@@ -1,0 +1,52 @@
+<%= error_messages_for 'job' %>
+
+<!--[form:job]-->
+
+<div style="color:red"><%= flash[:notice] %></div>
+
+<p><label for="jobm_name">名字</label><br/>
+<%= text_field 'jobm', 'name'  %></p>
+
+<p><label for="file">工程的压缩包 (场景文件以及所有需要打包 (tgz, tbz2, rar, zip))</label><br/>
+<input type="file" name="file"></p>
+
+<p><label for="job_renderer">渲染器</label><br/>
+<%= select("job", "renderer", @renderers, {}, {}) %></p>
+
+<p><label for="job_sort">序列</label><br/>
+<%= select("job", "sort", [ ["动画", "animation"], ["单帧", "image"] ], {}, {"onChange" => "if(this.value == 'image') {document.getElementById('frame_div').style.visibility='hidden'; document.getElementById('res_div').style.visibility='visible';} else {document.getElementById('frame_div').style.visibility='visible'; document.getElementById('res_div').style.visibility='hidden';}"}) %></p>
+
+
+<div id="frame_div" 
+<% if @job.sort == "animation" %>
+  style="visibility:visible">
+<% else %>
+  style="visibility:hidden">
+<% end %>
+
+<p><label for="jobm_frame_start">起始帧</label><br/>
+<%= text_field 'jobm', 'frame_start'  %></p>
+
+<p><label for="jobm_frame_end">结束帧</label><br/>
+<%= text_field 'jobm', 'frame_end'  %></p>
+
+</div>
+
+
+<div id="res_div"
+<% if @job.sort == "image" %>
+  style="visibility:visible">
+<% else %>
+  style="visibility:hidden">
+<% end %>
+
+<p><label for="res_height">图像的像素</label><br/>
+<%= select_tag "res_height", "<option>0 .. 1000 (low)</option> <option> > 1000 (medium)</option> <option> > 2000 (high)</option>" %>
+
+</div>
+
+
+
+
+<!--[eoform:job]-->
+

@@ -1,0 +1,145 @@
+
+<div style="text-align:right; width:100%">
+<% form_tag :action => 'list' do %>
+刷新时间间隔: <%= select_tag("refresh",
+		options_for_select([ ["", ""], ["30 seconds", "30"], ["1 minute", "60"], ["3 minutes", "180"], ["5 minutes", "300"], ["10 minutes", "600"] ], session[:last_refresh]),
+		{"onChange" => "document.forms[0].submit();"}) %>
+<% end %>
+</div>
+
+<div style="color:red"><%= flash[:notice] %></div>
+
+<% if params[:id] == 'all' %>
+<h2>所有任务</h2>
+
+<br /><br />
+
+<!-- Jobs created with DrQueueOnRails:<br /> -->
+在 InfuDrQueue WEB 界面上创建的任务:<br />
+<% else %>
+<!-- <h2>My jobs</h2> -->
+<h2>我的任务</h2>
+
+<br /><br />
+<% end %>
+
+<% if @jobs_db.length > 0 %>
+
+<table border="1" style="border-width:1px; border-style:solid; border-color:black;">
+  <tr>
+  <th>编号</th>
+  <th>任务</th>
+  <% if session[:profile].status == 'admin' %>
+  <th>用户</th>
+  <% end %>
+  <th>状态</th>
+  <th>剩下的帧</th>
+  <th>完成的帧</th>
+  <th>正在渲染的帧</th>
+  <th>每帧平均渲染用时</th>
+  <th>预计结束时间</th>
+  </tr>
+  
+<%
+for job in @jobs_db
+  if (job_data = Job.job_data_from_master(job.queue_id)) != nil
+%>
+  <tr>
+  <td><%= job.queue_id %></td>
+  <td><%= link_to job_data.name, :action => 'show', :id => job.queue_id %></td>
+  
+  <% if session[:profile].status == 'admin' %>
+  <td><%= job_data.owner %></td>
+  <% end %>
+  
+  <td><%= Job.human_readable_status(job_data.status) %></td>
+  <td style="text-align:center;"><%= job_data.fleft %></td>
+  <td style="text-align:center;"><%= job_data.fdone %></td>
+  <td style="text-align:center;"><%= job_data.nprocs %></td>
+  <td style="text-align:center;"><%= Drqueue::time_str(job_data.avg_frame_time) %></td>
+  
+  <% if (job_data.fdone == 0) || (job_data.avg_frame_time > 2592000) %>
+   <td style="text-align:center;"> - </td>
+  <% else %>
+   <td><%= Time.at(job_data.est_finish_time).asctime %></td>
+  <% end %>
+
+  </tr>
+<%
+  end
+end
+%>
+</table> 
+
+<% else %>
+<br />
+<!-- Read the tutorials page before creating your first job! -->
+阅读教程页面，然后再创建你的第一个任务!
+<br /><br />
+<!-- <br />No jobs were found.<br /> -->
+<br />没有找到任务.<br />
+<% end %>
+
+
+
+<% if (params[:id] == 'all') && (session[:profile].status == 'admin') %>
+
+<br /><br /><br />
+使用 InfuDrQueueMan 客户端创建的任务:<br />
+<table border="1" style="border-width:1px; border-style:solid; border-color:black;">
+  <tr>
+  <th>编号</th>
+  <th>任务</th>
+  <% if session[:profile].status == 'admin' %>
+  <th>用户</th>
+  <% end %>
+  <th>状态</th>
+  <th>剩下的帧</th>
+  <th>完成的帧</th>
+  <th>正在渲染的帧</th>
+  <th>每帧平均渲染用时</th>
+  <th>预计结束时间</th>
+  </tr>
+  
+<%
+jobs_master = Job.no_db_jobs()
+for job in jobs_master
+%>
+  <tr>
+  <td><%= job.id %></td>
+  <td><%= link_to job.name, :action => 'show', :id => job.id %></td>
+  <td><%= job.owner %></td>
+  <td><%= Job.human_readable_status(job.status) %></td>
+  <td style="text-align:center;"><%= job.fleft %></td>
+  <td style="text-align:center;"><%= job.fdone %></td>
+  <td style="text-align:center;"><%= job.nprocs %></td>
+  <td style="text-align:center;"><%= Drqueue::time_str(job.avg_frame_time) %></td>
+  
+  <% if (job.fdone == 0) || (job.avg_frame_time > 2592000) %>
+   <td style="text-align:center;"> - </td>
+  <% else %>
+   <td><%= Time.at(job.est_finish_time).asctime %></td>
+  <% end %>
+  
+  </tr>
+<% end %>
+</table>
+
+
+<% end %>
+
+<br /><br />
+<% if params[:id] != 'all' %>
+<!-- <%= button_to 'Create a new job', :action => 'new' %>  -->
+<%= button_to '创建一个新的任务', :action => 'new' %> 
+&nbsp;&nbsp;
+
+<br /><br />
+
+<%=
+if @jobs_db.length > 0
+	link_to(image_tag("rss.png", :size => "14x14", :border => 0, :style => "vertical-align:middle;")+" subscribe to RSS feed", {:controller => 'jobs', :action => 'feed', :protocol => "https://", :only_path => false})
+end
+%>
+
+<% end %>

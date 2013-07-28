@@ -1,0 +1,49 @@
+<h2>管理文件缓存</h2>
+
+<% form_tag({:action => 'filecache'}, :multipart => true) do %>
+
+<br /><br />
+<!-- Note: Do not use whitespaces or special chars in the filenames. Use the cache only for bigger files. -->
+注意:不要使用空格或特殊字符的文件名。使用缓存只针对大文件。
+<br /><br />
+
+<p><label for="file">上传文件</label><br/>
+<input type="file" name="file"></p>
+
+<%= submit_tag "上传" %>
+
+<% end %>
+
+
+<br /><br /><br /><br />
+
+<!-- Current contents: -->
+当前内容:
+<br /><br />
+
+<table border="1" style="border-width:1px; border-style:solid; border-color:black;">
+  <tr>
+  <th>文件名</th>
+  <th>大小</th>
+  <th>上传</th>
+  <th> </th>
+  </tr>
+
+<%
+i = 0
+for f in @cachefiles
+%>
+  <tr>
+  <td><%= f %></td>
+  <td><%= number_to_human_size(@filesizes[i]) %></td>
+  <td><%= @filedates[i] %></td>
+  <td><%= link_to("Delete", {:action => 'filecache_delete', :delete_file => f, :protocol => "https://"}, :method => :post) %></td>
+  </tr>
+<% 
+  i += 1
+end
+%>
+</table>
+
+
+
