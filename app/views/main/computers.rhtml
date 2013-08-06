@@ -15,15 +15,15 @@
 
 <table border="1">
 <tr>
- <td>Id</td>
+ <td>编号</td>
  <td><%= @computer_info.hwinfo.id %></td>
 </tr>
 <tr>
- <td>Name</td>
+ <td>名字</td>
  <td><%= @computer_info.hwinfo.name %></td>
 </tr>
 <tr>
- <td>Load Average</td>
+ <td>平均负载</td>
  <td><%= @computer_info.status.get_loadavg(0).to_s+','+@computer_info.status.get_loadavg(1).to_s+','+@computer_info.status.get_loadavg(2).to_s %></td>
 </tr>
 <tr>
@@ -31,7 +31,7 @@
  <td><%= @computer_info.status.ntasks %></td>
 </tr>
 <tr>
- <td>Operating System</td>
+ <td>操作系统</td>
  <td><%= computer_os(@computer_info) %></td>
 </tr>
 </table>
@@ -43,9 +43,9 @@ Task list:<br /><br />
 
 <table border="1">
 <tr>
- <td>Task ID</td>
- <td>Job name</td>
- <td>Status</td>
+ <td>任务编号</td>
+ <td>任务名字</td>
+ <td>状态</td>
  <td>Frame</td>
 </tr> 
 
@@ -85,28 +85,36 @@ No tasks found.
  <td> 编号 </td>
  <td> 名字 </td>
  <td> 启用 </td>
+ <td> Cpus </td>
+ <td> 操作系统 </td>
+ <td> 内存 </td>
  <td> 运行 </td>
  <td> 平均负载 </td>
  <td> 池 </td>
 </tr>
 
+<% @num = 0 %>
 <% @computer_list.each do |c| %>
-	<tr>
-	 <td><%= c.hwinfo.id %></td>
-	 <% if session[:profile].status == 'admin' %>
-	 	<td><a href="/main/computers/<%= c.hwinfo.id %>"><%= c.hwinfo.name %></a></td>
-	 <% else %>
-	 	<td><%= c.hwinfo.name %></td>
-	 <% end %>
-	 <% if c.limits.enabled == 1 %>
-	 	<td>Yes</td>
-	 <% else %>
-	 	<td>No</td>
-	 <% end %>
-	 <td><%= c.status.ntasks %></td>
-	 <td><%= c.status.get_loadavg(0).to_s+','+c.status.get_loadavg(1).to_s+','+c.status.get_loadavg(2).to_s %></td>
-	 <td><%= computer_pools(c) %></td>
-	</tr>
+        <tr>
+         <td><%= @num %></td>
+         <% if session[:profile].status == 'admin' %>
+                <td><%= `python /opt/getId.py #@num` %></td>
+         <% else %>
+                <td><%= `python /opt/getId.py #@num` %></td>
+         <% end %>
+         <% if c.limits.enabled == 1 %>
+                <td>Yes</td>
+         <% else %>
+                <td>No</td>
+         <% end %>
+         <td><%= `python /opt/getCpu.py #@num` %></td>
+         <td><%= `python /opt/getOs.py #@num` %></td>
+         <td><%= `python /opt/getMemory.py #@num` %></td>
+         <% @num += 1 %>
+         <td><%= c.status.ntasks %></td>
+         <td><%= c.status.get_loadavg(0).to_s+','+c.status.get_loadavg(1).to_s+','+c.status.get_loadavg(2).to_s %></td>
+         <td>mentalray</td>
+        </tr>
 <% end %>
 
 </table>
@@ -114,3 +122,4 @@ No tasks found.
 <% else %>
 There was an error.
 <% end %>
+
