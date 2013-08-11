@@ -1383,7 +1383,7 @@ ENV['WEB_PROTO']+"://")
 	jobdir = File.dirname(job_master.cmd)
 	#oldpwd = Dir.pwd
 	#Dir.chdir jobdir
-	#imagefile = Dir.glob("*"+params[:nr]+"*.{jpg,jpeg,png,gif}")[0]
+	#imagefile = Dir.glob("*"+params[:nr]+"*.{jpg,jpeg,png,gif,tga}")[0]
 	#puts imagepath = jobdir+"/"+imagefile
 	#Dir.chdir oldpwd
 	
@@ -1393,7 +1393,7 @@ ENV['WEB_PROTO']+"://")
 	dir = Dir.open(jobdir)
 	dir.each do |entry|
 	  entrypath = jobdir+"/"+entry
-	  if (File.file? entrypath) && (File.ctime(entrypath).to_i > oldest_ctime) && ( (File.extname(entrypath) == ".jpeg") || (File.extname(entrypath) == ".jpg") || (File.extname(entrypath) == ".png") || (File.extname(entrypath) == ".gif") )
+	  if (File.file? entrypath) && (File.ctime(entrypath).to_i > oldest_ctime) && ( (File.extname(entrypath) == ".jpeg") || (File.extname(entrypath) == ".jpg") || (File.extname(entrypath) == ".png") || (File.extname(entrypath) == ".gif" ) || (File.extname(entrypath) == ".tga") )
 	    found_files << entry
 	  end
 	end
