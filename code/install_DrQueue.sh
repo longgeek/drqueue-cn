@@ -41,7 +41,12 @@ wget http://www.drqueue.org/files/drqueue.0.64.4c3.tgz -P $SOURCE_DIR
 cd $SOURCE_DIR
 tar zxvf drqueue.0.64.4c3.tgz
 cd DrQueue-0.64.4c3
+scons
 scons install PREFIX=$INSTALL_DIR
+cd python
+python setup.py install
+sleep 5
+python setup.py install
 
 cat > $INSTALL_DIR/drqueue/etc/master.conf << _GEEK_
 logs=$INSTALL_DIR/drqueue/logs
