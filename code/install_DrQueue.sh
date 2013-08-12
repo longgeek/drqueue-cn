@@ -240,6 +240,6 @@ _GEEK_
 /etc/init.d/httpd start
 chkconfig httpd on
 yum -y install dnsmasq
-/etc/init.d/dnsmasq start
 chkconfig dnsmasq on
-echo "nameserver $IPADDR"` >> /etc/resolv.conf
+echo "nameserver $IPADDR" >> /etc/resolv.conf
+/etc/init.d/dnsmasq start
