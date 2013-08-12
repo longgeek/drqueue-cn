@@ -239,3 +239,7 @@ LoadModule passenger_module modules/mod_passenger.so
 _GEEK_
 /etc/init.d/httpd start
 chkconfig httpd on
+yum -y install dnsmasq
+/etc/init.d/dnsmasq start
+chkconfig dnsmasq on
+echo "nameserver $IPADDR"` >> /etc/resolv.conf
