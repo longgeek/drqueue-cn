@@ -198,6 +198,8 @@ git clone https://github.com/longgeek/DrQueueOnRails-CN.git /opt/.DrQueueOnRails
 cp -r /opt/.DrQueueOnRails-CN/app/views $SOURCE_DIR/DrQueue-0.64.4c3/DrQueueOnRails/app/
 cp -r /opt/.DrQueueOnRails-CN/app/controllers $SOURCE_DIR/DrQueue-0.64.4c3/DrQueueOnRails/app/
 cp /opt/.DrQueueOnRails-CN/code/* /opt
+cp /opt/.DrQueueOnRails-CN/code/create_user.sh /usr/sbin/create-user
+chmod +x /usr/sbin/create-user
 
 cat > /etc/yum.repos.d/longgeek.repo << _GEEK_
 [longgeek]
@@ -243,3 +245,8 @@ yum -y install dnsmasq
 chkconfig dnsmasq on
 echo "nameserver $IPADDR" >> /etc/resolv.conf
 /etc/init.d/dnsmasq start
+source /etc/profile
+nohup master > /dev/null 2>&1 &
+killall master.Linux.x86_64
+nohup master > /dev/null 2>&1 &
+echo -e "source /etc/profile\nnohup master > /dev/null 2>&1 &" >> /etc/rc.local
