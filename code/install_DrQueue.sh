@@ -8,7 +8,7 @@ if [ $CHECKHOSTNAME == "" ]; then
 fi
 
 SOURCE_DIR="/opt"
-INSTALL_DIR="/etc"
+INSTALL_DIR="/usr/local"
 LDAP_DC=$(hostname | awk -F. '{print $2"."$3}')
 IPADDR=$(ifconfig eth0 | grep 'inet addr' | awk '{print $2}' | awk -F: '{print $2}')
 DB_NAME="DrQueueOnRails"
