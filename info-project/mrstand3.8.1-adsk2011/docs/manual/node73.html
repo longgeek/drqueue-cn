@@ -1,0 +1,94 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shader Compilation and Linking</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node72.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node74.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION71"></a>
+<h3>Shader Compilation and Linking</h3>
+<pre>
+    code "<i>filename</i>"  
+</pre>
+<p><a id="INDEX168"></a> The named <i>filename</i>
+is interpreted as a C source file, ending with the extension ".c",
+is compiled and linked into mental ray. From this point on, the
+shaders it defines are available in mental ray as shading
+functions. For example, if the source defines a C function
+<i>myshader</i>, with the usual three parameters <i>result</i>,
+<i>state</i>, and <i>paras</i> (see chapter
+<a href="node99.html#shaders">shaders</a> for details), the name
+<i>myshader</i> may be used in materials, lights, textures and so
+on as the quoted shader name. The command-line option
+<tt>-code</tt> provides an alternative way of compiling and linking
+C source. Multiple code commands are possible. This is intended
+mainly for debugging because linking precompiled shader libraries
+is much more efficient. Note that every shading function must also
+be declared; see section <a href="node112.html#declaration">declaration</a>.</p>
+<p>Compiling C++ code requires that the shader function prototypes
+and any included mental ray headers such as <tt>shader.h</tt> are
+included in <tt>extern "C"</tt>. It may also be necessary to switch
+the compiler using the <tt>-c_compiler</tt> and <tt>-c_linker</tt>
+command-line options.<br /></p>
+<pre>
+    $code  
+    <i>C source text</i>  
+    $end code  
+</pre>
+<p>The $ signs must appear in column 1 of the line. This command
+also compiles and links C source code, but the code is read
+directly from the <tt>.mi</tt> file rather than from a separate
+source file. The <i>C source text</i> follows standard C syntax. In
+fact, it is written out to a temporary file, which is then compiled
+as if a <tt>code</tt> command had been used. Multiple $code
+commands are allowed. Note that every shading function must also be
+declared; see below. C++ requires the same steps as for the
+<tt>code</tt> command.<br /></p>
+<pre>
+    link "<i>filename</i>"  
+</pre>
+<p>Like the code command, the link command attaches external
+shaders to mental ray, which can then be used as shading functions.
+While the code command accepts ".c" files as <i>filename</i>, the
+link command expects either object files ending in ".o", or dynamic
+shared object (<b><a id="INDEX169"></a>DSO</b> on
+Unix, <b><a id="INDEX170"></a>DLL</b> on Windows
+NT) files ending in ".so". Object files are linked, while DSOs are
+just attached without any preprocessing. <b><a id="INDEX171"></a>DSO</b>s
+are the fastest way of attaching an
+external shader, and require no compilers or development options,
+which are sometimes sold separately by system vendors
+<a href="#FOOTNOTE10">[10]</a>. However, certain old systems do not support
+DSOs. The <tt>-link</tt> command-line option provides an
+alternative way of linking object files and DSOs. Any number of
+files can be linked. Note that every shading function must also be
+declared; see section <a href="node112.html#declaration">declaration</a>.
+If Dynamical Shared Objects are to be linked on Unix machines, the
+<tt>LD_LIBRARY_PATH</tt> or <tt>LD_LIBRARYN32_PATH</tt> (SGI)
+<a href="configuration.html#INDEX1085">environment variable</a> must
+include the path of the DSO file to be linked; see section
+<a href="node100.html#dynlink">dynlink</a>.<br /></p>
+<p><a id="FOOTNOTE10">[10]</a> For system and
+development software requirements, see the Release and Installation
+Notes.<br /></p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node72.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node74.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

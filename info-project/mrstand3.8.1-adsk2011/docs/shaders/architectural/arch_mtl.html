@@ -1,0 +1,2008 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="Author" content="mental images GmbH">
+<meta name="Company" content="mental images">
+<meta name="Creator" content="hypertex">
+<meta name="CreatorVersion" content="1.0">
+<meta name="CreationDate" content="18 Feb 2010">
+<link rel="stylesheet" type="text/css" href="mental.css">
+<style type="text/css"> i {color:darkred} dfn {font-style:italic}
+var {font-weight:bold; color:black} </style><title>Architectural Material</title>
+</head><body>
+<ul class="nav">
+<li><a href="architectural.html">home</a></li>
+<li><a href="arch_intro.html">&laquo;&nbsp;prev</a></li>
+<li><a href="arch_sunsky.html">next&nbsp;&raquo;</a></li>
+</ul>
+<h1>Architectural Material</h1>
+<h2 id="Introduction">Introduction</h2>
+<h3 id="What_is_the_<i>mia_material</i>_?">What is the <i>mia_material</i> ?</h3>
+<p>
+The <em>mental ray</em> <i>mia_material</i> is a monolithic material shader 
+that is designed to support most materials used by architectural 
+and product design renderings. It supports most hard-surface 
+materials such as metal, wood and glass. It is especially tuned
+for fast glossy reflections and refractions (replacing the DGS 
+material) and high-quality glass (replacing the dielectric material). 
+<p>
+The major features are:
+<br />
+<ul>
+
+<li> <b>Easy to use</b>
+- yet flexible. Controls arranged logically in a &quot;most used first&quot; fashion.
+<li> <b>Templates</b>
+- for getting faster to reality.
+<li> <b>Physically accurate</b>
+- the material is energy conserving, making shaders that breaks the laws
+  of physics impossible.
+<li> <b>Glossy performance</b>
+- advanced performance boosts including interpolation, emulated glossiness,
+  and importance sampling.
+<li> <b>Tweakable BRDF</b><a href="#Foot1" title="Bidirectional Reflectance Distribution Function"><sup>1</sup></a>
+- user can define how reflectivity depends on angle.
+<li> <b>Transparency - &quot;Solid&quot; or &quot;thin&quot; materials</b>
+- transparent objects such as glass can be treated as either &quot;solid&quot;
+  (refracting, built out of multiple faces) or &quot;thin&quot; (non-refracting,
+  can use single faces).
+<li> <b>Round corners</b>
+- shader can simulate &quot;fillets&quot; to allow sharp edges to still catch the
+  light in a realistic fashion.
+<li> <b>Indirect Illumination control</b>
+- set the final gather accuracy or indirect illumination level on a
+  per-material basis.
+<li> <b>Oren-Nayar diffuse</b>
+- allows &quot;powdery&quot; surfaces such as clay.
+<li> <b>Built in Ambient Occlusion</b>
+- for contact shadows and enhancing small details.
+<li> <b>All-in-one shader</b>
+- photon and shadow shader built in.
+<li> <b>Waxed floors, frosted glass and brushed metals...</b>
+- ...all fast and easy to set up.
+<li> <b>Multiple outputs</b>
+- when using <i>mia_material_x</i>
+</ul>
+
+<p>
+<h3 id="Enhancements_in_<i>mia_material_x</i>">Enhancements in <i>mia_material_x</i></h3>
+<p>
+The material comes in two variants, the original <i>mia_material</i> and the new
+extended <i>mia_material_x</i>. These are just two different interfaces using the
+same underlying code, so the functionality is identical, except that
+<i>mia_material_x</i> ...
+<ul>
+
+<li>
+...has some additional parameters relating to bump mapping described
+   on page <a href="arch_mtl.html#Bump">Bump</a>.
+<li>
+...supports setting <b>ao_do_details</b> to 2 for enabling &quot;ambient occlusion
+   with color bleed&quot; (see page <a href="arch_mtl.html#AO_with_bleed">AO with bleed</a>).
+<li>
+...returns multiple outputs in the form of a mental ray <em>struct</em>
+   return. The various outputs are described in detail on page
+   <a href="arch_mtl.html#Multiple_Outputs">Multiple Outputs</a>.
+</ul>
+
+<p>
+<h3 id="Structure_of_this_Document">Structure of this Document</h3>
+<p>
+This document is divided into sections of <em>Fundamentals</em>
+(beginning on page <a href="arch_mtl.html#Fundamentals">Fundamentals</a>) which
+explain the main features of the material
+and
+the <em>Parameters</em> section (page <a href="arch_mtl.html#Parameters">Parameters</a>) that goes through all
+the parameters
+ one by one, and a <em>Tips  Tricks</em> 
+(page <a href="arch_mtl.html#Tips_and_Tricks">Tips and Tricks</a>) with some advice for users.
+<p>
+<a name="Fundamentals"></a>
+<h2 id="Fundamentals">Fundamentals</h2>
+<p>
+<a name="Gamma"></a>
+<h3 id="Physics_and_the_Display">Physics and the Display</h3>
+<p>
+The <i>mia_material</i> primarily attempts to be <em>physically accurate</em> hence it 
+has an output with a high dynamic range. How visually pleasing the 
+material looks depends on how the mapping of colors inside the 
+renderer to colors displayed on the screen is done.
+<p>
+When working with the <i>mia_material</i> it is highly encouraged to make sure one 
+is operating through a <em>tone mapper/exposure control</em>
+or at the very least are using gamma correction.
+<p>
+<h4 id="A_Note_on_Gamma">A Note on Gamma</h4>
+<p>
+Describing all the details about <em>gamma correction</em> is beyond the
+scope of this document and this is just a brief overview.
+<p>
+The color space of a normal off-the-shelf computer 
+screen is not linear. The color with RGB value 200 200 200 is 
+<em>not</em> twice as bright as a color with RGB value 100 100 100 
+as one would expect. 
+<p>
+This is not a &quot;bug&quot; because due to the fact that our eyes see light
+in a <em>non linear</em> way, the former color is actually 
+<em>perceived</em> to be about twice as bright as the latter. 
+This makes the color space of a normal computer screen 
+roughly <em>perceptually uniform</em>. This is a good thing, and 
+is actually the main reason 24 bit color (with only
+8 bits - 256 discrete levels - for each of the red, green and blue 
+components) looks as good as it does to our eyes.
+<p>
+The problem is that physically correct computer graphics operate in
+a <em>true linear</em> color space where a value represents actual
+light energy. If one simply maps the range of
+colors output to the renderer naively to the 0-255 range of each
+RGB color component it is incorrect.
+<p>
+The solution is to introduce a mapping of some sort. One of these
+methods is called <em>gamma correction</em>.
+<p>
+Most computer screens have a gamma of about 2.2<a href="#Foot2" title="This is also known as the &quot;sRGB&quot; color space."><sup>2</sup></a>, but most 
+software default to a gamma of 1.0, which makes everything 
+(especially mid-tones) look too dark, and light will not 
+&quot;add up&quot; correctly.
+<p>
+Using gamma of 2.2 is the theoretically &quot;correct&quot; value, making 
+the physically linear light inside the renderer appear in a correct
+linear manner on screen. 
+<p>
+However, since the response of photographic film isn't linear either, users have 
+found this &quot;theoretically correct&quot; value looks too &quot;bright&quot; and
+&quot;washed out&quot;, and a very common compromise is to render to a 
+gamma of 1.8, making things look more &quot;photographic&quot;, i.e. as if 
+the image had been shot on photographic film and then developed.
+<p>
+<h4 id="Tone_Mapping">Tone Mapping</h4>
+<p>
+Another method to map the physical energies inside the renderer to
+visually pleasing pixel values is known as <em>tone mapping</em>.
+This can be done either by rendering to a floating point file 
+format and using external software, or use some plug-in to the 
+renderer to do it on-the-fly.
+<p>
+Two tone mapping shaders are included in the library, 
+the simple <i>mia_exposure_simple</i> and the more advanced 
+<i>mia_exposure_photographic</i>, both of which are documented 
+on page <a href="arch_camera.html#Tone_Mapper">Tone Mapper</a>
+<p>
+Note: Take special care when using tone mapping together with 
+gamma correction; some tone mapping shaders has their own 
+gamma correction feature built in, and if one is not careful one 
+can end up with washed out gamma due to it being applied twice. 
+Make sure to keep an eye on the gamma workflow so it is applied 
+in <em>one</em> place.
+<p>
+<h3 id="Use_Final_Gathering_and_Global_Illumination">Use Final Gathering and Global Illumination</h3>
+<p>
+The material is designed to be used in a realistic lighting
+environment, i.e. using full direct and indirect illumination. 
+<p>
+In mental ray there are two basic methods to generate indirect light: 
+Final Gathering and Global Illumination. 
+For best results at least one of these methods should be used.
+<p>
+At the very least one should enable Final Gathering, or use Final 
+Gathering combined with Global Illumination (photons) for quality
+results. Performance tips for using Final Gather and 
+Global Illumination can be found on page <a href="arch_mtl.html#Final_Gather_Performance">Final Gather Performance</a>
+of this document.
+<p>
+If you are using an environment for your reflections, make sure the
+same environment (or a blurred copy of it) is used to light the scene
+through Final Gathering. 
+<p>
+<h3 id="Use_Physically_Correct_Lights">Use Physically Correct Lights</h3>
+<p>
+Traditional computer graphics light sources live in a cartoon universe
+where the intensity of the light doesn't change with the distance. The
+real world doesn't agree with that simplification. Light decays when
+leaving a light source due to the fact that light rays diverge from
+their source and the &quot;density&quot; of the light rays change over distance.
+This decay of a point light source is This decay of a point light source is <samp>1/d&sup2;</samp>, i.e. light intensity
+, i.e. light intensity
+is proportional to the inverse of the square of the distance to the 
+source.
+<p>
+One of the <em>reasons</em> for this traditional oversimplification is
+actually the fact that in the early days of computer graphics 
+<em>tone mapping</em> was not used and problems of colors &quot;blowing out&quot; 
+to white in the most undesirable ways<a href="#Foot3" title="Raw clipping in sRGB color space is very displeasing to the eye, especially if one color channel clips earlier than the others. Tone mapping generally solves this by &quot;soft clipping&quot; in a more suitable color space than sRGB."><sup>3</sup></a> was rampant.
+<p>
+However, as long as only Final Gathering (FG) is used as indirect 
+illumination method, such traditional simplifications <em>still work</em>. 
+Even light sources with <em>no decay</em> still create reasonable renderings!
+This is because FG is only concerned with the transport of light from one
+surface to the next, not with the transport of light from the light
+source to the surface.
+<p>
+It's when working with Global Illumination (GI) (i.e. with <em>photons</em>) 
+the troubles arise.
+<p>
+When GI is enabled, light sources shoot photons. It is <em>imperative</em>
+for the <i>mia_material</i> (or any other <em>mental ray</em> material) to work properly 
+for the energy of these photons to
+<em>match the direct light cast by that same light!</em> And since photons
+model light in a physical manner, decay is &quot;built in&quot;. 
+<p>
+Hence, when using GI:
+<br />
+<ul>
+
+<li> Light sources must be emitting photons at the correct energy
+<li> The direct light must decay in a physically correct way to match 
+      the decay of the photons.
+</ul>
+
+<p>
+Therefore it is important to make sure the <em>light shader</em> and the 
+<em>photon emission shader</em> of the lights work well together. 
+<p>
+To solve this, the <em>mia_photometric_light</em> shader (see page 
+<a href="arch_sunsky.html#Photometric_Lights">Photometric Lights</a>) is included, which automatically 
+balances photons and direct light in the correct way.
+<p>
+<h2 id="Features">Features</h2>
+<p>
+<h3 id="The_Shading_Model">The Shading Model</h3>
+<p>
+From a usage perspective, the shading model consists of three 
+components:
+<br />
+<ul>
+
+<li> <b>Diffuse</b> - diffuse channel (including Oren Nayar &quot;roughness&quot;).
+<li> <b>Reflections</b> - glossy anisotropic reflections (and highlights).
+<li> <b>Refractions</b> - glossy anisotropic transparency (and translucency).
+</ul>
+
+<div class="pic">
+<img width="100%" src="images/archmtl.jpg" alt="The <i>mia_material</i> shading model"><br />The <i>mia_material</i> shading model
+</div>
+<p>
+Direct and indirect light from the scene both cause diffuse 
+reflections as well as translucency effects. Direct light sources 
+also cause traditional &quot;highlights&quot; (specular highlights).
+<p>
+Ray tracing is used to create reflective and refractive effects, and
+advanced importance-driven multi-sampling is used to create glossy
+reflections and refractions. 
+<p>
+The rendering speed of the glossy reflections/refractions can further 
+be enhanced by interpolation as well as &quot;emulated&quot; reflections with
+the help of Final Gathering.
+<p>
+<a name="Energy_Conservation"></a>
+<h3 id="Conservation_of_Energy">Conservation of Energy</h3>
+<p>
+One of the most important features of the material is 
+that it is <em>automatically energy conserving</em>. 
+This means that it makes sure that 
+<samp>diffuse&nbsp;+&nbsp;reflection&nbsp;+&nbsp;refraction&nbsp;&lt;=&nbsp;1</samp>, i.e. that no energy is 
+, i.e. that no energy is 
+magically created and the incoming light energy is properly distributed 
+to the diffuse, reflection and refraction components in a way that
+maintains the first law of thermodynamics<a href="#Foot4" title="The first law of thermodynamics is that no one talks about thermodynamics ;)"><sup>4</sup></a>.
+<p>
+In practice, this means for example that when adding more reflectivity, 
+the energy must be taken from somewhere, and hence the diffuse level 
+and the transparency will be automatically reduced accordingly. 
+Similarly, when adding transparency, this will happen at the cost 
+of the diffuse level.
+<p>
+
+The rules are as follows:
+<ul>
+
+<li> Transparency takes energy from Diffuse, i.e. at 100 transparency, there will be no diffuse at all.
+<li> Reflectivity takes energy from both Diffuse and Transparency, i.e. at 100 reflectivity there will neither be any diffuse nor any transparency.
+<li> Translucency is a type of transparency, and <b>refr_trans_w</b> defines the percentage of transparency vs. translucency.
+</ul>
+
+<div class="pic">
+<img width="100%" src="images/refl-7.jpg" alt="From left to right: Reflectivity 0.0, 0.4, 0.8 and 1.0"><br />From left to right: Reflectivity 0.0, 0.4, 0.8 and 1.0
+</div>
+<div class="pic">
+<img width="100%" src="images/refr5.jpg" alt="From left to right: Transparencies 0.0, 0.4, 0.8 and 1.0"><br />From left to right: Transparencies 0.0, 0.4, 0.8 and 1.0
+</div>
+<p>
+It also means that the <em>level</em> of highlights is linked to the 
+<em>glossiness</em> of a surface. A high <b>refl_gloss</b> value causes a
+narrower but very intense highlight, and a lower value causes a
+wider but less intense highlight. This is because the energy is now
+spread out and dissipated over a larger solid angle.
+<p>
+<a name="Angle"></a>
+<h3 id="BRDF___how_Reflectivity_Depends_on_Angle">BRDF - how Reflectivity Depends on Angle</h3>
+<p>
+In the real world, the reflectivity of a surface is often <em>view angle dependent</em>.
+A fancy term for this is BRDF (<em>Bi-directional Reflectance Distribution Function</em>), 
+i.e. a way to define how much a material reflects when seen from various angles.
+<div class="pic">
+<img width="100%" src="images/horsies.jpg" alt="The reflectivity of the wooden floor depends on the view angle"><br />The reflectivity of the wooden floor depends on the view angle
+</div>
+<p>
+Many materials exhibit this behavior. Glass, water and other 
+<em>dielectric</em> materials with <em>Fresnel</em> effects 
+(where the angular dependency is guided strictly by the 
+<em>Index of Refraction</em>) are the most obvious examples, 
+but other layered materials such as lacquered wood, plastic, etc. 
+display similar characteristics.
+<p>
+The <i>mia_material</i> allows this effect both to be defined by the Index of
+Refraction, and also allows an explicit setting for the two
+reflectivity values for:
+<br />
+<ul>
+
+<li> 0 degree faces (surfaces directly facing the camera)
+<li> 90 degree faces (surfaces 90 degrees to the camera)
+</ul>
+
+<p>
+See the BRDF section on page <a href="arch_mtl.html#Brdf">Brdf</a> for more details.
+<p>
+<h3 id="Reflectivity_Features">Reflectivity Features</h3>
+<p>
+The final surface reflectivity is in reality caused by the sum
+of three components:
+<ul>
+
+<li> The Diffuse effect
+<li> The actual reflections
+<li> Specular highlights that simulate the reflection of light sources
+</ul>
+
+<div class="pic">
+<img width="100%" src="images/refl-description.jpg" alt="Diffuse, Reflections and Highlights"><br />Diffuse, Reflections and Highlights
+</div>
+<p>
+In the real world &quot;highlights&quot; are just (glossy) reflections of the 
+light sources. In computer graphics it's more efficient to 
+treat these separately. 
+However, to maintain physical accuracy the material automatically 
+keeps &quot;highlight&quot; intensity, glossiness, anisotropy etc. in sync 
+with the intensity, glossiness and anisotropy of reflections, 
+hence there are no separate controls for these as both are driven by 
+the reflectivity settings.
+<p>
+<h3 id="Transparency_Features">Transparency Features</h3>
+<p>
+The material supports full glossy anisotropic transparency, as well
+as includes a translucent component, described more in detail on 
+page <a href="arch_mtl.html#Translucency">Translucency</a>.
+<div class="pic">
+<img width="100%" src="images/trans1.jpg" alt="Translucency"><br />Translucency
+</div>
+<p>
+<a name="Thin_Walled"></a>
+<h4 id="Solid_vs__Thin_Walled">Solid vs. Thin-Walled</h4>
+<p>
+The transparency/translucency can treat objects either as 
+<em>solid</em> or <em>thin walled</em>. 
+<p>
+If all objects were treated as solids at all times, every 
+single window pane in an architectural model would have to be modeled 
+as <em>two</em> faces; 
+an entry surface (that refracts the light slightly in one direction), 
+and immediately following it an exit surface (where the light would be 
+refracted back into the original direction).
+<p>
+Not only is this additional modeling work, it is a waste of rendering
+power to model a refraction that has very little net effect on the 
+image. Hence the material allows modeling the entire window pane as 
+one single flat plane, foregoing any actual &quot;`refraction&quot; of light.
+<div class="pic">
+<img width="100%" src="images/refr4.jpg" alt="Solid vs. Thin-walled transparency and translucency"><br />Solid vs. Thin-walled transparency and translucency
+</div>
+<p>
+In the above image the helicopter canopy, the window pane, the
+translucent curtain and the right sphere all use &quot;thin walled&quot;
+transparency or translucency, whereas the glass goblet, the 
+plastic horse and the left sphere all use &quot;solid&quot; transparency or
+translucency.
+<p>
+<h4 id="Cutout_Opacity">Cutout Opacity</h4>
+<p>
+Beyond the &quot;physical&quot; transparency (which models an actual property
+of the material) there is a completely separate non-physical &quot;cutout 
+opacity&quot; channel to allow &quot;billboard&quot; objects such as trees, or 
+to cut out things like a chain-link fence with an opacity mask.
+<p>
+<h3 id="Special_Effects">Special Effects</h3>
+<p>
+<a name="Ambient_Occlusion_Effect"></a>
+<h4 id="Built_in_Ambient_Occlusion">Built-in Ambient Occlusion</h4>
+<p>
+<em>Ambient Occlusion</em> (henceforth referred to as &quot;AO&quot;) is a 
+method spearheaded by the film industry to emulate the &quot;look&quot;
+of true global illumination by using shaders that calculate
+how <em>occluded</em> (i.e. blocked) an area is from receiving
+incoming light.
+<p>
+Used alone, an AO shader<a href="#Foot5" title="Like the separate mental ray mib_amb_occlusion shader."><sup>5</sup></a>
+creates a gray scale output that is &quot;dark&quot; in areas to which light cannot 
+reach and &quot;bright&quot; in areas where it can:
+<div class="pic">
+<img width="100%" src="images/ao1.jpg" alt="An example of AO applied to a scene"><br />An example of AO applied to a scene
+</div>
+<p>
+As seen in the above image, one of the main results of AO is
+dark in crevices and areas where light is blocked by other surfaces
+and it is bright in areas that are exposed to the environment.
+<p>
+One important aspect of AO is that one can tune the &quot;distance&quot;
+within which it looks for occluding geometry. 
+<div class="pic">
+<img width="100%" src="images/ao2.jpg" alt="AO looked up within a shorter radius"><br />AO looked up within a shorter radius
+</div>
+<p>
+Using a radius creates only a &quot;localized&quot; AO effect; only
+surfaces that are within the given radius are actually considered
+occluders (which is also <em>massively</em> faster to render). 
+The practical result is that the AO gives us 
+nice &quot;contact shadow&quot; effects and makes small crevices visible.
+<p>
+There are two ways to utilize the built in AO in the <i>mia_material</i> :
+<br />
+<ul>
+
+<li> &quot;Traditional&quot; AO for adding an omnipresent
+      ambient light that is then attenuated by the AO to 
+      create details. 
+<li> Use AO for <em>detail enhancement</em> together with existing 
+      indirect lighting methods (such as Final Gathering or photons).
+</ul>
+
+<p>
+The latter method is especially interesting when using a highly 
+&quot;smoothed&quot; indirect illumination solution (i.e. a very high 
+photon radius, or an extremely low final gather density) which could
+otherwise lose small details. By applying the AO with short rays these
+details can be brought back.
+<p>
+<h3 id="Performance_Features">Performance Features</h3>
+<p>
+Finally the <i>mia_material</i> contains a large set of built in functions
+for top performance, including but not limited to:
+<br />
+<ul>
+
+<li> Advanced importance sampling with ray rejection thresholds
+<li> Adaptive glossy sample count
+<li> Interpolated glossy reflection/refraction with detail enhancements
+<li> Ultra fast emulated glossy reflections (<b>refl_hl_only</b> mode)
+<li> Possibility to ignore internal reflections for glass objects
+<li> Allowing a choice between traditional transparent 
+      shadows (suitable for e.g. a window pane) and refractive 
+      caustics (suitable for solid glass objects) on a per material 
+      basis.
+</ul>
+
+<p>
+
+<a name="mi_shader__mia_material"></a>
+<a name="mi_shader__mia_material_x"></a>
+<a name="Parameters"></a>
+<p>
+<h2 id="Quick_Guide_to_the_Material_Parameters">Quick Guide to the Material Parameters</h2>
+<p>
+This section gives a quick overview of the parameters suitable as a
+memory refreshing tool for users already familiar with <i>mia_material</i>. A
+much more detailed run down is on page <a href="arch_mtl.html#Detailed_Parameters">Detailed Parameters</a>.
+Parameters labeled with [+] only exist in <i>mia_material_x</i>.
+<br />
+<ul>
+
+<li> <b>diffuse_weight</b> The amount of diffuse reflections.
+<li> <b>diffuse</b> The diffuse color, i.e. the main color of the material.
+<li> <b>diffuse_roughness</b> The Oren-Nayar &quot;roughness&quot;.
+<br />
+<li> <b>reflectivity</b> Overall reflectivity level. Multiplied by the <b>brdf_xx_degree_refl</b> parameters.
+<li> <b>refl_color</b> Overall reflectivity color. Normally white.
+<li> <b>refl_gloss</b> Reflection glossiness. 1.0 = perfect mirror.
+<li> <b>refl_gloss_samples</b> Number of samples (rays) for glossy reflections.
+<li> <b>refl_interpolate</b> Interpolation (smoothing) of the glossy reflections. Speed at the price of accuracy.
+<li> <b>refl_hl_only</b> Skip actual reflections, do only highlights and &quot;emulated&quot; reflections via FG.
+<li> <b>refl_is_metal</b> Metal mode. Uses the diffuse color as reflection color.
+<br />
+<li> <b>transparency</b> The overall transparency level.
+<li> <b>refr_color</b> The transparency (refraction) color.
+<li> <b>refr_gloss</b> The transparency glossiness.
+<li> <b>refr_ior</b> The Index of Refraction.
+<li> <b>refr_gloss_samples</b> Number of samples (rays) for glossy refractions.
+<li> <b>refr_interpolate</b> Interpolation (smoothing) of the glossy refractions.
+<li> <b>refr_translucency</b> Enables translucency
+<li> <b>refr_trans_color</b> The translucency color
+<li> <b>refr_trans_weight</b> The translucency weight
+<br />
+<li> <b>anisotropy</b> Anisotropy. 1.0 = Isotropic.
+<li> <b>anisotropy_rotation</b> The rotation of the anisotropy direction.
+<li> <b>anisotropy_channel</b> The coordinate space to derive anisotropy direction from.
+<br />
+<li> <b>brdf_fresnel</b> When on, uses the Fresnel equation (based on IOR) for the reflectivity curve, 
+       when off, uses the &quot;user defined&quot; settings below.
+<li> <b>brdf_0_degree_refl</b> The user defined reflectivity curve value for surfaces facing the viewer.
+<li> <b>brdf_90_degree_refl</b> The user defined reflectivity curve value for grazing surfaces. 
+<li> <b>brdf_curve</b> The user defined reflectivity curve shape.
+<li> <b>brdf_conserve_energy</b> When on, makes sure that energy is conserved. Keep this on!
+<br />
+<li> <b>intr_grid_density</b> Interpolation grid density.
+<li> <b>intr_refl_samples</b> Number of interpolation samples for reflections.
+<li> <b>intr_refl_ddist_on</b> Enable &quot;Detail Distance&quot;
+<li> <b>intr_refl_ddist</b> The detail distance. 
+<li> <b>intr_refr_samples</b> Number of interpolation samples for refraction.
+<li> <b>single_env_sample</b> Do only a single environment sample even if multiple 
+       reflectivity rays are traced. Used together with <i>mia_envblur</i>.
+<br />
+<li> <b>refl_falloff_on</b>    Enable distance falloff for reflections
+<li> <b>refl_falloff_dist</b>  The distance at which no reflections are seen.
+<li> <b>refl_falloff_color_on</b> Enable the falloff color. When off, falls of to the environment color.
+<li> <b>refl_falloff_color</b> The falloff color when above is on.
+<li> <b>refl_depth</b> The trace depth for reflections. 
+<li> <b>refl_cutoff</b> The importance cutoff for reflections. 
+<br />
+<li> <b>refr_falloff_on</b>    Enable distance falloff for refractions (transparency).
+<li> <b>refr_falloff_dist</b>  The distance at where no transparency is seen <em>or</em> when the falloff &quot;color&quot; is reached.
+<li> <b>refr_falloff_color_on</b> When off, reflections fall off to black (total absorption). When on, falls off to the given color tint.
+<li> <b>refr_falloff_color</b> The color tintint for reflections per distance travelled in the medium.
+<li> <b>refr_depth</b>  The trace depth for refractions. 
+<li> <b>refr_cutoff</b> The importance cutoff for refractions.
+<br />
+<li> <b>indirect_multiplier</b> The weighting of indirect illumination (FG, GI, Caustics)
+<li> <b>fg_quality</b> The quality of FG
+<li> <b>fg_quality_w</b> The weighting of above parameter (used for texture mapping).
+<br />
+<li> <b>ao_on</b> Enable Ambient Occlusion (AO).
+<li> <b>ao_samples</b> Number of AO probe rays.
+<li> <b>ao_distance</b> The maximum distance to look for occlusion. Shorter is faster.
+<li> <b>ao_dark</b> The &quot;shadow color&quot; of the AO
+<li> <b>ao_ambient</b> The &quot;additional light&quot; for the AO.
+<li> <b>ao_do_details</b> Indirect illumination detail enhancement mode. 1=using AO, 2=with color bleed.
+<br />
+<li> <b>thin_walled</b>    Treat surfaces as thin wafers of material, rather than the boundaries of solids.
+<li> <b>no_visible_area_hl</b> Disables traditional &quot;highlights&quot; for visible area lights.
+<li> <b>skip_inside_refl</b> Skips weak reflections on inside of glass.
+<li> <b>do_refractive_caustics</b> Do refractive caustics, rather than transparent shadows. Only when Caustics mode is on.
+<li> <b>backface_cull</b> Make surfaces invisible (to the camera only) from their back side.
+<li> <b>propagate_alpha</b> Transparent surfaces propagate the alpha channel value of what is behind them.
+<li> <b>hl_vs_refl_balance</b> The relative intensity of &quot;highlights&quot; to reflections.
+<li> <b>cutout_opacity</b> The overall opacity. Used for stencil/cut-out effects.
+<li> <b>additional_color</b> An additional color simply added to the other shading.
+<li> <b>bump</b> A shader used for perturbing the normal. 
+<li> <b>no_diffuse_bump</b> Disables bump mapping for the diffuse shading.
+<li> <b>mode</b> The light list mode.
+<li> <b>lights</b> The lights list itself.
+<br />
+<li> [+] <b>bump_mode</b> Defines the mode of the new bump inputs. If zero, uses the compatible &quot;bump&quot; above.
+<li> [+] <b>overall_bump</b> Bump that always affects everything.
+<li> [+] <b>standard_bump</b> General bump. Does not affect diffuse when <b>no_diffuse_bump</b> is on.
+<li> [+] <b>multiple_outputs</b> When on, activates the multiple outputs. When off, only writes to &quot;result&quot;.
+</ul>
+
+<p>
+<a name="Detailed_Parameters"></a>
+<p>
+<h2 id="Detailed_Description_of_Material_Parameters">Detailed Description of Material Parameters</h2>
+<p>
+<h3 id="Diffuse">Diffuse</h3>
+<p>
+<b>diffuse_weight</b> sets the desired level (and <b>diffuse</b> the color) of the
+diffuse reflectivity. Since the material is energy conserving, the
+<em>actual</em> diffuse level used depends on the reflectivity 
+and transparency as discussed above.
+<p>
+The diffuse component uses the Oren-Nayar shading model. 
+When <b>diffuse_roughness</b> is 0.0 this is identical to classical Lambertian shading,
+but with higher values the surface gets a more &quot;powdery&quot; look:
+<div class="pic">
+<img width="100%" src="images/roughness.jpg" alt="Roughness 0.0 (left), 0.5 (middle) and 1.0 (right)"><br />Roughness 0.0 (left), 0.5 (middle) and 1.0 (right)
+</div>
+<p>
+<h3 id="Reflections">Reflections</h3>
+<p>
+<h4 id="Basic_Features">Basic Features</h4>
+<p>
+The <b>reflectivity</b> and <b>refl_color</b> together define level of reflections as well 
+as the intensity of the traditional &quot;highlight&quot; 
+(also known as &quot;specular highlight&quot;). 
+<p>
+This value is the <em>maximum</em> value - the <em>actual</em> value also 
+depends on the angle of the surface and come from the BRDF curve. 
+This curve (described in more detail on page <a href="arch_mtl.html#Brdf">Brdf</a>) allows
+one to define a <b>brdf_0_degree_refl</b> (for surfaces facing the view) and 
+<b>brdf_90_degree_refl</b> (for surfaces perpendicular to the view).
+<div class="pic">
+<img width="100%" src="images/refl-1.jpg" alt="No reflectivity (left), angle dependent (center), constant (right)"><br />No reflectivity (left), angle dependent (center), constant (right)
+</div>
+<br />
+<ul>
+
+<li> The left cup shows no reflectivity at all and a purely diffuse material.
+<li> The center cup shows a <b>brdf_0_degree_refl</b> of 0.1 and a <b>brdf_90_degree_refl</b> of 1.0.
+<li> The right cup has a both a <b>brdf_0_degree_refl</b> and <b>brdf_90_degree_refl</b> of 0.9, i.e. 
+      constant reflectivity across the surface.
+</ul>
+
+<p>
+Note how the high reflectivity automatically &quot;subtracts&quot; from the 
+white diffuse color. If this didn't happen, the material would become
+unrealistically over-bright, and would break the laws of physics
+<a href="#Foot6" title="See page Energy Conservation."><sup>6</sup></a>.
+<p>
+The <b>refl_gloss</b> parameter defines the surface &quot;glossiness&quot;, ranging
+from 1.0 (a perfect mirror) to 0.0 (a diffusely reflective surface):
+<div class="pic">
+<img width="100%" src="images/refl-2.jpg" alt="Glossiness of 1.0 (left), 0.5 (center) and 0.25 (right)"><br />Glossiness of 1.0 (left), 0.5 (center) and 0.25 (right)
+</div>
+<p>
+The <b>refl_samples</b> parameters defines the maximum<a href="#Foot7" title="The actual number is adaptive and depends on reflectivity, ray importance, and many other factors."><sup>7</sup></a>
+number of samples (rays) are shot to create the glossy reflections. 
+Higher values renders slower but create a smoother result. 
+Lower values render faster but create a grainier result. 
+Generally 32 is enough for most cases.
+<p>
+There are two special cases:
+<br />
+<ul>
+
+<li> Since a <b>refl_gloss</b> value of 1.0 equals a &quot;perfect mirror&quot; it 
+      is meaningless to shoot multiple rays for this case, hence only
+      one reflection ray is shot.
+<li> If the <b>refl_samples</b> value is set to 0, the reflections will
+      be &quot;perfect mirror&quot; (and only one ray shot) <em>regardless</em>
+      of the actual value of <b>refl_gloss</b> . This can be used to boost
+      performance for surfaces with very weak reflections. The
+      highlight still obeys the glossiness value.
+</ul>
+
+<p>
+Metallic objects actually influence the color of their reflection
+whereas other materials do not. For example, a gold bar will have 
+gold colored reflections, whereas a red glass orb does not have red
+reflections. This is supported through the <b>refl_is_metal</b> option.
+<br />
+<ul>
+
+<li> When <em>off</em>, the <b>refl_color</b> parameter defines the color and <b>reflectivity</b> parameter (together with the 
+BRDF settings) the intensity and colors of reflections.
+<li> When <em>on</em>, the <b>diffuse</b> parameter defines the color of reflections, and <b>reflectivity</b> parameter
+      sets the &quot;weight&quot; between diffuse reflections and glossy (metallic) 
+      reflections.
+</ul>
+
+<div class="pic">
+<img width="100%" src="images/refl-5.jpg" alt="No metal reflections (left), Metal reflections (center), Metal mixed with diffuse (right)"><br />No metal reflections (left), Metal reflections (center), Metal mixed with diffuse (right)
+</div>
+<p>
+The left image shows non-metallic reflections (<b>refl_is_metal</b> is off). One
+can see reflections clearly contain the color of the objects they reflect
+and are not influenced by the color of the materials.
+<p>
+The center image uses metallic reflections (<b>refl_is_metal</b> is on). Now the
+color of reflections are influenced by the color of the material.
+The right image shows a variant of this with the <b>reflectivity</b> at 0.5, creating
+a 50:50 mix between colored reflections and diffuse reflections.
+<p>
+<h4 id="Performance_Features">Performance Features</h4>
+<p>
+Glossy reflections need to trace multiple rays to yield a smooth
+result, which can become a performance issue. For this reason
+there are a couple of special features designed to enhance their
+performance.
+<p>
+The first of those features is the <em>interpolation</em>. By turning
+<b>refl_interpolate</b> on, a smoothing algorithm allows rays to be re-used and
+smoothed<a href="#Foot8" title="The technique works best on flat surfaces."><sup>8</sup></a>.
+The result is faster and smoother glossy reflections at the 
+expense of accuracy. Interpolation is explained in more detail on page 
+<a href="arch_mtl.html#Interpolation">Interpolation</a>.
+<p>
+For highly reflective surfaces it is clear that true reflection rays
+are needed. However, for less reflective surfaces (where it is less
+&quot;obvious&quot; that the surface is really reflecting anything) there
+exists a performance-enhancing shortcut, the <b>refl_hl_only</b> switch.
+<p>
+When <b>refl_hl_only</b> is <em>on</em>, no actual reflection rays are traced. Instead
+only the &quot;highlights&quot; are shown, as well as soft reflections 
+<em>emulated</em> with the help of using Final Gathering<a href="#Foot9" title="If Final Gathering is not enabled, this mode simply shows the highlights and attempts no emulation of reflections."><sup>9</sup></a>.
+<p>
+The <b>refl_hl_only</b> mode takes <em>no</em> additional render time 
+compared to a non-glossy (diffuse) surface, yet can yield surprisingly 
+convincing results. 
+While it may not be completely convincing for &quot;hero&quot; objects
+in a scene it can work very well for less essential scene elements.
+It tends to work best on materials with weak reflections or 
+<em>extremely</em> glossy (blurred) reflections:
+<div class="pic">
+<img width="100%" src="images/refl-8.jpg" alt="The left two cups use real reflections, those on the right use <b>refl_hl_only</b> "><br />The left two cups use real reflections, those on the right use <b>refl_hl_only</b> 
+</div>
+<p>
+While the two cups on the left are undoubtedly more convincing than those
+on the right, the fact that the right hand cups have no additional 
+render time compared to a completely non-reflective surface makes 
+this mode very interesting. The emulated reflections still pull in a 
+<em>directional color bleed</em> such that the bottom side of the cup is
+influenced by the color of the wooden floor just as if it was truly
+reflective.
+<p>
+<h3 id="Refractions">Refractions</h3>
+<p>
+The <b>transparency</b> parameter defines the level of refractions and 
+<b>refr_color</b> defines the color. While this color can be used to
+create &quot;colored glass&quot;, there is a slightly more accurate method
+to do this described on page <a href="arch_mtl.html#Colored_Glass">Colored Glass</a>.
+<p>
+Due to the materials energy conserving nature (see page 
+<a href="arch_mtl.html#Energy_Conservation">Energy Conservation</a>) the value set in the <b>transparency</b> parameter is 
+the <em>maximum</em> value - the <em>actual</em> value depends on the 
+reflectivity as well as the BRDF curve. 
+<p>
+The <b>refr_ior</b> defines the Index of Refraction, which is a measurement
+of how much a ray of light &quot;bends&quot; when entering a material. Which
+direction light bends depends on if it is <em>entering</em> or
+<em>exiting</em> the object. The <i>mia_material</i> use the direction of the
+surface normal as the primary cue for figuring out whether it is
+entering or exiting. It is therefore <em>important</em> to model
+transparent refractive objects with the surface normal pointing
+in the proper direction.
+<p>
+The IOR can also be used to define the BRDF curve, which is 
+what happens in the class of transparent materials known as 
+&quot;dielectric&quot; materials, and is illustrated here:
+<div class="pic">
+<img width="100%" src="images/refr-6.jpg" alt="Index of refraction 1.0 (left), 1.2 (center) and 1.5 (right)"><br />Index of refraction 1.0 (left), 1.2 (center) and 1.5 (right)
+</div>
+<p>
+Note how the leftmost cup looks completely unrealistic and
+is almost invisible. Because an IOR of 1.0 (which equals 
+that of air) is impossible, we get no change in reflectivity 
+across the material and hence perceive no &quot;edges&quot; or change 
+of any kind. Whereas the middle and rightmost cups have a realistic 
+change in reflectivity guided by the IOR.
+<p>
+One is however not forced to base the reflectivity on the IOR
+but can instead use the BRDF mode to set it manually:
+<div class="pic">
+<img width="100%" src="images/refr.jpg" alt="Different types of transparency"><br />Different types of transparency
+</div>
+<p>
+The left cup again acquires it's curve from the index of
+refraction. The center cup has a manually defined curve, which has 
+been set to a <b>brdf_90_degree_refl</b> of 1.0 and a <b>brdf_0_degree_refl</b> of 0.2, which looks a bit 
+more like metallized glass. The rightmost cup uses the same
+BRDF curve, but instead is set to &quot;thin walled&quot; transparency
+(see page <a href="arch_mtl.html#Thin_Walled">Thin-Walled</a>). Clearly, this method is the better
+way to make &quot;non-refractive&quot; objects compared to simply setting
+<b>refr_ior</b> to 1.0 as we tried above.
+<p>
+As with reflections, the <b>refr_gloss</b> parameter defines how sharp or blurry
+the refractions/transparency are, ranging from a 1.0 (a completely clear 
+transparency) to 0.0 (an extremely diffuse transparency):
+<div class="pic">
+<img width="100%" src="images/refr2.jpg" alt="A <b>refr_gloss</b> of 1.0 (left), 0.5 (center) and 0.25 (right)"><br />A <b>refr_gloss</b> of 1.0 (left), 0.5 (center) and 0.25 (right)
+</div>
+<p>
+Just as with the glossy reflections, the glossy transparency has a 
+<b>refr_interpolate</b> switch, allowing faster, smoother, but less accurate
+glossy transparency. Interpolation is described on page <a href="arch_mtl.html#Interpolation">Interpolation</a>.
+<p>
+<a name="Translucency"></a>
+<h3 id="Translucency">Translucency</h3>
+<p>
+Translucency is handled as a special case of transparency, i.e. 
+to use translucency there must first exist some level of transparency, 
+and the <b>refr_trans_w</b> parameter decides how much of this is used as 
+transparency and how much is translucency:
+<div class="pic">
+<img width="100%" src="images/trans3.jpg" alt="A <b>transparency</b> of 0.75 and a <b>refr_trans_w</b> of 0.0 (left), 0.5 (center) and 1.0 (right)"><br />A <b>transparency</b> of 0.75 and a <b>refr_trans_w</b> of 0.0 (left), 0.5 (center) and 1.0 (right)
+</div>
+<br />
+<ul>
+
+<li> If <b>refr_trans_w</b> is 0.0, all of the <b>transparency</b> is used for transparency.
+<li> If <b>refr_trans_w</b> is 0.5, half of the <b>transparency</b> is used for transparency and half is used for translucency.
+<li> If <b>refr_trans_w</b> is 1.0, all of the <b>transparency</b> is used for translucency and there is <em>no</em> actual transparency.
+</ul>
+
+<p>
+The translucency is primarily intended to be used in &quot;thin walled&quot; mode
+(as in the example above) to model things like curtains, rice paper, or
+such effects. In &quot;thin walled&quot; mode it simply allows the shading of the 
+reverse side of the object to &quot;bleed through&quot;.
+<p>
+The shader also operates in &quot;Solid&quot; mode, but the 
+implementation of translucency in the <i>mia_material</i> is a simplification concerned 
+solely with the transport of light from the back of an object to it's front 
+faces and is not &quot;true&quot; SSS (sub surface scattering). An &quot;SSS-like&quot; effect 
+can be generated by using glossy transparency coupled with translucency 
+but it is neither as fast nor as powerful as the dedicated SSS shaders.
+<div class="pic">
+<img width="100%" src="images/trans2.jpg" alt="Solid translucency w. <b>refr_trans_w</b> of 0.0 (left), 0.5 (center) and 1.0 (right)"><br />Solid translucency w. <b>refr_trans_w</b> of 0.0 (left), 0.5 (center) and 1.0 (right)
+</div>
+<p>
+<a name="Anisotropy"></a>
+<h3 id="Anisotropy">Anisotropy</h3>
+<p>
+Anisotropic reflections and refractions can be created using
+the <b>anisotropy</b> parameter. The parameter sets the ratio between the
+&quot;width&quot; and the &quot;height&quot; of the highlights, hence when <b>anisotropy</b>
+is 1.0 there is no anisotropy, i.e. the effect is disabled.
+<p>
+For other values of <b>anisotropy</b> (above and below 1.0 are both valid) 
+the &quot;shape&quot; of the highlight (as well as the appearance of 
+reflections) change.
+<div class="pic">
+<img width="100%" src="images/aniso0.jpg" alt="<b>anisotropy</b> values of 1.0 (left), 4.0 (center) and 8.0 (right)"><br /><b>anisotropy</b> values of 1.0 (left), 4.0 (center) and 8.0 (right)
+</div>
+<p>
+The anisotropy can be rotated by using the <b>anisotropy_rotation</b> parameter. 
+The value 0.0 is un-rotated, and the value 1.0 is one full revolution
+(i.e. 360 degrees). This is to aid using a texture map to steer the
+angle:
+<div class="pic">
+<img width="100%" src="images/aniso1.jpg" alt="<b>anisotropy_rotation</b> values of 0.0 (left), 0.25 (center) and textured (right)"><br /><b>anisotropy_rotation</b> values of 0.0 (left), 0.25 (center) and textured (right)
+</div>
+<p>
+<em>Note:</em> When using a textured <b>anisotropy_rotation</b> it is important 
+that this texture is <em>not</em> anti-aliased (filtered). 
+Otherwise the anti-aliased pixels will cause local vortices in the
+anisotropy that appear as seam artifacts.
+<p>
+For values of 0 or above, the space which defines the &quot;stretch directions&quot; 
+of the highlights are derived from the texture space set by
+<b>anisotropy_channel</b><a href="#Foot10" title="Note that deriving the anisotropy from texture space only creates one space per triangle and may cause visible seams between triangles."><sup>10</sup></a>.
+<p>
+<b>anisotropy_channel</b> can also have the following &quot;special&quot; values:
+<br />
+<ul>
+
+<li> -1: the base rotation follows the local object coordinate system.
+<li> -2: the base rotation follows the bump basis vectors
+<li> -3: the base rotation follows the surface derivatives
+<li> -4: the base rotation follows a vector placed in <code>state>tex</code> prior to calling <i>mia_material</i>
+</ul>
+
+<p>
+See also &quot;brushed metal&quot; on page <a href="arch_mtl.html#Brushed_Metals">Brushed Metals</a> in the tips section.
+<p>
+<a name="Brdf"></a>
+<h3 id="BRDF">BRDF</h3>
+<p>
+As explained in the introduction on page <a href="arch_mtl.html#Angle">Angle</a> the materials
+reflectivity is ultimately guided by the <em>incident angle</em> from 
+which it is viewed.
+<div class="pic">
+<img width="100%" src="images/brdf.jpg" alt="0 degree (green) and 90 degree (red) view angles"><br />0 degree (green) and 90 degree (red) view angles
+</div>
+<p>
+There are two modes to define this BRDF curve: 
+<p>
+The first mode is &quot;by IOR&quot;, i.e. when <b>brdf_fresnel</b> is <em>on</em>.
+How the reflectivity depends on the angle is then solely guided by 
+the materials IOR.
+This is known as <em>Fresnel reflections</em> and is the behavior of
+most dielectric materials such as water, glass, etc.
+<p>
+The second mode is the manual mode, when <b>brdf_fresnel</b> is <em>off</em>.
+In this mode the <b>brdf_0_degree_refl</b> parameter defines the reflectivity for
+surfaces directly facing the viewer (or incident ray), and <b>brdf_90_degree_refl</b>
+defines the reflectivity of surfaces perpendicular to the viewer.
+The <b>brdf_curve</b> parameter defines the falloff of this curve.
+<p>
+This mode is used for most hybrid materials or for metals. Most 
+material exhibit strong reflections at grazing angles and hence
+the <b>brdf_90_degree_refl</b> parameter can generally be kept at 1.0 (and using the
+<b>reflectivity</b> parameter to guide the overall reflectivity instead).
+Metals tend to be fairly uniformly reflective and the <b>brdf_0_degree_refl</b>
+value is high (0.8 to 1.0) but many other layered materials, such
+as linoleum, lacquered wood, etc. has lower <b>brdf_0_degree_refl</b> values (0.1 - 0.3).
+<p>
+See the tips on page <a href="arch_mtl.html#Material_Tips">Material Tips</a> for some guidelines.
+<p>
+<h3 id="Special_Effects">Special Effects</h3>
+<a name="Ambient_Occlusion"></a>
+<h4 id="Built_in_Ambient_Occlusion">Built-in Ambient Occlusion</h4>
+<p>
+The built in Ambient Occlusion (henceforth shortened to &quot;AO&quot;) can
+be used in two ways. Either it is used to enhance details and &quot;contact 
+shadows&quot; in indirect illumination (in which case there must first 
+<em>exist</em> some form of indirect illumination in the first place), 
+or it is used together with a specified &quot;ambient light&quot; in a more 
+traditional manner. Hence, if neither indirect light exists, nor any
+&quot;ambient light&quot; is specified, <em>the AO will have no effect</em>
+<a href="#Foot11" title="Sometimes people use AO as a general multiplier to all diffuse light. This has the distinct drawback of affecting even brightly directly lit areas with &quot;AO shadows&quot;, which can look wrong. This use is not covered by the built in AO shader because it is trivially achieved by simply applying the mib_amb_occlusion shader to the diffuse color of the material and putting the materials original color into it's Bright parameter."><sup>11</sup></a>.
+<p>
+The <b>ao_samples</b> sets the number of samples (rays) shot for creating 
+the AO. Higher value is smoother but slower, lower values faster but
+grainier. 16 is the default and 64 covers most situations.
+<p>
+The <b>ao_distance</b> parameter defines the radius within which occluding objects
+are found. Smaller values restrict the AO effect only to small crevices
+but are much faster to render. Larger values cover larger areas but
+render slower. The following images illustrate the raw AO contribution
+with two different distances:
+<div class="pic">
+<img width="80%" src="images/ao2.jpg" alt="Larger distance"><br />Larger distance<br /><img width="80%" src="images/ao3.jpg" alt="Smaller distance"><br />Smaller distance<br /></div>
+<p>
+As mentioned in the introduction on page <a href="arch_mtl.html#Ambient_Occlusion_Effect">Ambient Occlusion Effect</a>
+the AO can be used for &quot;detail enhancement&quot; of indirect illumination.
+This mode is enabled by setting <b>ao_do_details</b> to 1.
+<p>
+This mode is used to apply short distance AO multiplying it with 
+the existing <em>indirect illumination</em> (Final Gathering or 
+GI/photons), bringing out small details. 
+<p>
+Study this helicopter almost exclusively lit by indirect light:
+<div class="pic">
+<img width="80%" src="images/ao4-off.jpg" alt="Without AO"><br />Without AO<br /><img width="80%" src="images/ao4-on.jpg" alt="With AO"><br />With AO<br /></div>
+<p>
+Note how the helicopter does not feel &quot;grounded&quot; in the left image
+and the shadows under the landing skids are far too vague. The right
+image uses AO to &quot;punch out&quot; the details and the contact shadows.
+<p>
+<a name="AO_with_bleed"></a>
+One can also set <b>ao_do_details</b> to 2, which enables a more sophisticated
+AO mode introduced in mental ray 3.6.
+Instead of doing simple <em>occlusion</em>, which can only 
+add &quot;darkness&quot; of varying degree, the shader will actually look
+at the color of the surrounding objects, and use that color rather
+than &quot;darkness&quot;. Since this involves shading each of the points
+hit, this is not as fast as pure AO, but it has the additional 
+effect of resolving both <em>bright</em> and <em>dark</em> details.
+<div class="pic">
+<img width="80%" src="images/ao-no-bleed.jpg" alt="<b>ao_do_details</b> = 1"><br /><b>ao_do_details</b> = 1<br /><img width="80%" src="images/ao-with-bleed.jpg" alt="<b>ao_do_details</b> = 2"><br /><b>ao_do_details</b> = 2<br /></div>
+<p>
+The image on the left illustrates the problem with the traditional
+AO; it applies to all indirect illumination and always makes it 
+<em>darker</em>. It is most noticeable on the glowing sphere (which
+has a dark spot under it) but can also be perceived on the floor 
+in front of the cube which is suspiciously dark, even though the
+cube is strongly lit on the front, as well as between the
+legs of the horse and the underside of the red sphere.
+<p>
+In contrast, the image on the right is using <b>ao_do_details</b>=2 for all
+materials, and now the floor is correctly lit by the glowing ball,
+there is a hint of white bounce-light on the floor from the cube, 
+there is light between the legs of the horse, and on the underside
+of the red ball.
+<p>
+If you find that using AO creates a &quot;dirty&quot; look with excessive
+darkening in corners, or dark rims around self-illuminated objects,
+try to set <b>ao_do_details</b> to 2 for a more accurate result.
+<p>
+The <b>ao_dark</b> parameter sets the &quot;darkness&quot; of the AO shadows. 
+It is used as the multiplier value for completely occluded surfaces.
+In practice this means: A black color will make the AO effect very dark,
+a middle gray color will make the effect less noticeable (brighter) etc.
+When the new <b>ao_do_details</b> mode 2 is used, it instead sets the &quot;blend&quot; 
+between the color picked up from nearby objects and &quot;darkness&quot;.
+The blend is:
+<p>
+<samp>(1-<b>ao_dark</b>)&nbsp;*&nbsp;(object&nbsp;colors)&nbsp;+&nbsp;black&nbsp;*&nbsp;<b>ao_dark</b></samp>.
+.
+<p>
+The <b>ao_ambient</b> parameter is used for doing more &quot;traditional&quot; AO,
+i.e. supplying the imagined &quot;ever present ambient light&quot; that is
+then attenuated by the AO effect to create shadows. 
+<p>
+While &quot;traditional AO&quot; is generally used when rendering 
+<em>without</em> other indirect light, it can also be combined 
+with existing indirect light. 
+One needs to keep in mind that this magical &quot;ever present ambient 
+light&quot; is inherently non-physical, but may perhaps help lighten 
+some troublesome dark corners.
+<p>
+<h3 id="Advanced_Rendering_Options">Advanced Rendering Options</h3>
+<p>
+<h4 id="Reflection_Optimization_Settings">Reflection Optimization Settings</h4>
+<p>
+These parameters define some performance boosting options for
+reflections.
+<p>
+<b>refl_falloff_dist</b> allows limiting reflections to a certain distance,
+which both speeds up rendering as well as avoiding pulling in distant
+objects into extremely glossy reflections.
+<p>
+If <b>refl_falloff_color</b> is enabled and used, reflections will fade to this
+color. If it is not enabled, reflections will fade to the environment
+color. The former tends to be more useful for indoor scenes, the 
+latter for outdoor scenes. 
+<div class="pic">
+<img width="100%" src="images/refl-9.jpg" alt="Full reflections (left), fading over 100mm (center) or 25mm (right)"><br />Full reflections (left), fading over 100mm (center) or 25mm (right)
+</div>
+<p>
+Each material can locally set a maximum trace depth using the 
+<b>refl_depth</b> parameter. When this trace depth is reached the material
+will behave as if the <b>refl_hl_only</b> switch was enabled, i.e. only
+show highlights and &quot;emulated&quot; reflections. If <b>refl_depth</b> is
+zero, the global trace depth is used.
+<p>
+<b>refl_cutoff</b> is a threshold at which reflections are rejected (not
+traced). It's a relative value, i.e. the default of 0.01 means that 
+rays that contribute less than 1 to the final pixel are ignored.
+<p>
+<h4 id="Refraction_Optimization_Settings">Refraction Optimization Settings</h4>
+<p>
+The optimization settings for refractions (transparency) are nearly 
+identical to those for reflections. The exception is that of 
+<b>refr_falloff_color</b> which behaves differently.
+<br />
+<ul>
+
+<li> When <b>refr_falloff_dist</b> is used, and <b>refr_falloff_color</b> is <em>not</em> used,
+transparency rays will fade to <em>black</em>. This is like smoked
+glass or highly absorbent materials. Transparency will just 
+completely <em>stop</em> at a certain distance. This has the same
+performance advantage as using the <b>refl_falloff_dist</b> for reflections, 
+i.e. tracing shorter rays are much faster.
+<br />
+<li> However, when <b>refr_falloff_color</b> <em>is</em> used, it works differently.
+The material will then make physically correct absorption.
+Exactly at the distance given by <b>refr_falloff_dist</b> will the
+refractions have the color given by <b>refr_falloff_color</b> - but the 
+rays are <em>not</em> limited in reach. At twice the distance,
+the influence of <b>refr_falloff_color</b> is double, at half the distance
+half, etc. 
+</ul>
+
+<div class="pic">
+<img width="100%" src="images/refr3.jpg" alt="No limit (left), fade to black (center), fade to blue (right)"><br />No limit (left), fade to black (center), fade to blue (right)
+</div>
+<p>
+The leftmost cup has no fading. The center cup has <b>refr_falloff_color</b> off, 
+and hence fades to black, which also includes the same performance 
+benefits of limiting the trace distance as when used for reflections.
+<p>
+The rightmost cup, however, fades to a <em>blue</em> color. This causes
+proper exponential attenuation in the material, such that the thicker 
+the material, the deeper the color.  See page <a href="arch_mtl.html#Colored_Glass">Colored Glass</a> 
+for a discussion about realistic colored glass.
+<p>
+<b>Note:</b> To render proper shadows when using <b>refr_falloff_dist</b> one
+must use ray traced shadows, and the shadow mode must be set to <em>segment</em>. 
+See the mental ray manual on shadow modes.
+<p>
+Each material can locally set a maximum trace depth using the 
+<b>refl_depth</b> parameter. When this trace depth is reached, the material
+returns a <em>black</em> refraction. Most other transparency/glass shaders 
+return the environment, which can create very odd results when rendering
+an indoor rendering with an extremely bright outdoor environment, and
+bright areas appear in glass objects in dark cupboards that suddenly
+refract some sky. If <b>refl_depth</b> is zero, the global trace depth is 
+used, and the environment <em>is</em> returned, rather than black.
+<p>
+<b>refl_cutoff</b> works identical to the reflection case described above.
+<p>
+<h4 id="Options">Options</h4>
+<p>
+The options contain several on/off switches that control some of
+the deepest details of the material:
+<p>
+The <b>thin_walled</b> decides if a material causes refractions (i.e. behaves
+as if it is made of a solid transparent substance) or not (i.e. behaves
+as if made of wafer-thin sheets of a transparent material).
+This topic is discussed in more detail on page <a href="arch_mtl.html#Thin_Walled">Thin-Walled</a>.
+<div class="pic">
+<img width="100%" src="images/refl-6.jpg" alt="Solid (left) and Thin-walled (right)"><br />Solid (left) and Thin-walled (right)
+</div>
+<p>
+The <b>do_refractive_caustics</b> parameter defines how glass behaves when <em>caustics</em>
+are enabled. 
+<p>
+When not rendering caustics, the <i>mia_material</i> uses a shadow shader to
+create transparent shadows. For objects such as window panes this is 
+perfectly adequate, and actually creates a better result than using 
+caustics since the direct light is allowed to pass (more or less) 
+undisturbed through the glass into e.g. a room.
+<p>
+Traditionally, enabling caustics in <em>mental ray</em> cause all 
+materials to stop casting transparent shadows and instead start
+to generate refractive caustics. In most architectural scenes
+this is undesirable; one may very well want a glass decoration on 
+a table to generate caustic effect, but still want the windows
+of the room to let in quite normal direct light.
+This switch makes this possible on the material level.
+<div class="pic">
+<img width="80%" src="images/bottle-shadow.jpg" alt="Using transparent shadows"><br />Using transparent shadows<br /><img width="80%" src="images/bottle-caustic.jpg" alt="Using refractive caustics"><br />Using refractive caustics<br /></div>
+<p>
+The left image shows the result that happen when <b>do_refractive_caustics</b> is off,
+the right the result when it is on. Both modes can be freely mixed
+within the same rendering. Photons are automatically treated 
+accordingly by the built in photon shader, shooting straight through
+as direct light in the former case, and being refracted as caustics
+in the latter.
+<p>
+The <b>backface_cull</b> switch enables a special mode which makes surfaces
+completely invisible to the camera when seen from the reverse side.
+This is useful to create &quot;magic walls&quot; in a room. If all walls are
+created as planes with the normal facing inwards, the <b>backface_cull</b> 
+switch allows the room to be rendered from &quot;outside&quot;. The camera
+will see into the room, but the walls will still &quot;exist&quot; and
+cast shadows, bounce photons, etc. while being magically &quot;see 
+through&quot; when the camera steps outside.
+<div class="pic">
+<img width="80%" src="images/backface-off.jpg" alt="No Back-face Culling"><br />No Back-face Culling<br /><img width="80%" src="images/backface-on.jpg" alt="Back-face Culling on the walls"><br />Back-face Culling on the walls<br /></div>
+<p>
+The <b>propagate_alpha</b> switch defines how transparent objects treats any
+alpha channel information in the background. When on, refractions
+and other transparency effects will propagate the alpha of the 
+background &quot;through&quot; the transparent object. When off, transparent
+objects will have an opaque alpha.
+<p>
+The <b>no_visible_area_hl</b> parameter concerns the behavior of <em>visible</em> area 
+lights. 
+<p>
+Keep in mind that traditional &quot;highlights&quot; (i.e. specular
+effects) is a computer graphics &quot;trick&quot; in place of actually creating
+a glossy reflection of an actual visible light-emitting surface.
+<p>
+However, <em>mental ray</em> area lights can be visible, and when they
+are visible they will reflect in any (glossy) reflective objects. 
+If both the reflection of the visible area light <em>and</em> the
+highlight is rendered, the light is added twice, causing an
+unrealistic brightening effect. This switch (which defaults to on)
+causes visible area lights to loose their &quot;highlights&quot; and instead
+only appear as reflections<a href="#Foot12" title="Naturally this does not apply to the refl_hl_only mode, since it doesn't actually reflect anything."><sup>12</sup></a>.
+<p>
+<b>hl_vs_refl_balance</b> modifies the balance between the intensity of the highlight
+and the intensity of reflections. The default value of 1.0 is the 
+&quot;as close to physically correct as possible&quot; value. This parameter 
+allows tweaking this default value where values above 1.0 makes the
+highlight stronger, and below 1.0 weaker.
+<p>
+A final optimization switch (also on by default) is the 
+<b>skip_inside_refl</b> checkbox.
+Most reflections on the <em>insides</em> of transparent objects are 
+very faint, except in the special case that occurs at certain angles
+known as &quot;Total Internal Reflection&quot; (TIR).
+This switch saves rendering time by ignoring the weak 
+reflections completely but retaining the TIR's.
+<p>
+The <b>indirect_multiplier</b> allows tweaking of how strongly the material responds
+to indirect light, and <b>fg_quality</b> is a local multiplier for the number
+of final gather rays shot by the material. Both default to 1.0 which
+uses the global value.
+<p>
+To aid in mapping textures to <b>fg_quality</b> the additional <b>fg_quality_w</b>
+parameter exists. When zero, <b>fg_quality</b> is the raw quality setting,
+but for a nonzero <b>fg_quality_w</b> the actual quality used is the product
+of the two values, with a minimum of 1.0. This means that with a color
+texture mapped to <b>fg_quality</b> and <b>fg_quality_w</b> set to 5.0, black in the
+texture results in a quality of 1.0 (i.e. the number of final gather rays
+shot is the global default), and white in the texture in a quality of 5.0
+(five times as many rays are shot).
+<p>
+<a name="Interpolation"></a>
+<h3 id="Interpolation">Interpolation</h3>
+<p>
+Glossy reflections and refractions can be <em>interpolated</em>. This 
+means they render faster and become smoother.
+<p>
+Interpolation works by pre-calculating glossy reflection in a grid
+across the image. The number of samples (rays) taken at each point is
+govern by the <b>refl_samples</b> or <b>refr_samples</b> parameters just as in the 
+non-interpolated case. The resolution of this grid is set by the 
+<b>intr_grid_density</b> parameter. 
+<p>
+However, interpolation can cause <em>artifacts</em>. Since it is
+done on a low resolution grid, it can lose details. 
+Since it blends neighbors of this low resolution grid it can cause 
+over-smoothing. For this reason it is primarily useful on flat
+surfaces. Wavy, highly detailed surfaces, or surfaces using bump 
+maps will not work well with interpolation. Also, since the grid
+exists in screen space, animations involving camera motion are not
+recommended since these may cause this grid-nature to become 
+visible.
+<p>
+Valid values for <b>intr_grid_density</b> parameter are:
+
+<ul>
+
+<li> 0 = grid resolution is double that of the rendering
+<li> 1 = grid resolution is same as that of the rendering
+<li> 2 = grid resolution is half of that of the rendering
+<li> 3 = grid resolution is a third of that of the rendering.
+<li> 4 = grid resolution is a fourth of that of the rendering.
+<li> 5 = grid resolution is a fifth of that of the rendering.
+</ul>
+
+<p>
+Within the grid data is stored and shared across the points. 
+Lower grid resolutions is faster but lose more detail information.
+Both reflection and refraction has an <b>intr_refl_samples</b> parameter 
+which defines how many stored grid points (in an N by N group around 
+the currently rendered point) is looked up to smooth out the 
+glossiness. The default is 2, and higher values will &quot;smear&quot; 
+the glossiness more, but are hence prone to more oversmoothing artifacts.
+<div class="pic">
+<img width="100%" src="images/refl-11.jpg" alt="No interpolation (left), looking up 2 points (center) and 4 points (right)"><br />No interpolation (left), looking up 2 points (center) and 4 points (right)
+</div>
+<p>
+The reflection of the left cup in the floor is not using interpolation,
+and one can perceive some grain (here intentionally exaggerated). 
+The floor tiles under the other two cup uses a half resolution 
+interpolation with 2 (center) and 4 (right) point lookup respectively.
+<p>
+This image also illustrates one of the consequences of using 
+interpolation: The foot of the left cup, which is near the floor,
+is reflected quite sharply, and only parts of the cup far from the
+floor are blurry. Whereas the interpolated reflections on the 
+right cups have a certain &quot;base level&quot; of blurriness (due to the
+smoothing of interpolation) which makes even the closest parts
+somewhat blurry. In most scenes with weak glossy reflections this
+discrepancy will never be noticed, but in other cases this can make 
+things like legs of tables and chairs feel &quot;unconnected&quot; with 
+a glossy floor, if the reflectivity is high.
+<p>
+To solve this the <b>intr_refl_ddist</b> parameter exists. It allows a second
+set of detail rays to be traced to create a &quot;clearer&quot; version of
+objects within that radius.
+<div class="pic">
+<img width="100%" src="images/refl-12.jpg" alt="No detail distance (left), 25mm detail distance (center) and 150mm detail distance (right)"><br />No detail distance (left), 25mm detail distance (center) and 150mm detail distance (right)
+</div>
+<p>
+All three floor tiles use interpolation but the rightmost 
+two use different distances for the &quot;detail distance&quot;.
+<p>
+This also allows an interesting &quot;trick&quot;: Set the <b>refl_samples</b> to 0,
+which renders reflections as if they were mirror-perfect but use 
+the interpolation to introduce blur into this &quot;perfect&quot; reflection
+(and perhaps use the <b>intr_refl_ddist</b> to make nearby parts less blurry).
+This is an extremely fast way to obtain a glossy reflection.
+<div class="pic">
+<img width="100%" src="images/refl-13.jpg" alt="No detail distance (left), with detail distance (right)"><br />No detail distance (left), with detail distance (right)
+</div>
+<p>
+The above floor tiles are rendered with mirror reflections, and the
+&quot;blurriness&quot; comes solely from the interpolation. This renders as 
+fast (or faster!) than pure mirror reflections, yet gives a satisfying
+illusion of true glossy reflections, especially when utilizing the
+<b>intr_refl_ddist</b> as on the right.
+<p>
+<a name="Special_Maps"></a>
+<h3 id="Special_Maps">Special Maps</h3>
+<p>
+The <i>mia_material</i> also supports the following special inputs:
+<p>
+<a name="Bump"></a>
+<h4 id="Bump_Mapping">Bump Mapping</h4>
+<p>
+The <b>bump</b> parameter accepts a shader that perturbs the normal for bump mapping.
+This parameter is only used it the new <b>bump_mode</b> parameter is <em>zero</em>.
+<p>
+When <b>no_diffuse_bump</b> is <em>off</em>, the bumps apply to all 
+shading components (diffuse, highlights, reflections, refractions... ). 
+When it is <em>on</em>, bumps are applied to all component except the 
+diffuse. This means bumps are seen in reflections, highlights, etc. 
+but the diffuse shading shows no bumps. It is as if the materials
+diffuse surface is smooth, but covered by a bumpy lacquer coating.
+<div class="pic">
+<img width="100%" src="images/bumps.jpg" alt="<b>no_diffuse_bump</b> is off (left) and on (right)"><br /><b>no_diffuse_bump</b> is off (left) and on (right)
+</div>
+<p>
+In <i>mia_material_x</i> there are also three new parameters related to bump mapping:
+two vector bump inputs, <b>overall_bump</b> and <b>standard_bump</b>, and a <b>bump_mode</b> parameter 
+defining the coordinate-space of those vectors. The shaders put into <b>overall_bump</b>
+or <b>standard_bump</b> should return a <em>vector</em>, but it is also legal for those
+shaders to modify the normal vector themselves and return (0,0,0).
+<p>
+<b>overall_bump</b> defines an overall bump that <em>always applies</em> both to the diffuse 
+and the specular component at all times, regardless of the setting of 
+<b>no_diffuse_bump</b> <b>standard_bump</b> is a vector equivalent of the old <b>bump</b> parameter,
+in that
+it applies globally when <b>no_diffuse_bump</b> is <em>off</em>, and only to the 
+specular/reflection &quot;layer&quot; when <b>no_diffuse_bump</b> is <em>on</em>. However,
+the <b>standard_bump</b> is added &quot;on top of&quot; the <b>overall_bump</b> result.
+<p>
+The intended use is to put the <i>mia_roundcorners</i> shader in <b>overall_bump</b>
+and your normal bump shader into <b>standard_bump</b>. This way, the &quot;round corners&quot;
+effect will apply both to the diffuse and specular component irregardless
+of the setting of <b>no_diffuse_bump</b>.
+<p>
+<a name="Bump_Modes"></a>
+The <b>bump_mode</b> parameter defines the coordinate space of the vectors, and 
+if they are additive or not. The following values are legal:
+<ul>
+
+<li> 0: compatible mode. The old <b>bump</b> parameter is used in place of <b>overall_bump</b> and <b>standard_bump</b>.
+<li> 1: &quot;add&quot; mode in &quot;internal&quot; space
+<li> 2: &quot;add&quot; mode in world space
+<li> 3: &quot;add&quot; mode in object space
+<li> 4: &quot;add&quot; mode in camera space
+<li> 5: &quot;set&quot; mode in &quot;internal&quot; space
+<li> 6: &quot;set&quot; mode in world space
+<li> 7: &quot;set&quot; mode in object space
+<li> 8: &quot;set&quot; mode in camera space
+</ul>
+
+<p>
+The &quot;add&quot; modes mean that the vector should contain a <em>normal perturbation</em>, i.e.
+a modification that is &quot;added&quot; to the current normal. Whereas &quot;set&quot; mode means that
+the actual normal is <em>replaced</em> by the incoming vector, interpreted in the
+aforementioned coordinate space.
+<p>
+This new scheme makes the <i>mia_material_x</i> bump mapping compatible with more
+mental ray integrations, as well as allows the round corners to be applied 
+even if <b>no_diffuse_bump</b> is on.
+<p>
+
+<h4 id="Cutout_Opacity_and_Additional_Color">Cutout Opacity and Additional Color</h4>
+<p>
+The <b>cutout_opacity</b> is used to apply an opacity map to completely remove parts
+of objects. A classic example is to map an image of a tree to a flat 
+plane and use opacity to cut away the parts of the tree that are
+not there.
+<div class="pic">
+<img width="100%" src="images/cutout.jpg" alt="Mapping the transparency (left) vs. <b>cutout_opacity</b> (right)"><br />Mapping the transparency (left) vs. <b>cutout_opacity</b> (right)
+</div>
+<p>
+The <b>additional_color</b> is an input to which one can apply any shader. 
+The output of this shader is simply added on top of the shading 
+done by the <i>mia_material</i> and can be used both for &quot;self illumination&quot;
+type effects as well as adding whatever additional shading one 
+may want. 
+<p>
+The material also supports standard <b>displacement</b> and <b>environment</b> 
+shaders. If no <b>environment</b> is supplied, the global camera environment
+is used.
+<p>
+
+<a name="Multiple_Outputs"></a>
+<h3 id="Multiple_Outputs_of_<i>mia_material_x</i>">Multiple Outputs of <i>mia_material_x</i></h3>
+<p>
+<h4 id="Introduction">Introduction</h4>
+<p>
+Here follows a detailed listing of the available outputs
+of <i>mia_material_x</i>:
+<p>
+Most of the outputs follow the pattern of xxx<b>_result</b>, 
+xxx<b>_raw</b> and xxx<b>_level</b>. The &quot;result&quot; is the 
+final contribution, &quot;raw&quot; is the un-scaled contribution, 
+and &quot;level&quot; is the scaling. The &quot;level&quot; is often related
+to an input parameter (or combinations thereof), and has been
+modified to abide by the energy conservation feature of the material.
+<p>
+Unless otherwise noted, it is true that Unless otherwise noted, it is true that <samp>xxx_result&nbsp;=&nbsp;xxx_raw&nbsp;*&nbsp;xxx_level</samp>.
+.
+<div class="pic">
+<img width="100%" src="images/output-types.jpg" alt="The different outputs and their relationship"><br />The different outputs and their relationship
+</div>
+<p>
+Hence the outputs contain some redundancy; if one just wants the
+&quot;current reflections&quot; in a separate channel, use <b>refl_result</b>,
+but if one wants more control over the amount of reflections in post
+production, one can instead use <b>refl_raw</b> and <b>refl_level</b>,
+multiplying them in the compositing phase prior to adding them to the 
+final color.
+<p>
+Be aware, though, that <i>mia_material_x</i> will <em>intentionally</em> sample 
+reflections that has a very low level in the actual rendering phase at low 
+quality (for performance), so doing <em>huge</em> modifications to reflection 
+intensity in post should be avoided.
+<p>
+<h4 id="List_of_All_Outputs">List of All Outputs</h4>
+<p>
+The following outputs exist:
+<br />
+<ul>
+
+<br />
+<li> <b>result</b> is the main, blended output, i.e. the &quot;beauty&quot; pass.
+It is identical to the single output of <i>mia_material</i>. If the &quot;safety&quot;
+parameter <b>multiple_outputs</b> is off,
+<em>no other output except this one is ever written to</em>
+<a href="#Foot13" title="To easier support using mia_material_x in phenomena and other places where formerly mia_material was used, the multiple_outputs parameter exists. If this is set to off, no other parameter than result is written to (leaving the others unmodified and hence undefined). This also makes it safe to supply mia_material_x to parameters of type &quot;shader&quot; which only expect a single color return value."><sup>13</sup></a>.
+<br />
+<li> <b>diffuse_result</b> is the resulting diffuse component after
+lighting, including textures, <b>diffuse_raw</b> is the diffuse
+lighting itself, without textures, and <b>diffuse_level</b> is
+the diffuse texture color <em>adjusted by the energy conservation</em>.
+<br />
+<li> <b>spec_result</b> is the resulting specular component,  
+<b>spec_raw</b> is the raw un-attenuated highlight, and 
+<b>spec_level</b> is the specular level, which is the same as 
+<b>refl_level</b> if the input parameter <b>hl_vs_refl_balance</b> is 1.0.
+<br />
+<li> <b>refl_result</b> is the resulting reflection component,  
+<b>refl_raw</b> is the raw (full intensity) reflection, 
+and <b>refl_level</b> is the actual reflectivity, including
+reflection color and BRDF (or Fresnel) curve attenuation effects.
+<br />
+<li> <b>refr_result</b> is the resulting refraction (transparency) 
+component, <b>refr_raw</b> is the raw full intensity transparency, 
+and <b>refr_level</b> is the actual transparency level, which has
+been adjusted by the energy conservation.
+<br />
+<li> <b>tran_result</b> is the resulting translucency component, 
+<b>tran_raw</b> is the raw translucency, and <b>tran_level</b> 
+the actual translucency level, adjusted by the energy conservation.
+<br />
+<li> <b>indirect_result</b> is the resulting indirect illumination
+including ambient occlusion effects and multiplying by the diffuse color, 
+<b>indirect_raw</b> is the raw result from <b>mi_compute_avg_radiance()</b>,
+<b>indirect_post_ao</b> is the indirect illumination affected by AO
+but without being multiplied by the diffuse color, and <b>ao_raw</b>
+is the raw contribution of the AO.
+<br />
+<li> <b>add_result</b> is a straight pass-through of the <b>add_color</b>
+parameter.
+<br />
+<li> <b>opacity_result</b> contains the final contribution of any 
+background of the object as a result of the input <b>cutout_opacity</b> being less than 1.0. 
+<b>opacity_raw</b> contains the background `without scaling by the opacity.
+These outputs will contain black if <b>cutout_opacity</b> is 1.0 since no actual transparency
+ray is ever traced in that case! The <b>opacity</b> output contains the 
+actual opacity itself. Care must be taken if <b>opacity</b> equals zero, 
+because this mean that <em>the material has performed no shading whatsoever</em>
+and <em>none</em> of the other outputs will contain any value at all!
+</ul>
+
+<div class="pic">
+<img width="100%" src="images/output-examples.jpg" alt="An example of outputs"><br />An example of outputs
+</div>
+<p>
+<h4 id="Proper_Compositing">Proper Compositing</h4>
+<p>
+Due to the redundancy available in the outputs, there are several ways to 
+composite them together to yield the same result as the beauty render. 
+Here we outline two compositing pipelines in equation form.
+<p>
+First we have the &quot;simple&quot; variant, which is simply a sum of the 
+various <b>result</b> parameters. This version allows only minor
+post production changes to the overall balance between the materials.
+<p>
+But it has the advantage of not needing as many files, as well 
+as working reasonably well in non-floating-point compositing.
+<p>
+<pre>
+    Beauty = diffuse_result + indirect_result + spec_result + 
+                refl_result + refr_result + tran_result + 
+                add_result
+</pre>
+<p>
+Then we have the more &quot;complex&quot; variant which uses the various 
+<em>raw</em> and <em>level</em> outputs, which allows much greater 
+control in post production.
+<p>
+Note that the <em>raw</em> outputs needs to be stored and composited 
+in floating point to maintain the dynamic range. 
+The <em>level</em> outputs always stay in a 0.0-1.0 range and does not 
+require floating point storage.
+<p>
+<pre>
+    Beauty = diffuse_level * (diffuse_raw + (indirect_raw * ao_raw)) + 
+                spec_level * spec_raw +
+                refl_level * refl_raw +
+                refr_level * refr_raw +
+                tran_level * tran_raw +
+                add_result
+</pre>
+<p>
+
+<a name="Tips_and_Tricks"></a>
+<h2 id="Tips_and_Tricks">Tips and Tricks</h2>
+<p>
+<a name="Final_Gather_Performance"></a>
+<h3 id="Final_Gathering_Performance">Final Gathering Performance</h3>
+<p>
+The Final Gathering algorithm in mental ray 3.5 is vastly improved from
+earlier versions, especially in it's <em>adaptivity</em>.
+This means one can often use much lower ray counts and much lower
+densities than in previous versions of mental ray.
+<p>
+Many stills can be rendered with such extreme settings as 50 rays 
+and a density of 0.1 - if this causes &quot;over-smoothing&quot; artifacts, 
+one can use the built in AO (see page <a href="arch_mtl.html#Ambient_Occlusion">Ambient Occlusion</a>)
+to solve those problems.
+<p>
+When using Final Gathering together with GI (photons), make sure
+the photon solution is fairly &quot;smooth&quot; by rendering with Final
+Gathering disabled first. If the photon solution is noisy, increase
+the photon search radius until it &quot;calms down&quot;, and then re-enable
+Final Gathering.
+<p>
+<a name="Material_Tips"></a>
+<h3 id="Quick_Guide_to_some_Common_Materials">Quick Guide to some Common Materials</h3>
+<p>
+Here are some quick rules-of-thumb for creating various materials.
+They each assume basic default settings as a starting point.
+<p>
+<h4 id="General_Rules_of_Thumb_for_Glossy_Wood__Flooring__etc_">General Rules of Thumb for Glossy Wood, Flooring, etc.</h4>
+<p>
+This is the kind of &quot;hybrid&quot; materials one run into in many 
+architectural renderings; lacquered wood, linoleum, etc.
+<p>
+For these materials <b>brdf_fresnel</b> should be <em>off</em> (i.e. 
+we define a custom BRDF curve). Start out with <b>brdf_0_degree_refl</b> of
+0.2 and <b>brdf_90_degree_refl</b> of 1.0 and apply some suitable texture map
+to the <b>diffuse</b>. Set <b>reflectivity</b> around 0.5 to 0.8.
+<p>
+How glossy is the material? Is reflections very clear 
+or very blurry? Are they Strong or Weak?
+<br />
+<ul>
+
+<li> For clear, fairly strong reflections, keep <b>refl_gloss</b> at 1.0
+<br />
+<li> For slightly blurry but strong reflections, set a lower <b>refl_gloss</b> value. 
+      If performance becomes an issue try using <b>refl_interpolate</b>.
+<br />
+<li> For slightly blurry but also very <em>weak</em> reflections one can often &quot;cheat&quot; 
+      by setting a lower <b>refl_gloss</b> value (to get the broader highlights) but set 
+      <b>refl_samples</b> value to 0. This shoots only one mirror ray for reflections - but if
+      they are very weak, one can often not really tell.  
+<br />
+<li> For <em>medium</em> blurry surfaces set an even lower <b>refl_gloss</b> and maybe
+      increase the <b>refl_samples</b>. Again, for performance try <b>refl_interpolate</b>.
+<br />
+<li> For <em>extremely</em> blurry surfaces or surfaces with very weak reflections, 
+      try using the <b>refl_hl_only</b> mode.
+</ul>
+
+<p>
+A typical wooden floor could use <b>refl_gloss</b> of 0.5, <b>refl_samples</b> of 16, <b>reflectivity</b> of
+0.75, a nice wood texture for <b>diffuse</b>, perhaps a slight bump map 
+(try the <b>no_diffuse_bump</b> checkbox if bumpiness should appear only in the lacquer layer).
+<p>
+A linoleum carpet could use the same but with a different texture and bump map, and
+probably with a slightly lower <b>reflectivity</b> and <b>refl_gloss</b>.
+<p>
+<h4 id="Ceramics">Ceramics</h4>
+<p>
+Ceramic materials are <em>glazed</em>, i.e. covered in a thin layer of transparent
+material. They follow similar rules to the general materials
+mentioned above, but one should have <b>brdf_fresnel</b> <em>on</em> and the <b>refr_ior</b> 
+set at about 1.4 and <b>reflectivity</b> at 1.0.
+<p>
+The <b>diffuse</b> should be set to a suitable texture or color, i.e. white 
+for white bathroom tiles.
+<p>
+<h4 id="Stone_Materials">Stone Materials</h4>
+<p>
+Stone is usually fairly matte, or has reflections that are so blurry they 
+are nearly diffuse. The &quot;powdery&quot; character of stone is simulated with
+the <b>diffuse_roughness</b> parameter - try 0.5 as a starting point. Porous stone such
+as bricks would have a higher value.
+<p>
+Stone would have a very low <b>refl_gloss</b> (lower than 0.25) and one can most likely
+use <b>refl_hl_only</b> to good effect for very good performance. Use a nice stone texture 
+for <b>diffuse</b>, some kind of bump map, and perhaps a map that varies the 
+<b>refl_gloss</b> value.
+<p>
+The <b>reflectivity</b> would be around 0.5-0.6 with <b>brdf_fresnel</b> off and <b>brdf_0_degree_refl</b> at 0.2 and
+<b>brdf_90_degree_refl</b> at 1.0
+<p>
+<h4 id="Glass">Glass</h4>
+<p>
+Glass is a dielectric, so <b>brdf_fresnel</b> should definitely be <em>on</em>. The IOR
+of glass is around 1.5. Set <b>diffuse_weight</b> to 0.0, <b>reflectivity</b> to 1.0 and <b>transparency</b> to 1.0.
+This is enough to create basic, completely clear refractive glass.
+<p>
+If this glass is for a window pane, set <b>thin_walled</b> to <em>on</em>. 
+If this is a  solid glass block, set <b>thin_walled</b> to <em>off</em> and
+consider if caustics are necessary or not, and set <b>do_refractive_caustics</b> accordingly.
+<p>
+Is the glass frosted? Set <b>refr_gloss</b> to a suitable value. Tune the <b>refr_samples</b>
+for good quality or use <b>refr_interpolate</b> for performance. 
+<p>
+<a name="Colored_Glass"></a>
+<h4 id="Colored_Glass">Colored Glass</h4>
+<p>
+For clear glass the tips in the previous section work. But <em>colored</em> glass
+is a slightly different story.
+<p>
+Many shaders set the transparency at the <em>surface</em> of the glass. And indeed this
+is what happens if one simply sets a <b>refr_color</b> to some value, e.g. blue. For glass done
+with <b>thin_walled</b> turned <em>on</em> this works perfectly. But for solid glass objects
+this is not an accurate representation of reality.
+<p>
+Study the following example. It contains two glass blocks 
+of very different size and a sphere with a spherical hole 
+inside of it<a href="#Foot14" title="Created by inserting a second sphere with the normals flipped inside the outer sphere. Don't forget to flip normals of such surfaces or they will not render correctly!"><sup>14</sup></a>
+plus a glass horse. 
+<div class="pic">
+<img width="100%" src="images/refr-7.jpg" alt="With a blue <b>refr_color</b>: Glass with color changes at the surface"><br />With a blue <b>refr_color</b>: Glass with color changes at the surface
+</div>
+<p>
+The problems are evident:
+<ul>
+
+<li> The two glass blocks are of completely different thickness, 
+yet they are exactly the same level of blue. 
+<li> The inner
+sphere is <em>darker</em> than the outer.
+</ul>
+
+<p>
+Why does this happen? 
+<p>
+Consider a light ray that enters a glass object. If the color is &quot;at the surface&quot;, the ray
+will be colored somewhat as it enters the object, retain this color through the object, and
+receive a second coloration (attenuation) when it exits the object:
+<div class="pic">
+<img width="100%" src="images/graph1.jpg" alt="Diagram for glass with color changes at the surface"><br />Diagram for glass with color changes at the surface
+</div>
+<p>
+In the illustration above the ray enters from the left, and at the entry surface it
+drops in level and gets slightly darker (bottom of graph schematically illustrates
+the level). It retains this color throughout the travel through the medium and drops
+in level again at the exit surface.
+<p>
+For simple glass objects this is quite sufficient. For any glass 
+using <b>thin_walled</b> it is by definition the correct thing to do,
+but for any complex solid it is not. It is <em>especially</em> wrong
+for negative spaces inside the glass (like the sphere in our example)
+because the light rays have to travel through four surfaces 
+instead of two (getting two extra steps of 
+&quot;attenuation at the surface&quot;)
+<p>
+In real colored glass, light travels <em>through</em> the
+medium and is attenuated &quot;as it goes&quot;. In the <i>mia_material</i>
+this is accomplished by enabling the <b>refr_falloff_dist</b> and 
+use the <b>refr_falloff_color</b> and setting the <b>refr_color</b> to white.
+This is the result:
+<div class="pic">
+<img width="100%" src="images/refr-7b.jpg" alt="Glass with color changes within the medium"><br />Glass with color changes within the medium
+</div>
+<p>
+The above result is clearly much more satisfactory; the
+thick glass block is much deeper blue than the thin one,
+and the hollow sphere now looks correct. 
+In diagram form it looks as follows:
+<div class="pic">
+<img width="100%" src="images/graph2.jpg" alt="d=<b>refr_falloff_dist</b> where attenuation is <b>refr_falloff_color</b>"><br />d=<b>refr_falloff_dist</b> where attenuation is <b>refr_falloff_color</b>
+</div>
+<p>
+The ray enters the medium and during it's entire travel 
+it is attenuated. The strength of the attenuation is such 
+that precisely at the <b>refr_falloff_dist</b> (<em>d</em> in the figure) 
+the attenuation will match that of <b>refr_falloff_color</b> 
+(i.e. at this depth the attenuation is the same as was received 
+immediately at the surface with the previous model). 
+The falloff is exponential 
+such that at double <b>refr_falloff_dist</b> the effect is that of 
+<b>refr_falloff_color</b> squared, and so on.
+<p>
+There is one minor trade off: 
+<p>
+To correctly render the <em>shadows</em> of a material using this method 
+one must either use caustics <em>or</em> make sure <em>mental ray</em> is 
+rendering shadows in &quot;segment&quot; shadow mode.
+<p>
+Using caustics naturally gives the most correct looking shadows 
+(the above image was not rendered with caustics), but will require 
+that one has caustic photons enabled and a physical light source that 
+shoots caustic photons.
+<p>
+On the other hand, the <em>mental ray</em> &quot;segment&quot; shadows have a 
+slightly lower performance than the more widely used &quot;simple&quot; shadow 
+mode. But if it is not used, there shadow intensity will not 
+take the attenuation through the media into account 
+properly<a href="#Foot15" title="But it could potentially still look &quot;nice&quot;."><sup>15</sup></a>.
+<p>
+<h4 id="Water_and_Liquids">Water and Liquids</h4>
+<p>
+Water, like glass, is a <em>dielectric</em> with the IOR of 1.33. 
+Hence, the same principles as for glass (above) applies for solid 
+bodies of water which truly need to refract things... for example 
+water running out of a tap. Colored beverages use the same principles 
+as colored glass, etc.
+<div class="pic">
+<img width="100%" src="images/liquids.jpg" alt="Water into Wine"><br />Water into Wine
+</div>
+<p>
+To create a beverage in a container as in the image above, it is
+important to understand how the <i>mia_material</i> handles refraction 
+through multiple surfaces vs. how the &quot;real world&quot; tackles
+the same issue.
+<p>
+What is important for refraction is how the transition from
+one medium to another with a different IOR. Such a transition 
+is known as an <em>interface</em>.
+<p>
+For lemonade in a glass, imagine a ray of light travelling through 
+the air (IOR = 1.0) enter the glass, and is refracted by the IOR of 
+the glass (1.5). After travelling through the glass the ray leaves 
+the glass and enters the liquid, i.e. it passes an <em>interface</em> 
+from one medium of IOR 1.5 to another medium of IOR 1.33.
+<p>
+One way to model this in computer graphics is to make the glass
+one separate closed surface, with the normals pointing towards
+the inside of the glass and an IOR of 1.5, and a second, closed
+surface for the beverage, with the normals pointing inwards and
+an IOR of 1.33, and leaving a small &quot;air gap&quot; between the container
+and the liquid.
+<p>
+While this &quot;works&quot;, there is one problem with this approach: When
+light goes from a higher IOR to a lower there is a chance of an effect
+known as &quot;Total Internal Reflection&quot; (TIR). This is the effect
+one sees when diving in a swimming pool and looking up - the 
+objects above the surface can only be seen in a small circle straight 
+above, anything below a certain angle only shows a reflection of
+the pool and things below the surface. The larger the difference in
+the IOR of the two media, the larger is the chance of TIR.
+<p>
+So in our example, as the ray goes from glass (IOR=1.5) to air, there
+is a large chance of TIR. But in <em>reality</em> the ray would move 
+from a medium of IOR=1.5 to one of IOR=1.33, which is a much smaller
+step with a much smaller chance of TIR. This will look different:
+<div class="pic">
+<img width="100%" src="images/ior.jpg" alt="Correct refraction (left) vs. the &quot;air gap&quot; method (right)"><br />Correct refraction (left) vs. the &quot;air gap&quot; method (right)
+</div>
+<p>
+The result on the left is the correct result, but how it is obtained?
+<p>
+The solution to the problem is to rethink the modeling, and not
+think in terms of media, but in terms of <em>interfaces</em>. In our
+example, we have three different interfaces, where we can consider
+the IOR as the ratio between the IOR's of the outside and inside media:
+<ul>
+
+<li> Air-Glass  interface (IOR = 1.5/1.0 = 1.5)
+<li> Air-Liquid interface (IOR = 1.33/1.0 = 1.33)
+<li> Glass-Liquid interface (IOR=1.33/1.5=0.8)
+</ul>
+
+<p>
+It is evident that in the most common case of an interface with air, 
+the IOR to use is the IOR of the media (since the IOR of air is 1.0),
+whereas in an <em>interface</em> between two different media, the 
+situation is different.
+<p>
+To correctly model this scenario, we then need <em>three</em> surfaces,
+each with a separate <i>mia_material</i> applied:
+<div class="pic">
+<img width="100%" src="images/ior-graph.jpg" alt="The three <em>interfaces</em> for a liquid in a glass"><br />The three <em>interfaces</em> for a liquid in a glass
+</div>
+<br />
+<ul>
+
+<li> The Air-glass surface (blue), with normals pointing <em>out of</em> the glass,
+      covering the area where air directly touches the glass, having an 
+      IOR of 1.5
+<li> The Air-liquid surface (green), with normals pointing <em>out of</em> the liquid,
+      covering the area where air directly touches the liquid, having an
+      IOR of 1.33
+<li> The Glass-liquid surface (red), with normals pointing <em>out of</em> the liquid,
+      covering the area where the glass touches the liquid, having an
+      IOR of 0.8
+</ul>
+
+<p>
+By setting a suitable <b>refr_falloff_dist</b> and <b>refr_falloff_color</b> for the two liquid materials
+(to get a colored liquid), the image on the left in the comparison above is the result.
+<p>
+<h4 id="The_Ocean_and_Water_Surfaces">The Ocean and Water Surfaces</h4>
+<p>
+A water <em>surface</em> is a slightly different matter than a visibly
+transparent liquid.
+<p>
+The ocean isn't blue - it is <em>reflective</em>. Not much of the 
+light that goes down under the surface of the ocean gets anywhere
+of interest. A little bit of it is scattered back up again doing
+a little bit of very literal &quot;sub surface scattering&quot;.
+<p>
+To make an ocean surface with the <i>mia_material</i> do the following steps:
+<p>
+Set <b>diffuse_weight</b> to 0.0, <b>reflectivity</b> to 1.0 and <b>transparency</b> to 0.0 (yes, we
+do not use refraction at all!).
+<p>
+Set the <b>refr_ior</b> to 1.33 and <b>brdf_fresnel</b> to <em>on</em>. Apply
+some interesting wobbly shader to <b>bump</b> 
+and our ocean is basically done! 
+<p>
+This ocean has <em>only</em> reflections guided by the IOR. But 
+this might work fine - try it. Just make sure there is something
+there for it to reflect! Add a sky map, objects, or a just a 
+blue gradient background. There must be <em>something</em> or it
+will be completely black.
+<div class="pic">
+<img width="100%" src="images/ocean.jpg" alt="The Ocean isn't blue - the sky is"><br />The Ocean isn't blue - the sky is
+</div>
+<p>
+For a more &quot;tropical&quot; look, try setting <b>diffuse</b> to some 
+slight greenish/blueish color, set the <b>diffuse_weight</b> to some fairly
+low number (0.1) and check the <b>no_diffuse_bump</b> checkbox.
+<p>
+Now we have a &quot;`base color&quot; in the water which emulates the little
+bit of scattering occurring in the top level of the ocean.
+<div class="pic">
+<img width="100%" src="images/hawaii.jpg" alt="Enjoy the tropics"><br />Enjoy the tropics
+</div>
+<p>
+<h4 id="Metals">Metals</h4>
+<p>
+Metals are very reflective, which means they need something to reflect.
+The best looking metals come from having a true HDRI environment, 
+either from a spherically mapped HDRI 
+photo<a href="#Foot16" title="Many HDRI images are available online."><sup>16</sup></a>,
+or something like the <em>mental ray</em> physical sky.
+<p>
+To set up classic chrome, turn <b>brdf_fresnel</b> <em>off</em>, set 
+<b>reflectivity</b> to 1.0, <b>brdf_0_degree_refl</b> to 0.9 and <b>brdf_90_degree_refl</b> to 1.0. Set <b>diffuse</b> 
+to white and check the <b>refl_is_metal</b> checkbox. 
+<p>
+This creates
+an almost completely reflective material. Tweak the <b>refl_gloss</b> 
+parameter for various levels of blurry reflections to taste.
+Also consider using the &quot;round corners&quot; effect, which tend
+to work very well on metallic objects.
+<p>
+Metals also influence the <em>color</em> of their reflections. 
+Since we enabled <b>refl_is_metal</b> this is already happening; try 
+setting the <b>diffuse</b> to a &quot;gold&quot; color to create gold.
+<p>
+Try various levels of <b>refl_gloss</b> (with the help of <b>refl_interpolate</b> 
+for performance, when necessary).
+<p>
+One can also change the <b>reflectivity</b> which has a slightly different
+meaning when <b>refl_is_metal</b> is enabled; it blends between the
+reflections (colored by the <b>diffuse</b>) and normal diffuse shading.
+This allows a &quot;blend&quot; between the glossy reflections and the
+diffuse shading, both driven by the same color. For example,
+an aluminum material would need a bit of diffuse blended in,
+whereas chrome would not.
+<div class="pic">
+<img width="100%" src="images/metals.jpg" alt="Gold, silver and copper, perhaps?"><br />Gold, silver and copper, perhaps?
+</div>
+<p>
+<a name="Brushed_Metals"></a>
+<h4 id="Brushed_Metals">Brushed Metals</h4>
+<p>
+Brushed metal is an interesting special case of metals. 
+In some cases, creating a brushed metal only takes turning
+down the <b>refl_gloss</b> to a level where one receives a
+&quot;very blurred&quot; reflection. This is sufficient when the
+brushing direction is random or the brushes are too small
+to be visible even as an aggregate effect.
+<p>
+For materials that have a clear <em>brushing direction</em> 
+and/or where the actual brush strokes are <em>visible</em>,
+creating a convincing look is a slightly more involved process.
+<p>
+The tiny grooves in a brushed metal all work together to
+cause <em>anisotropic</em> reflections. This can be illustrated
+by the following schematic, which simulates the brush grooves
+by actually modeling many tiny adjacent cylinders, shaded
+with a simple Phong shader:
+<div class="pic">
+<img width="100%" src="images/brushshematic.jpg" alt="Many small adjacent cylinders"><br />Many small adjacent cylinders
+</div>
+<p>
+As one can see, the specular highlight in each of the cylinders
+work together to create an aggregate effect which is the
+<em>anisotropic highlight</em>.
+<p>
+Also note that the highlight isn't continuous, it is actually 
+broken up in small adjacent segments. I.e. the main visual cues
+that a material is &quot;brushed metal' are:
+<br />
+<ul>
+
+<li> Anisotropic highlights that stretch out in a direction 
+      <em>perpendicular</em> to the brushing direction.
+<li> A discontinuous highlight with &quot;breaks&quot; in the brushing
+      direction.
+</ul>
+
+<p>
+Many attempts to simulate brushed metals have only looked at 
+the first effect, the anisotropy. Another common mistake is to
+think that the highlight stretches <em>in</em> the brushing direction.
+Neither is true.
+<p>
+Hence, to simulate brushed metals, we need to simulate these two
+visual cues. The first one is simple; use <b>anisotropy</b> and <b>anisotropy_rotation</b>
+to make anisotropic highlights. The second can be done in several
+ways:
+<br />
+<ul>
+
+<li> With a <b>bump</b> map
+<li> With a map that varies the <b>anisotropy</b> or <b>refl_gloss</b> 
+<li> With a map that varies the <b>refl_color</b> 
+</ul>
+
+<p>
+Each have advantages and disadvantages, but the one we will try here
+is the last one. The reason for choosing this method is that it works
+well together with interpolation.
+<p>
+<ol>
+
+<li> Create a map for the &quot;brush streaks&quot;. There are many 
+      ways to do this, either by painting a map in a paint 
+      program, or by using a &quot;Noise&quot; map that has been stretched 
+      heavily in one direction.
+<p>
+<li> The map should vary between middle-gray and white. Apply this map to
+      the <b>refl_color</b> in a scale suitable for the brushing.
+<p>
+<li> Set <b>diffuse</b> to <em>white</em> (or the color of the metal) 
+      but set <b>diffuse_weight</b> to 0.0 (or a small value). 
+<p>
+<li> Make sure <b>refl_is_metal</b> is enabled.
+<p>
+<li> Set <b>refl_gloss</b> to 0.75.
+<p>
+<li> Set <b>anisotropy</b> to 0.1 or similar. Use <b>anisotropy_rotation</b> to align the highlight
+      properly with the map. If necessary use <b>anisotropy_channel</b> to base it on 
+      the same texture space as the map.
+</ol>
+
+<div class="pic">
+<img width="100%" src="images/brushedmetal.jpg" alt="Brushed Metal"><br />Brushed Metal
+</div>
+<p><hr><p><dl>Footnotes
+<a name="Foot1"></a><dt>1
+<dd>Bidirectional Reflectance Distribution Function
+<a name="Foot2"></a><dt>2
+<dd>
+This is also known as the &quot;sRGB&quot; color space.
+<a name="Foot3"></a><dt>3
+<dd>Raw clipping in sRGB
+color space is very displeasing to the eye,
+especially if one color channel clips earlier than the others.
+Tone mapping generally solves this by &quot;soft clipping&quot; in a more
+suitable color space than sRGB.
+<a name="Foot4"></a><dt>4
+<dd>
+The first law of thermodynamics is that no one talks about thermodynamics ;)
+<a name="Foot5"></a><dt>5
+<dd>Like the separate mental ray <b>mib_amb_occlusion</b> shader.
+<a name="Foot6"></a><dt>6
+<dd>See page <a href="arch_mtl.html#Energy_Conservation">Energy Conservation</a>.
+<a name="Foot7"></a><dt>7
+<dd>
+The actual number is adaptive and depends on reflectivity,
+ray importance, and many other factors.
+<a name="Foot8"></a><dt>8
+<dd>The technique works best on flat surfaces.
+<a name="Foot9"></a><dt>9
+<dd>
+If Final Gathering is not enabled, this mode simply shows the highlights
+and attempts no emulation of reflections.
+<a name="Foot10"></a><dt>10
+<dd>
+  Note that deriving the anisotropy from texture space only creates
+  one space per triangle and may cause visible seams between triangles.
+<a name="Foot11"></a><dt>11
+<dd>
+  Sometimes people use AO as a general multiplier to <em>all</em> diffuse
+  light. This has the distinct drawback of affecting even brightly 
+  <em>directly</em> lit areas with &quot;AO shadows&quot;, which can look wrong.
+  This use is not covered by the built in AO shader because it is
+  trivially achieved by simply applying the <b>mib_amb_occlusion</b> shader to the
+  diffuse color of the material and putting the materials original
+  color into it's <b>Bright</b> parameter.
+<a name="Foot12"></a><dt>12
+<dd>Naturally this does not apply to
+the <b>refl_hl_only</b> mode, since it doesn't actually reflect anything.
+<a name="Foot13"></a><dt>13
+<dd>To easier support using <i>mia_material_x</i> in phenomena and other places
+where formerly <i>mia_material</i> was used, the <b>multiple_outputs</b> parameter exists.
+If this is set to off, no other parameter than <b>result</b> is
+written to (leaving the others unmodified and hence undefined).
+This also makes it safe to supply <i>mia_material_x</i> to parameters
+of type &quot;shader&quot; which only expect a single color return value.
+<a name="Foot14"></a><dt>14
+<dd>
+  Created by inserting a second sphere with the
+  normals flipped inside the outer sphere. 
+  Don't forget to flip normals of such surfaces
+  or they will not render correctly!
+<a name="Foot15"></a><dt>15
+<dd>But it could potentially still look &quot;nice&quot;.
+<a name="Foot16"></a><dt>16
+<dd>Many HDRI images are available online.
+</dl>
+<ul class="nav">
+<li><a href="architectural.html">home</a></li>
+<li><a href="arch_intro.html">&laquo;&nbsp;prev</a></li>
+<li><a href="arch_sunsky.html">next&nbsp;&raquo;</a></li>
+</ul>
+</body></html>

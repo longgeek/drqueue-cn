@@ -1,0 +1,880 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Rendering Options</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node219.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node221.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION218"></a>
+<h3>Rendering Options</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_OPTIONS</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miOptions</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>-</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>as described below</td>
+</tr>
+</table>
+<p>The rendering options were designed to accommodate as wide a
+range of renderers as possible, from simple wireframe displayers to
+complex ray tracers. The interpretation of the structure members is
+left to the renderer. Generally, no renderer will require all
+provided fields; each renderer may use a different subset.</p>
+<pre>
+struct miOptions {
+        miBoolean       trace;                  /* 2nd generation ray trace? */
+        int             scanline;               /* one of miRENDER_FH_* */
+        miUint          motion;                 /* motion blur? : miFALSE */
+        miBoolean       shadow_sort;            /* Obsolete! Do not use */
+        miBoolean       preview_mode;           /* for future use */
+        int             reflection_depth;       /* refl. trace depth : 1 */
+        int             refraction_depth;       /* refr. trace depth : 1 */
+        int             trace_depth;            /* refl. + refr. depth : 1 */
+        int             min_samples;            /* min. sampling level : -2 */
+        int             max_samples;            /* max. sampling level : 0 */
+        miColor         contrast;               /* sampling contrast: .1 */
+        miColor         time_contrast;          /* temporal sampling contrast*/
+        miTag           contour_contrast;       /* NULLTAG */
+        miTag           contour_store;          /* NULLTAG */
+        miBoolean       caustic;                /* enable caustics: miFALSE */
+        miBoolean       globillum;              /* enable global il.: miFALSE*/
+        int             caustic_accuracy;       /* no. caus. photons in est. */
+        float           caustic_radius;         /* maxdist for caus. photons */
+        int             globillum_accuracy;     /* no. glob. photons in est. */
+        float           globillum_radius;       /* maxdist for glob. photons */
+        float           caustic_filter_const;   /* filter const. for caus. */
+        float           filter_size_x;          /* filter size in x : 1.0 */
+        float           filter_size_y;          /* filter size in y : 1.0 */
+        float           jitter;                 /* sample jittering : 1.0 */
+        float           shutter;                /* shutter close time: 0 */
+        short           grid_res[3];            /* grid resolution */
+        short           grid_max_size;          /* max obj. in grid cell */
+        short           grid_max_depth;         /* max grid nesting */
+        miSint1         def_min_samples;        /* min/max samples for objs */
+        miSint1         def_max_samples;        /* without min/max, -128 127 */
+        int             space_max_size;         /* space subdiv. leaf size: 4*/
+        int             space_max_depth;        /* space subdiv. depth : 25*/
+        float           shutter_delay;          /* shutter open time: 0 */
+        int             no_images;              /* # images : 1 */
+        miApprox        approx;                 /* approximation overrides if*/
+        miApprox        approx_displace;        /* style != APPROX_STYLE_NONE*/
+        miUint          spare1[19];             /* keep ray33 offsets */
+        miTag           images_info;            /* frame buffers */
+        miTag           finalgather_file;       /* finalgather map file: 0 */
+        miCBoolean      space_shadow_separate;  /* space subdiv shadow struct*/
+        miUchar         finalgather_filter;     /* finalgather ray filter */
+        char            rast_collect_rate;      /* rasterizer only: */
+                                                /* samples per pixel dim. */
+        char            rast_motion_resample;   /* rasterizer only: # of */
+                                                /* time samples for movng geo*/
+        char            use_shadow_maps;        /* 0=off, 1=on, 'o'=opengl*/
+                                                /* bit7: only shmap,no render*/
+        miCBoolean      rendering_shadow_maps;  /* Shadow map mode? 0 */
+        char            recompute_shadow_maps;  /* 'n'o,'y'es (could be Bool)*/
+        char            shadow;                 /* shadow casting? : 1 */
+                                                /* 0 off, 1 on, 'l' sort, */
+                                                /* 's' segments */
+        char            caustic_filter;         /* filter-type */
+                                                /* 'b' box, 'c' cone, */
+                                                /* 'g' gaussian */
+        miCBoolean      finalgather_rebuild;    /* rebuild FG ?: on*/
+        char            filter;                 /* sample filter type : 'b' */
+                                                /* 'b' box, 't' triangle, */
+                                                /* 'g' gauss */
+        char            acceleration;           /* one of miRENDER_ACCEL_*   */
+        char            face;                   /* primitive facing: 'a' */
+                                                /* 'f' front, 'b' back, */
+                                                /* 'a' all */
+        char            field;                  /* field rendering? 0 */
+                                                /* 0 off, 'e' even, 'o' odd */
+        char            smethod;                /* sampling algorithm: 'q' */
+        char            render_space;           /* coordinate space 'o' */
+                                                /* 'c' camera space, */
+                                                /* 'o' object space, */
+                                                /* 'm' mixed space */
+        miCBoolean      pixel_preview;          /* pixel selective sampling */
+        miCBoolean      task_preview;           /* task selective sampling */
+        miCBoolean      visible_lights;         /* any visible area lights? */
+        miCBoolean      shadow_map_motion;      /* motion blurred shadowmaps?*/
+        int             task_size;              /* image task size : 0 */
+        miBoolean       strips;                 /* GAP returns triangles in
+                                                 * strips */
+        miTag           photonmap_file;         /* photon map file name */
+        miBoolean       photonmap_rebuild;      /* photon map rebuild ? */
+        int             photon_reflection_depth;/* photon refl. depth */
+        int             photon_refraction_depth;/* photon refr. depth */
+        int             photon_trace_depth;     /* total photon trace depth */
+        int             space_max_mem;          /* maximum bsp memory (mb):0 */
+        miColor         caustic_scale;          /* caustic multiplier */
+        miColor         globillum_scale;        /* globillum multiplier */
+        miColor         finalgather_scale;      /* finalgather multiplier */
+        miColor         finalgather_sec_scale;  /* secondary fg multiplier */
+        miUint          spare4;
+        miColor         photonvol_scale;        /* photon volume multiplier */
+        miUint          spare2[6];              /* keep ray33 offsets */
+        miTag           spectrum_blueprint;     /* spectrum for render space */
+        miTag           input_cprof;            /* input color space, default */
+        miTag           white_cprof;            /* white adapt. col. space */
+        miTag           render_cprof;           /* color profile render space*/
+        miTag           fb_dir;                 /* frame buffer directory */
+        miCBoolean      no_lens;                /* disable lens shaders */
+        miCBoolean      no_volume;              /* disable volume shaders */
+        miCBoolean      no_geometry;            /* disable geometry shaders */
+        miCBoolean      no_displace;            /* disable displace shaders */
+        miUint1         no_output;              /* disable output shaders */
+        miCBoolean      no_merge;               /* disable surface merging */
+        miUint1         caustic_flag;           /* def. caustic flag for objs*/
+        miUint1         diagnostic_mode;        /* miSCENE_DIAG_* flags */
+        int             photonvol_accuracy;     /* no. vol. photons in est. */
+        float           photonvol_radius;       /* maxdist for vol. photons */
+        miUint1         globillum_flag;         /* def. globil. flag for objs*/
+        miCBoolean      samplelock;             /* steady samples?: on */
+        miCBoolean      autovolume;             /* internal volumes? */
+        miCBoolean      finalgather_view;       /* radii in raster pixels ? */
+        miCBoolean      no_hair;                /* disable hair rendering */
+        miUint1         n_motion_vectors;       /* global number of motions */
+        miCBoolean      no_pass;                /* disable multipass render */
+        miCBoolean      photon_autovolume;      /* autovolume for photons */
+        miCBoolean      no_predisplace;         /* disable displ presampling */
+        miUint1         fg_reflection_depth;    /* finalgather refl. depth */
+        miUint1         fg_refraction_depth;    /* finalgather refr. depth */
+        miUint1         fg_trace_depth;         /* total fg trace depth */
+        float           fg_falloff_start;       /* finalgather falloff start */
+        float           fg_falloff_stop;        /* finalgather falloff stop */
+        miTag           userdata;               /* optional user data blocks */
+        miBoolean       irradiance_particles;   /* irradiance particles on/off */
+        miUint4         spare5[23];             /* not used, but keep offsets */
+        int             finalgather;            /* 0:off,1:on,'f':fastlookup*/
+        int             finalgather_rays;       /* no. rays in final gather */
+        float           finalgather_maxradius;  /* maxdist for finalgather */
+        float           finalgather_minradius;  /* mindist for finalgather */
+        float           diag_photon_density;    /* density for diag */
+        float           diag_grid_size;         /* gridsize for diag */
+        miBoolean       desaturate;             /* for IMG: fade to white? */
+        miBoolean       dither;                 /* for IMG: LSB dithering? */
+        miBoolean       nopremult;              /* for IMG: A < RGB ok? */
+        int             colorclip;              /* for IMG: miIMG_COLORCLIP* */
+        float           gamma;                  /* for IMG: gamma, default 1 */
+        miTag           inh_funcdecl;           /* inheritance function */
+        miColor         luminance_weight;       /* weights to calc intensity */
+        int             spare0[2];              /* not used */
+        miCBoolean      inh_is_traversal;       /* inh_funcdecl is a traver- */
+                                                /* sal, not inheritance, shd */
+        miUint1         hardware;               /* hwrender 0=off 1=on 3=all */
+        miUint1         hardware_diagnostic;    /* flags for diagn. mode */
+        miUint1         shadowmap_flags;        /* flag for shadowmaps */
+        float           maxdisplace;            /* override if !=0: default 0*/
+        miScalar        shadowmap_bias;         /* move shmap Z back by bias */
+        miUint1         hwshader;               /* 1=force */
+                                                /* 2=cg 4=oglsl/hlsl 8=fast */
+        miCBoolean      photonmap_only;         /* render photon map only */
+        miUint1         lightmap;               /* 0=off,1=on,2=only */
+                                                /* 4=use any host (unsafe) */
+        miUint1         fg_diffuse_depth;       /* #secondary fg bounces */
+        miTag           state_func;             /* allow user to init state */
+        float           fg_presamp_density;     /* samples density for precomp.
+                                                 * finalgather points */
+        float           rast_shading_samples;   /* shading samples per pixel */
+                                                /* default: 1.0f */
+        miUint1         fb_virtual;             /* fb mem management */
+                                                /* 0=none 1=mapped 2=cached */
+                                                /* default: 1 */
+        miCBoolean      spare3[3];              /* not used */
+        miTag           string_options;         /* arbitrary name-value options */
+
+        int             spare[9];               /* not used */
+};
+</pre>
+<p>A translator must provide: nothing.
+<p>A translator may provide: all fields.</p>
+<dl>
+<dt>trace
+<dd>enables <a href="node102.html#INDEX390">ray tracing</a> to compute
+secondary rendering effects like reflections and refractions.
+<dd>The default is <code>miTRUE</code>.
+
+<dt>scanline
+<dd>enables a scanline rendering algorithm to accelerate computation of
+first-hit intersections with primary visible objects.
+The value can be one of
+<dl>
+<dt><code>miRENDER_FH_OFF</code><dd>to disable scanline rendering,
+<dt><code>miRENDER_FH_SCANLINE</code><dd>to enable scanline rendering,
+<dt><code>miRENDER_FH_OPENGL</code><dd>to use <a href="node56.html#INDEX106">
+OpenGL</a> hardware of the system for accelerated scanline rendering,
+<dt><code>miRENDER_FH_RAST</code><dd>to utilize the
+<a href="node34.html#fo:rasterizer">rasterizer</a> for optimized performance
+together with motion blur.
+</dl>
+<dd>The default is <code>miRENDER_FH_SCANLINE</code>.
+
+<dt>motion
+<dd>enables computation of motion blur.
+<dd>The default is <code>miFALSE</code>.
+
+<dt>preview_mode
+<dd>is currently not used.
+
+<dt>reflection_depth
+<dd>limits the <a href="node102.html#INDEX390">ray tracing</a> depth for
+reflection rays.
+<dd>The default is <code>2</code>.
+
+<dt>refraction_depth
+<dd>limits the <a href="node102.html#INDEX390">ray tracing</a> depth for
+refraction or <a href="node76.html#INDEX199">transparency ray</a>s.
+<dd>The default is <code>2</code>.
+
+<dt>trace_depth
+<dd>limits the <a href="node102.html#INDEX390">ray tracing</a> depth for
+the sum of any reflection, refraction, and transparency rays.
+<dd>The default is <code>4</code>.
+ 
+<dt>min_samples
+<dd>specifies the minimum sample level in each direction in recursive
+oversampling mode. The actual number of samples is computed by 2<sup>level</sup>
+in each direction, and determines how many samples are at least taken. See
+the <a href="node76.html#samples">samples</a> option for further explanation.
+<dd>The default is <code>-2</code> (at least 1 sample per 16 pixels).
+<dd><em>Does not apply to <a href="node34.html#INDEX67">rasterizer</a>.</em> 
+
+<dt>max_samples
+<dd>specifies the maximum sample level in each direction in recursive
+oversampling mode. The actual number of samples is computed by 2<sup>level</sup>
+in each direction, and determines how many samples are at most taken. See
+the <a href="node76.html#samples">samples</a> option for further explanation.
+<dd>The default is <code>0</code> (at most 1 sample per 1 pixel).
+<dd><em>Does not apply to <a href="node34.html#INDEX67">rasterizer</a>.</em> 
+
+<dt>contrast
+<dd>specifies the contrast limit above which more spatial samples are taken.
+<dd>The default is <code>0.1 0.1 0.1 0.1</code>.
+<dd><em>Does not apply to <a href="node34.html#INDEX67">rasterizer</a>.</em> 
+
+<dt>time_contrast
+<dd>controls the number of temporal samples used for motion blur rendering.
+The value is approximately equal to the inverse of the number of the temporal
+samples. Because of blurring, this can usually be much higher than the spatial
+contrast.
+<dd>The default is <code>0.2 0.2 0.2 0.2</code>.
+
+<dt>contour_contrast
+<dd>specifies a function that computes contrasts in contour rendering mode.
+<dd>The default is <code>miNULLTAG</code>.
+
+<dt>contour_store
+<dd>specifies a function that collects and stores sample information for use
+by the contour contrast function, in contour rendering mode.
+<dd>The default is <code>miNULLTAG</code>.
+
+<dt>caustic
+<dd>specifies whether caustics should be rendered.
+<dd>The default is <code>miFALSE</code>.
+
+<dt>globillum
+<dd>specifies whether global illumination should be rendered.
+<dd>The default is <code>miFALSE</code>.
+
+<dt>caustic_accuracy
+<dd>specifies the number of photons to use when estimating radiance for caustics.
+<dd>The default is <code>100</code>.
+
+<dt>caustic_radius
+<dd>specifies the maximum distance in which photons used
+in the radiance estimate for caustics are located. If the radius is
+<code>0.0</code> then an estimate based on the scene extent will be used.
+<dd>The default is <code>0.0</code>.
+
+<dt>globillum_accuracy
+<dd>specifies the number of photons to use when estimating radiance
+for global illumination.
+<dd>The default is <code>500</code>.
+
+<dt>globillum_radius
+<dd>specifies the maximum distance in which photons used
+in the radiance estimate for global illumination are located. If the radius
+is <code>0.0</code> then an estimate based on the scene extent will be used.
+<dd>The default is <code>0.0</code>.
+
+<dt>caustic_filter_const
+<dd>is a constant used when filtering caustics radiance estimates.
+<dd>The default is <code>1.1</code>.
+
+<dt>filter_size_x
+<dd>specifies the width of the filter specified in the <code>filter</code> field.
+<dd>The default is <code>1.0</code>.
+
+<dt>filter_size_y
+<dd>specifies the height of the filter specified in the <code>filter</code> field.
+<dd>The default is <code>1.0</code>.
+
+<dt>jitter
+<dd>is the jitter interval. Jittering displaces samples to avoid sampling artifacts.
+<dd>The default is <code>1.0</code>.
+
+<dt>shutter
+<dd>is the shutter close time of the camera if motion blur is enabled.
+It may not be negative.
+<dd>The default is <code>0.0</code>.
+
+<dt>grid_res <span class="depr">Deprecated</span>
+<dd>controls the
+<a href="node76.html#INDEX205">voxel grid</a> resolution in X, Y,
+and Z directions, if acceleration is set to 'g' (grid). If all
+three are 0, mental ray uses a default computed from the scene.
+<dd>The default is <code>0 0 0</code>.
+
+<dt>grid_max_size <span class="depr">Deprecated</span>
+<dd>controls the maximum size of each grid voxel, if acceleration is set to 'g'
+(grid).
+<dd>The default is <code>128</code>.
+
+<dt>grid_max_depth <span class="depr">Deprecated</span>
+<dd>controls the maximum nesting depth of grids, if acceleration is set to 'g'
+(grid).
+<dd>The default is <code>2</code>.
+
+<dt id="api:options:def_min_samples">def_min_samples
+<dd>sets a global default value for per object <code>min_samples</code> option.
+An object may set its local <code>min_samples</code> value to achieve custom
+oversampling effects in the area of the image that it covers. See the related
+<a href="node83.html#mi:object:samples">samples</a> object setting for further
+explanation. Like the per object min/max samples parameters, the default value
+should stay within the global sampling range specified in the options with
+<i>min_samples</i>&hellip;<i>max_samples</i> to have an impact on oversampling.
+A value of <code>-128</code> turns per object control off; and the global
+<i>min_samples</i> will be used as usual.
+<dd>The default is <code>-128</code>.
+
+<dt>def_max_samples
+<dd>sets a global default value for <code>max_samples</code> option on objects.
+See the related <a href="#api:options:min_samples">def_min_samples</a> for
+details. A value of <code>127</code> turns per object control off; and the
+global <i>max_samples</i> will be used as usual.
+<dd>The default is <code>127</code>.
+
+<dt>space_max_size
+<dd>is the maximum leaf size for BSP.
+<dd>The default is <code>10</code>.
+<dd><em>This does not apply to BSP2.</em>
+
+<dt>space_max_depth
+<dd>is the maximum tree depth for BSP.
+<dd>The default is <code>40</code>.
+<dd><em>This does not apply to BSP2.</em>
+
+<dt>shutter_delay
+<dd><dd>is the shutter open time of the camera if motion blur is enabled.
+It allows starting the <a href="node76.html#INDEX195">shutter</a> interval
+late, which ranges from t = <code>shutter_delay</code> to <code>shutter</code>.
+This is useful for shifting the evaluation time to the center of the frame
+by setting <code>shutter_delay</code> and <code>shutter</code> to the same
+value, such as 0.5, and then doing bidirectional postprocessing motion blur.
+<dd>The default is <code>0.0</code>.
+
+<dt>no_images <span class="depr">Deprecated</span>
+<dd>is always 1.
+In previous versions it was the number of valid entries in
+the <i>images_info</i> array described below.
+<dd>The default is <code>1</code>.
+
+<dt>images_info
+<dd>is a database array which specifies the
+<a href="node144.html#INDEX617">frame buffer</a>s. There are <i>no_images</i>
+entries in the array. Each entry has the type <code>miFb_info</code>, which
+is described below. Frame buffers may be accessed only in
+<a href="node126.html#INDEX492">output shader</a>s.
+<pre>
+typedef struct miFb_info {
+        miImg_type      image_type;             /* image types */
+        miUint4         write_image;            /* bits: 0=sample image */
+                                                /*       1=write  image */
+        miBoolean       interp_image            /* interpolate image? */
+} miFb_info;
+</pre>
+<dd>See the public header file <code>shader.h</code>for a list of valid
+image types.
+
+<dl>
+<dt>image_types
+<dd>specifies the image types to be generated during rendering.
+<dd>The default is <code>miIMG_TYPE_RGBA</code>.
+
+<dt>write_image
+<dd>specifies for each image whether
+it is sampled (if bit 0 is 1) and written to a file (if bit 1 is 1)
+after rendering completes. mental ray 2.1 combined both bits into a
+single boolean.
+<dd>The default is <code>3</code>.
+
+<dt>interp_image
+<dd>specifies for each image whether it is to be interpolated. This
+means that if fewer than one sample per pixel is taken, the holes
+are filled in.
+<dd>The default is <code>miTRUE, miFALSE, ...</code>.
+</dl>
+
+<dt>finalgather_file
+<dd>is a tag to a database string containing the filename of a file from which
+a finalgather point map should be loaded (if possible) or otherwise saved to.
+If this tag is a <code>miNULLTAG</code> then no finalgather map is loaded or
+saved.
+<dd>The default is <code>miNULLTAG</code>.
+
+<dt>space_shadow_separate
+<dd>turns on a separate BSP tree for shadow objects in addition to the main
+BSP tree for traceable geometry. The trace and shadow flags are attributes
+of geometric objects. Objects that have both flags set will go into both BSP
+trees, which is less efficient.
+<dd>The default is <code>miFALSE</code>.
+
+<dt>finalgather_filter
+<dd>specifies the size of the final gathering speckle removal filter.
+A value of <code>0</code> means off; values greater than <code>4</code>
+are not normally useful.
+<dd>The default is <code>1</code>.
+
+<dt>rast_collect_rate
+<dd>for the <a href="node34.html#INDEX67">rasterizer</a>
+specifies the number of samples per pixel dimension. If set to <code>0</code>
+an internal default will be used, which is <code>3</code> giving 9 samples
+per pixel. Note, in contrast to adaptive sampling settings, the number of
+samples is not given as power of 2.
+<dd>The default is <code>0</code>.
+
+<dt>rast_shading_samples
+<dd>for the <a href="node34.html#INDEX67">rasterizer</a>
+specifies the number of shading calls per pixel. If set to 0 the internal
+default will be used, which is <code>1.0</code>.
+<dd>The default is <code>0</code>.
+
+<dt>rast_motion_resample
+<dd>for the <a href="node34.html#INDEX67">rasterizer</a>
+controls the number of samples in time.
+<dd>The default is <code>0</code>.
+
+<dt>use_shadow_maps
+<dd>if <code>miTRUE</code>enables shadowmaps to be used for the light
+sources which have shadowmaps specified. If set to <code>'o'</code>
+shadowmaps are computed using OpenGL. mental ray allows setting bit 7
+independently to only render shadowmaps to files, if applicable, but
+omit the main rendering stage (similar to <code>-shadowmap only</code>
+on the command line of standalone mental ray). This flag applies to all
+shadowmaps in the scene.
+<dd>The default is <code>0</code> (off).
+
+<dt>rendering_shadow_maps
+<dd>is set to <code>miTRUE</code> by mental ray when shadowmaps are being
+rendered. This option is internal to RC and only used to optimize the
+rendering of shadowmaps.
+<dd>The default is <code>miFALSE</code>.
+
+<dt>recompute_shadow_maps
+<dd>can be 'y' or 'n'. 'y' means that
+all shadowmaps are recomputed even if they could have been loaded
+from a file. 'n' means that shadowmaps are only computed if they
+could not be re-used or loaded from a file (shadowmaps are
+recomputed "intelligently" meaning that the shadowmap code tries to
+identify those light sources for which a new shadowmap needs to be
+recomputed. This recomputation currently only applies to light
+sources for which the position or direction of the emitted light -
+ie. the transformation matrix - changes in an animation).
+
+<dt>shadow
+<dd>(default <code>1</code>) controls shadow casting. It
+is one of <code>0</code> (no shadows), <code>1</code> (normal shadows),
+<code>'s'</code> (shadow segments with separate volume shaders), and
+<code>'l'</code> (shadow intersections sorted from the light source
+towards the illumination point).
+
+<dt>caustic_filter
+<dd>is the type of filter used: 'b' box filter,
+'c' cone filter and 'g' gauss filter.
+
+<dt>finalgather_rebuild
+<dd>(default miFALSE) if set to miTRUE then final gathering is re-computed
+in every frame of an animation.
+
+<dt>filter
+<dd>(default <code>'b'</code>) is one of <code>'b'</code> (box filter),
+<code>'t'</code> (triangle filter), <code>'g'</code> (Gaussian filter),
+<code>'m'</code> (Mitchell filter), or <code>'l'</code> (Lanczos filter).
+
+<dt>acceleration
+<dd>(default <code>'b'</code>) is one of
+<code>'b'</code> (space subdivision, BSP), <code>'l'</code> (large-scene
+BSP), and <code>'g'</code> (grid).
+
+<dt>face
+<dd>(default <code>'a'</code>) enables backface culling, one
+of <code>'f'</code> (front-facing only), <code>'b'</code> (back-facing
+only), and <code>'a'</code> (both). During rendering, mental ray 3.x
+copies the face flag to the shader state to make it controllable by
+shaders.
+
+<dt>field
+<dd>is not used.
+
+<dt>smethod
+<dd>is not used.
+
+<dt>render_space
+<dd>(default 'c') is 'o' for <a href="node101.html#INDEX369">object space</a>
+(recommended) or 'c' for <a href="node101.html#INDEX370">camera space</a>
+(default).
+
+<dt>pixel_preview
+<dd>is set when pixel previewing should be used. The default is off.
+
+<dt>task_preview
+<dd>is set when task previewing should be used. The default is off.
+
+<dt>visible_lights
+<dd>is set if there are any area lights with
+the 'visible' flag. This option is internal to RC and used to
+optimize rendering.
+
+<dt>shadow_map_motion
+<dd> enables motion blurring of shadowmap shadows. The default is on.
+
+<dt>task_size
+<dd>(default 0) is the size of the image tasks to be rendered.
+If it is zero, a heuristic based on the image
+resolution will be used in RC in order to calculate an appropriate
+value. task_size can also be specified explicitly.
+
+<dt>strips
+<dd>specifies whether the approximated geometry is
+represented as triangle strips and fans. The default is off.
+
+<dt>photonmap_file
+<dd>is a string containing the filename of a
+file from which a <a href="node48.html#INDEX96">photon map</a>
+should be loaded (if possible) or otherwise saved to. If this tag
+is a miNULLTAG then no photon map is loaded or saved.
+
+<dt>photonmap_rebuild
+<dd>will, if true, enforce a recomputation
+of the <a href="node48.html#INDEX96">photon map</a> even if it
+could have been loaded from a file.
+
+<dt>photon_reflection_depth
+<dd>controls the trace depth of reflected photons. The default is 5.
+
+<dt>photon_refraction_depth
+<dd>controls the trace depth of refracted photons. The default is 5.
+
+<dt>photon_trace_depth
+<dd>controls the combined trace depth of reflected and refracted photons.
+The default is 5.
+
+<dt>space_max_depth
+<dd>is not used.
+
+<dt>caustic_scale
+<dd>is multiplied into the indirect illumination from caustics.
+Values greater than 1 increase the brightness of the effect. If just
+this option is changed, it is correct to re-render scene with
+<code>photonmap_rebuild</code> set to <code>false</code>.
+
+<dt>globillum_scale
+<dd>is multiplied into the irradiance obtained from global illumination
+photonmap lookup. Values greater than 1 increase the brightness of the effect.
+If just this option is changed, it is correct to re-render scene with
+<code>photonmap_rebuild</code> set to <code>false</code>.
+
+<dt>finalgather_scale
+<dd>is multiplied into the indirect illumination obtained from final gathering.
+This allows fast artistic tuning of indirect illumination. If just this option
+is changed, it is correct to re-render scene with
+<code>finalgather_rebuild</code> set to <code>false</code>, saving the
+finalgather preprocessing step.
+
+<dt>finalgather_sec_scale
+<dd>is multiplied into the indirect illumination obtained from secondary
+bounces of final gathering. This allows fast artistic tuning of indirect
+illumination. If just this option is changed, it is correct to re-render
+scene with <code>finalgather_rebuild</code> set to <code>false</code>, saving the
+finalgather preprocessing step.
+
+<dt>photonvol_scale
+<dd>is multiplied into the indirect illumination obtained from volume photons.
+Values less than 1 decrease the contribution of the effect.
+
+<dt>spectrum_blueprint
+<dd>
+
+<dt>input_cprof
+<dd>is a tag associated with a color profile describing the color space
+for input images like textures. If this value is not set, then no color
+space transformation is performed but input textures are assumed to be
+given in the render color space.
+
+<dt>white_cprof
+<dd>is a tag associated with a color profile used to perform all white point
+adaptions when transforming from the rendering color space to the output
+color profile. If this value is not set, then any white point adaptions
+are performed in mental rays internal color space.
+
+<dt>render_cprof
+<dd>is a tag associated with a color profile describing the rendering color
+space. If this value is not set, then rendering is performed in a device
+dependent color space which is identical with the output color space. If
+the value is set to a valid color profile, then rendering is performed in
+this color space. The results in the color frame buffer are stored
+in mental rays internal color space.
+
+<dt>fb_dir
+<dd>is a string containing the directory
+for <a href="node37.html#INDEX77">frame buffer file</a>s on disk.
+If this is a null tag then defaults are taken from
+<a href="configuration.html#INDEX1085">environment variable</a>s.
+
+<dt>no_lens
+<dd>if <code>miTRUE</code>disables all lens shaders.
+The default is <code>miFALSE</code>.
+
+<dt>no_volume
+<dd>if <code>miTRUE</code>disables all volume shaders.
+The default is <code>miFALSE</code>.
+
+<dt>no_geometry
+<dd>if <code>miTRUE</code>disables all geometry shaders.
+The default is <code>miFALSE</code>.
+
+<dt>no_displace
+<dd>if <code>miTRUE</code>disables all displacement shaders.
+The default is <code>miFALSE</code>.
+
+<dt>no_output
+<dd>is a bitmap. Bit zero, it set, disables all output shaders.
+Bit one, if set, disables writing of output image files.
+The default is zero for both bits.
+
+<dt>no_merge
+<dd>if <code>miTRUE</code>disables all edge merging and adjacency detection.
+The default is <code>miFALSE</code>.
+
+<dt>caustic_flag
+<dd>is the default caustic flag for objects. The default value is
+<code>3</code>, making all objects caustic generators and caustic receivers.
+
+<dt>diagnostic_mode<dd> controls alternate rendering modes for
+diagnostic purposes. It is a bitmap. The only currently supported
+bit is <code>miSCENE_DIAG_SAMPLES</code> which, when set, turns on
+sample view mode. The default value is zero for all bits.
+<dt>photonvol_accuracy<dd> specifies the number of photons to use
+when estimating radiance inside participating media.
+<dt>photonvol_radius<dd> specifies the maximum distance in which
+photons used in the radiance estimate for participating media are
+located. If the radius is 0.0 then an estimate based on the scene
+extent will be used.
+<dt>cut_windows<dd><sup>2.1</sup> enables rendering every image
+as <var>n &times; n</var> cut windows if set greater than zero.
+<dt>cut_expand<dd><sup>2.1</sup> increases the cut window frustum
+by a factor all around the frustum if greater than zero, to catch
+invisible outside geometry that becomes visible because it is
+displaced into the frustum. The default is 0.1. It has an effect
+only if cut windows are enabled.
+<dt>globillum_flag<dd> is the default globillum flag for objects.
+The default value is 3, making all objects globillum generators and
+receivers.
+<dt>samplelock<dd> (default <code>miTRUE</code>) uses the same
+sampling sequences for every frame, causing sampling noise to
+remain unchanged in unchanged parts of the scene. If set to
+<code>miFALSE</code>, the sequences are initialized with the
+<a href="node199.html#INDEX1061">frame number</a> to cause moving
+noise.
+<dt>autovolume<dd> (default <code>miFALSE</code> enables automatic
+volume tracking by mental ray. This allows managing overlapping
+volumes and a camera that is inside one or more volumes, to always
+call the correct volume shaders.
+<dt>finalgather_view<dd> (default <code>miFALSE</code>) switches the
+final gather radius parameters from world space to projected
+<a href="node101.html#INDEX371">raster space</a>.
+<dt>no_hair<dd>if set, disables hair rendering.
+<dt>n_motion_vectors<dd><sup>3.1</sup> specifies the number of
+curve segments into which motion transformations should be
+subdivided to create a smooth curved motion path. This must be a
+number in the range 1..15. The default is 1. The scene language
+equivalent is <code>motion steps</code>.
+<dt>no_pass<dd><sup>3.1</sup> disables sample pass rendering. All
+pass statements in the camera will be ignored.
+<dt>photon_autovolume<dd> enables autovolume mode for photons.
+Autovolume mode keeps track of the volumes or list of volumes that
+a photon is in, depending on volume shaders and their mixing
+properties on materials.
+<dt>no_predisplace<dd> turns off displacement presampling, which
+normally attempts to improve bounding box quality by checking a
+number of displaced points for extreme values.
+<dt>fg_reflection_depth<dd> is a trace depth for reflected
+finalgather rays. This implements multi-generation final gathering
+in a way similar to reflection_depth for regular rays.
+<dt>fg_refraction_depth<dd> is a trace depth for refracted
+finalgather rays.
+<dt>fg_diffuse_depth<dd>is a trace depth for secondary diffuse bounces.
+<dt>fg_trace_depth<dd> is a total trace depth for reflected and
+refracted finalgather rays.
+<dt>fg_falloff_start<dd> specifies the starting distance for
+finalgather falloff.
+<dt>fg_falloff_stop<dd> specifies the stopping distance for
+finalgather rays. The total length of finalgather rays cannot
+exceed the stop distance, and is attenuated with a linear falloff
+curve between the start and stop distances. If both are set to 0.0,
+no falloff takes place.
+<dt>approx<dd> overrides all base surface approximations in
+objects, both free-form surfaces and polygonal, if the
+approximation style is not <code>miAPPROX_STYLE_NONE</code>. This style
+is the default, and all other fields are 0. Use the
+<code>miAPPROX_DEFAULT</code> macro to activate this approximation. See
+the <code>miApprox</code> data structure description above.
+<dt>approx_displace<dd> is the same thing for displacement
+approximations.
+<dt>finalgather<dd> enables final gathering. The default is
+off.
+<dt>finalgather_rays<dd> is the number of rays shot in each final
+gather. The default is 1000.
+<dt>finalgather_maxradius<dd> is the maximum radius in which a
+final gather result can be used for interpolation or extrapolation.
+If this radius is 0.0 then an estimate based on the scene extent
+will be used.
+<dt>finalgather_minradius<dd> indicates that a final gather
+result must be used for interpolation or extrapolation if it is
+within this distance. If this radius is 0.0, it will be set to 10%
+of finalgather_maxradius.
+<dt>diag_photon_density<dd> scales the diagnostic photon density
+mode by defining the density where the diagnostic color range
+peaks.
+<dt>diag_grid_size<dd> defines the grid width of the diagnostic
+grid mode.
+<dt>desaturate<dd> used to be set with
+<i>mi_img_mode</i><sup>2.1</sup>. If enabled, colors exceeding the
+0..1 range will not be clipped per component, but the whole color
+is faded to white. This has an effect only when storing colors in
+8-bit or 16-bit color frame buffers.
+<dt>dither<dd> was also handled by
+<i>mi_img_mode</i><sup>2.1</sup>. It enables LSB dithering when
+storing colors in 8-bit or 16-bit color frame buffers, to avoid
+color banding.
+<dt>nopremult<dd> was also handled by
+<i>mi_img_mode</i><sup>2.1</sup>. It turns off
+<a href="node76.html#INDEX211">premultiplication</a> when storing colors in
+the frame buffer.
+<dt>colorclip<dd> was also handled by
+<i>mi_img_mode</i><sup>2.1</sup>. Sets the color clipping when
+storing colors in 8-bit or 16-bit color frame buffers to
+<code>miIMG_COLORCLIP_RGB</code> (preserve RGB and adjust alpha),
+<code>miIMG_COLORCLIP_ALPHA</code> (preserve alpha and adjust RGB), or
+<code>miIMG_COLORCLIP_RAW</code> (disable color clipping).
+<dt>gamma<dd> was also handled by
+<i>mi_img_mode</i><sup>2.1</sup>. It applies
+<a href="node76.html#INDEX215">gamma correction</a> if gamma is less than
+or greater than 1.0, when storing colors in 8-bit or 16-bit color
+frame buffers.
+<dt>inh_funcdecl<dd> contains the
+<a href="node76.html#INDEX224">inheritance function</a>.
+<dt>luminance_weight<dd> (default 0.33, 0.33, 0.33) controls the
+weights that <i><a href="node150.html#INDEX747">mi_luminance</a></i>
+will assign to R, G,
+and B, respectively, to compute the luminance value.
+<dt>split_obj_no_triangs<dd> is not used.
+<dt>split_obj_no_faces<dd> is not used.
+<dt>inh_is_traversal<dd><sup>3.1</sup> (mental ray 3.1.2), if
+true, switches the inheritance function described by
+<i>inh_funcdecl</i> to a traversal shader. It works the same way
+but gets a different argument set that is more powerful. New
+projects should rely on traversal functions instead of inheritance
+functions.
+<dt>hardware <span class="depr">Deprecated</span>
+<dd>is used for internal purposes only. It controls when mental ray
+will use hardware shaders: never, if available, or always (even if
+the shading result can only be approximated).
+<dt>hardware_diagnostic <span class="depr">Deprecated</span>
+<dd> is reserved.
+<dt>shadowmap_flags<dd> is a bitmap of bits 0 (shadowmap merge),
+and bit 3 (shadowmap only). The other bits must be cleared.
+<dt>maxdisplace<dd>if set to a value other than zero, overrides
+the <i>maxdisplace</i> values when approximating a displaced
+object. This is useful if an old scene without object
+<i>maxdisplace</i> values must be rendered without truncating all
+displacement to zero.
+<dt>shadowmap_bias<dd> supplies a
+<a href="node200.html#INDEX1063">shadowmap bias</a> value to all shadowmaps
+attached to light sources. This is a simple way to switch all of
+mental ray to biased shadowmaps without modifying all lights.
+<dt>hwshader <span class="depr">Deprecated</span>
+<dd>is a bitmap of hardware allowed shading modes that mental ray
+will try in turn until one succeeds:
+<ul>
+<li><code>miHW_DEFAULT</code>: use the best shading mode.</li>
+<li><code>miHW_FORCE</code>: force hardware rendering even if the
+following modes fail. Never fall back on software. This may result
+in gray default surfaces.</li>
+<li><code>miHW_CG</code>: try programmable Cg shaders.</li>
+<li><code>miHW_NATIVE</code>: try OpenGL Shading Language. (This is
+currently not well-supported, added in future releases when the
+OpenGL standard is finalized.)</li>
+<li><code>miHW_FAST</code>: try non-programmable OpenGL, which can
+handle only very simple vertex shading models.</li>
+</ul>
+<dt>photonmap_only<dd>if true, means that only the photon maps and
+not the camera images are rendered. The default is false.
+<dt>lightmap<dd>flag controls rendering of lightmaps. The settings
+are <code>0</code> (off), <code>1</code> (on), and <code>2</code>
+(only). By default, lightmaps are enabled. If this option is set to
+<code>2</code> only the lightmaps and not the camera images are rendered.
+<dt>state_func<dd> is the tag of the optional
+<a href="node125.html#INDEX491">state shader</a> that is called at the
+beginning and end of the lifetime of a state or a primary ray or
+similar shader call.
+<dt>fg_presamp_density<dd>controls the density of
+initial finalgather points. It increases (decreases if
+<var>fg_presamp_density &lt; 1</var>) the number of finalgather
+points computed in the initial stage approximately
+<var>fg_presamp_density</var> times.
+<dt>rapid_shading_samples<dd>sets the number of shading samples per
+pixel for the <a href="node34.html#INDEX67">rasterizer</a> (default is
+<code>1.0</code>). Only has an effect for
+<code>scanline = miRENDER_FH_RAST</code>.
+<dt>fb_virtual<dd>controls whether <a href="node37.html#fo:framebuffers">
+frame buffers</a> are maintained in memory (<code>0</code>), or
+memory-mapped to disk in single potentially large chunks (<code>1</code>),
+or cached to disk in pieces (<code>2</code>). The default is <code>1</code>,
+which allows an arbitrary number of frame buffers or arbitrary resolution
+without filling up physical memory on 64bit systems. On 32bit systems with
+limited memory address space mode <code>2</code> may be more appropriate.
+For certain applications such as fast preview rendering it may be desirable
+to keep the framebuffer in main memory by setting this flag to <code>0</code>.
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node219.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node221.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,564 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :    Pierre-Felix Breton
+# Purpose:    Simplified "all purposes" generic material based on the mrArch&Design shader
+#
+# History:
+#
+# 2006 nov 23nd - pfbreton, initial implementation
+# 2006 dec 19th - pfbreton, adding structs to separate main parameters from performance tuning parameters
+# 2007 feb 2nd  - pfbreton, final ui tweaks and advanced parameters rollup
+# 2007 May 31st - pfbreton, added self illumination parameter and a few tweaks for the reflection control
+#
+#****************************************************************************/
+
+min version "3.5"
+
+declare phenomenon                                        
+    material "adsk_Mtl_DecalAppearance_V2" 
+        (
+          #-------------------------------------
+          # main parameters
+          #-------------------------------------
+                
+                struct "m"
+                {
+                    #----------------------------------
+                    color    "diffuse",
+                    
+                    #----------------------------------
+                    scalar "brdf_0_degree_refl",
+                    scalar "brdf_90_degree_refl",
+                    scalar "surf_gloss",
+                    
+                    
+                    #----------------------------------
+                    color texture    "bump_map",
+                    scalar "bump_amount",
+					boolean		"tint_enable" default off,
+					color		"tint_color" default 1.0 1.0 1.0
+            
+            
+          },# end struct
+
+                #-------------------------------------
+          # transparency parameters
+          #-------------------------------------
+                
+                struct "t"
+                {
+                    #----------------------------------
+                    scalar "transparency",
+                    scalar "refr_trans_weight",
+                    scalar "refr_ior",
+                    scalar "cutout_opacity",
+                    boolean "backface_cull"
+            
+          },# end struct         
+          
+
+                #-------------------------------------
+          # self illumination parameters
+          #-------------------------------------
+                
+                struct "i"
+                {
+                    #----------------------------------
+                    scalar "self_illum_luminance", #this value must be passed in cd per m2 and take into account the physical scale of 3ds max
+                    scalar "self_illum_color_temperature",
+                    color    "self_illum_filter_map"
+            
+          },# end struct         
+          
+          
+          #-------------------------------------
+          # Ambient Occlusion
+          #         hidden in applications like revit 
+          #     provided as added value and exposed in 3ds max or maya directly 
+          #            identical to the Special Effects rollout in the A&D material
+          #-------------------------------------
+              struct "o"
+          {
+              #----------------------------------
+                    boolean "ao_on",
+                    integer "ao_samples",
+                    scalar  "ao_distance", 
+                boolean "ao_do_details",
+                color "ao_dark", 
+                color "ao_ambient"
+                    
+                }, #end struct
+
+                #-------------------------------------
+          # Round Corners
+          #         hidden in applications like revit 
+          #     provided as added value and exposed in 3ds max or maya directly 
+          #            identical to the Special Effects rollout in the A&D material
+          #-------------------------------------
+              struct "r"
+          {
+              #----------------------------------
+                
+                    scalar "roundcorners_radius",
+                    boolean "roundcorners_allow_different_materials"
+              
+          }, #end struct
+
+              #-------------------------------------
+          # Performance Tuning Parameters
+          #         may be hidden and driven as globals in applications like revit 
+          #     but exposed in 3ds max or maya directly in the shader
+          #-------------------------------------
+          struct "p"
+          {
+              #----------------------------------
+              integer "reflection_glossy_samples",
+              integer "refraction_glossy_samples",
+              integer "refl_depth",
+              integer "refr_depth"
+          }, #end struct
+          
+		  #-------------------------------------
+		  # Internals
+		  #-------------------------------------
+		  struct "x"
+		  {
+			  #----------------------------------
+	      	  integer "gbuffer_id"
+		  },
+	          
+          #----------------------------------
+          # Lights and Mode Parameters
+          #     Hidden settings to the user, internally handled by applications like 3ds max or maya
+          #----------------------------------
+                integer     "mode",
+          array light "lights"
+                
+    )#end material
+
+    
+  #------------------------------------------------------------------------
+  # 3ds max Bump shader
+  #------------------------------------------------------------------------
+  shader "Bump (3dsmax)|Shader" "adsk_Utility_Bump"
+  (
+    "Multiplier" = interface "m.bump_amount",
+    "Map" = interface "m.bump_map"
+    )
+ 
+  #------------------------------------------------------------------------
+  # Round Corners Bump Shader
+  #------------------------------------------------------------------------
+    shader "Architectural: Round Corners Bump|Shader" "mia_roundcorners" 
+    (
+        "radius" = interface "r.roundcorners_radius", 
+        "allow_different_materials" = interface "r.roundcorners_allow_different_materials",
+        "bump" "Bump (3dsmax)|Shader"
+    )
+
+  #------------------------------------------------------------------------
+  # Black Body (Kelvin Temperature)
+  #------------------------------------------------------------------------
+    shader "mib_blackbody|Shader" "mib_blackbody" 
+    (
+        "temperature" = interface "i.self_illum_color_temperature", 
+        "intensity" 1
+    )
+    
+    #------------------------------------------------------------------------
+  # Self Luminous surface shader
+  #------------------------------------------------------------------------
+    shader "Architectural: Self Illuminator|Shader" "mia_light_surface" 
+    (
+        "color"  = "mib_blackbody|Shader", 
+        "intensity" = interface "i.self_illum_luminance", 
+        "fg_contrib" 0, 
+        "refl_contrib" 1, 
+        "use_lights" off, 
+        "lights_multiplier" 1, 
+        "lights_eval_point" 0 0 0, 
+        "lights"    = interface "lights"
+        )
+        
+    #------------------------------------------------------------------------
+  # Self Luminous surface shader
+  #------------------------------------------------------------------------
+    shader "Color Mix (base)|Shader" "mib_color_mix" 
+    (
+        "num" 1, 
+        "mode_0" 4, 
+        "mode_1" 0, 
+        "mode_2" 0, 
+        "mode_3" 0, 
+        "mode_4" 0, 
+        "mode_5" 0, 
+        "mode_6" 0, 
+        "mode_7" 0, 
+        "weight_0" 1, 
+        "weight_1" 0, 
+        "weight_2" 0, 
+        "weight_3" 0, 
+        "weight_4" 0, 
+        "weight_5" 0, 
+        "weight_6" 0, 
+        "weight_7" 0, 
+        "color_0"  = interface "i.self_illum_filter_map", 
+        "color_1" 0 0 0 1, 
+        "color_2" 0 0 0 1, 
+        "color_3" 0 0 0 1, 
+        "color_4" 0 0 0 1, 
+        "color_5" 0 0 0 1, 
+        "color_6" 0 0 0 1, 
+        "color_7" 0 0 0 1, 
+        "color_base"  = "Architectural: Self Illuminator|Shader"
+    )
+
+
+    #------------------------------------------------------------------------
+    # Reflection Blur Multiplication
+    #------------------------------------------------------------------------
+    shader "reflection_gloss_sample|shader" "adsk_blurred_reflection_multiplier"
+    (
+        "blurred_reflection_value" = interface "p.reflection_glossy_samples"
+    )
+    
+    #------------------------------------------------------------------------
+    # Refraction Blur Multiplication
+    #------------------------------------------------------------------------
+    shader "refraction_gloss_sample|shader" "adsk_blurred_refraction_multiplier"
+    (
+        "blurred_refraction_value" = interface "p.refraction_glossy_samples"
+    )    
+    
+    shader "scale_Cutout" "adsk_Utility_scale_zero_up"
+	(
+		"op1_in" = interface "t.cutout_opacity",
+		"op2_in" 0.02
+	)
+
+	shader "mia_optimizer" "adsk_Mia_Optimizer"
+	(
+		"material_type"         4, # DecalAppearance (see enum in the optimizer shader code)
+		"reflectivity"          1.0,
+		"brdf_0_degree_refl"  = interface "m.brdf_0_degree_refl",
+		"brdf_90_degree_refl" = interface "m.brdf_90_degree_refl",
+		"transparency"        = interface "t.transparency",
+		"refl_gloss"          = interface "m.surf_gloss",
+		"refr_gloss"          = interface "m.surf_gloss",
+		"refl_gloss_samples"  = interface "p.reflection_glossy_samples",
+		"refr_gloss_samples"  = interface "p.refraction_glossy_samples",
+		"refl_depth"          = interface "p.refl_depth",
+		"refr_depth"          = interface "p.refr_depth"
+	)
+	
+  #------------------------------------------------------------------------
+  # Arch & Design Shader
+  #------------------------------------------------------------------------  
+    shader "mrArchMaterial|Shader" "mia_material" 
+    (
+            
+            #----------------------------------
+            "diffuse_weight" 1, 
+            "diffuse" = interface "m.diffuse",
+            "diffuse_roughness" 0.0, 
+            
+            #----------------------------------
+            "reflectivity"         1.0, 
+            "refl_color"           1 1 1 1, 
+            "refl_gloss"         = interface "m.surf_gloss",
+            "refl_gloss_samples" = "mia_optimizer.refl_gloss_samples", #note: may be hidden in applications like revit and driven globally, but exposed in applications like 3ds max or maya
+            "refl_interpolate"   = "mia_optimizer.refl_interpolate", 
+            "refl_hl_only"       = "mia_optimizer.refl_hl_only", 
+            "refl_is_metal"        off, 
+            
+            #----------------------------------
+            "transparency"       = interface "t.transparency", 
+            "refr_color"         = interface "m.diffuse", 
+            "refr_gloss"         = interface "m.surf_gloss", 
+            "refr_ior"           = interface "t.refr_ior", 
+            "refr_gloss_samples" = "mia_optimizer.refr_gloss_samples", #note: may be hidden in applications like revit and driven globally, but exposed in applications like 3ds max or maya
+            "refr_interpolate"   = "mia_optimizer.refr_interpolate", 
+            "refr_translucency"    on,  
+            "refr_trans_color"   = interface "m.diffuse", 
+            "refr_trans_weight"  = interface "t.refr_trans_weight", 
+            
+            #----------------------------------
+            "anisotropy" 1, 
+            "anisotropy_rotation" 0, 
+            "anisotropy_channel" -1, 
+            
+            #----------------------------------
+            "brdf_fresnel" off, 
+            "brdf_0_degree_refl"  = interface "m.brdf_0_degree_refl", 
+            "brdf_90_degree_refl" = interface "m.brdf_90_degree_refl", 
+            "brdf_curve" 5, 
+            "brdf_conserve_energy" on, 
+            
+            #----------------------------------
+            "intr_grid_density"  = "mia_optimizer.intr_grid_density", 
+            "intr_refl_samples"  = "mia_optimizer.intr_refl_samples", 
+            "intr_refl_ddist_on" = "mia_optimizer.intr_refl_ddist_on", 
+            "intr_refl_ddist"    = "mia_optimizer.intr_refl_ddist", 
+            "intr_refr_samples"  = "mia_optimizer.intr_refr_samples", 
+            
+            #----------------------------------
+            "single_env_sample"  = "mia_optimizer.single_env_sample", 
+            
+            #----------------------------------
+            "refl_falloff_on"   = "mia_optimizer.refl_falloff_on", 
+            "refl_falloff_dist" = "mia_optimizer.refl_falloff_dist", 
+            "refl_falloff_color_on" off, 
+            "refl_falloff_color" 0.2 0.2 0.2 1, 
+            "refl_depth"        = "mia_optimizer.refl_depth", 
+            "refl_cutoff"       = "mia_optimizer.refl_cutoff", 
+            
+            #----------------------------------
+            "refr_falloff_on"   = "mia_optimizer.refr_falloff_on", 
+            "refr_falloff_dist" = "mia_optimizer.refr_falloff_dist", 
+            "refr_falloff_color_on" off, 
+            "refr_falloff_color" 0.2 0.2 0.2 1, 
+            "refr_depth" = "mia_optimizer.refr_depth", 
+            "refr_cutoff" = "mia_optimizer.refr_cutoff", 
+            
+            #----------------------------------
+            "indirect_multiplier" = "mia_optimizer.indirect_multiplier", 
+            
+            #----------------------------------
+            "fg_quality" = "mia_optimizer.fg_quality", 
+            "fg_quality_w" = "mia_optimizer.fg_quality_w", 
+            
+            #----------------------------------
+            "ao_on" = interface "o.ao_on", 
+            "ao_samples" = interface "o.ao_samples", 
+            "ao_distance" = interface "o.ao_distance", 
+            "ao_dark" = interface "o.ao_dark", 
+            "ao_ambient" = interface "o.ao_ambient", 
+            "ao_do_details" = interface "o.ao_do_details", 
+            
+            #----------------------------------
+            "thin_walled" off, 
+            "no_visible_area_hl" on, 
+            "skip_inside_refl" on, 
+            "do_refractive_caustics" on, 
+            "backface_cull" = interface "t.backface_cull", 
+            "propagate_alpha" on, 
+            "hl_vs_refl_balance" 1, 
+            "cutout_opacity" = "scale_Cutout", 
+            "additional_color"  = "Color Mix (base)|Shader",  
+            "bump" "Architectural: Round Corners Bump|Shader", 
+            "no_diffuse_bump" off, 
+            "mode"  = interface "mode",  
+            "lights"    = interface "lights"
+        )    #end shader
+
+
+  #------------------------------------------------------------------------
+  # 3ds max render elements
+  #------------------------------------------------------------------------      
+  shader "max_mia_material_renderelements|Shader" "adsk_Utility_MiaDecomposer" 
+  (
+            "mia_material" "mrArchMaterial|Shader", 
+            "GBufferID" = interface "x.gbuffer_id"
+    ) #end shader
+    
+       
+  	shader "Tint Enable|Shader" "adsk_Utility_Bool_to_Int"
+    (
+        "bool_in" = interface "m.tint_enable"   
+    )
+
+    shader "Tint Multiply|Shader" "mib_color_mix" 
+    (
+        "num" = "Tint Enable|Shader",  
+		"mode_0" 4, 
+		"mode_1" 0, 
+		"mode_2" 0, 
+		"mode_3" 0, 
+		"mode_4" 0, 
+		"mode_5" 0, 
+		"mode_6" 0, 
+		"mode_7" 0, 
+		"weight_0" 1, 
+		"weight_1" 0, 
+		"weight_2" 0, 
+		"weight_3" 0, 
+		"weight_4" 0, 
+		"weight_5" 0, 
+		"weight_6" 0, 
+		"weight_7" 0, 
+		"color_0"  = interface "m.tint_color", 
+		"color_1" 0 0 0 1, 
+		"color_2" 0 0 0 1, 
+		"color_3" 0 0 0 1, 
+		"color_4" 0 0 0 1, 
+		"color_5" 0 0 0 1, 
+		"color_6" 0 0 0 1, 
+		"color_7" 0 0 0 1, 
+		"color_base"  = "max_mia_material_renderelements|Shader"
+   )
+       
+    #------------------------------------------------------------------------
+    #------------------------------------------------------------------------
+    # Material Connections
+    #------------------------------------------------------------------------       
+    material "material" 
+      = "Tint Multiply|Shader"
+      shadow = "mrArchMaterial|Shader"
+        photon = "mrArchMaterial|Shader"
+    end material
+    
+  root material "material"   
+  
+  
+
+  
+  #------------------------------------------------------------------------
+  #------------------------------------------------------------------------
+  # UI
+  #------------------------------------------------------------------------  
+  gui "gui_adsk_Mtl_DecalAppearance_V2" 
+  {            
+        #----------------------------------
+		control "Global" "Global" 
+		(
+			"uiName" "ProMaterials: Generic", "category" "Material",          
+			"viewport_diffuse" "m.diffuse",
+			"viewport_specular" 1.0 1.0 1.0,
+			"viewport_shininess" "m.surf_gloss",
+			"viewport_transparency" "t.transparency"
+		)        
+        
+        #---------------------------------------------------------------------------------
+        #   Material Parameters
+        #---------------------------------------------------------------------------------
+        control "m" "struct" ("uiName" "Generic Material Parameters", "openstate" "true")
+    {  
+
+            #----------------------------------
+            control "diffuse"  "color" ("uiName"  "Diffuse Color (Reflectance)", "value" .75 .75 .75 )
+            
+            #----------------------------------
+            control "brdf_0_degree_refl" "float" ("uiName" "Reflectivity Perpendicular to Surface", "value" 0.2,  "range" 0 1.0)
+            control "brdf_90_degree_refl" "float" ("uiName" "Reflectivity Parrallel to Surface", "value" 1.0,  "range" 0 1.0)
+            control "surf_gloss" "float" ("uiName" "Surface Glossiness", "value" 1.0,  "range" 0 1.0)
+            
+            #----------------------------------
+            control "bump_map" "vector texture" ("textureInfo" "max_texmap", "uiName" "Surf. Imperfections (Bump) Map ", "helpText" "Surface Imperfections (Bump) Map")
+            control "bump_amount" "float" ("nonConnectable", "uiName" "Surf. Imperfections (Bump) Amount", "value" 0.3,  "range" -100 100, "helpText" "Surface Imperfections (Bump) Map")        
+
+            
+        }    #end struct
+
+    #-------------------------------------
+    # Transparency
+    #         available to all apps
+    #-------------------------------------
+        control "t" "struct" ("uiName" "Transparency", "openstate" "false")
+    {  
+                
+            #----------------------------------
+            control "transparency" "float" ("uiName" "Transparency", "value" 0.0,  "range" 0 1.0)
+            control "refr_ior" "float" ("nonConnectable", "uiName" "Index of Refraction", "value" 1.52,  "range" 1.0 10.0)        
+            control "refr_trans_weight" "float" ("uiName" "Translucency", "value" 0.0,  "range" 0 1.0)            
+            control "cutout_opacity" "float" ("uiName" "Cutout Opacity", "value" 1.0, "range" 0 1.0)
+            control "backface_cull" "boolean" ("uiName" "Backface Cull", "value" 0)
+        }    #end struct    
+
+        
+
+    #-------------------------------------
+    # Self Illumination
+    #         available to all apps
+    #-------------------------------------
+        control "i" "struct" ("uiName" "Self Illumination", "openstate" "false")
+    {  
+                
+            #----------------------------------
+            control "self_illum_luminance" "float" ("nonConnectable","uiName"  "Luminance (cd/m^2)", "value" 0, "range" 0 100000000000000000000.0)
+            
+            control "self_illum_color_temperature"  "float" ("nonConnectable","uiName"  "Color Temperature (Kelvin)", "value" 6500, "range" 0 100000000000000000000.0)
+            control "self_illum_filter_map"  "color" ("uiName"  "Filter Color", "value" 1.0 1.0 1.0)
+                    
+        }    #end struct    
+
+
+    #-------------------------------------
+    # Ambient Occlusion
+    #         hidden in applications like revit 
+    #     provided as added value and exposed in 3ds max or maya directly 
+    #            identical to the Special Effects rollout in the A&D material
+    #-------------------------------------
+        control "o" "struct" ("uiName" "Ambient Occlusion", "openstate" "false")
+    {  
+                
+            #----------------------------------
+            control "ao_on"  "boolean" ("nonConnectable", "uiName"  "Ambient Occlusion", "value" 0, 
+                                         "helpText" "Enables Ambient Occlusion. Emulates the look of true global illumination by using shaders to calculate the extent that an area is occluded or prevented from receiving incoming light. Use this effect with indirect light.")
+            control "ao_samples" "integer" ("nonConnectable", "uiName"  "Samples", "value" 16, "range" 1 1024, "helpText" "Ambient occlusion quality. (High= Smoother/Slower; Low= Grainier/Faster)")
+            control "ao_distance" "float" ("nonConnectable","units" "world", "uiName"  "Max Distance", "value" 4, "range" 0 100000000000000000000.0, "helpText" "Defines the ambient occlusion radius.(High= Large coverage area/Slower; Low= Small coverage area/Faster)")
+            control "ao_do_details"  "boolean" ("nonConnectable", "uiName"  "Use Color From Other Materials (Exact AO)", "value" 1, "helpText" "Enables a more complex mode of Ambient Occlusion that takes object color into account. Note: This improves excessive 'corner darkening' and solves the creation of 'dark rims' by AO around self-illuminating objects.")
+            control "ao_dark"  "color" ("uiName"  "Shadow Color", "value" 0.2 0.2 0.2, "hidden")
+            control "ao_ambient"  "color" ("uiName"  "Custom Ambient Color", "value" 0 0 0, "hidden")
+            
+        }    #end struct    
+    
+      #-------------------------------------
+    # Round Corners
+    #         hidden in applications like revit 
+    #     provided as added value and exposed in 3ds max or maya directly 
+    #            identical to the Special Effects rollout in the A&D material
+    #-------------------------------------
+        control "r" "struct" ("uiName" "Round Corners", "openstate" "false")
+    { 
+            
+            #----------------------------------
+            # Round Corners
+            control "roundcorners_radius" "float" ("units" "world", "uiName"  "Fillet Radius", "value" 0, "range" 0 100000000000000000000.0, "helpText" "Adjusts the radius of the round corner effect")
+            control "roundcorners_allow_different_materials"  "boolean" ("nonConnectable", "uiName"  "Blend With Other Materials", "value" off, "helpText" "Activate to apply corner rounding effects to any material. Disable to apply corner rounding effects to the surface of the current material only.")
+                
+        }    #end struct    
+        
+        
+        #-------------------------------------
+    # Performance Tuning Parameters
+    #         may be hidden and driven as globals in applications like revit 
+    #     but exposed in 3ds max or maya directly in the shader
+    #-------------------------------------
+        control "p" "struct" ("uiName" "Performance Tuning Parameters", "openstate" "false")
+    {  
+
+            #----------------------------------
+            control "reflection_glossy_samples"  "integer" ("nonConnectable", "uiName"  "Reflection Glossy Samples", "value" 8, "range" 1 1024, "helpText" "Defines the maximum number of samples (rays) that mental ray computes to create glossy reflections.")
+            control "refl_depth"  "integer" ("nonConnectable", "uiName"  "Reflection Max Trace Depth", "value" 0, "range" 0 100, "helpText" "Number of times each ray is reflected. When set to zero, global render settings take precedence.")
+            control "refraction_glossy_samples"  "integer" ("nonConnectable", "uiName"  "Refraction Glossy Samples", "value" 8, "range" 1 1024, "helpText" "Defines the maximum number of samples (rays) that mental ray computes to create glossy refractions.")
+            control "refr_depth"  "integer" ("nonConnectable", "uiName"  "Refraction Max Trace Depth", "value" 0, "range" 0 100, "helpText" "Number of times each ray is refracted. When set to zero, global render settings take precedence.")
+            
+        }    #end struct    
+
+        
+ 	#-------------------------------------
+	# Internal
+ 	#-------------------------------------
+	control "x" "struct" ("uiName" "Internals", "openstate" "false")
+	{
+        #----------------------------------
+			control "gbuffer_id"  "integer" (hidden, "nonConnectable", "uiName"  "Translator must link here to pass a different ID", "value" 9)
+	}
+        
+    #-------------------------------------
+    # Lights and Mode Parameters
+    #-------------------------------------
+        control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+        control "lights" "array light" ("hidden","nonConnectable")
+        control "mode" "integer" ("hidden","nonConnectable")
+            
+                
+    }    #end gui
+    
+    
+end declare
+#---------------------------------------------------------------------------------
+# <- end, declare phenomenon
+#---------------------------------------------------------------------------------

@@ -1,0 +1,89 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Gradient_linear {
+
+  input:
+    bool rotate_90_degrees = false {
+        display_name("Rotate 90 degress");
+        description("Rotates the gradient generation by 90");
+    };
+    Shader curve_a {
+        display_name("Curve A");
+        description("Input for function curve shader A");
+    };
+	 float offset = 0.0;
+        
+  output:
+    Color result;
+         
+    void main() {
+        
+        float res = 0.0;
+        float m_t;
+        
+
+        float pass_value = rotate_90_degrees == true? (texture_coordinate[0].y + offset): 
+                                                    (texture_coordinate[0].x + offset);
+        
+        if(curve_a.call("input", "t", pass_value,
+                    "output", "result", res) == true) {
+            m_t = res;
+        }
+        else {
+            m_t = pass_value;
+        } 
+                    
+        result = Color(m_t); 
+    }
+};
+
+shader Gradient_radial {
+
+  input:
+    bool circular = false {
+        display_name("Circular");
+        description("When this parameter is true, the gradient will be based "
+            "on the distance, otherwise it will be based on the angle");
+    };
+    Shader curve_a {
+        display_name("Curve A");
+        description("Input for function curve shader A");
+    };
+    float offset = 0.0;
+    
+  output:
+    Color result;
+    
+    void main()
+    {
+        float m_t, res;
+        float angle;
+        if(circular == true)
+        {
+            angle = length(float2( texture_coordinate[0].x - .5, 
+                                    texture_coordinate[0].y - .5)) +offset;
+        }
+        else
+        {
+            angle = (atan2(texture_coordinate[0].x - .5, texture_coordinate[0].y - .5)+PI) / 
+                    (2 * PI) + offset;
+        }
+        if(curve_a.call("input", "t", angle,
+                    "output", "result", res) == true)
+        {
+            m_t = res;
+        }
+        else
+        {
+            m_t = angle;
+        }
+        result = Color(m_t);
+    }
+};
+
+// declaration for curve shader pack backwards compatibility
+shader gradient_linear : Gradient_linear { };
+shader gradient_radial : Gradient_radial { };

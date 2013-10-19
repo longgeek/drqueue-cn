@@ -1,0 +1,60 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	Pierre-Felix Breton
+# Purpose:	Simplified environment
+#
+# History:
+#
+#
+#****************************************************************************/
+
+min version "3.5"
+
+#
+# Shader for the mental ray physical sun
+#
+declare phenomenon 
+	"adsk_physicalsun" (
+        boolean "on"                   default on,
+        scalar  "multiplier"           default 1.0,
+        color   "rgb_unit_conversion"  default 0.0001 0.0001 0.0001,
+        scalar  "haze"                 default 0.0,
+        scalar  "redblueshift"         default 0.0,
+        scalar  "saturation"           default 1.0,
+        scalar  "horizon_height"       default 0.0,
+        scalar  "shadow_softness"      default 1.0,
+        vector  "photon_bbox_min",
+        vector  "photon_bbox_max",
+        boolean "automatic_photon_energy",
+        boolean "y_is_up"
+    )
+
+	shader "adsk_physicalsun|area_shadow_samples" "adsk_area_shadow_samples"
+	(
+	)
+	
+	shader "adsk_physicalsun|sun" "mia_physicalsun"
+	(
+        "on"                   = interface "on",
+        "multiplier"           = interface "multiplier",
+        "rgb_unit_conversion"  = interface "rgb_unit_conversion",
+        "haze"                 = interface "haze",
+        "redblueshift"         = interface "redblueshift",
+        "saturation"           = interface "saturation",
+        "horizon_height"       = interface "horizon_height",
+        "shadow_softness"      = interface "shadow_softness",
+        "samples"              = "adsk_physicalsun|area_shadow_samples",
+        "photon_bbox_min"      = interface "photon_bbox_min",
+        "photon_bbox_max"      = interface "photon_bbox_max",
+        "automatic_photon_energy" = interface "automatic_photon_energy",
+        "y_is_up"		       = interface "y_is_up"
+	)
+	
+	root = "adsk_physicalsun|sun"
+
+    version 1
+    
+    apply light
+end declare

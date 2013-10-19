@@ -1,0 +1,55 @@
+/*****************************************************************************
+* Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Light_point
+{
+  input:
+    Color   color = Color(1,1,1,1)
+	{	
+		display_name("Color");
+		description( "The color that the light will shine on the scene." );
+	};
+    float  intensity = PI
+	{	
+		display_name("Intensity");
+		soft_range(float(0),float(10));
+		description( "How bright the light will shine on the scene." );
+	};
+    float  distance_falloff_exponent = 0.0
+	{		
+		display_name("Distance Falloff Exponent");		
+		hard_range(float(0),float(4));
+		description( "Determines how quickly light intensity falls "
+		             "off as a function of distance." );
+	};
+    float  distance_scale = 1.0
+   	{	
+		display_name("Distance Scale");
+		soft_range(float(0.001),float(2));
+		description( "Factor to apply in all distance calculations." );
+	};	
+    
+  output:
+    Color result;
+	Color light_shadow;
+    
+    void main()
+    {
+	float attenuation = 1.0;
+	if (distance_falloff_exponent > 0)
+	    attenuation = pow(light_distance * distance_scale, -distance_falloff_exponent);
+   
+        result = color * intensity * attenuation;
+        result.a = 1.0;
+	light_shadow = shadowing();
+    }
+}
+{ 
+	shader_type( "light" );
+	light_type( "point" );
+	description( "Creates an omnidirectional light source centered at "
+				 "a point in the world." );
+}
+;

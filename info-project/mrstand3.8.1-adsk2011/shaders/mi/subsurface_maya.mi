@@ -1,0 +1,277 @@
+$ifndef "subsurface_maya_mi_included"
+set "subsurface_maya_mi_included" "true"
+
+min version "3.3.1"
+max version "3.8.99"
+
+declare shader 
+        color "misss_set_normal" (
+                vector     "normal",
+                integer    "space" default 1,
+                boolean    "add"   default off
+        )
+        version 1
+        apply material
+end declare
+
+#
+# lightmap phen, misss_fast_lmap_maya
+#
+
+declare phenomenon 
+        struct {
+                vector      "point",
+                vector      "normal"
+                }
+        "misss_fast_lmap_maya" (
+                color texture "lightmap",
+                boolean       "indirect"       default off,
+                scalar        "lightmap_gamma" default 0.75,
+                scalar        "scatter_bias"   default 0,
+                color         "ambient"        default 0 0 0,
+                integer       "mode"           default 4,
+                                               #: property "lightmode"
+                array light   "lights"         #: property "lightlink"
+        )
+
+        shader "lm_sample" "misss_lambert_gamma" (
+                "ambient"                = interface "ambient",
+                "ambience"                 1 1 1,
+                "diffuse"                  1 1 1,
+                "indirect"               = interface "indirect",
+                "diffuse_curve"          = interface "lightmap_gamma",
+                "mode"                   = interface "mode",
+                "lights"                 = interface "lights"
+        )
+
+        shader "lm_write" "misss_lightmap_write" (
+                "lightmap"               = interface "lightmap",
+                "scatter_bias"           = interface "scatter_bias",
+                "input"                    "lm_sample"
+        )
+ 
+        apply lightmap
+        root = "lm_write"
+end declare
+
+#
+# Surface shader phen, misss_fast_simple_maya
+#
+
+declare phenomenon 
+        color
+        "misss_fast_simple_maya" (
+                color texture "lightmap",
+                integer       "samples"          default 64,
+                color         "ambient"          default 0 0 0,
+                color         "overall_color"    default 1 1 1,
+                color         "diffuse_color"    default 1 1 1,
+                scalar        "diffuse_weight"   default 0.5,
+                color         "front_sss_color"  default 0.8 0.4 0.1,
+                scalar        "front_sss_weight" default 0.5,
+                scalar        "front_sss_radius" default 10,
+                color         "back_sss_color"   default 0.8 0.4 0.1,
+                scalar        "back_sss_weight"  default 0.5,
+                scalar        "back_sss_radius"  default 10,
+                scalar        "back_sss_depth"   default 10,
+                color         "specular"         default 0.5 0.5 0.5,
+                scalar        "exponent"         default 33,
+
+                scalar        "scale_conversion" default 1.0,
+                scalar        "falloff"          default 2.0,
+                boolean       "screen_composit"  default on,
+                vector        "normalCamera"     default 0 0 0,
+
+                integer       "mode"             default 4,
+                                                 #: property "lightmode"
+                array light   "lights"           #: property "lightlink"
+        )
+
+        shader "bumpshader" "misss_set_normal" (
+                "normal"          = interface "normalCamera",
+                "space"           1,
+                "add"             off
+        )
+
+        shader "diffuse" "misss_lambert_gamma" (
+                "ambient"         = interface "ambient",
+                "ambience"        = interface "diffuse_color",
+                "diffuse"         = interface "diffuse_color",
+                "diffuse_curve"   1.0,
+                "indirect"        on,
+                "mode"            = interface "mode",
+                "lights"          = interface "lights"
+        )
+
+        shader "specular" "misss_skin_specular" (
+                "overall_weight"         1.0, 
+                "primary_weight"         1.0,
+                "primary_spec_color"     = interface "specular",
+                "primary_shinyness"      = interface "exponent",
+
+                "mode"                   = interface "mode",
+                "lights"                 = interface "lights"
+        )
+
+        shader "mtlsh" "misss_fast_shader" (
+                "lightmap"               = interface "lightmap",
+                "depthmap"               = interface "depthmap",
+                "bump"                     "bumpshader",
+                "diffuse_illum"            "diffuse",
+                "diffuse_color"          = interface "overall_color",
+                "diffuse_weight"         = interface "diffuse_weight",
+                "specular_illum"           "specular",
+                "screen_composit"        = interface "screen_composit",
+                "front_sss_color"        = interface "front_sss_color",
+                "front_sss_weight"       = interface "front_sss_weight",
+                "front_sss_radius"       = interface "front_sss_radius",
+                "back_sss_color"         = interface "back_sss_color",
+                "back_sss_weight"        = interface "back_sss_weight",
+                "back_sss_radius"        = interface "back_sss_radius",
+                "back_sss_depth"         = interface "back_sss_depth",
+                "scale_conversion"       = interface "scale_conversion",
+                "falloff"                = interface "falloff",
+                "samples"                = interface "samples"
+        )
+
+        root = "mtlsh"
+        apply material
+end declare
+
+#
+# Surface shader phen misss_fast_skin_maya
+#
+
+declare phenomenon
+        color
+        "misss_fast_skin_maya" (
+                color texture  "lightmap",
+                integer        "samples"        default 64,
+
+                color   "ambient"               default 0 0 0,
+                color   "overall_color"         default 1 1 1,
+                color   "diffuse_color"         default .95 .95 1 ,
+                scalar  "diffuse_weight"        default 0.3 ,
+
+                color   "front_sss_color"       default 1 0.85 0.6 ,
+                scalar  "front_sss_weight"      default 0.5 ,
+                scalar  "front_sss_radius"      default 8,
+                color   "mid_sss_color"         default .95 0.5 0.2,
+                scalar  "mid_sss_weight"        default 0.4,
+                scalar  "mid_sss_radius"        default 25,
+                color   "back_sss_color"        default 0.7 0.1 0.1 ,
+                scalar  "back_sss_weight"       default 0.5,
+                scalar  "back_sss_radius"       default 25,
+                scalar  "back_sss_depth"        default 25,
+
+                scalar  "overall_weight"        default 1.0,
+                scalar  "edge_factor"           default 5.0, 
+                color   "primary_spec_color"    default 0.75 0.9 1,
+                scalar  "primary_weight"        default 0.3,
+                scalar  "primary_edge_weight"   default 0.8 ,
+                scalar  "primary_shinyness"     default 5.0 ,
+
+                color   "secondary_spec_color"  default 0.9 0.95 1.0 ,
+                scalar  "secondary_weight"      default 0.3,
+                scalar  "secondary_edge_weight" default 0.0,
+                scalar  "secondary_shinyness"   default 33.0,
+
+                scalar  "reflect_weight"        default 0 ,
+                scalar  "reflect_edge_weight"   default 0 ,
+                scalar  "reflect_shinyness"     default 2,
+                boolean "reflect_environment_only" default off,
+
+                scalar  "scale_conversion"      default 1.0,
+                scalar  "falloff"               default 2.0,
+                boolean "screen_composit"       default on,
+
+                vector  "normalCamera"          default 0 0 0,
+
+                integer     "mode"              default 4,
+                                                #: property "lightmode"
+                array light "lights"            #: property "lightlink"
+        )
+
+        shader "bumpshader" "misss_set_normal" (
+                "normal"          = interface "normalCamera",
+                "space"           1,
+                "add"             off
+        )
+
+        shader "diffuse" "misss_lambert_gamma" (
+                "ambient"         = interface "ambient",
+                "ambience"        = interface "diffuse_color",
+                "diffuse"         = interface "diffuse_color",
+                "diffuse_curve"   1.0,
+                "indirect"        on,
+                "mode"            = interface "mode",
+                "lights"          = interface "lights"
+        )
+
+        shader "specular" "misss_skin_specular" (
+                "overall_weight"           = interface "overall_weight", 
+
+                "primary_weight"           = interface "primary_weight",
+                "primary_edge_weight"      = interface "primary_edge_weight",
+                "primary_spec_color"       = interface "primary_spec_color",
+                "primary_shinyness"        = interface "primary_shinyness",
+
+                "secondary_weight"         = interface "secondary_weight",
+                "secondary_edge_weight"    = interface "secondary_edge_weight",
+                "secondary_spec_color"     = interface "secondary_spec_color",
+                "secondary_shinyness"      = interface "secondary_shinyness",
+
+                "reflect_weight"           = interface "reflect_weight",
+                "reflect_edge_weight"      = interface "reflect_edge_weight",
+                "reflect_environment_only" = interface "reflect_environment_only",
+                "reflect_shinyness"        = interface "reflect_shinyness",
+
+                "edge_factor"              = interface "edge_factor",
+
+                "mode"                     = interface "mode",
+                "lights"                   = interface "lights"
+        )
+
+        shader "shallowscatter" "misss_fast_shader" (
+                "lightmap"                 = interface "lightmap",
+                "depthmap"                 = interface "depthmap",
+                "diffuse_illum"            "diffuse",
+                "diffuse_color"            1 1 1 1,
+                "diffuse_weight"           = interface "diffuse_weight",
+                "front_sss_color"          = interface "front_sss_color",
+                "front_sss_weight"         = interface "front_sss_weight",
+                "front_sss_radius"         = interface "front_sss_radius",
+                "back_sss_radius"          0,
+                "back_sss_weight"          0,
+                "screen_composit"          = interface "screen_composit",
+                "scale_conversion"         = interface "scale_conversion",
+                "falloff"                  = interface "falloff",
+                "samples"                  = interface "samples"
+        )
+
+        shader "deepscatter" "misss_fast_shader" (
+                "lightmap"                 = interface "lightmap",
+                "depthmap"                 = interface "depthmap",
+                "bump"                     "bumpshader",
+                "diffuse_illum"            "shallowscatter",
+                "diffuse_color"            = interface "overall_color",
+                "diffuse_weight"           1.0,
+                "specular_illum"           "specular",
+                "screen_composit"          = interface "screen_composit",
+                "front_sss_color"          = interface "mid_sss_color",
+                "front_sss_weight"         = interface "mid_sss_weight",
+                "front_sss_radius"         = interface "mid_sss_radius",
+                "back_sss_color"           = interface "back_sss_color",
+                "back_sss_weight"          = interface "back_sss_weight",
+                "back_sss_radius"          = interface "back_sss_radius",
+                "back_sss_depth"           = interface "back_sss_depth",
+                "scale_conversion"         = interface "scale_conversion",
+                "falloff"                  = interface "falloff",
+                "samples"                  = interface "samples"
+        )
+
+        root = "deepscatter"
+        apply  material
+end declare
+
+$endif # if not "subsurface_maya_mi_included"

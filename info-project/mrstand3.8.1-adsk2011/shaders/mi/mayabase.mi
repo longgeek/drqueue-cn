@@ -1,0 +1,4401 @@
+# ==========================================================================
+# Copyright 2008 Autodesk, Inc. All rights reserved.
+#
+# Use of this software is subject to the terms of the Autodesk
+# license agreement provided at the time of installation or download,
+# or which otherwise accompanies this software in either electronic
+# or hard copy form.
+# ==========================================================================
+
+# guard against multiple inclusion
+$ifndef "autodesk_mayabase_included"
+set "autodesk_mayabase_included" "true"
+
+#*****************************************************************************
+#
+# Shader and user data declarations for "mental ray for Maya".
+#
+#*****************************************************************************
+
+# Version 10.8
+
+min version "3.6.0.6"
+max version "3.8.99"
+
+# =============================================================================
+# Library Version
+# =============================================================================
+
+declare shader
+	struct {
+		integer		"hi",
+		integer		"lo"
+	} "mayabase_version" (
+		)
+	version	1
+end declare
+
+# =============================================================================
+# Maya State
+# =============================================================================
+
+declare shader
+	color
+	"maya_state" (
+		boolean		"passAlphaThrough",	# obsolete
+		boolean 	"passLabelThrough",	# obsolete
+		boolean 	"passDepthThrough",	# obsolete
+		integer		"glowColorBuffer"	# obsolete
+		)
+	apply state
+	version 5
+end declare
+
+# =============================================================================
+# Surface Materials
+# =============================================================================
+
+# Shading Engine
+#
+declare shader
+	color
+	"maya_shadingengine" (
+		color		"surfaceShader",
+		scalar		"cutAwayOpacity",
+		integer		"alphaMode"
+		)
+	apply material
+	version 3
+end declare
+
+# Anisotropic
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_anisotropic" (
+		scalar		"spreadX",
+		scalar		"spreadY",
+		scalar		"roughness",
+		scalar		"angle",
+		scalar		"fresnelRefractiveIndex",
+		boolean		"anisotropicReflectivity",
+		# Inherited from Reflect
+		integer		"reflectionLimit",
+		color		"specularColor",
+		scalar		"reflectivity",
+		color		"reflectedColor",
+		scalar		"reflectionSpecularity",
+		# Inherited from Lambert
+		integer		"refractionLimit",
+		scalar		"refractiveIndex",
+		boolean		"refractions",
+		scalar		"diffuse",
+		color		"color",
+		color		"transparency",
+		color		"ambientColor",
+		color		"incandescence",
+		scalar		"translucence",
+		scalar		"translucenceFocus",
+		scalar		"translucenceDepth",
+		scalar		"opacityGain",
+		scalar		"glowIntensity",
+		boolean		"hideSource",
+		scalar		"surfaceThickness",
+		scalar		"shadowAttenuation",
+		scalar		"transparencyDepth",
+		scalar		"lightAbsorbance",
+		boolean		"chromaticAberration",
+		vector		"normalCamera",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		color		"irradiance",
+		color		"irradianceColor",
+		scalar		"refractionBlur",
+		integer		"refractionBlurLimit",
+		integer		"refractionRays",
+		scalar		"reflectionBlur",
+		integer		"reflectionBlurLimit",
+		integer		"reflectionRays",
+		vector		"tangentUCamera",
+		vector		"tangentVCamera",
+		color		"scatterColor",
+		scalar		"scatterRadius",
+		integer		"scatterAccuracy",
+		integer		"scatterFalloff",
+		integer		"scatterLimit",
+		integer		"scatterCache"
+		)
+	apply material
+	version 12
+end declare
+
+# Blinn
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_blinn" (
+		scalar		"eccentricity",
+		scalar		"specularRollOff",
+		# Inherited from Reflect
+		integer		"reflectionLimit",
+		color		"specularColor",
+		scalar		"reflectivity",
+		color		"reflectedColor",
+		scalar		"reflectionSpecularity",
+		# Inherited from Lambert
+		integer		"refractionLimit",
+		scalar		"refractiveIndex",
+		boolean		"refractions",
+		scalar		"diffuse",
+		color		"color",
+		color		"transparency",
+		color		"ambientColor",
+		color		"incandescence",
+		scalar		"translucence",
+		scalar		"translucenceFocus",
+		scalar		"translucenceDepth",
+		scalar		"opacityGain",
+		scalar		"glowIntensity",
+		boolean		"hideSource",
+		scalar		"surfaceThickness",
+		scalar		"shadowAttenuation",
+		scalar		"transparencyDepth",
+		scalar		"lightAbsorbance",
+		boolean		"chromaticAberration",
+		vector		"normalCamera",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		color		"irradiance",
+		color		"irradianceColor",
+		boolean		"reflectionRolloff",
+		scalar		"refractionBlur",
+		integer		"refractionBlurLimit",
+		integer		"refractionRays",
+		scalar		"reflectionBlur",
+		integer		"reflectionBlurLimit",
+		integer		"reflectionRays",
+		color		"scatterColor",
+		scalar		"scatterRadius",
+		integer		"scatterAccuracy",
+		integer		"scatterFalloff",
+		integer		"scatterLimit",
+		integer		"scatterCache"
+		)
+	apply material
+	version 11
+end declare
+
+# Fur
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_fur" (
+		color		"baseColor",
+		integer		"baseMap",
+		scalar		"baseNoise",
+		scalar		"baseNoiseFreq",
+		color		"tipColor",
+		integer		"tipMap",
+		scalar		"tipNoise",
+		scalar		"tipNoiseFreq",
+		color		"baseAmbientColor",
+		integer		"baseAmbientMap",
+		scalar		"baseAmbientNoise",
+		scalar		"baseAmbientNoiseFreq",
+		color		"tipAmbientColor",
+		integer		"tipAmbientMap",
+		scalar		"tipAmbientNoise",
+		scalar		"tipAmbientNoiseFreq",
+		color		"specularColor",
+		integer		"specularMap",
+		scalar		"specularNoise",
+		scalar		"specularNoiseFreq",
+		scalar		"specularSharpness",
+		integer		"specularSharpnessMap",
+		scalar		"specularSharpnessNoise",
+		scalar		"specularSharpnessNoiseFreq",
+		scalar		"baseOpacity",
+		integer		"baseOpacityMap",
+		scalar		"baseOpacityNoise",
+		scalar		"baseOpacityNoiseFreq",
+		scalar		"tipOpacity",
+		integer		"tipOpacityMap",
+		scalar		"tipOpacityNoise",
+		scalar		"tipOpacityNoiseFreq",
+		integer		"lightModel"
+		)
+	apply material
+	version 4
+end declare
+
+# W 10 Fur
+#
+declare shader
+	color "maya_w10fur" (
+		# Fur renderer attributes.
+		geometry	"hairObject",
+		integer		"sampleRate",
+		integer		"motionRate",
+		integer		"bvhType",
+		scalar		"bvhTradeoff",
+		boolean		"useDensityGrid",
+		scalar		"resolutionScale",
+		scalar		"shadingQuality",
+		scalar		"densityScale",
+		# Fur shader.
+		color		"baseColor",
+		scalar		"baseColorNoise",
+		scalar		"baseColorNoiseFreq",
+		integer		"baseColorMap",
+		color		"tipColor",
+		scalar		"tipColorNoise",
+		scalar		"tipColorNoiseFreq",
+		integer		"tipColorMap",
+		color		"baseAmbientColor",
+		scalar		"baseAmbientColorNoise",
+		scalar		"baseAmbientColorNoiseFreq",
+		integer		"baseAmbientColorMap",
+		color		"tipAmbientColor",
+		scalar		"tipAmbientColorNoise",
+		scalar		"tipAmbientColorNoiseFreq",
+		integer		"tipAmbientColorMap",
+		color		"specularColor",
+		scalar		"specularColorNoise",
+		scalar		"specularColorNoiseFreq",
+		integer		"specularColorMap",
+		scalar		"exponent",
+		scalar		"exponentNoise",
+		scalar		"exponentNoiseFreq",
+		integer		"exponentMap",
+		scalar		"baseOpacity",
+		scalar		"baseOpacityNoise",
+		scalar		"baseOpacityNoiseFreq",
+		integer		"baseOpacityMap",
+		scalar		"tipOpacity",
+		scalar		"tipOpacityNoise",
+		scalar		"tipOpacityNoiseFreq",
+		integer		"tipOpacityMap",
+		integer		"lightModel"
+		)
+	apply volume
+	version	9
+end declare
+
+# Hair Tube Shader
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_hairtubeshader" (
+		integer		"tubeDirection",
+		array struct	"colorScale" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		scalar		"specularPower",
+		scalar		"specularShift",
+		scalar		"scatterPower",
+		scalar		"scatter",
+		vector		"uvCoord",
+		# Inherited from Reflect
+		integer		"reflectionLimit",
+		color		"specularColor",
+		scalar		"reflectivity",
+		color		"reflectedColor",
+		scalar		"reflectionSpecularity",
+		# Inherited from Lambert
+		integer		"refractionLimit",
+		scalar		"refractiveIndex",
+		boolean		"refractions",
+		scalar		"diffuse",
+		color		"color",
+		color		"transparency",
+		color		"ambientColor",
+		color		"incandescence",
+		scalar		"translucence",
+		scalar		"translucenceFocus",
+		scalar		"translucenceDepth",
+		scalar		"opacityGain",
+		scalar		"glowIntensity",
+		boolean		"hideSource",
+		scalar		"surfaceThickness",
+		scalar		"shadowAttenuation",
+		scalar		"transparencyDepth",
+		scalar		"lightAbsorbance",
+		boolean		"chromaticAberration",
+		vector		"normalCamera",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		color		"irradiance",
+		color		"irradianceColor",
+		scalar		"refractionBlur",
+		integer		"refractionBlurLimit",
+		integer		"refractionRays",
+		scalar		"reflectionBlur",
+		integer		"reflectionBlurLimit",
+		integer		"reflectionRays",
+		vector		"tangentUCamera",
+		vector		"tangentVCamera",
+		color		"scatterColor",
+		scalar		"scatterRadius",
+		integer		"scatterAccuracy",
+		integer		"scatterFalloff",
+		integer		"scatterLimit",
+		integer		"scatterCache"
+		)
+	apply material
+	version 8
+end declare
+
+# Long Hair Shader
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_hairshader" (
+		array struct	"colorScale" {		# obsolete
+			scalar	"position",		# obsolete
+			color	"color",		# obsolete
+			integer	"interp"		# obsolete
+			},				# obsolete
+		scalar		"specularPower",
+		color		"specularColor",
+		scalar		"translucence",
+		color		"color",		# obsolete
+		scalar		"opacity",
+		integer		"matteOpacityMode",	# obsolete
+		scalar		"matteOpacity"		# obsolete
+		)
+	apply material
+	version 4
+end declare
+
+# Lambert
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_lambert" (
+		integer		"refractionLimit",
+		scalar		"refractiveIndex",
+		boolean		"refractions",
+		scalar		"diffuse",
+		color		"color",
+		color		"transparency",
+		color		"ambientColor",
+		color		"incandescence",
+		scalar		"translucence",
+		scalar		"translucenceFocus",
+		scalar		"translucenceDepth",
+		scalar		"opacityGain",
+		scalar		"glowIntensity",
+		boolean		"hideSource",
+		scalar		"surfaceThickness",
+		scalar		"shadowAttenuation",
+		scalar		"transparencyDepth",
+		scalar		"lightAbsorbance",
+		boolean		"chromaticAberration",
+		vector		"normalCamera",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		color		"irradiance",
+		color		"irradianceColor",
+		scalar		"refractionBlur",
+		integer		"refractionBlurLimit",
+		integer		"refractionRays",
+		color		"scatterColor",
+		scalar		"scatterRadius",
+		integer		"scatterAccuracy",
+		integer		"scatterFalloff",
+		integer		"scatterLimit",
+		integer		"scatterCache"
+		)
+	apply material
+	version 11
+end declare
+
+# Layered Shader
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_layeredshader" (
+		integer		"compositingFlag",
+		array struct	"inputs" {
+			color		"color",
+			color		"transparency",
+			color		"glowColor"
+			},
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity"
+		)
+	apply material
+	version	3
+end declare
+
+# Ocean Shader
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity",
+		# Ocean Shader specials.
+		scalar		"displacement",
+		scalar		"foam"
+	} "maya_oceanshader" (
+		integer		"refractionLimit",
+		scalar		"refractiveIndex",
+		boolean		"refractions",
+		scalar		"diffuse",
+		color		"waterColor",
+		color		"transparency",
+		color		"ambientColor",
+		color		"incandescence",
+		scalar		"translucence",
+		scalar		"translucenceFocus",
+		scalar		"translucenceDepth",
+		scalar		"opacityDepth",
+		scalar		"glowIntensity",
+		scalar		"specularGlow",
+		scalar		"shadowAttenuation",
+		scalar		"eccentricity",
+		scalar		"specularity",
+		integer		"reflectionLimit",
+		color		"specularColor",
+		scalar		"reflectivity",
+		array struct	"environment" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		color		"reflectedColor",
+		scalar		"reflectionSpecularity",
+		vector		"normalCamera",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		scalar		"time",
+		scalar		"scale",
+		vector		"windUV",
+		scalar		"observerSpeed",
+		scalar		"waveDirSpread",
+		scalar		"numFrequencies",
+		scalar		"waveLengthMin",
+		scalar		"waveLengthMax",
+		array struct	"waveHeight" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"waveTurbulence" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"wavePeaking" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		scalar		"waveHeightOffset",
+		scalar		"troughShadowing",
+		color		"foamColor",
+		scalar		"foamEmission",
+		scalar		"foamThreshold",
+		scalar		"foamOffset",
+		scalar		"bumpBlur",
+		scalar		"waveSpeed",
+		color		"irradiance",
+		color		"irradianceColor",
+		scalar		"refractionBlur",
+		integer		"refractionBlurLimit",
+		integer		"refractionRays",
+		scalar		"reflectionBlur",
+		integer		"reflectionBlurLimit",
+		integer		"reflectionRays",
+		color		"scatterColor",
+		scalar		"scatterRadius",
+		integer		"scatterAccuracy",
+		integer		"scatterFalloff",
+		integer		"scatterLimit",
+		integer		"scatterCache",
+		scalar		"horizonFilter"
+		)
+	apply material
+	version 10
+end declare
+
+# Phong
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_phong" (
+		scalar		"cosinePower",
+		# Inherited from Reflect
+		integer		"reflectionLimit",
+		color		"specularColor",
+		scalar		"reflectivity",
+		color		"reflectedColor",
+		scalar		"reflectionSpecularity",
+		# Inherited from Lambert
+		integer		"refractionLimit",
+		scalar		"refractiveIndex",
+		boolean		"refractions",
+		scalar		"diffuse",
+		color		"color",
+		color		"transparency",
+		color		"ambientColor",
+		color		"incandescence",
+		scalar		"translucence",
+		scalar		"translucenceFocus",
+		scalar		"translucenceDepth",
+		scalar		"opacityGain",
+		scalar		"glowIntensity",
+		boolean		"hideSource",
+		scalar		"surfaceThickness",
+		scalar		"shadowAttenuation",
+		scalar		"transparencyDepth",
+		scalar		"lightAbsorbance",
+		boolean		"chromaticAberration",
+		vector		"normalCamera",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		color		"irradiance",
+		color		"irradianceColor",
+		scalar		"refractionBlur",
+		integer		"refractionBlurLimit",
+		integer		"refractionRays",
+		scalar		"reflectionBlur",
+		integer		"reflectionBlurLimit",
+		integer		"reflectionRays",
+		color		"scatterColor",
+		scalar		"scatterRadius",
+		integer		"scatterAccuracy",
+		integer		"scatterFalloff",
+		integer		"scatterLimit",
+		integer		"scatterCache"
+		)
+	apply material
+	version 11
+end declare
+
+# PhongE
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_phongE" (
+		scalar		"roughness",
+		scalar		"highlightSize",
+		color		"whiteness",
+		# Inherited from Reflect
+		integer		"reflectionLimit",
+		color		"specularColor",
+		scalar		"reflectivity",
+		color		"reflectedColor",
+		scalar		"reflectionSpecularity",
+		# Inherited from Lambert
+		integer		"refractionLimit",
+		scalar		"refractiveIndex",
+		boolean		"refractions",
+		scalar		"diffuse",
+		color		"color",
+		color		"transparency",
+		color		"ambientColor",
+		color		"incandescence",
+		scalar		"translucence",
+		scalar		"translucenceFocus",
+		scalar		"translucenceDepth",
+		scalar		"opacityGain",
+		scalar		"glowIntensity",
+		boolean		"hideSource",
+		scalar		"surfaceThickness",
+		scalar		"shadowAttenuation",
+		scalar		"transparencyDepth",
+		scalar		"lightAbsorbance",
+		boolean		"chromaticAberration",
+		vector		"normalCamera",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		color		"irradiance",
+		color		"irradianceColor",
+		scalar		"refractionBlur",
+		integer		"refractionBlurLimit",
+		integer		"refractionRays",
+		scalar		"reflectionBlur",
+		integer		"reflectionBlurLimit",
+		integer		"reflectionRays",
+		color		"scatterColor",
+		scalar		"scatterRadius",
+		integer		"scatterAccuracy",
+		integer		"scatterFalloff",
+		integer		"scatterLimit",
+		integer		"scatterCache"
+		)
+	apply material
+	version 11
+end declare
+
+# Ramp Shader
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_rampshader" (
+		integer		"refractionLimit",
+		scalar		"refractiveIndex",
+		boolean		"refractions",
+		scalar		"diffuse",
+		scalar		"forwardScatter",
+		array struct	"color" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		integer		"colorInput",
+		array struct	"transparency" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		color		"ambientColor",
+		array struct	"incandescence" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		scalar		"translucence",
+		scalar		"translucenceFocus",
+		scalar		"translucenceDepth",
+		scalar		"opacityDepth",
+		scalar		"glowIntensity",
+		scalar		"specularGlow",
+		boolean		"hideSource",
+		scalar		"surfaceThickness",
+		scalar		"shadowAttenuation",
+		scalar		"transparencyDepth",
+		scalar		"lightAbsorbance",
+		boolean		"chromaticAberration",
+		scalar		"eccentricity",
+		scalar		"specularity",
+		array struct	"specularRollOff" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		integer		"reflectionLimit",
+		array struct	"specularColor" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		array struct	"reflectivity" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"environment" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		color		"reflectedColor",
+		scalar		"reflectionSpecularity",
+		vector		"normalCamera",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		color		"irradiance",
+		color		"irradianceColor",
+		scalar		"refractionBlur",
+		integer		"refractionBlurLimit",
+		integer		"refractionRays",
+		scalar		"reflectionBlur",
+		integer		"reflectionBlurLimit",
+		integer		"reflectionRays",
+		# New in Maya 7.0
+		integer 	"shadowMode",
+		color		"shadowColor",
+		scalar		"shadowThreshold"
+		)
+	apply material
+	version 9
+end declare
+
+# Shading Map
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_shadingmap" (
+		color		"color",
+		color		"shadingMapColor",
+		color		"glowColor",
+		color		"transparency",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		integer 	"mapFunctionU",
+		integer 	"mapFunctionV"
+		)
+	apply material
+	version	4
+end declare
+
+# Shadow Shader
+#
+declare shader
+	color
+	"maya_shadow" (
+		color		"transparency",
+		scalar		"shadowAttenuation",
+		scalar		"translucenceDepth"
+		)
+	apply shadow
+	version	5
+end declare
+
+# Surface Shader
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_surfaceshader" (
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+		)
+	apply material
+	version	3
+end declare
+
+# Use Background
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# BRDF components.
+		color		"outAmbient",
+		color		"outIncandescence",
+		color		"outIrradiance",
+		color		"outDiffuseShadowed",
+		color		"outDiffuseNoShadow",
+		color		"outShadow",
+		color		"outSpecularShadowed",
+		color		"outSpecularNoShadow",
+		color		"outReflection",
+		color		"outRefraction",
+		color		"outScatter",
+		color		"outOpacity"
+	} "maya_usebackground" (
+		vector		"normalCamera",
+		scalar		"shadowMask",
+		integer		"reflectionLimit",
+		color		"specularColor",
+		scalar		"reflectivity",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		array geometry	"imagePlanes",
+		scalar		"reflectionBlur",
+		integer		"reflectionBlurLimit",
+		integer		"reflectionRays",
+		scalar		"occlusionMask"
+		)
+	apply material
+	version	8
+end declare
+
+# =============================================================================
+# Volumetric Materials
+# =============================================================================
+
+# Volume Sampler
+#
+declare shader
+	color
+	"maya_volumesampler" (
+		color		"volumeShader"
+		)
+	apply volume
+	version	1
+end declare
+
+# Volume Engine
+#
+declare shader
+	color
+	"maya_volumeengine" (
+		array geometry	"instances"
+		)
+	version	1
+end declare
+
+# Fluid Shader
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency"
+	} "maya_fluidshader" (
+		scalar		"lightReleased",
+		color		"lightColor",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		boolean		"selfShadowing",
+		scalar		"quality",
+		integer		"renderInterpolator",
+		array struct	"color" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		integer		"colorInput",
+		scalar		"colorInputBias",
+		array struct	"opacity" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		integer		"opacityInput",
+		scalar		"opacityInputBias",
+		color		"transparency",
+		scalar		"shadowOpacity",
+		array struct	"incandescence" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		integer		"incandescenceInput",
+		scalar		"incandescenceInputBias",
+		scalar		"glowIntensity",
+		color		"specularColor",
+		scalar		"cosinePower",
+		array struct	"environment" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		integer		"dropoffShape",
+		scalar		"edgeDropoff",
+		scalar		"contrastTolerance",
+		boolean		"heightField",
+		boolean		"surfaceRender",
+		scalar		"surfaceThreshold",
+		scalar		"surfaceTolerance",
+		boolean		"softSurface",
+		scalar		"refractiveIndex",
+		integer		"sampleMethod",
+		boolean		"realLights",
+		boolean		"isPointLight",
+		vector		"directionalLight",
+		vector		"pointLight",
+		integer		"pointLightDecay",
+		scalar		"lightBrightness",
+		scalar		"ambientBrightness",
+		scalar		"ambientDiffusion",
+		color		"fluidLightColor",
+		color		"ambientColor",
+		integer		"textureType",
+		boolean		"colorTexture",
+		scalar		"colorTexGain",
+		boolean		"incandTexture",
+		scalar		"incandTexGain",
+		boolean		"opacityTexture",
+		scalar		"opacityTexGain",
+		boolean		"invertTexture",
+		scalar		"amplitude",
+		scalar		"ratio",
+		scalar		"threshold",
+		vector		"textureScale",
+		vector		"textureOrigin",
+		integer		"depthMax",
+		scalar		"frequency",
+		scalar		"frequencyRatio",
+		scalar		"inflection",
+		scalar		"textureTime",
+		scalar		"billowDensity",
+		scalar		"spottyness",
+		scalar		"sizeRand",
+		scalar		"randomness",
+		integer		"falloff",
+		integer		"numWaves",
+		scalar		"implode",
+		vector		"implodeCenter",
+		vector		"textureRotate",
+		vector		"dynamicOffset",
+		boolean		"autoResize",
+		# Fluid grids as user data
+		geometry	"fluidTag",
+		# Additional parameters
+		boolean		"visibleInReflections",
+		boolean		"visibleInRefractions"
+		)
+	apply volume
+	version 2
+end declare
+
+# Env Fog
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency"
+	} "maya_envfog" (
+		integer		"distanceClipPlanes",
+		boolean		"useLayer",
+		boolean		"useHeight",
+		scalar		"blendRange",
+		scalar		"saturationDistance",
+		scalar		"fogNearDistance",
+		scalar		"fogFarDistance",
+		scalar		"layer",
+		scalar		"minHeight",
+		scalar		"maxHeight",
+		boolean		"physicalFog",
+		integer		"fogType",
+		scalar		"fogDensity",
+		color		"fogColor",
+		color		"fogOpacity",
+		scalar		"fogMinHeight",
+		scalar		"fogMaxHeight",
+		scalar		"fogDecay",
+		scalar		"fogLightScatter",
+		scalar		"airDensity",
+		color		"airColor",
+		color		"airOpacity",
+		scalar		"airMinHeight",
+		scalar		"airMaxHeight",
+		scalar		"airDecay",
+		scalar		"airLightScatter",
+		scalar		"waterDensity",
+		color		"waterColor",
+		color		"waterOpacity",
+		scalar		"waterLevel",
+		scalar		"waterDepth",
+		scalar		"waterLightDecay",
+		scalar		"waterLightScatter",
+		scalar		"planetRadius",
+		integer		"fogAxis",
+		scalar		"sunIntensity",
+		scalar		"sunAzimuth",
+		scalar		"sunElevation",
+		color		"sunColor",
+		# Inherited from LightFog
+		light		"light",
+		color		"color",
+		scalar		"density",			# dummy
+		boolean		"fastDropOff",			# dummy
+		boolean		"colorBasedTransparency",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		# Additional parameters
+		boolean		"visibleInReflections",
+		boolean		"visibleInRefractions"
+		)
+	apply volume
+	version	2
+end declare
+
+# Light Fog
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency"
+	} "maya_lightfog" (
+		light		"light",
+		color		"color",
+		scalar		"density",
+		boolean		"fastDropOff",
+		boolean		"colorBasedTransparency",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		# Additional parameters
+		boolean		"visibleInReflections",
+		boolean		"visibleInRefractions"
+		)
+	apply volume
+	version	2
+end declare
+
+# Volume Fog
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency"
+	} "maya_volumefog" (
+		color		"color",
+		integer		"colorRampInput",
+		array struct	"colorRamp" {
+			scalar		"position",
+			color		"color",
+			integer		"interp"
+			},
+		color		"transparency",
+		color		"incandescence",
+		scalar		"glowIntensity",
+		scalar		"density",
+		integer		"densityMode",
+		integer		"dropoffShape",
+		scalar		"edgeDropoff",
+		scalar		"axialDropoff",
+		integer		"dropoffMethod",
+		scalar		"dropoffSubtract",
+		boolean		"illuminated",
+		scalar		"lightScatter",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		# Additional parameters
+		boolean		"visibleInReflections",
+		boolean		"visibleInRefractions"
+		)
+	apply volume
+	version	3
+end declare
+
+# Volume Shader
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency"
+	} "maya_volumeshader" (
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		# Additional parameters
+		boolean		"visibleInReflections",
+		boolean		"visibleInRefractions"
+		)
+	apply volume
+	version	1
+end declare
+
+# =============================================================================
+# Volume Primitives
+# =============================================================================
+
+# Box
+#
+declare shader
+	geometry
+	"maya_box" (
+		vector		"size",
+		# Volume Sampler Parameters
+		integer		"renderableObjectType",
+		boolean		"volumeSamplesOverride",
+		integer		"volumeSamples",
+		boolean		"depthJitter",
+		# New in Maya 10.0
+		boolean		"dummyObject"
+		)
+	apply geometry
+	version	5
+end declare
+
+# Bounding Box
+#
+declare shader
+	geometry
+	"maya_boundingbox" (
+		vector		"boxMin",
+		vector		"boxMax",
+		# Volume Sampler Parameters
+		integer		"renderableObjectType",
+		boolean		"volumeSamplesOverride",
+		integer		"volumeSamples",
+		boolean		"depthJitter",
+		# New in Maya 10.0
+		boolean		"dummyObject"
+		)
+	apply geometry
+	version	1
+end declare
+
+# Sphere
+#
+declare shader
+	geometry
+	"maya_sphere" (
+		scalar		"radius",
+		integer		"uSpans",
+		integer		"vSpans",
+		# Volume Sampler Parameters
+		integer		"renderableObjectType",
+		boolean		"volumeSamplesOverride",
+		integer		"volumeSamples",
+		boolean		"depthJitter",
+		# New in Maya 10.0
+		boolean		"dummyObject"
+		)
+	apply geometry
+	version	5
+end declare
+
+# Cone
+#
+declare shader
+	geometry
+	"maya_cone" (
+		scalar		"coneAngle",
+		scalar		"coneCap",
+		integer		"uSpans",
+		integer		"vSpans",
+		# Volume Sampler Parameters
+		integer		"renderableObjectType",
+		boolean		"volumeSamplesOverride",
+		integer		"volumeSamples",
+		boolean		"depthJitter",
+		# New in Maya 10.0
+		boolean		"dummyObject"
+		)
+	apply geometry
+	version	5
+end declare
+
+# Slab
+#
+declare shader
+	geometry
+	"maya_slab" (
+		boolean		"useCameraClipPlanes",
+		scalar		"slabMin",
+		scalar		"slabMax",
+		# Volume Sampler Parameters
+		integer		"renderableObjectType",
+		boolean		"volumeSamplesOverride",
+		integer		"volumeSamples",
+		boolean		"depthJitter",
+		# New in Maya 10.0
+		boolean		"dummyObject"
+		)
+	apply geometry
+	version	2
+end declare
+
+# =============================================================================
+# Software Particles
+# =============================================================================
+
+# Particle Cloud
+#
+declare shader
+	struct {
+		color		"outParticleEmission",
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outTransparency"
+	} "maya_particlecloud" (
+		color		"color",
+		color		"transparency",
+		color		"incandescence",
+		scalar		"density",
+		scalar		"glowIntensity",
+		scalar		"noise",
+		scalar		"noiseFreq",
+		scalar		"noiseAspect",
+		color		"blobMap",
+		vector		"normalCamera",
+		scalar		"translucenceCoeff",
+		scalar		"diffuseCoeff",
+		boolean		"surfaceShadingShadow",
+		color		"surfaceColor",
+		scalar		"solidCoreSize",
+		scalar		"translucence",
+		scalar		"noiseAnimRate",
+		scalar		"roundness"
+		)
+	apply volume
+	version 2
+end declare
+
+# Particle Age Mapper
+#
+declare shader
+	struct {
+		vector		"outUvCoord"
+	} "maya_particleagemapper" (
+		boolean		"relativeAge",
+		scalar		"timeScale",
+		boolean		"foldAtEnd"
+		)
+	version 1
+end declare
+
+# Particle Sampler Info
+#
+declare shader
+	struct {
+		vector		"outUvCoord",
+		color		"outColor",
+		color		"outTransparency",
+		color		"outIncandescence",
+		scalar		"ageNormalized",
+		integer		"particleId",
+		scalar		"age",
+		color		"rgbPP",
+		color		"incandescencePP",
+		scalar		"opacityPP",
+		scalar		"userScalar1PP",
+		scalar		"userScalar2PP",
+		scalar		"userScalar3PP",
+		scalar		"userScalar4PP",
+		scalar		"userScalar5PP",
+		vector		"userVector1PP",
+		vector		"userVector2PP",
+		vector		"userVector3PP",
+		vector		"userVector4PP",
+		vector		"userVector5PP"
+	} "maya_particlesamplerinfo" (
+		integer		"outUvType",
+		scalar		"normalizationValue",
+		integer		"normalizationMethod",
+		boolean		"inverseOutUv"
+		)
+	version 3
+end declare
+
+# Blobby Particle Intersector
+#
+declare shader
+	color
+	"maya_blobbyparticles" (
+		shader		"surfaceShader",
+		shader		"shadowShader",
+		scalar		"threshold",
+		geometry	"particleSystem",
+		# Additional parameters
+		boolean		"visibleInReflections",
+		boolean		"visibleInRefractions"
+		)
+	version 2
+end declare
+
+# Cloud Particle Intersector
+#
+declare shader
+	color
+	"maya_cloudparticles" (
+		boolean		"betterIllumination",
+		boolean		"disableCloudAxis",
+		scalar		"surfaceShading",
+		shader		"surfaceShader",
+		shader		"shadowShader",
+		scalar		"threshold",
+		scalar		"filterRadius",
+		shader		"volumeShader",
+		geometry	"particleSystem",
+		# Additional parameters
+		boolean		"visibleInReflections",
+		boolean		"visibleInRefractions"
+		)
+	version 2
+end declare
+
+# Tube Particle Intersector
+#
+declare shader
+	color
+	"maya_tubeparticles" (
+		scalar		"filterRadius",
+		shader		"volumeShader",
+		geometry	"particleSystem",
+		# Additional parameters
+		boolean		"visibleInReflections",
+		boolean		"visibleInRefractions"
+		)
+	version 2
+end declare
+
+# Geometry shader for hardware particles
+#
+declare shader
+	geometry
+	"maya_hardwareparticles" (
+		geometry	"particleSystem",
+		integer		"normalDir",
+		integer		"pointSize",
+		boolean		"useLighting",
+		integer		"multiCount",
+		scalar		"multiRadius",
+		integer		"lineWidth",
+		scalar		"tailFade",
+		scalar		"tailSize"
+		)
+	apply geometry
+	version	1
+end declare
+
+# =============================================================================
+# Displacement Materials
+# =============================================================================
+
+# Displacement
+#
+declare shader
+	struct {
+		scalar		"displacement"
+	} "maya_displace" (
+		scalar		"displacement"
+		)
+	apply displace
+	version	1
+end declare
+
+# =============================================================================
+# 2D Textures
+# =============================================================================
+
+# Bulge
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_bulge" (
+		scalar		"uWidth",
+		scalar		"vWidth",
+		# Inherited from Texture2d
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		scalar		"filter",
+		scalar		"filterOffset",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor"
+		)
+	apply texture
+	version	2
+end declare
+
+# Checker
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_checker" (
+		scalar		"contrast",
+		color		"color1",
+		color		"color2",
+		# Inherited from Texture2d
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		scalar		"filter",
+		scalar		"filterOffset",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor"
+		)
+	apply texture
+	version	2
+end declare
+
+# Cloth
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_cloth" (
+		color		"gapColor",
+		color		"uColor",
+		color		"vColor",
+		scalar		"uWidth",
+		scalar		"vWidth",
+		scalar		"uWave",
+		scalar		"vWave",
+		scalar		"randomness",
+		scalar		"widthSpread",
+		scalar		"brightSpread",
+		# Inherited from Texture2d
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		scalar		"filter",
+		scalar		"filterOffset",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor"
+		)
+	apply texture
+	version	2
+end declare
+
+# File
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha",
+		vector		"outSize",
+		boolean		"fileHasAlpha",
+		color		"outTransparency",
+		vector		"outNormal"
+	} "maya_file" (
+		color texture	"fileTextureName",
+		integer		"filterType",
+		scalar		"filterWidth",
+		boolean		"useMaximumRes",
+		# Inherited from Texture2d
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		scalar		"filter",
+		scalar		"filterOffset",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		# New in Maya 4.5
+		boolean		"fileHasAlpha",
+		# New in Maya 6.5
+		boolean		"disableFileLoad",
+		vector		"coverage",
+		vector		"translateFrame",
+		scalar		"rotateFrame",
+		boolean		"doTransform",
+		boolean		"mirrorU",
+		boolean		"mirrorV",
+		boolean		"stagger",
+		boolean		"wrapU",
+		boolean		"wrapV",
+		vector		"repeatUV",
+		vector		"offset",
+		scalar		"rotateUV",
+		vector		"noiseUV",
+		boolean		"blurPixelation",
+		vector		"vertexUvOne",
+		vector		"vertexUvTwo",
+		vector		"vertexUvThree",
+		# New in Maya 8.0
+		integer		"normalEncoding",
+		integer		"normalSpace",
+		# New in Maya 8.5
+		boolean		"missingAlphaOpaque",
+		# New in Maya 9.5
+		boolean		"miUseEllipticalFilter",
+		boolean		"miEllipticalBilinear",
+		scalar		"miEllipticalEccMax",
+		scalar		"miEllipticalMaxMinor",
+		scalar		"miEllipticalDiscR",
+		scalar		"miEllipticalCircleR",
+		integer		"miEllipticalSetIndex"
+		)
+	apply texture
+	version 7
+end declare
+
+# Fractal
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_fractal" (
+		scalar		"amplitude",
+		scalar		"ratio",
+		scalar		"threshold",
+		scalar		"levelMin",
+		scalar		"levelMax",
+		boolean		"animated",
+		scalar		"time",
+		# Inherited from Texture2d
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		scalar		"filter",
+		scalar		"filterOffset",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		# New in Maya 4.0
+		scalar		"frequencyRatio",
+		scalar		"timeRatio",
+		scalar		"bias",
+		boolean		"inflection"
+		)
+	apply texture
+	version	3
+end declare
+
+# Fluid Texture 2D
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		scalar		"outAlpha",
+		vector		"outUV"
+	} "maya_fluidtexture2d" (
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		color		"defaultColor",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		# Inherited from FluidShape
+		scalar		"lightReleased",
+		color		"lightColor",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		integer		"renderInterpolator",
+		array struct	"color" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		integer		"colorInput",
+		scalar		"colorInputBias",
+		array struct	"opacity" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		integer		"opacityInput",
+		scalar		"opacityInputBias",
+		color		"transparency",
+		array struct	"incandescence" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		integer		"incandescenceInput",
+		scalar		"incandescenceInputBias",
+		scalar		"glowIntensity",
+		integer		"dropoffShape",
+		scalar		"edgeDropoff",
+		boolean		"heightField",
+		integer		"textureType",
+		boolean		"colorTexture",
+		scalar		"colorTexGain",
+		boolean		"incandTexture",
+		scalar		"incandTexGain",
+		boolean		"opacityTexture",
+		scalar		"opacityTexGain",
+		boolean		"invertTexture",
+		scalar		"amplitude",
+		scalar		"ratio",
+		scalar		"threshold",
+		vector		"textureScale",
+		vector		"textureOrigin",
+		integer		"depthMax",
+		scalar		"frequency",
+		scalar		"frequencyRatio",
+		scalar		"inflection",
+		scalar		"textureTime",
+		scalar		"billowDensity",
+		scalar		"spottyness",
+		scalar		"sizeRand",
+		scalar		"randomness",
+		integer		"falloff",
+		integer		"numWaves",
+		scalar		"implode",
+		vector		"implodeCenter",
+		vector		"textureRotate",
+		vector		"dynamicOffset",
+		boolean		"autoResize",
+		# Fluid grids as user data
+		geometry	"fluidTag"
+		)
+	apply texture
+	version 1
+end declare
+
+# Grid
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_grid" (
+		color		"fillerColor",
+		color		"lineColor",
+		scalar		"contrast",
+		scalar		"uWidth",
+		scalar		"vWidth",
+		# Inherited from Texture2d
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		scalar		"filter",
+		scalar		"filterOffset",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor"
+		)
+	apply texture
+	version	2
+end declare
+
+# Mountain
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_mountain" (
+		color		"snowColor",
+		color		"rockColor",
+		scalar		"amplitude",
+		scalar		"snowRoughness",
+		scalar		"rockRoughness",
+		scalar		"boundary",
+		scalar		"snowAltitude",
+		scalar		"snowDropoff",
+		scalar		"snowSlope",
+		scalar		"depthMax",
+		# Inherited from Texture2d
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		scalar		"filter",
+		scalar		"filterOffset",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor"
+		)
+	apply texture
+	version	2
+end declare
+
+# Noise
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_noise" (
+		scalar		"amplitude",
+		scalar		"ratio",
+		scalar		"threshold",
+		integer		"depthMax",
+		scalar		"frequency",
+		scalar		"frequencyRatio",
+		boolean		"inflection",
+		scalar		"time",
+		integer		"noiseType",
+		scalar		"density",
+		scalar		"spottyness",
+		scalar		"sizeRand",
+		scalar		"randomness",
+		integer		"falloff",
+		integer		"numWaves",
+		scalar		"implode",
+		vector		"implodeCenter",
+		# Inherited from Texture2d
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		scalar		"filter",
+		scalar		"filterOffset",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor"
+		)
+	apply texture
+	version	1
+end declare
+
+# Ocean
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha",
+		scalar		"outFoam"
+	} "maya_ocean" (
+		scalar		"time",
+		scalar		"scale",
+		vector		"windUV",
+		scalar		"observerSpeed",
+		scalar		"waveDirSpread",
+		scalar		"numFrequencies",
+		scalar		"waveLengthMin",
+		scalar		"waveLengthMax",
+		array struct	"waveHeight" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"waveTurbulence" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"wavePeaking" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		scalar		"foamEmission",
+		scalar		"foamThreshold",
+		integer		"colorMode",
+		# Inherited from Texture2d
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		scalar		"filter",
+		scalar		"filterOffset",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor"
+		)
+	apply texture
+	version 1
+end declare
+
+# Ramp
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_ramp" (
+		integer		"type",
+		integer		"interpolation",
+		array struct	"colorEntryList" {
+			scalar		"position",
+			color		"color"
+			},
+		scalar		"uWave",
+		scalar		"vWave",
+		scalar		"noise",
+		scalar		"noiseFreq",
+		scalar		"hueNoise",
+		scalar		"satNoise",
+		scalar		"valNoise",
+		scalar		"hueNoiseFreq",
+		scalar		"satNoiseFreq",
+		scalar		"valNoiseFreq",
+		# Inherited from Texture2d
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		scalar		"filter",
+		scalar		"filterOffset",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor"
+		)
+	apply texture
+	version	2
+end declare
+
+# Water
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_water" (
+		integer		"numberOfWaves",
+		scalar		"waveTime",
+		scalar		"waveVelocity",
+		scalar		"waveAmplitude",
+		scalar		"waveFrequency",
+		scalar		"subWaveFrequency",
+		scalar		"smoothness",
+		vector		"windUV",
+		scalar		"rippleTime",
+		scalar		"rippleFrequency",
+		scalar		"rippleAmplitude",
+		scalar		"dropSize",
+		vector		"rippleOrigin",
+		scalar		"groupVelocity",
+		scalar		"phaseVelocity",
+		scalar		"spreadStart",
+		scalar		"spreadRate",
+		boolean		"reflectionBox",
+		vector		"boxMin",
+		vector		"boxMax",
+		boolean		"fast",
+		# Inherited from Texture2d
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		scalar		"filter",
+		scalar		"filterOffset",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor"
+		)
+	apply texture
+	version	2
+end declare
+
+# =============================================================================
+# 3D Textures
+# =============================================================================
+
+# Brownian
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_brownian" (
+		scalar		"lacunarity",
+		scalar		"increment",
+		scalar		"octaves",
+		vector		"weight3d",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		vector		"normalCamera",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	3
+end declare
+
+# Cloud
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_cloud" (
+		color		"color1",
+		color		"color2",
+		scalar		"contrast",
+		boolean		"softEdges",
+		scalar		"transpRange",
+		scalar		"centerThresh",
+		scalar		"edgeThresh",
+		vector		"ripples",
+		vector		"depth",
+		scalar		"amplitude",
+		scalar		"ratio",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		vector		"normalCamera",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	3
+end declare
+
+# Crater
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha",
+		vector		"outNormal"
+	} "maya_crater" (
+		scalar		"shaker",
+		color		"channel1",
+		color		"channel2",
+		color		"channel3",
+		scalar		"melt",
+		scalar		"balance",
+		scalar		"frequency",
+		scalar		"normDepth",
+		scalar		"normMelt",
+		scalar		"normBalance",
+		scalar		"normFrequency",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		vector		"normalCamera",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	3
+end declare
+
+# Fluid Texture 3D
+#
+declare shader
+	struct {
+		color		"outColor",
+		color		"outGlowColor",
+		color		"outMatteOpacity",
+		color		"outTransparency",
+		scalar		"outAlpha",
+		vector		"outCoord"
+	} "maya_fluidtexture3d" (
+		color		"defaultColor",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		transform	"placementMatrix",
+		# Inherited from FluidShape
+		scalar		"lightReleased",
+		color		"lightColor",
+		integer		"matteOpacityMode",
+		scalar		"matteOpacity",
+		integer		"renderInterpolator",
+		array struct	"color" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		integer		"colorInput",
+		scalar		"colorInputBias",
+		array struct	"opacity" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		integer		"opacityInput",
+		scalar		"opacityInputBias",
+		color		"transparency",
+		array struct	"incandescence" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		integer		"incandescenceInput",
+		scalar		"incandescenceInputBias",
+		scalar		"glowIntensity",
+		integer		"dropoffShape",
+		scalar		"edgeDropoff",
+		boolean		"heightField",
+		integer		"textureType",
+		boolean		"colorTexture",
+		scalar		"colorTexGain",
+		boolean		"incandTexture",
+		scalar		"incandTexGain",
+		boolean		"opacityTexture",
+		scalar		"opacityTexGain",
+		boolean		"invertTexture",
+		scalar		"amplitude",
+		scalar		"ratio",
+		scalar		"threshold",
+		vector		"textureScale",
+		vector		"textureOrigin",
+		integer		"depthMax",
+		scalar		"frequency",
+		scalar		"frequencyRatio",
+		scalar		"inflection",
+		scalar		"textureTime",
+		scalar		"billowDensity",
+		scalar		"spottyness",
+		scalar		"sizeRand",
+		scalar		"randomness",
+		integer		"falloff",
+		integer		"numWaves",
+		scalar		"implode",
+		vector		"implodeCenter",
+		vector		"textureRotate",
+		vector		"dynamicOffset",
+		boolean		"autoResize",
+		# Fluid grids as user data
+		geometry	"fluidTag"
+		)
+	apply texture
+	version 1
+end declare
+
+# Granite
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_granite" (
+		color		"color1",
+		color		"color2",
+		color		"color3",
+		color		"fillerColor",
+		scalar		"cellSize",
+		scalar		"density",
+		scalar		"mixRatio",
+		scalar		"spottyness",
+		scalar		"randomness",
+		scalar		"threshold",
+		boolean		"creases",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	3
+end declare
+
+# Leather
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_leather" (
+		color		"cellColor",
+		color		"creaseColor",
+		scalar		"cellSize",
+		scalar		"density",
+		scalar		"spottyness",
+		scalar		"randomness",
+		scalar		"threshold",
+		boolean		"creases",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	3
+end declare
+
+# Marble
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_marble" (
+		color		"fillerColor",
+		color		"veinColor",
+		scalar		"veinWidth",
+		scalar		"diffusion",
+		scalar		"contrast",
+		vector		"ripples",
+		vector		"depth",
+		scalar		"amplitude",
+		scalar		"ratio",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		vector		"normalCamera",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	3
+end declare
+
+# Rock
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_rock" (
+		color		"color1",
+		color		"color2",
+		scalar		"grainSize",
+		scalar		"diffusion",
+		scalar		"mixRatio",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	3
+end declare
+
+# Snow
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_snow" (
+		color		"snowColor",
+		color		"surfaceColor",
+		scalar		"threshold",
+		scalar		"depthDecay",
+		scalar		"thickness",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		vector		"normalCamera",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	3
+end declare
+
+# Solid Fractal
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_solidfractal" (
+		scalar		"amplitude",
+		scalar		"ratio",
+		scalar		"threshold",
+		vector		"ripples",
+		vector		"depth",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		transform	"placementMatrix",
+		boolean		"local",
+		# New in Maya 4.0
+		scalar		"frequencyRatio",
+		scalar		"bias",
+		boolean		"inflection",
+		boolean		"animated",
+		scalar		"timeRatio",
+		scalar		"time"
+		)
+	apply texture
+	version	4
+end declare
+
+# Stucco
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha",
+		vector		"outNormal"
+	} "maya_stucco" (
+		scalar		"shaker",
+		color		"channel1",
+		color		"channel2",
+		scalar		"normalMelt",
+		scalar		"normalDepth",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		vector		"normalCamera",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	3
+end declare
+
+# Volume Noise
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_volumenoise" (
+		scalar		"amplitude",
+		scalar		"ratio",
+		scalar		"threshold",
+		vector		"scale",
+		vector		"origin",
+		integer		"depthMax",
+		scalar		"frequency",
+		scalar		"frequencyRatio",
+		boolean		"inflection",
+		scalar		"time",
+		integer		"noiseType",
+		scalar		"density",
+		scalar		"spottyness",
+		scalar		"sizeRand",
+		scalar		"randomness",
+		integer		"falloff",
+		integer		"numWaves",
+		scalar		"implode",
+		vector		"implodeCenter",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	1
+end declare
+
+# Wood
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_wood" (
+		color		"fillerColor",
+		color		"veinColor",
+		scalar		"veinSpread",
+		scalar		"layerSize",
+		scalar		"randomness",
+		scalar		"age",
+		color		"grainColor",
+		scalar		"grainContrast",
+		scalar		"grainSpacing",
+		vector		"center",
+		scalar		"amplitudeX",
+		scalar		"amplitudeY",
+		scalar		"ratio",
+		vector		"ripples",
+		vector		"depth",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		vector		"normalCamera",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	3
+end declare
+
+# Wood Grain
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_woodgrain" (
+		color		"woodColor",
+		color		"ringColor",
+		scalar		"numberOfRings",
+		scalar		"contrast",
+		integer		"amountOfSwirl",
+		scalar		"swirlFrequency",
+		scalar		"swirlSize",
+		scalar		"grainAxisX",
+		scalar		"grainAxisY",
+		scalar		"grainAxisZ",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		vector		"normalCamera",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	1
+end declare
+
+# =============================================================================
+# Environment Textures
+# =============================================================================
+
+# Env Ball
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_envball" (
+		color		"image",
+		scalar		"inclination",
+		scalar		"elevation",
+		scalar		"skyRadius",
+		scalar		"bottom",
+		scalar		"top",
+		scalar		"left",
+		scalar		"right",
+		scalar		"front",
+		scalar		"back",
+		boolean		"reflect",
+		boolean		"eyeSpace",
+		# Inherited from TextureEnv
+		transform	"placementMatrix"
+		)
+	apply texture, environment
+	version	1
+end declare
+
+# Env Chrome
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_envchrome" (
+		color		"skyColor",
+		color		"zenithColor",
+		color		"lightColor",
+		scalar		"lightWidth",
+		scalar		"lightWidthGain",
+		scalar		"lightWidthOffset",
+		scalar		"lightDepth",
+		scalar		"lightDepthGain",
+		scalar		"lightDepthOffset",
+		boolean		"realFloor",
+		color		"floorColor",
+		scalar		"floorAltitude",
+		color		"horizonColor",
+		color		"gridColor",
+		scalar		"gridWidth",
+		scalar		"gridWidthGain",
+		scalar		"gridWidthOffset",
+		scalar		"gridDepth",
+		scalar		"gridDepthGain",
+		scalar		"gridDepthOffset",
+		# Inherited from TextureEnv
+		transform	"placementMatrix"
+		)
+	apply texture, environment
+	version	1
+end declare
+
+# Env Color
+#
+declare shader
+	color
+	"maya_envcolor" (
+		color		"color"
+		)
+	apply texture, environment
+	version 1
+end declare
+
+# Env Cube
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_envcube" (
+		boolean		"infiniteSize",
+		color		"left",
+		color		"right",
+		color		"top",
+		color		"bottom",
+		color		"front",
+		color		"back",
+		# Inherited from TextureEnv
+		transform	"placementMatrix"
+		)
+	apply texture, environment
+	version	1
+end declare
+
+# Env Sky
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_envsky" (
+		scalar		"totalBrightness",
+		color		"sunBrightness",
+		color		"haloBrightness",
+		scalar		"elevation",
+		scalar		"azimuth",
+		scalar		"size",
+		scalar		"blur",
+		color		"skyBrightness",
+		scalar		"airDensity",
+		scalar		"dustDensity",
+		scalar		"skyThickness",
+		scalar		"skyRadius",
+		boolean		"hasFloor",
+		color		"floorColor",
+		scalar		"floorAltitude",
+		boolean		"useTexture",
+		scalar		"cloudTexture",
+		color		"cloudBrightness",
+		color		"sunsetBrightness",
+		scalar		"density",
+		scalar		"threshold",
+		scalar		"power",
+		scalar		"altitude",
+		scalar		"haloSize",
+		scalar		"skySamples",
+		scalar		"floorSamples",
+		scalar		"cloudSamples",
+		# Inherited from TextureEnv
+		transform	"placementMatrix"
+		)
+	apply texture, environment
+	version	1
+end declare
+
+# Env Sphere
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_envsphere" (
+		color		"image",
+		vector		"shearUV",
+		boolean		"flip",
+		# Inherited from TextureEnv
+		transform	"placementMatrix"
+		)
+	apply texture, environment
+	version	1
+end declare
+
+# =============================================================================
+# Other Textures
+# =============================================================================
+
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha",
+		color		"outTransparency"
+	} "maya_layeredtexture" (
+		array struct	"inputs" {
+			color		"color",
+			scalar		"alpha",
+			integer		"blendMode",
+			boolean		"isVisible"
+			},
+		boolean		"alphaIsLuminance"
+		)
+	apply texture
+	version	1
+end declare
+
+# =============================================================================
+# Lights
+# =============================================================================
+
+# Ambient Light
+#
+declare shader
+	color
+	"maya_ambientlight" (
+		scalar		"ambientShade",
+		scalar		"shadowRadius",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit"
+		)
+	apply light
+	version	2
+end declare
+
+# Directional Light
+#
+declare shader
+	color
+	"maya_directionallight" (
+		boolean		"useLightPosition",
+		scalar		"lightAngle",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit"
+		)
+	apply light
+	version	2
+end declare
+
+# Default Light
+#
+declare shader
+	color
+	"maya_defaultlight" (
+		boolean		"useLightPosition",
+		scalar		"lightAngle",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit"
+		)
+	apply light
+	version	2
+end declare
+
+# Point Light
+#
+declare shader
+	color
+	"maya_pointlight" (
+		scalar		"lightRadius",
+		integer		"decayRate",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit",
+		# Volume shading parameters
+		scalar		"fogRadius",
+		integer		"fogType",
+		scalar		"fogIntensity",
+		# Light profile
+		lightprofile	"lightProfile"
+		)
+	apply light
+	version 5
+end declare
+
+# Spot Light
+#
+declare shader
+	color
+	"maya_spotlight" (
+		scalar		"coneAngle",
+		scalar		"penumbraAngle",
+		scalar		"dropoff",
+		boolean		"barnDoors",
+		scalar		"leftBarnDoor",
+		scalar		"rightBarnDoor",
+		scalar		"topBarnDoor",
+		scalar		"bottomBarnDoor",
+		boolean		"useDecayRegions",
+		scalar		"startDistance1",
+		scalar		"endDistance1",
+		scalar		"startDistance2",
+		scalar		"endDistance2",
+		scalar		"startDistance3",
+		scalar		"endDistance3",
+		scalar		"lightRadius",
+		integer		"decayRate",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit",
+		# Volume shading parameters
+		scalar		"fogSpread",
+		scalar		"fogIntensity"
+		)
+	apply light
+	version 4
+end declare
+
+# Area Light
+#
+declare shader
+	color
+	"maya_arealight" (
+		integer		"decayRate",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit"
+		)
+	apply light
+	version	2
+end declare
+
+# Shape Light
+#
+declare shader
+	color
+	"maya_shapelight" (
+		scalar		"shapeIntensity",
+		integer		"decayRate",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit"
+		)
+	apply light
+	version	1
+end declare
+
+
+# Volume Light
+#
+declare shader
+	color
+	"maya_volumelight" (
+		integer		"lightShape",
+		integer		"volumeLightDir",
+		scalar		"arc",
+		scalar		"coneEndRadius",
+		array struct	"colorRange" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		array struct	"penumbra" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		boolean		"emitAmbient",
+		# Inherited from point light
+		scalar		"lightRadius",
+		integer		"decayRate",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit",
+		# Volume shading parameters
+		scalar		"fogRadius",
+		integer		"fogType",
+		scalar		"fogIntensity"
+		)
+	apply light
+	version 2
+end declare
+
+# =============================================================================
+# General Utilities
+# =============================================================================
+
+# Bump 2D
+#
+declare shader
+	struct {
+		vector		"outNormal"
+	} "maya_bump2d" (
+		vector		"normalCamera",
+		scalar		"bumpValue",
+		scalar		"bumpDepth",
+		scalar		"bumpFilter",
+		scalar		"bumpFilterOffset",
+		boolean		"adjustEdges",
+		boolean		"provide3dInfo",
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		vector		"tangentUCamera",
+		vector		"tangentVCamera",
+		integer		"tangentSet"
+		)
+	version	5
+end declare
+
+# Bump 3D
+#
+declare shader
+	struct {
+		vector		"outNormal"
+	} "maya_bump3d" (
+		vector		"normalCamera",
+		scalar		"bumpValue",
+		scalar		"bumpDepth",
+		scalar		"bumpFilter",
+		scalar		"bumpFilterOffset",
+		vector		"tangentUCamera",
+		vector		"tangentVCamera"
+		)
+	version	2
+end declare
+
+# Condition
+#
+declare shader
+	struct {
+		color		"outColor"
+	} "maya_condition" (
+		integer		"operation",
+		scalar		"firstTerm",
+		scalar		"secondTerm",
+		color		"color1",
+		color		"color2"
+		)
+	version	1
+end declare
+
+# Distance Between
+#
+declare shader
+	struct {
+		scalar		"distance"
+	} "maya_distancebetween" (
+		vector		"point1",
+		transform	"matrix1",
+		vector		"point2",
+		transform	"matrix2"
+		)
+	version	1
+end declare
+
+# Light Info
+#
+declare shader
+	struct {
+		vector		"lightPosition",
+		vector		"lightDirection",
+		scalar		"sampleDistance"
+	} "maya_lightinfo" (
+		geometry	"light",
+		boolean		"lightDirectionOnly"
+		)
+	version 1
+end declare
+
+# Light Link (obsolete)
+#
+declare shader
+	shader
+	"maya_lightlink" (
+		array geometry	"ignoreLinks"
+		)
+	version 4
+end declare
+
+# Multiply Divide
+#
+declare shader
+	struct {
+		vector		"output"
+	} "maya_multdiv" (
+		integer		"operation",
+		vector		"input1",
+		vector		"input2"
+		)
+	version 1
+end declare
+
+# Place 2D Texture
+#
+declare shader
+	struct {
+		vector		"outUV",
+		vector		"outUvFilterSize",
+		# Inputs copied to output.
+		vector		"coverage",
+		vector		"translateFrame",
+		scalar		"rotateFrame",
+		boolean		"mirrorU",
+		boolean		"mirrorV",
+		boolean		"stagger",
+		boolean		"wrapU",
+		boolean		"wrapV",
+		vector		"repeatUV",
+		vector		"offset",
+		scalar		"rotateUV",
+		vector		"noiseUV"
+	} "maya_place2dtex" (
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		vector		"coverage",
+		vector		"translateFrame",
+		scalar		"rotateFrame",
+		boolean		"mirrorU",
+		boolean		"mirrorV",
+		boolean		"stagger",
+		boolean		"wrapU",
+		boolean		"wrapV",
+		vector		"repeatUV",
+		vector		"offset",
+		scalar		"rotateUV",
+		vector		"noiseUV"
+		)
+	version	5
+end declare
+
+# Place 3D Texture
+#
+declare shader
+	struct {
+		transform	"worldInverseMatrix"
+	} "maya_place3dtex" (
+		transform	"placementMatrix",
+		transform	"placementMatrixMotion"
+		)
+	version	1
+end declare
+
+# Plus Minus Average
+#
+declare shader
+	struct {
+		scalar		"output1D",
+		vector		"output2D",
+		vector		"output3D"
+	} "maya_plusminusavg" (
+		integer		"operation",
+		array scalar	"input1D",
+		array vector	"input2D",
+		array vector	"input3D"
+		)
+	version	2
+end declare
+
+# Projection
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_projection" (
+		vector		"imageSize",
+		color		"image",
+		scalar		"uAngle",
+		scalar		"vAngle",
+		integer		"projType",
+		geometry	"linkedCamera",
+		integer		"fitType",
+		integer		"fitFill",
+		vector		"ripples",
+		vector		"depth",
+		scalar		"amplitudeX",
+		scalar		"amplitudeY",
+		scalar		"ratio",
+		# Inherited from Texture3d
+		scalar		"filter",
+		vector		"filterSize",
+		scalar		"filterOffset",
+		scalar		"blend",
+		boolean		"wrap",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor",
+		vector		"normalCamera",
+		transform	"placementMatrix",
+		boolean		"local"
+		)
+	apply texture
+	version	3
+end declare
+
+# Reverse
+#
+declare shader
+	struct {
+		vector		"output"
+	} "maya_reverse" (
+		vector		"input"
+		)
+	version 1
+end declare
+
+# Sampler Info
+#
+declare shader
+	struct {
+		vector		"pointCamera",
+		vector		"pointObj",
+		vector		"pointWorld",
+		vector		"normalCamera",
+		vector		"uvCoord",
+		vector		"rayDirection",
+		vector		"tangentUCamera",
+		vector		"tangentVCamera",
+		vector		"pixelCenter",
+		boolean		"flippedNormal",
+		scalar		"facingRatio"
+	} "maya_samplerinfo" (
+		integer 	"resultSpace",
+		integer 	"ignoreBits"
+		)
+	version	2
+end declare
+
+# Set Range
+#
+declare shader
+	struct {
+		vector		"outValue"
+	} "maya_setrange" (
+		vector		"value",
+		vector		"min",
+		vector		"max",
+		vector		"oldMin",
+		vector		"oldMax"
+		)
+	version 1
+end declare
+
+# Stencil
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_stencil" (
+		color		"image",
+		scalar		"mask",
+		scalar		"edgeBlend",
+		boolean		"keyMasking",
+		boolean		"positiveKey",
+		color		"colorKey",
+		scalar		"hueRange",
+		scalar		"saturationRange",
+		scalar		"valueRange",
+		scalar		"threshold",
+		# Inherited from Texture2d
+		vector		"uvCoord",
+		vector		"uvFilterSize",
+		scalar		"filter",
+		scalar		"filterOffset",
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor"
+		)
+	apply texture
+	version	2
+end declare
+
+# Uv Chooser
+#
+declare shader
+	struct {
+		vector		"outUv",
+		vector		"outVertexUvOne",
+		vector		"outVertexUvTwo",
+		vector		"outVertexUvThree"
+	} "maya_uvchooser" (
+		array struct	"uvSets" {
+			geometry	"object",
+			integer		"index"
+			},
+		boolean		"multiBumpBasis"
+		)
+	version 3
+end declare
+
+# Vector Product
+#
+declare shader
+	struct {
+		vector		"output"
+	} "maya_vectorproduct" (
+		integer		"operation",
+		vector		"input1",
+		vector		"input2",
+		transform	"matrix",
+		boolean		"normalizeOutput"
+		)
+	version 1
+end declare
+
+# =============================================================================
+# Switch Utilities
+# =============================================================================
+
+# Single Shading Switch
+#
+declare shader
+	struct {
+		scalar		"output"
+	} "maya_singleswitch" (
+		scalar		"default",
+		array struct	"input" {
+			geometry	"inShape",
+			scalar		"inSingle"
+			}
+		)
+	version	1
+end declare
+
+# Double Shading Switch
+#
+declare shader
+	struct {
+		vector		"output"
+	} "maya_doubleswitch" (
+		vector		"default",
+		array struct	"input" {
+			geometry	"inShape",
+			vector		"inDouble"
+			}
+		)
+	version	1
+end declare
+
+# Triple Shading Switch
+#
+declare shader
+	struct {
+		vector		"output"
+	} "maya_tripleswitch" (
+		vector		"default",
+		array struct	"input" {
+			geometry	"inShape",
+			vector		"inTriple"
+			}
+		)
+	version	1
+end declare
+
+# Quad Shading Switch
+#
+declare shader
+	struct {
+		vector		"outTriple",
+		scalar		"outSingle"
+	} "maya_quadswitch" (
+		struct		"default" {
+			vector		"defTriple",
+			scalar		"defSingle"
+			},
+		array struct	"input" {
+			geometry	"inShape",
+			struct		"inQuad" {
+				vector		"inTriple",
+				scalar		"inSingle"
+				}
+			}
+		)
+	version	1
+end declare
+
+# =============================================================================
+# Color Utilities
+# =============================================================================
+
+# Blend Colors
+#
+declare shader
+	struct {
+		color		"output"
+	} "maya_blend" (
+		scalar		"blender",
+		color		"color1",
+		color		"color2"
+		)
+	version	1
+end declare
+
+# Clamp
+#
+declare shader
+	struct {
+		color		"output"
+	} "maya_clamp" (
+		color		"input",
+		color		"min",
+		color		"max"
+		)
+	version	1
+end declare
+
+# Contrast
+#
+declare shader
+	struct {
+		vector		"outValue"
+	} "maya_contrast" (
+		vector		"value",
+		vector		"contrast",
+		vector		"bias"
+		)
+	version	1
+end declare
+
+# Gamma Correct
+#
+declare shader
+	struct {
+		vector		"outValue"
+	} "maya_gamma" (
+		vector		"value",
+		vector		"gamma"
+		)
+	version	1
+end declare
+
+# Hsv To Rgb
+#
+declare shader
+	struct {
+		color		"outRgb"
+	} "maya_hsvtorgb" (
+		color		"inHsv"
+		)
+	version	1
+end declare
+
+# Luminance
+#
+declare shader
+	struct {
+		scalar		"outValue"
+	} "maya_luminance" (
+		color		"value"
+		)
+	version	1
+end declare
+
+# Remap Color
+#
+declare shader
+	struct {
+		color		"outColor"
+	} "maya_remapcolor" (
+		color		"color",
+		scalar		"inputMin",
+		scalar		"inputMax",
+		scalar		"outputMin",
+		scalar		"outputMax",
+		array struct	"red" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"green" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"blue" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			}
+		)
+	version	1
+end declare
+
+# Remap Hsv
+#
+declare shader
+	struct {
+		color		"outColor"
+	} "maya_remaphsv" (
+		color		"color",
+		scalar		"inputMin",
+		scalar		"inputMax",
+		scalar		"outputMin",
+		scalar		"outputMax",
+		array struct	"hue" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"saturation" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"value" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			}
+		)
+	version	1
+end declare
+
+
+# Remap Value
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outValue"
+	} "maya_remapvalue" (
+		scalar		"inputValue",
+		scalar		"inputMin",
+		scalar		"inputMax",
+		scalar		"outputMin",
+		scalar		"outputMax",
+		array struct	"color" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		array struct	"value" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			}
+		)
+	version	1
+end declare
+
+# Rgb To Hsv
+#
+declare shader
+	struct {
+		color		"outHsv"
+	} "maya_rgbtohsv" (
+		color		"inRgb"
+		)
+	version	1
+end declare
+
+# Surface Luminance
+#
+declare shader
+	struct {
+		scalar		"outValue"
+	} "maya_surfaceluminance" (
+		vector		"normalCamera"
+		)
+	version	3
+end declare
+
+# Vertex Colors
+#
+declare shader
+	struct {
+		color		"outColor",
+		scalar		"outAlpha"
+	} "maya_vertexcolors" (
+		array struct	"cpvSets" {
+			geometry	"object",
+			integer		"index"
+			},
+		boolean		"invert",
+		boolean		"alphaIsLuminance",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		scalar		"alphaOffset",
+		color		"defaultColor"
+		)
+	apply texture
+	version	2
+end declare
+
+# =============================================================================
+# Image Plane
+# =============================================================================
+
+declare shader
+	color
+	"maya_imageplane" (
+		integer		"type",
+		color texture	"imageName",
+		color		"sourceTexture",
+		integer		"displayMode",
+		color		"colorGain",
+		color		"colorOffset",
+		scalar		"alphaGain",
+		boolean		"visibleInReflections",
+		boolean		"visibleInRefractions"
+		)
+	apply material
+	version	1
+end declare
+
+# =============================================================================
+# Glow
+# =============================================================================
+
+declare shader
+	color
+	"maya_shaderglow" (
+		integer		"glowType",
+		integer		"haloType",
+		scalar		"glowIntensity",
+		color		"glowColor",
+		scalar		"glowSpread",
+		scalar		"glowEccentricity",
+		scalar		"glowRadialNoise",
+		scalar		"glowStarLevel",
+		scalar		"glowOpacity",
+		scalar		"glowRingIntensity",
+		scalar		"glowRingFrequency",
+		integer		"glowFilterWidth",
+		scalar		"haloIntensity",
+		color		"haloColor",
+		scalar		"haloSpread",
+		scalar		"haloEccentricity",
+		scalar		"haloRadialNoise",
+		scalar		"haloStarLevel",
+		scalar		"haloOpacity",
+		scalar		"haloRingIntensity",
+		scalar		"haloRingFrequency",
+		integer		"haloFilterWidth",
+		scalar		"quality",
+		scalar		"threshold",
+		scalar		"radialFrequency",
+		scalar		"starPoints",
+		scalar		"rotation",
+		boolean		"autoExposure",
+		# Glow frame buffer
+		integer		"glowColorBuffer"	# obsolete
+		)
+	apply output
+	version	1
+end declare
+
+# =============================================================================
+# Depth of Field
+# =============================================================================
+
+declare shader
+	color
+	"maya_dof" (
+		scalar		"focusDistance",
+		scalar		"fStop",
+		scalar		"focusRegionScale",
+		integer		"lensSamples"
+		)
+	apply lens
+	scanline off
+	trace on
+	version	1
+end declare
+
+# =============================================================================
+# Compound Utilities
+# =============================================================================
+
+# Split RGBA Color
+#
+declare shader
+	struct {
+		scalar		"r",
+		scalar		"g",
+		scalar		"b",
+		scalar		"a"
+	} "maya_color_to_rgb" (
+		color		"color"
+		)
+	version	1
+end declare
+
+# Split HSVA Color
+#
+declare shader
+	struct {
+		scalar		"h",
+		scalar		"s",
+		scalar		"v",
+		scalar		"a"
+	} "maya_color_to_hsv" (
+		color		"color"
+		)
+	version	1
+end declare
+
+# Split 3D Vector
+#
+declare shader
+	struct {
+		scalar		"x",
+		scalar		"y",
+		scalar		"z"
+	} "maya_vector_to_xyz" (
+		vector		"vector"
+		)
+	version	1
+end declare
+
+# Split 3D Vector
+#
+declare shader
+	struct {
+		scalar		"u",
+		scalar		"v",
+		scalar		"w"
+	} "maya_vector_to_uvw" (
+		vector		"vector"
+		)
+	version	1
+end declare
+
+# Generate RGBA Color
+#
+declare shader
+	color
+	"maya_rgb_to_color" (
+		scalar		"r",
+		scalar		"g",
+		scalar		"b",
+		scalar		"a"
+		)
+	version	1
+end declare
+
+# Generate HSVA Color
+#
+declare shader
+	color
+	"maya_hsv_to_color" (
+		scalar		"h",
+		scalar		"s",
+		scalar		"v",
+		scalar		"a"
+		)
+	version	1
+end declare
+
+# Convert Vector to Color
+#
+declare shader
+	color
+	"maya_vector_to_color" (
+		vector		"vector",
+		scalar		"a"
+		)
+	version	1
+end declare
+
+# Generate 3D Vector
+#
+declare shader
+	vector
+	"maya_xyz_to_vector" (
+		scalar		"x",
+		scalar		"y",
+		scalar		"z"
+		)
+	version	1
+end declare
+
+# Generate 3D Vector
+#
+declare shader
+	vector
+	"maya_uvw_to_vector" (
+		scalar		"u",
+		scalar		"v",
+		scalar		"w"
+		)
+	version	1
+end declare
+
+# Convert Color to Vector
+#
+declare shader
+	struct {
+		vector		"vector",
+		scalar		"a"
+	} "maya_color_to_vector" (
+		color		"color"
+		)
+	version	2
+end declare
+
+# Convert float to int
+#
+declare shader
+	integer
+	"maya_float_to_int" (
+		scalar		"float"
+		)
+	version	1
+end declare
+
+# Convert int to float
+#
+declare shader
+	scalar
+	"maya_int_to_float" (
+		integer		"int"
+		)
+	version	1
+end declare
+
+# Unit Conversion
+#
+declare shader
+	struct {
+		scalar		"output"
+	} "maya_unitconversion" (
+		scalar		"input",
+		scalar		"conversionFactor"
+		)
+	version	1
+end declare
+
+# =============================================================================
+# Curves
+# =============================================================================
+
+# Base AnimCurve
+#
+declare shader
+	scalar
+	"maya_curve" (
+		array struct	"keys" {
+			scalar		"time",
+			scalar		"value",
+			scalar		"tanInX",
+			scalar		"tanInY",
+			scalar		"tanOutX",
+			scalar		"tanOutY"
+			},
+		boolean		"isWeighted",
+		integer		"preInfinity",
+		integer		"postInfinity"
+		)
+	version	1
+end declare
+
+# animCurveTU
+#
+declare shader
+	struct {
+		scalar		"output"
+	} "maya_time_curve" (
+		scalar		"input",
+		shader		"curve"
+		)
+	version	1
+end declare
+
+# animCurveUU
+#
+declare shader
+	struct {
+		scalar		"output"
+	} "maya_scalar_curve" (
+		scalar		"input",
+		shader		"curve"
+		)
+	version	1
+end declare
+
+# =============================================================================
+# Physical Simulation
+# =============================================================================
+
+# Photon surface shader
+#
+declare shader
+	color
+	"maya_photonsurface" (
+		scalar		"shinyness",
+		scalar		"spreadX",
+		scalar		"spreadY",
+		scalar		"angle",
+		color		"whiteness",
+		# Inherited from Reflect
+		color		"specularColor",
+		scalar		"reflectivity",
+		# Inherited from Lambert
+		scalar		"refractiveIndex",
+		boolean		"refractions",
+		boolean		"absorbs",
+		scalar		"diffuse",
+		color		"color",
+		color		"transparency",
+		scalar		"translucence",
+		scalar		"translucenceFocus",
+		vector		"normalCamera",
+		# Additional parameters
+		integer		"colorNorm"
+		)
+	apply photon
+	version	2
+end declare
+
+# Ibl Env
+#
+declare shader
+	color
+	"maya_iblenv" (
+		integer 	"mapping",
+		boolean		"infinite",
+		color texture	"texture",
+		color		"color",
+		boolean		"visible",
+		boolean		"visibleInReflections",
+		boolean		"visibleInRefractions",
+		boolean		"visibleInEnvironment",
+		boolean		"visibleInFinalGather",
+		boolean		"alphaIsLuminance",
+		boolean		"invert",
+		color		"colorGain",
+		color		"colorOffset",
+		boolean		"fgInvert",
+		color		"fgColorGain",
+		color		"fgColorOffset",
+		scalar		"fgFilterSize",
+		transform	"placement"
+		)
+	apply environment
+	version 5
+end declare
+
+# Ibl Emitter
+#
+declare shader
+	color
+	"maya_iblemitter" (
+		integer 	"mapping",
+		boolean		"infinite",
+		color texture	"texture",
+		color		"color",
+		boolean		"standardEmission",
+		boolean		"invert",
+		color		"colorGain",
+		color		"colorOffset",
+		transform	"placement"
+		)
+	apply emitter
+	version 2
+end declare
+
+# Ibl Light
+#
+declare shader
+	color
+	"maya_ibllight" (
+		integer 	"mapping",
+		boolean		"infinite",
+		color texture	"texture",
+		color		"color",
+		vector		"filter",
+		vector		"samples",
+		vector		"lowSamples",
+		scalar		"jitter",
+		boolean		"skipBack",
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"rayDepthLimit",
+		boolean		"invert",
+		color		"colorGain",
+		color		"colorOffset",
+		transform	"placement"
+		)
+	apply light
+	version 3
+end declare
+
+# =============================================================================
+# Contour Rendering
+# =============================================================================
+
+declare shader
+	struct {
+		color		"color",
+		integer		"pri_idx",
+		integer		"pri_data",
+		geometry	"instance",
+		material	"material",
+		integer		"label",
+		scalar		"dist",
+		vector		"point",
+		vector		"normal",
+		vector		"normal_geom",
+		boolean		"inv_normal",
+		vector		"tex"
+	} "maya_contourstore" (
+		)
+	version 2
+end declare
+
+declare shader
+	"maya_contourcontrast" (
+		boolean 	"background",
+		color		"color",
+		boolean 	"pri_idx",
+		boolean 	"pri_data",
+		boolean 	"instance",
+		boolean 	"material",
+		boolean 	"label",
+		scalar		"dist",
+		scalar		"depth",
+		scalar		"normal",
+		boolean		"normal_geom",
+		boolean		"inv_normal",
+		vector		"tex"
+		)
+	version 2
+end declare
+
+declare shader
+	"maya_contour" (
+		color		"color",
+		scalar		"alpha",
+		scalar		"width",
+		boolean 	"relativeWidth"
+		)
+	version 1
+end declare
+
+declare shader
+	"maya_contouroutput" (
+		integer 	"samples",
+		integer 	"filter",
+		scalar	 	"filterSupport",
+		boolean		"clearImage",
+		color		"clearColor"
+		)
+	version 1
+end declare
+
+# =============================================================================
+# Baking
+# =============================================================================
+
+# Bake Lightmap
+#
+declare shader
+	struct {
+		vector		"tex"
+	} "maya_bakelightmap" (
+		integer		"content",
+		shader		"storage",
+		integer		"uvSpace",
+		boolean		"uvRange",
+		vector		"uvMin",
+		vector		"uvMax",
+		integer		"uvFit",
+		integer		"samples",
+		integer		"alphaMode",
+		scalar		"overbake",
+		integer		"rayDirection",
+		integer		"normalDirection",
+		scalar		"prebakeFgQuality",
+		scalar		"prebakeFgReflect",
+		integer		"occlusionRays",
+		scalar		"occlusionFalloff",
+		boolean		"occlusionDeep",
+		shader		"customShader",
+		integer		"backgroundMode",
+		color		"backgroundColor"
+		)
+	apply lightmap
+	version	6
+end declare
+
+# Lens Lightmap
+#
+declare shader
+	color
+	"maya_lenslightmap" (
+		integer		"content",
+		integer		"occlusionRays",
+		scalar		"occlusionFalloff",
+		boolean		"occlusionDeep",
+		shader		"customShader",
+		integer		"alphaMode",
+		integer		"uvSpace",
+		vector		"uvMin",
+		vector		"uvMax",
+		integer		"rayDirection",
+		integer		"normalDirection",
+		color		"backgroundColor",
+		array geometry	"instances"
+		)
+	apply lens
+	version 2
+end declare
+
+# Post Lightmap
+#
+declare shader
+	color
+	"maya_postlightmap" (
+		scalar		"overbake",
+		boolean		"extendEdgeColor"
+		)
+	apply output
+	version	1
+end declare
+
+# Bake Vertices
+#
+declare shader
+	struct {
+		vector		"point",
+		vector		"normal"
+	} "maya_bakevertices" (
+		integer		"content",
+		shader		"storage",
+		integer		"rayDirection",
+		integer		"normalDirection",
+		integer		"occlusionRays",
+		scalar		"occlusionFalloff",
+		boolean		"occlusionDeep",
+		shader		"customShader"
+		)
+	apply lightmap
+	version	3
+end declare
+
+# =============================================================================
+# Miscellaneous Helper Shaders
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Wrap Shaders
+# -----------------------------------------------------------------------------
+
+# Displacement Wrapper
+#
+declare shader
+	scalar "maya_material_displace" (
+		scalar		"displacement"
+		)
+	apply material
+	version 1
+end declare
+
+# =============================================================================
+# User Data Declarations
+# =============================================================================
+
+# Options (obsolete)
+#
+declare data
+	"maya_options" (
+		integer		"magic",	# 'Maya' = 1298233697
+		integer		"renderPass",
+		integer		"shadowLimit",
+		boolean		"computeFilterSize",
+		scalar		"defaultFilterSize",
+		boolean		"aggressiveCaching",
+		boolean		"disableShaderGlow",
+		scalar		"asqMinThreshold",
+		scalar		"asqMaxThreshold",
+		integer		"refractionBlurLimit",
+		integer		"reflectionBlurLimit"
+		)
+	version	7
+end declare
+
+# Camera Data
+#
+declare data
+	"maya_cameradata" (
+		integer		"magic",	# 'Maya' = 1298233697
+		scalar		"xPixelAngle",
+		scalar		"horizontalFilmAperture",
+		scalar		"verticalFilmAperture",
+		scalar		"horizontalFilmOffset",
+		scalar		"verticalFilmOffset",
+		scalar		"lensSqueezeRatio",
+		scalar		"orthographicWidth",
+		# Volume Sampler Parameters
+		integer		"volumeSamples",
+		boolean		"depthJitter",
+		# Z Channel Parameters
+		boolean 	"depth",
+		boolean 	"transparencyBasedDepth",
+		scalar		"threshold",
+		integer 	"depthType",
+		# Shutter Times
+		scalar		"shutterOpen",
+		scalar		"shutterClose",
+		# Camera background color
+		color		"backgroundColor"
+		)
+	version	6
+end declare
+
+# Object Data
+#
+declare data
+	"maya_objectdata" (
+		integer		"magic",	# 'Maya' = 1298233697
+		integer		"uvSpace",
+		# Volume Sampler Parameters
+		integer		"renderableObjectType",	# obsolete
+		integer		"volumeSamples",	# obsolete
+		boolean		"depthJitter",		# obsolete
+		# FG and GI Overrides
+		boolean		"overrideFgGi",
+		integer		"finalgatherRays",
+		scalar		"finalgatherMaxRadius",
+		scalar		"finalgatherMinRadius",
+		boolean		"finalgatherView",
+		integer		"finalgatherFilter",
+		integer		"globillumAccuracy",
+		scalar		"globillumRadius",
+		integer		"causticAccuracy",
+		scalar		"causticRadius",
+		integer		"finalgatherPoints",
+		scalar		"finalgatherImportance"
+		)
+	version	6
+end declare
+
+# Image Plane Data
+#
+declare data
+	"maya_imageplanedata" (
+		integer		"magic",	# 'Maya' = 1298233697
+		vector		"center",
+		vector		"u",
+		vector		"v",
+		vector		"n"
+		)
+	version	1
+end declare
+
+# Light Data
+#
+declare data
+	"maya_lightdata" (
+		integer		"magic",	# 'Maya' = 1298233697
+		integer		"furShadingType",
+		scalar		"furSelfShade",
+		scalar		"furSelfShadeDarkness",
+		scalar		"furBackShadeFactor",
+		scalar		"furBackShadeDarkness",
+		scalar		"furLightMultiplier"
+		)
+	version	1
+end declare
+
+# Custom Vertex Data
+#
+declare data
+	"maya_vertexdata" (
+		integer		"magic",	# 'MiVx' = 1298749048
+		array struct	"data" {
+			string		"name",
+			integer		"type",
+			integer		"size",
+			integer		"offset"
+			},
+		array struct	"uvs" {
+			string		"name",
+			integer		"type",
+			integer		"size",
+			integer		"offset"
+			},
+		array struct	"cpv" {
+			string		"name",
+			integer		"type",
+			integer		"size",
+			integer		"offset"
+			}
+		)
+	version	2
+end declare
+
+$endif  # if not "autodesk_mayabase_included"

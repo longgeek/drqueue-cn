@@ -1,0 +1,80 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+ 
+#include <mi_msl_shared.msl>
+
+float mi_perm(
+        Texture1D_sampler_color perm,   /* The permutation table */
+        float x ) {                    /* The texture coordinate / permutation */
+    return perm.lookup(x+0.5/256.0).x;
+}
+
+shader Curve_noise_1d_discrete {
+  input:
+	float t = texture_coordinate[0].x {
+		display_name("Input");
+	};
+	float freq = 30 {
+		display_name("Frequency");
+		description("Frequency of the discrete noise.");
+	};
+	float seed_val = 0 {
+		display_name("Seed");
+		description("Different values will result in different function curves");
+	};
+	float offset = 0.0 {
+		display_name("Offset");
+		description("Offsets the 1d noise function");
+	};
+	texture1D noise_perm_texture = "noise_perm.dds" {
+		in_group("Advanced");
+		display_name("Noise Permutation Texture");
+		description("The texture containing the permutation table used in "
+					"generating the noise.");
+		disable_filtering();
+		texture_coord_u("clamp");
+	};
+	
+  output:
+	float result;
+	Color graph_out;
+		
+	void main()
+	{
+		Texture1D_sampler_color perm(noise_perm_texture,0,"data");
+		float A;
+		float AA;
+		float seed;
+		
+		// 'normalize' seed to lie between 0 and 1 in discrete steps:
+		seed = fmod(floor(seed_val*256), 256.0);
+		seed = seed / 256.0;
+		//P will hold the quantized values from 0 - 255, but scaled to lie between 0...1
+		float P;
+		float p; //p holds the fractional part of the cell
+		
+		p = (t+ offset) * freq;
+		P = fmod(floor(p), 256.0);
+		p -= floor(p);
+		 
+		P = P / 256.0;
+
+		A = mi_perm(perm, P.x) + seed;
+		AA = mi_perm(perm, A);
+		 
+		result = (AA);
+		graph_out = (texture_coordinate[0].y) < result? MI_LOWER_COL : MI_UPPER_COL;
+	}
+}
+{
+	description("Generates a 1d noise function with descrete steps. Using discrete steps "
+	" is always prone to aliasing artifacts, so you have to be careful when using this node.");
+};
+
+// declaration for curve shader pack backwards compatibility
+shader curve_noise_1d_discrete : Curve_noise_1d_discrete { };
+
+
+

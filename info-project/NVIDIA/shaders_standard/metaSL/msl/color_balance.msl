@@ -1,0 +1,130 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Color_brightness
+{
+  input:
+	Color color   = Color(0,0,0,1)
+	{		
+		display_name("Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The unfiltered value." );
+	};
+	float amount = 1.0
+   	{	
+		display_name("Amount");
+		soft_range(float(0),float(2));
+		description( "The amount to scale the color." );
+	};
+	
+  output:
+	Color result;
+	
+	void main()
+	{
+		result = (color*amount);
+	}
+}
+{
+	description( "Scales the input color by the specified brightness value." );
+}
+;
+
+shader Color_contrast
+{
+  input:
+	Color color   = Color(0,0,0,1)
+	{	
+		display_name("Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The unfiltered value." );
+	};
+	Color amount = Color(1,1,1,1)
+   	{	
+		display_name("Amount");
+		soft_range(Color(0,0,0,0),Color(2,2,2,2));
+		description( "The amount to adjust the contrast of the color's "
+					 "channels." );
+	};
+	
+  output:
+	Color result;
+	
+	void main()
+	{
+		result  = color-Color(0.5);
+		result *= amount;
+		result += Color(0.5);
+	}
+}
+{
+	description( "Changes the contrast of the channels of the input color "
+				 "by the specified value." );
+}
+;
+
+shader Color_saturation
+{
+  input:
+	Color color   = Color(0,0,0,1)
+	{
+		display_name("Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The unfiltered value." );
+	};
+	float saturation = 1.0
+   	{
+		display_name("Saturation");
+		soft_range(float(0),float(2));
+		description( "The amount of saturation to leave in the color." );
+	};
+	
+  output:
+	Color result;
+	
+	void main()
+	{
+		float grey_s = color.r*0.3 + color.g*0.59 + color.b*0.11;
+		Color  grey_c = Color(grey_s);
+		result = lerp(grey_c, color, saturation);
+	}
+}
+{
+	description( "Modulates input color's saturation by the specified "
+				 "saturation value." );
+}
+;
+
+shader Color_gamma
+{
+  input:
+	Color color   = Color(0,0,0,1)
+	{
+		display_name("Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The unfiltered value." );
+	};
+	Color gamma = Color(1,1,1,1)
+   	{
+		display_name("Gamma");
+		soft_range(Color(0.1,0.1,0.1,0.1),Color(4,4,4,4));
+		description( "The gamma power that will be applied to each of the "
+					 "color's channels." );
+	};
+	
+  output:
+	Color result;
+	
+	void main()
+	{
+		result = pow(color, Color(1.0)/gamma);
+	}
+}
+{
+	description( "Uses a gamma operation to change the contrast of each "
+	             "input channel by a specified value." );
+}
+;
+

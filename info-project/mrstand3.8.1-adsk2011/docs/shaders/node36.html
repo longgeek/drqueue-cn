@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Scene Requirements</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node35.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node37.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION34"></a>
+
+  <h3>Scene Requirements</h3>
+
+  <p>In order to work correctly with the
+  <i><a href="node37.html#mi_shader__misss_physical">misss_physical</a></i>
+  shader, it is necessary to set up the scene following these requirements:
+  </p>
+
+  <ul style="list-style-type: disc">
+    <li>The subsurface shader package needs to be loaded into mental ray.
+
+    <li>Ray tracing needs to be enabled.
+
+    <li>Caustics and/or global illumination must be enabled. Caustics only
+    is preferred to global illumination only.
+
+    <li>A light, preferably focused on the subsurface-scattering media object
+    must specify an energy value as well as emit caustic/globillum photons.
+
+    <li>The <i><a href="node37.html#mi_shader__misss_physical">misss_physical</a></i>
+    shader must be used both as a material and a photon shader, or the material
+    Phenomenon must be used. It should be linked to lights which emit photons.
+
+    <li>Subsurface-scattering objects or their instances must be flagged as
+    casting and receiving caustics/global illumination.
+  </ul>
+
+  <p>The following .mi scene fragments show an example setup:</p>
+
+  <ul>
+    <li>At the beginning of the scene file:
+<pre>
+    link "subsurface.so"
+    $include "subsurface.mi"
+</pre>
+    </li>
+
+    <li>In the options block:
+<pre>
+    trace on
+    caustic on
+    globillum on
+</pre>
+    </li>
+
+    <li>In the light definition (example):
+<pre>
+    energy 10000 10000 10000
+    caustic photons 250000
+    globillum photons 250000
+</pre>
+    </li>
+
+    <li>The shader and material definition:
+<pre>
+    shader "myshader" "misss_physical" ("mode" 4) # use instance lights
+    material options
+    material "materialinstancename"
+        = "myshader"
+        photon = "myshader"
+    end material
+</pre>
+    </li>
+
+    <li>In the object or its instance definition:
+      <pre>
+    caustic 3
+    globillum 3
+</pre>
+    </li>
+  </ul>
+
+  <p>The shader provides useful feedback when executed, using info
+  messages. In any case verbosity level 5 is suggested to debug
+  your scene. The shader statistics reports are especially valuable
+  to estimate correct values for the following parameters:</p>
+
+  <ul>
+    <li>depth: look for information in "channel 0 1 2" and
+    "photon statistics".</li>
+
+    <li>max_radius and max_photons. Look for information in
+    "multi-scatter photon per samples statistics".</li>
+  </ul>
+
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node35.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node37.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,115 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+#import <mi_msl_shared.msl>
+
+shader Illumination_ward
+{
+  input:        
+    Color  diffuse_color = Color(1,1,1,1)
+	{	
+		display_name("Diffuse Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color used to tint the Diffuse Reflectance Color." );
+	};
+    float diffuse_scalar = 0.7
+	{	
+		display_name("Diffuse Float");
+		soft_range(float(0),float(1));
+		description( "The intensity of the light diffusely reflected from "
+					 "this surface." );
+	};
+    Color  specular_color = Color(1,1,1,1)
+	{	
+		display_name("Specular Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color used to tint the Specular Reflectance "
+					 "Color." );
+	};
+    float specular_scalar = 0.5
+	{	
+		display_name("Specular Float");
+		soft_range(float(0),float(1));
+		description( "The intensity of the specular light reflections from "
+					 "this surface." );
+	};
+    
+    float shininess_u = 5.0
+    {	
+			display_name("Specular Shininess U");
+			soft_range(float(0),float(100));
+			description( "Width of specular highlights along U-axis "
+						 "of the textures mapped to the surface." );
+    };
+    float shininess_v = 60.0    
+    {	
+			display_name("Specular Shininess V");
+			soft_range(float(0),float(100));
+			description( "Width of specular highlights along U axis "
+						 "of the textures mapped to the surface." );
+    };
+    
+  output:
+    Color result;
+    Color sum;	
+    Color diffuse;
+    Color specular;
+   
+    void main() 
+    {        
+        diffuse  = Color(0,0,0,0);
+        specular = Color(0,0,0,0);
+    
+        Color Rd = diffuse_color * diffuse_scalar;
+        Color Rs = specular_color * specular_scalar;
+
+        // normalize components
+		Color temp = Rd + Rs;
+		float maxc = max(max(temp.r,temp.g),temp.b);
+		if (maxc>1.0) {
+			Rd /= maxc;
+			Rs /= maxc;
+		}
+
+        float3 vdir = direction;
+        float3 tangent = texture_tangent_u[0];
+        float3 binormal = texture_tangent_v[0];
+    
+        // enumerate lights
+        Light_iterator light;
+        foreach (light)
+        {
+            float d = saturate(light.dot_nl);
+            if (d > 0.0) {
+        	diffuse += (d/PI) * light.contribution;
+        	float s = mi_ward_anisglossy(vdir, 
+        		light.direction, 
+        		normal,
+        		tangent,
+        		binormal,
+        		shininess_u,
+        		shininess_v);
+        	specular += s * light.contribution;
+            }
+        }
+
+        diffuse *= Rd;
+        specular *= Rs;
+
+        // irradiance term
+        Irradiance_options irradiance_options;
+        irradiance_options.set_importance(diffuse_scalar);
+        diffuse += Rd/PI * irradiance(irradiance_options);
+
+        diffuse.a = 1.0;
+        specular.a = 1.0;
+        sum = diffuse + specular;
+		result = sum;
+    }
+}
+{
+	description( "An illumination model for anisotropic "
+	             "specular surfaces, such as brushed metal or cloth." );
+}
+;

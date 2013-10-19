@@ -1,0 +1,93 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+#define HLSL_OPTIMIZE
+#ifdef HLSL_OPTIMIZE
+#define PARAM(x) x
+#else
+#define PARAM(x) Parameters.x
+#endif
+
+shader max_VertexColor {
+ input:
+
+#ifndef HLSL_OPTIMIZE
+ struct Parameters_struct {
+    int map;
+    int subid;
+  }; // Parameters
+
+ struct ExtraParameters_struct {
+    int GBufferID;
+  }; // ExtraParameters
+   Parameters_struct Parameters = Parameters_struct(0, 0);
+
+  
+  ExtraParameters_struct ExtraParameters = ExtraParameters_struct(0);
+#else
+    int map = 0{
+    };
+    int subid = 0{
+    };
+#endif
+  bool evalNormal = false{
+  };
+ output:
+  Color result;
+
+  Color maxVertCol_EvalColor()
+  {
+      Color res = Color(0, 0, 0, 1.0);
+
+      //TODO this should be set from Object Data.
+      int chan = PARAM(map);
+      
+     
+      //For now we will switch on the shader type
+      if(ray_shader == "environment")// object data
+      {
+          // Assume that we're being called to shade the environment
+          float3 camera_dir;
+          camera_dir = transform_vector("internal", "camera", direction);
+          res.rgb = 100.0 * camera_dir;
+         
+      }
+      else
+      {
+           //TODO retrieve the channel from the object data.
+          int sub_id = PARAM(subid) - 1;
+          switch(sub_id)
+          {
+          case 0:
+            res.rgb = texture_coordinate[chan].xxx;
+            break;
+          case 1:
+            res.rgb = texture_coordinate[chan].yyy;
+            break;
+          case 2:
+            res.rgb = texture_coordinate[chan].zzz;
+            break;
+          default:
+            res.rgb = texture_coordinate[chan].xyz;
+            break;
+          }
+      }
+      return res;
+
+  }
+
+
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+
+    if(false == evalNormal)
+    {
+        result = maxVertCol_EvalColor();
+    }
+    // Removed the eval normal case as it returned a zero vector
+  } // main
+};

@@ -1,0 +1,123 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Images</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node220.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node222.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION219"></a>
+<h3>Images</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_IMAGE</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miImg_image</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>-</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls</td>
+</tr>
+</table>
+<pre>
+typedef struct miImg_image {
+        miBoolean       filter;         /* caller wants filtered lookups */
+        int             dirsize;        /* valid # of filter levels */
+        int             dir[miIMG_DIRSIZE]; /* offs from this to other imgs */
+        int             width, height;  /* width and height in pixels */
+        int             bits;           /* requested bits per comp, 8/16/32 */
+        int             comp;           /* requested components/pixel, 1..4 */
+        miCBoolean      local;          /* local texture, use image/mmap/path*/
+        miCBoolean      writable;       /* writable texture (eg. light map) */
+        miCBoolean      cacheable;      /* cache in parts */
+        miCBoolean      remap;          /* image is remapped */
+        int             type;           /* requested miIMG_TYPE_* */
+        miTag           real_name;      /* (local) file name to open */
+        miTag           colorprofile;   /* color profile for image data */
+        int             c[4];           /*      indexed by miIMG_*; 4*height */
+                                        /*      component indices follow, */
+                                        /*      then component scanlines */
+} miImg_image;
+</pre>
+<p>A translator must provide: nothing.<br />
+A translator may provide: nothing.<br />
+Provided by <i>mi_scene_create</i>: all fields.</p>
+<p>Images consist of three sections: the header (type
+<tt>miImg_image</tt>), a list of scanlines indices, and the actual
+uncompressed pixel data. There are <var>height</var> &minus; 1
+scanline indices, one set of <i>comp</i> (up to 4) indices for each
+scanline. They contain indices relative to the first pixel data
+byte. The pixel data is arranged in one-component scanlines of
+<i>width</i> component values each. All images are scanned
+bottom-up.</p>
+<p><b>filter</b>, if nonzero, enables
+<a href="node249.html#INDEX1089">pyramid texture</a> mode.</p>
+<p><b>dirsize</b> and <b>dir</b> are used for internal
+purposes.</p>
+<p><b>width</b> is the number of pixels per scanline.</p>
+<p><b>height</b> is the number of scanlines.</p>
+<p><b>bits</b> is the number of bits per component pixel.</p>
+<p><b>comp</b> is the number of components per pixel.</p>
+<p><b>writable</b>, if true, specifies a <a href="node78.html#INDEX241">writable
+texture</a>. Such textures are created by shaders, usually
+<a href="node135.html#INDEX501">lightmap shader</a>, and then written to
+disk.</p>
+<p><b>cacheable</b><sup>3.1</sup>, if true, is used internally to
+mark images that are paged into a texture cache. Do not set.</p>
+<p><b>remap</b>, if true, specifies that the image is a .map file
+created with <a href="node249.html#INDEX1088">imf_copy</a>
+<tt>-r</tt>, which rearranges pixels so that the unit of caching is
+a ractangle instead of a group of scanlines. This increases cache
+performance for large textures.</p>
+<p><b>local</b>, if true, specifies a local image that each slave
+on the network must read locally, instead of fetching it across the
+network from the master.</p>
+<p><b>type</b> is the data type of the image.</p>
+<p><b>real_name</b><sup>2.1</sup> is the tag of a database item of
+type string (contains a null-terminated ASCII string) that is the
+full path of the file to open. This name is used for local images,
+where the file is opened when first accessed (after the usual
+filename rewriting). For this purpose, the <i>path</i> is not
+sufficient because it may be truncated. mental ray 3.0 accesses a
+symbol table to find the name specified with
+<i><a href="node184.html#INDEX907">mi_api_texture_file_def</a></i> instead of
+relying on real_name, because the file may be demand-loaded or
+memory-mapped, so that real_name may be unavailable or
+incorrect.</p>
+<p><b>color_profile</b><sup>3.4</sup> is a tag associated with the
+color profile describing the color space of the image color data.
+When the image data are created and rendering was performed in a
+prescribed color space, then the color data are transformed to the
+specified color profile before they are written. If the image data
+are read, then they are transformed from the given representation
+to the color profile associated with the rendering color space.</p>
+<p><b>c</b> is the first scanline index block. Only <i>comp</i> of
+the 4 available indices are used. It is unused if <i>local</i> is
+true.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node220.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node222.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

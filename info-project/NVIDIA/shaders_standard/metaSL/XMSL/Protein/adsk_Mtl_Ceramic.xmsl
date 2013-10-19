@@ -1,0 +1,710 @@
+<root>
+  <version major="2" minor="0"/>
+  <metasl_code file_name="adsk_Utility_MSL_Spiders\adsk_Ceramic_spider.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Alpha.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_BRDF_Accumulator.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_BRDF_Components.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Converters.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Environment.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Mixers.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Noise.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Normal.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_ShaderCallers.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Switchers.msl"/>
+  <metasl_code file_name="light_point.msl"/>
+
+  <phenomenon name="adsk_Mtl_Ceramic_MSL">
+    <input name="type" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Type"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="1"/>
+      </annotation>
+    </input>
+    <input name="diffuse_color" type="Color" value="0.5 0.5 0.5 1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Surface Color"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="Color" value="0 0 0 0"/>
+        <annotation_member name="param1" type="Color" value="1 1 1 1"/>
+      </annotation>
+    </input>
+    <input name="application" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Surface Finish"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="2"/>
+      </annotation>
+    </input>
+    <input name="bump_enable" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Surface Bumps"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="2"/>
+      </annotation>
+    </input>
+    <input name="bump_map" type="Shader" value="">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Custom Bump"/>
+      </annotation>
+    </input>
+    <input name="bump_amount" type="float" value="0.5">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Bump Amount"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="pattern_enable" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Tiling Patterns"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="1"/>
+      </annotation>
+    </input>
+    <input name="pattern_map" type="Shader" value="">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Custom Map"/>
+      </annotation>
+    </input>
+    <input name="pattern_amount" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Height"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="tometerscale" type="float" value="0.0254">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="INTERNAL: Meter Scale Factor"/>
+      </annotation>
+    </input>
+    <input name="wirecoloralpha" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="INTERNAL: Wire Color Alpha"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <output name="result" type="Color" display_name="result">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="result"/>
+      </annotation>
+    </output>
+    <output name="transparency" type="float" display_name="transparency">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="transparency"/>
+      </annotation>
+    </output>
+
+    <node name="NodeVisibility" class="adsk_Utility_MSL_NodeVisibility">
+      <input name="input" value="1 1 1 1"/>
+      <input name="reverse" value="true"/>
+      <input name="wireColorAlpha" value="1">
+        <attachment target_name="wirecoloralpha"/>
+      </input>
+      <output name="result">
+        <attachment target_name="transparency"/>
+      </output>
+      <gui_data width="2.58839" height="1.7815" open_width="2.58839" open_height="1.7815" position="-5.96705 2.96901" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\input" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\reverse" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="float" show_preview="false" orbit="-1.2846" tilt="4.6754" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\wireColorAlpha" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="ceramic_spider" class="adsk_Shd_MSL_Ceramic_spider">
+      <input name="type" value="0">
+        <attachment target_name="type"/>
+      </input>
+      <input name="application" value="0">
+        <attachment target_name="application"/>
+      </input>
+      <input name="iSceneToMeterScale" value="0">
+        <attachment target_name="tometerscale"/>
+      </input>
+      <output name="diffuse_roughness"/>
+      <output name="reflectivity"/>
+      <output name="refl_gloss"/>
+      <output name="brdf_curve"/>
+      <output name="noise_tiling"/>
+      <gui_data width="2.04786" height="2.78531" open_width="2.04786" open_height="2.78531" position="-17.1404 -6.36586" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\brdf_curve" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\noise_tiling" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\reflectivity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\type" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\refl_gloss" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iSceneToMeterScale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\application" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\diffuse_roughness" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="BRDFfactor" class="adsk_Component_MSL_BRDFfactor">
+      <input name="brdf_0_degree_refl" value="0.2"/>
+      <input name="brdf_90_degree_refl" value="1"/>
+      <input name="brdf_curve" value="5">
+        <attachment target_name="brdf_curve" target_node="ceramic_spider"/>
+      </input>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="result"/>
+      <gui_data width="2.35929" height="1.3708" open_width="2.35929" open_height="1.3708" position="-12.083 -0.969183" view_translation="0 4.82" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\brdf_curve" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\brdf_90_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\brdf_0_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="ApplyFx" class="adsk_Utility_MSL_Mix2Float">
+      <input name="iFloat1" value="0">
+        <attachment target_name="reflectivity" target_node="ceramic_spider"/>
+      </input>
+      <input name="iFloat2" value="1">
+        <attachment target_name="result" target_node="BRDFfactor"/>
+      </input>
+      <input name="mixing_mode" value="2"/>
+      <input name="mixing_factor" value="1"/>
+      <output name="result"/>
+      <gui_data width="2.42526" height="1.39867" open_width="2.42526" open_height="1.39867" position="-9.06671 -0.878953" view_translation="0 36.74" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iFloat1" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iFloat2" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="white_color" class="adsk_Utility_MSL_ColorState">
+      <input name="the_color" value="1 1 1 1"/>
+      <output name="result"/>
+      <gui_data width="1.78295" height="0.91" open_width="1.78295" open_height="0.91" position="-14.5607 -2.56179" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\the_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="pattern_map" class="adsk_Utility_MSL_CallShader">
+      <input name="the_shader" value="">
+        <attachment target_name="pattern_map"/>
+      </input>
+      <input name="bump_amount" value="0">
+        <attachment target_name="pattern_amount"/>
+      </input>
+      <output name="result"/>
+      <output name="result_bump"/>
+      <gui_data width="1.64489" height="2.29335" open_width="1.64489" open_height="2.29335" position="-14.6109 -3.9094" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result_bump" type_name="float3" show_preview="true" orbit="0.185398" tilt="0.775396" zoom="1.75" pan="0.04 0.1" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\the_shader" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Pattern_Color" class="adsk_Utility_MSL_Switch2Color">
+      <input name="switcher" value="0">
+        <attachment target_name="pattern_enable"/>
+      </input>
+      <input name="color_1">
+        <attachment target_name="result" target_node="white_color"/>
+      </input>
+      <input name="color_2">
+        <attachment target_name="result" target_node="pattern_map"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="2.28406" height="1.21" open_width="2.28406" open_height="1.21" position="-12.1287 -2.41495" view_translation="0 17.9" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\color_1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\color_2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\switcher" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="EnergyConservation" class="adsk_Component_MSL_EnergyConservation">
+      <input name="diffuse_weight" value="1"/>
+      <input name="diffuse" value="0.5 0.5 0.5 1">
+        <attachment target_name="diffuse_color"/>
+      </input>
+      <input name="reflectivity" value="0.6">
+        <attachment target_name="result" target_node="ApplyFx"/>
+      </input>
+      <input name="refl_color" value="1 1 1 1">
+        <attachment target_name="result" target_node="Pattern_Color"/>
+      </input>
+      <input name="refl_balance" value="1"/>
+      <input name="refl_hl_only" value="false"/>
+      <input name="transparency" value="0"/>
+      <input name="refr_color" value="1 1 1 1"/>
+      <output name="oDiffuse"/>
+      <output name="oReflect"/>
+      <output name="oRefract"/>
+      <gui_data width="2.58563" height="2.71101" open_width="2.58563" open_height="2.71101" position="-8.9613 -3.01113" view_translation="2.6982 8.40303" view_scale="1.40093" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\refr_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\oDiffuse" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\diffuse" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\diffuse_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\oReflect" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\refl_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\refl_balance" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\reflectivity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\refl_hl_only" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\oRefract" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\transparency" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Roughness" class="adsk_Component_MSL_OrenNayarSimplex">
+      <input name="iDiffuseColor">
+        <attachment target_name="oDiffuse" target_node="EnergyConservation"/>
+      </input>
+      <input name="iRoughness">
+        <attachment target_name="diffuse_roughness" target_node="ceramic_spider"/>
+      </input>
+      <input name="iLightDotNL"/>
+      <input name="iLightDir"/>
+      <input name="iEyeDir"/>
+      <input name="iNormal"/>
+      <output name="result"/>
+      <gui_data width="2.22744" height="1.81096" open_width="2.22744" open_height="1.81096" position="-5.82518 -1.64702" view_translation="0 20.3" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iLightDotNL" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iLightDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iDiffuseColor" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iHWshading" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iRoughness" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Speculars" class="adsk_Component_MSL_GlossySpecular">
+      <input name="iGlossy" value="0.720812">
+        <attachment target_name="refl_gloss" target_node="ceramic_spider"/>
+      </input>
+      <input name="iAnisotropy" value="1"/>
+      <input name="iAnisoU" value="0 0 0"/>
+      <input name="iAnisoV" value="0 0 0"/>
+      <input name="iAuxFactor" value="1"/>
+      <input name="iAnotherSpec"/>
+      <input name="iLightDir" value="0 0 0"/>
+      <input name="iEyeDir" value="0 0 0"/>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="result"/>
+      <gui_data width="2.21862" height="2.19201" open_width="2.21862" open_height="2.19201" position="-5.87393 -4.3942" view_translation="0 34.22" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iAnotherSpec" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iLightDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iGlossy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iAuxFactor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iAnisoU" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iAnisoV" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iAnisotropy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Normal_State" class="adsk_Utility_MSL_Normal_State">
+      <output name="result"/>
+      <output name="result_bump"/>
+      <gui_data width="1.72169" height="0.91" open_width="1.72169" open_height="0.91" position="-17.031 -4.19706" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="SwitchWavy" class="adsk_Utility_MSL_Switch2Float_SL">
+      <input name="switcher" value="0">
+        <attachment target_name="bump_enable"/>
+      </input>
+      <input name="float_1"/>
+      <input name="float_2">
+        <attachment target_name="bump_amount"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="3.94114" height="1.21" open_width="3.94114" open_height="1.21" position="-16.9025 -9.25279" view_translation="0 30.02" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\switcher" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\float_1" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\float_2" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="bump_wavy_dimmer" class="adsk_Utility_MSL_Mix2Float">
+      <input name="iFloat1" value="0">
+        <attachment target_name="result" target_node="SwitchWavy"/>
+      </input>
+      <input name="iFloat2" value="0.1"/>
+      <input name="mixing_mode" value="2"/>
+      <input name="mixing_factor" value="1"/>
+      <output name="result"/>
+      <gui_data width="3.30758" height="1.36" open_width="3.30758" open_height="1.36" position="-16.129 -10.764" view_translation="0 36.74" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iFloat1" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iFloat2" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Waves" class="adsk_Utility_MSL_NoiseGenerator">
+      <input name="noise_perm_texture" value="adsk_Data_Noise_Perm.dds"/>
+      <input name="noise_grad_texture" value="adsk_Data_Noise_Grad.dds"/>
+      <input name="noise_position" value="0 0 0"/>
+      <input name="noise_scale" value="5 5 5">
+        <attachment target_name="noise_tiling" target_node="ceramic_spider"/>
+      </input>
+      <input name="noise_amount" value="1">
+        <attachment target_name="result" target_node="bump_wavy_dimmer"/>
+      </input>
+      <input name="angle" value="0"/>
+      <input name="uvgen" value="1"/>
+      <output name="result"/>
+      <output name="result_bump"/>
+      <gui_data width="3.84578" height="1.96" open_width="3.84578" open_height="1.96" position="-12.3392 -8.87696" view_translation="0 16.82" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\noise_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result_bump" type_name="Color" show_preview="false" orbit="0.505398" tilt="1.1454" zoom="1.25" pan="0 0" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\noise_scale" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\noise_perm_texture" type_name="texture1D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\uvgen" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\uvgen" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\angle" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\noise_scale" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\angle" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\noise_position" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\noise_grad_texture" type_name="texture1D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\noise_perm_texture" type_name="texture1D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\noise_grad_texture" type_name="texture1D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\noise_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="Color" show_preview="false" orbit="0.945398" tilt="0.955397" zoom="2" pan="0 0" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\noise_position" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="adsk_Utility_MSL_Color_to_Float3_1" class="adsk_Utility_MSL_Color_to_Float3">
+      <input name="the_color" value="1 1 0 1">
+        <attachment target_name="result_bump" target_node="Waves"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="3.89289" height="0.91" open_width="3.89289" open_height="0.91" position="-12.2989 -8.33153" view_translation="0 15.62" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\the_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="bump_map" class="adsk_Utility_MSL_CallShader">
+      <input name="the_shader" value="">
+        <attachment target_name="bump_map"/>
+      </input>
+      <input name="bump_amount" value="0">
+        <attachment target_name="bump_amount"/>
+      </input>
+      <output name="result"/>
+      <output name="result_bump"/>
+      <gui_data width="1.88109" height="2.44009" open_width="1.88109" open_height="2.44009" position="-14.7044 -6.53323" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\the_shader" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="Color" show_preview="true" orbit="0.765398" tilt="1.2854" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Bump_Switch" class="adsk_Utility_MSL_Switch3Vector_SL">
+      <input name="switcher" value="0">
+        <attachment target_name="bump_enable"/>
+      </input>
+      <input name="vector_1">
+        <attachment target_name="result_bump" target_node="Normal_State"/>
+      </input>
+      <input name="vector_2">
+        <attachment target_name="result" target_node="adsk_Utility_MSL_Color_to_Float3_1"/>
+      </input>
+      <input name="vector_3">
+        <attachment target_name="result_bump" target_node="bump_map"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="1.832" height="2.66204" open_width="1.832" open_height="2.66204" position="-12.2476 -6.39524" view_translation="0 21.14" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\vector_1" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\vector_2" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\vector_3" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\switcher" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="float3" show_preview="true" orbit="0.445398" tilt="1.2254" zoom="0.65" pan="0.075 0.15" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Pattern_Bump" class="adsk_Utility_MSL_Switch2Vector">
+      <input name="switcher" value="0">
+        <attachment target_name="pattern_enable"/>
+      </input>
+      <input name="float_1">
+        <attachment target_name="result_bump" target_node="Normal_State"/>
+      </input>
+      <input name="float_2">
+        <attachment target_name="result_bump" target_node="pattern_map"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="1.99308" height="1.32795" open_width="1.99308" open_height="1.32795" position="-12.1978 -3.88961" view_translation="0 21.74" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\switcher" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\float_1" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\float_2" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="BumpSupport" class="adsk_Component_MSL_Bump">
+      <input name="standard_bump" value="0 0 0">
+        <attachment target_name="result" target_node="Bump_Switch"/>
+      </input>
+      <input name="overall_bump" value="0 0 0">
+        <attachment target_name="result" target_node="Pattern_Bump"/>
+      </input>
+      <input name="no_diffuse_bump" value="true"/>
+      <output name="bump_global"/>
+      <output name="bump_local"/>
+      <gui_data width="2.34813" height="3.95807" open_width="2.34813" open_height="3.95807" position="-9.00918 -7.89464" view_translation="0 93.02" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\no_diffuse_bump" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\overall_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\bump_local" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\bump_global" type_name="float3" show_preview="true" orbit="0.355398" tilt="1.4854" zoom="0.9" pan="0.085 0.025" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\standard_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="BRDF_fx" class="adsk_Utility_MSL_Color_to_Float">
+      <input name="the_color" value="1 1 0 1">
+        <attachment target_name="oReflect" target_node="EnergyConservation"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="2.17708" height="0.91" open_width="2.17708" open_height="0.91" position="-9.003 -5.06101" view_translation="0 13.46" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\the_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="LightAccumulator" class="adsk_Utility_BRDF_Accumulator">
+      <input name="iDiffuse">
+        <attachment target_name="result" target_node="Roughness" is_reference="true"/>
+      </input>
+      <input name="iSpecular">
+        <attachment target_name="result" target_node="Speculars" is_reference="true"/>
+      </input>
+      <input name="iBump">
+        <attachment target_name="bump_global" target_node="BumpSupport" is_reference="true"/>
+      </input>
+      <input name="iSpecFx" value="0.705584">
+        <attachment target_name="result" target_node="BRDF_fx"/>
+      </input>
+      <input name="iNormal" value="0 0 0"/>
+      <input name="paint_model"/>
+      <output name="result"/>
+      <output name="oDiffuse"/>
+      <output name="oSpecular"/>
+      <gui_data width="2.75683" height="4.72801" open_width="2.75683" open_height="4.72801" position="-2.5359 -3.05239" view_translation="1.23628 5.78606" view_scale="1.12434" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\oDiffuse" type_name="Color" show_preview="true" orbit="0.365398" tilt="0.895399" zoom="0.95" pan="0.045 0.105" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\oSpecular" type_name="Color" show_preview="true" orbit="0.275398" tilt="1.1754" zoom="0.6" pan="0 0" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iDiffuse" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\paint_model" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iSpecular" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0.14 0.055" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iBump" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iSpecFx" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Reflections" class="adsk_Component_MSL_Reflection">
+      <input name="iRefl_color" value="1 1 1 1"/>
+      <input name="iRefl_factor" value="1">
+        <attachment target_name="result" target_node="BRDF_fx"/>
+      </input>
+      <input name="iPosition" value="0 0 0"/>
+      <input name="iDirection" value="0 0 0"/>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="result"/>
+      <gui_data width="2.18846" height="1.51" open_width="2.18846" open_height="1.51" position="-5.84944 -7.98127" view_translation="0.15 67.73" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iDirection" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iPosition" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iRefl_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iRefl_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="BumpReflect" class="adsk_Component_MSL_BumpCombiner">
+      <input name="iShading">
+        <attachment target_name="result" target_node="Reflections" is_reference="true"/>
+      </input>
+      <input name="iMode" value="0"/>
+      <input name="iNormal" value="0 0 0">
+        <attachment target_name="bump_global" target_node="BumpSupport"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="2.59307" height="3.72689" open_width="2.59307" open_height="3.72689" position="-2.499 -7.96016" view_translation="0 84.26" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iShading" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="Color" show_preview="true" orbit="0.545398" tilt="1.1254" zoom="0.950001" pan="0.025 0.135" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\iMode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="ComposeShading" class="adsk_Utility_MSL_Mix2ColorCompact">
+      <input name="color1" value="0 0 0 1">
+        <attachment target_name="result" target_node="LightAccumulator"/>
+      </input>
+      <input name="color2" value="1 1 1 1">
+        <attachment target_name="result" target_node="BumpReflect"/>
+      </input>
+      <input name="mixing_mode" value="1"/>
+      <input name="mixing_factor" value="1"/>
+      <output name="result">
+        <attachment target_name="result"/>
+      </output>
+      <gui_data width="3.69301" height="9.14263" open_width="3.69301" open_height="9.14263" position="1.2748 -5.26784" view_translation="0 32.06" view_scale="1" open_state="closed" selected_state="true">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\result" type_name="Color" show_preview="true" orbit="0.8254" tilt="0.115401" zoom="2" pan="0 0" preview_object="3" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Ceramic_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+  </phenomenon>
+
+  <node name="adsk_Mtl_Ceramic_MSL" class="adsk_Mtl_Ceramic_MSL">
+    <input name="type" value="0"/>
+    <input name="diffuse_color" value="0.204918 0.191481 0.191481 1"/>
+    <input name="application" value="0"/>
+    <input name="bump_enable" value="0"/>
+    <input name="bump_map" value=""/>
+    <input name="bump_amount" value="0.5"/>
+    <input name="pattern_enable" value="0"/>
+    <input name="pattern_map" value=""/>
+    <input name="pattern_amount" value="0.5"/>
+    <input name="tometerscale" value="0.01"/>
+    <input name="wirecoloralpha" value="1"/>
+    <output name="result"/>
+    <output name="transparency"/>
+    <gui_data width="3.13999" height="6.51597" open_width="3.13999" open_height="6.51597" position="1.93998 0.0712576" view_translation="7.99492 3.23731" view_scale="0.044963" open_state="maximized" selected_state="false">
+      <preview_data>
+        <preview_data_element name="\diffuse_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\pattern_enable" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="-6.88458" tilt="0.785387" zoom="2.1" pan="0.03 0.01" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\type" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\tometerscale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\transparency" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\application" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\pattern_map" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\bump_enable" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\pattern_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\wirecoloralpha" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\bump_map" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <node name="Enviroment" class="adsk_Utility_MSL_EnvBall">
+    <input name="env_tex" value="adsk_Textures/adsk_Data_ReflectionDefault.png"/>
+    <input name="intensity" value="1"/>
+    <input name="blur" value="0.375635"/>
+    <output name="result"/>
+    <gui_data width="3.11035" height="3.54828" open_width="3.11035" open_height="3.54828" position="-1.49623 -1.40335" view_translation="0 2.54" view_scale="1" open_state="closed" selected_state="false">
+      <preview_data>
+        <preview_data_element name="\blur" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\intensity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\env_tex" type_name="texture2D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <node name="dimmer" class="Light_point">
+    <input name="color" value="1 1 1 1"/>
+    <input name="intensity" value="1"/>
+    <input name="distance_falloff_exponent" value="0"/>
+    <input name="distance_scale" value="1"/>
+    <output name="result"/>
+    <output name="light_shadow"/>
+    <gui_data width="1.80103" height="2.75285" open_width="1.80103" open_height="2.75285" position="-0.842563 1.80211" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+      <preview_data>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\intensity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\distance_scale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\distance_falloff_exponent" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\light_shadow" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <render_data>
+    <light_list/>
+    <scene_ambient color="0 0 0 0"/>
+  </render_data>
+</root>

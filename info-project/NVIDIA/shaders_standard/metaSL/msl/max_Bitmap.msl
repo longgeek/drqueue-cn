@@ -1,0 +1,457 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#include <max_common.msl>
+
+shader max_Bitmap {
+ input:
+  // parameters for max_Bitmap:
+  // --------------------------
+  // see mrBitmap in max_texmaps.h
+#ifdef HLSL_OPTIMIZE
+  float ClipU = 0.0 { // u
+  };
+  float ClipV = 0.0 { // v
+  };
+  float ClipW = 1.0 { // w
+  };
+  float ClipH = 1.0 { // h
+  };
+  float Jitter = 1.0 { // jitter
+  };
+  bool UseJitter = false { // randPlace
+  };
+  bool Apply = false { // applyCrop
+  };
+  int CropPlace = 0 { // placeImage
+    // hardrange(0, 1);
+  };
+  // int Filtering = 0 { // filtertype
+  // };
+  int MonoOutput = 0 { // alpha_as_mono
+  };
+  int RGBOutput = 0 { // alpha_as_rgb
+  };
+  int AlphaSource = 0 { // alpha_source
+    // hardrange(0, 2);
+  };
+  bool PreMultAlpha = true { // premultiply_alpha
+  };
+  float Gamma = 1.0 { // Gamma correction
+  };
+  // textures
+  Texture2d Bitmap = "brickwall.dds";
+  // shader type parameters
+  Shader Coords;
+  Shader Output;
+#else
+  struct Parameters_struct {              // see mrBitmap in max_texmaps.h
+    float ClipU;                          // u
+    float ClipV;                          // v
+    float ClipW;                          // w
+    float ClipH;                          // h
+    float Jitter;                         // jitter
+    bool UseJitter;                       // randPlace
+    bool Apply;	                          // applyCrop
+    int CropPlace;                        // placeImage
+    int Filtering;                        // filtertype
+    int MonoOutput;                       // alpha_as_mono
+    int RGBOutput;                        // alpha_as_rgb
+    int AlphaSource;                      // alpha_source
+    bool PreMultAlpha;                    // premultiply_alpha
+    Texture2d Bitmap;                     // imagetag
+    Shader Coords;
+    Shader Output;
+  };
+  Parameters_struct Parameters = 
+    Parameters_struct(0.0, 0.0, 1.0, 1.0, 1.0,
+		      false, false,
+		      0, 0, 0, 0, 0,
+		      true,
+		      Texture2d(),
+		      Shader(), Shader());
+  struct time_parameters_struct {
+    int startTime;                        // startTime
+    float playBackRate;                   // pbRate
+    int endCondition;                     // endCond
+    bool tieTimeToMatIDs;                 // tieTimeToMatID
+  };
+  time_parameters_struct time_parameters;
+  struct ExtraParameters_struct {
+    int GBufferID;			  // GBufID
+    int currentTime;			  // currentTime
+    int firstFrame;			  // firstFrame
+    int lastFrame;			  // lastFrame
+    int ticksPerFrame;			  // ticksPerFrame
+                                 	  // i_bitmapFrames
+                                	  // n_bitmapFrames
+    // TODO: Texture2d bitmapFrames[];		  // bitmapFrames
+    int bitmapFrames_Padding;		  //
+    bool useBitmapEvalCallback;		  // useBitmapEvalCallback
+    int bitmapEvalCallback;		  // bitmapEvalCallback
+    int bitmapEvalArg;			  // bitmapEvalArg
+    int bitmapType;			  // bitmapType
+                                          // i_bitmapEvalArgFrames;
+                                          // n_bitmapEvalArgFrames;
+    // TODO: int bitmapEvalArgFrames[];		  // bitmapEvalArgFrames
+    int bitmapEvalArgFrames_Padding;	  //
+    int bitmapWidth;			  // bitmapWidth
+    int bitmapHeight;			  // bitmapHeight
+    int filterEvalCallback;		  // filterEvalCallback
+    int bitmapEvalCallbackHi64;		  // bitmapEvalCallbackHi64
+    int bitmapEvalArgHi64;		  // bitmapEvalArgHi64
+    int filterEvalCallbackHi64;		  // filterEvalCallbackHi64
+                                          // i_bitmapEvalArgFramesHi64;
+                                          // n_bitmapEvalArgFramesHi64;
+    // TODO: int bitmapEvalArgFramesHi64[];	  // bitmapEvalArgFramesHi64
+    int bitmapEvalArgsFramesHi64_Padding; //
+    float Gamma;
+  };
+  ExtraParameters_struct ExtraParameters;
+  // TODO: I moved the shader type parameters here (outside the structs) !!!
+  // Shader Coords;
+  // Shader Output;
+  // TODO: I also moved the texture parameter here (outside the structs) !!!
+  // Texture2d Bitmap = "brickwall.dds";
+#endif
+  const bool evalNormal = false {
+  };
+
+ output:
+  Color result;
+  float mono_result;
+
+  // see max_support.cpp
+  float maxIntensity(in Color c) {
+    float f = (c.r + c.g + c.b) * 0.333333333;
+    return f;
+  } // maxIntensity
+
+  // see max_support.h
+  float maxFLOOR(in float x) {
+    if (x < 0.0) return ((int) x - 1.0);
+    else return (int) x;
+  } // maxFLOOR
+
+  // see max_support.h
+  float maxFRAC(in float x) {
+    return x - maxFLOOR(x);
+  } // maxFRAC
+
+  // see tex_bitmap.cpp
+  void maxJitter() {
+    // TODO
+  } // maxJitter
+
+  // see tex_bitmap.cpp
+  bool maxPlaceUVFilter(inout float u, inout float v) {
+    float ufac = PARAS(ClipW);
+    float vfac = PARAS(ClipH);
+    // avoid division by zero: make sure we don't have zero
+    if((ufac != 0) && (vfac != 0)) {
+      if (PARAS(UseJitter)) {
+	float ujit = PARAS(Jitter) * (1.0 - PARAS(ClipW));
+	float vjit = PARAS(Jitter) * (1.0 - PARAS(ClipH));
+	float ru = 0.0;
+	float rv = 0.0;
+	// TODO: maxJitter(state, ujit, vjit, &ru, &rv, iu, iv);
+	// note: v is the inverse from the 3dsmax implementation
+	rv = 1.0 - (rv + vfac);
+	// if (u < ru || v < rv || u > ru + ufac || v > rv + vfac) return false;
+	// note jitter ignores u0, v0, effectively setting them to zero
+	u = (u - ru) / ufac;
+	v = (v - rv) / vfac;
+      } // if (PARAS(UseJitter))
+      else {
+	float u0 = PARAS(ClipU);
+	// float u1 = PARAS(ClipU) + ufac;
+	// note: v is the inverse from the 3dsmax implementation
+	float v0 = 1.0 - (PARAS(ClipV) + vfac);
+	// float v1 = 1.0 - PARAS(ClipV);
+	// if (u < u0 || v < v0 || u > u1 || v > v1) return false;
+	u = (u - u0) / ufac;
+	v = (v - v0) / vfac;
+      } // else [ if (PARAS(UseJitter)) ]
+      return true;
+    } // if((ufac != 0) && (vfac != 0))
+    else {
+      return false;
+    } // else [ if((ufac != 0) && (vfac != 0)) ]
+  } // maxPlaceUVFilter
+
+  // see tex_bitmap.cpp
+  Color maxBitmapSampleFilter(// sampler
+			      in float2 duv,
+			      // others
+			      in float u, in float v) {
+    Color local_result = Color(0.0, 0.0, 0.0, 0.0);
+    float2 uv = float2(0.0, 0.0);
+    float fu = maxFRAC(u);
+    float fv = maxFRAC(v);
+    if (PARAS(Apply)) {
+      if (PARAS(CropPlace) != 0) {
+	if (!maxPlaceUVFilter(// inout
+			      fu, fv)) {
+	  // transpBlack
+	  return Color(0.0, 0.0, 0.0, 0.0);
+	}
+	uv.x = fu;
+	uv.y = fv;
+	float du = duv.x;
+	float dv = duv.y;
+	du /= PARAS(ClipW);
+	dv /= PARAS(ClipH);
+	float du2 = 0.5 * du;
+	float ua = fu - du2;
+	float ub = fu + du2;
+	if (ub <= 0.0 || ua >= 1.0) {
+	  // transpBlack
+	  return Color(0.0, 0.0, 0.0, 0.0);
+	} // if (ub <= 0.0 || ua >= 1.0)
+	float dv2 = 0.5 * dv;
+	float va = fv - dv2;
+	float vb = fv + dv2;
+	if (vb <= 0.0 || va >= 1.0) {
+	  // transpBlack
+	  return Color(0.0, 0.0, 0.0, 0.0);
+	} // if (vb <= 0.0 || va >= 1.0)
+	bool clip = false;
+	if (ua < 0.0) { ua = 0.0; clip = true; }
+	if (ub > 1.0) { ub = 1.0; clip = true; }
+	if (va < 0.0) { va = 0.0; clip = true; }
+	if (vb > 1.0) { vb = 1.0; clip = true; }
+	// do a lookup in the filter
+	// TODO: inst->imageFilterLookup(...) ImageFilterLookup_[Local|Callback]
+	//	Texture2D_356ler_color ts(PARAS(Bitmap), 0.0, "none");
+	//	local_result = ts.lookup(uv);
+	local_result =  
+	  Texture2D_sampler_color(PARAS(Bitmap), 0.0, "none").lookup(uv);
+	// local_result = tex2d(PARAS(Bitmap), uv);
+	switch (PARAS(AlphaSource)) {
+	case ALPHA_NONE:
+	  local_result.a = 1.0;
+	  break;
+	case ALPHA_RGB:
+	  local_result.a = maxIntensity(local_result);
+	  break;
+	}
+	if (clip) {
+	  float f = ((ub - ua) / du) * ((vb - va) / dv);
+	  local_result.r *= f;
+	  local_result.g *= f;
+	  local_result.b *= f;
+	  local_result.a *= f;
+	} // if (clip)
+	return local_result;
+      } // if (PARAS(CropPlace))
+      else {
+	uv.x = maxFRAC(PARAS(ClipU) + fu * PARAS(ClipW));
+	uv.y = maxFRAC(1.0 - PARAS(ClipV) - PARAS(ClipH) + fv * PARAS(ClipH));
+	// TODO: du *= PARAS(ClipW);
+	// TODO: dv *= PARAS(ClipH);
+      } // else [ if (PARAS(CropPlace)) ]
+    } // if (PARAS(Apply))
+    else {
+      uv.x = fu;
+      uv.y = fv;
+    } // else [ if (PARAS(Apply)) ]
+    // TODO: inst->imageFilterLookup(...) ImageFilterLookup_[Local|Callback]
+    //    Texture2D_sampler_color ts(PARAS(Bitmap), 0.0, "none");
+    //    local_result = ts.lookup(uv);
+    local_result =  
+      Texture2D_sampler_color(PARAS(Bitmap), 0.0, "none").lookup(uv);
+    // local_result = tex2d(PARAS(Bitmap), uv);
+    switch (PARAS(AlphaSource)) {
+    case ALPHA_NONE:
+      local_result.a = 1.0;
+      break;
+    case ALPHA_RGB:
+      local_result.a = maxIntensity(local_result);
+      break;
+    }
+    return local_result;
+  } // maxBitmapSampleFilter
+
+  // see tex_bitmap.cpp
+  bool maxBitmapEvalColor(inout Color local_result,
+			  in float2 uv,
+			  in float2 duv,
+			  // paras
+			  in bool applyCrop,
+			  in int placeImage,
+			  in float u,
+			  in float v,
+			  in float w,
+			  in float h,
+			  in bool randPlace,
+			  in float jitter,
+			  in int alpha_source) {
+    // TODO: calls somehow maxBitmapSampleFilter
+    local_result = maxBitmapSampleFilter(//sampler
+					 duv,
+					 // others
+					 uv.x, uv.y);
+    return true;
+  } // maxBitmapEvalColor
+
+  // see tex_bitmap.cpp
+  bool maxBitmapEvalNormal(inout Color local_result,
+			   in float2 col,
+			   // xtra
+			   in float3 xtra_dP,
+			   in float3 xtra_dPdu,
+			   in float3 xtra_dPdv) {
+    float3 dM = float3(0.0, 0.0, 0.0);
+    float3 res = float3(0.0, 0.0, 0.0);
+    float3 dUV = xtra_dP;
+    // ...
+    dM.x = col.x;
+    dM.y = col.y;
+    dM.z = 0.0; // original shader calls max_base_UVGenerator here
+    
+    // TODO: Shouldn't be here, but is a safeguard against zero derivs...
+    if (dUV.x <=0.0) dUV.x = 0.001;
+    if (dUV.y <=0.0) dUV.y = 0.001;
+    
+    float2 duv = xtra_dP.xy;
+    Color tempcol = maxBitmapSampleFilter(duv, col.x, col.y);
+    // Color tempcol = tex2d(PARAS(Bitmap), col);
+    float m0 = maxIntensity(tempcol);
+
+    local_result.a = m0;
+
+    if (dUV.x > 0.0)
+      {
+	tempcol = maxBitmapSampleFilter(duv, col.x + dUV.x, col.y);
+        float m1 = maxIntensity(tempcol);
+        dM.x = -(m1-m0)/dUV.x;  
+      }
+    else 
+      dM.x = 0.0;
+
+    if (dUV.y > 0.0)
+      {
+	tempcol = maxBitmapSampleFilter(duv, col.x, col.y + dUV.y);
+        float m2 = maxIntensity(tempcol);
+        dM.y = -(m2-m0)/dUV.y;
+      }
+    else
+      dM.y = 0.0;
+
+    dM.x *= 0.01;
+    dM.y *= 0.01;
+    dM.z *= 0.01;
+
+    res.x = dM.x * xtra_dPdu.x + dM.y * xtra_dPdv.x;
+    res.y = dM.x * xtra_dPdu.y + dM.y * xtra_dPdv.y;
+    res.z = dM.x * xtra_dPdu.z + dM.y * xtra_dPdv.z;
+    local_result.r = res.x;
+    local_result.g = res.y;
+    local_result.b = res.z;
+    return true;
+  } // maxBitmapEvalNormal
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // mi_MAX_T_ADD_INFO *add_info
+    int add_info_texture_eval_type = mi_MAX_EVAL_COLOR; // see max_proto.h
+    if (evalNormal) {
+      add_info_texture_eval_type = mi_MAX_EVAL_NORMAL;  // see max_proto.h
+    } // if (evalNormal)
+      // call max_base_UVGenerator (use add_info_texture_eval_type !!!)
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    // extra outputs
+    float3 xtra_dP   = float3(0.0, 0.0, 0.0);
+    float3 xtra_dPdu = float3(0.0, 0.0, 0.0);
+    float3 xtra_dPdv = float3(0.0, 0.0, 0.0);
+    float2 uv = float2(0.0, 0.0);
+    uv.x = texture_coordinate[0].x;
+    uv.y = texture_coordinate[0].y;
+    if (PARAS(Coords).call("input", "texture_eval_type", 
+			   add_info_texture_eval_type,
+			   "output", "result", shader_return,
+			   "output", "xtra_dP",       xtra_dP,
+			   "output", "xtra_bumpDP_0", xtra_dPdu,
+			   "output", "xtra_bumpDP_1", xtra_dPdv)) {
+      uv  = shader_return.rg;
+    }
+    else {
+      xtra_dP = (abs(ddx(texture_coordinate[0]).xyz) +
+		 abs(ddy(texture_coordinate[0]).xyz));
+      if(xtra_dP.x == 0.0 && xtra_dP.y == 0.0) {
+	xtra_dP = float3(0.002, 0.002, 0.002);
+      }
+      xtra_dPdu = texture_tangent [0];
+      xtra_dPdv = texture_binormal[0];
+    }
+    bool rc = true;
+    // pattern
+    Color output_shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    switch (add_info_texture_eval_type) {
+    case mi_MAX_EVAL_COLOR:
+      // rc = maxBitmapEvalColor(result, state, paras, inst, add_info);
+      rc = maxBitmapEvalColor(result, uv, 
+			      xtra_dP.xy,
+			      // paras
+			      PARAS(Apply), 
+			      PARAS(CropPlace), 
+			      PARAS(ClipU), PARAS(ClipV), 
+			      PARAS(ClipW), PARAS(ClipH),
+			      PARAS(UseJitter), PARAS(Jitter), 
+			      PARAS(AlphaSource));
+
+#ifdef HLSL_OPTIMIZE
+      float g = Gamma;
+#else
+      float g = ExtraParameters.Gamma;
+#endif
+      if (g > 0 && g != 1.0)
+        result.rgb = pow(result.rgb, g);
+
+      if (!PARAS(PreMultAlpha) && result.a > 0.0f)
+	result.rgb /= result.a;
+      
+      // call "output" shader, if any
+      if (PARAS(Output).call("input", "inputColor", result, 
+			     "output", "result", output_shader_return)) {
+	result = output_shader_return;
+      }
+
+      if (PARAS(MonoOutput) != 0)
+	mono_result = result.a;
+      else
+	mono_result = maxIntensity(result);
+
+      if (PARAS(RGBOutput) != 0)
+	{
+	  result.rgb = mono_result;
+	  result.a   = 1.0;
+	}
+
+      break;
+
+    case mi_MAX_EVAL_MONO:
+      error("TODO: mi_MAX_EVAL_MONO");
+      // rc = maxBitmapEvalMono(result, state, paras, inst, add_info);
+      break;
+
+    case mi_MAX_EVAL_NORMAL:
+      rc = maxBitmapEvalNormal(result, uv,
+			       // xtra
+			       xtra_dP,
+			       xtra_dPdu,
+			       xtra_dPdv);
+      // call "output" shader, if any
+      if (PARAS(Output).call("input", "inputColor", result, 
+			     "input", "evalNormal", evalNormal,
+			     "output", "result", output_shader_return)) {
+	result = output_shader_return;
+      }
+      mono_result = result.a;
+      result.a = 0.0;
+      break;
+    } // switch (add_info_texture_eval_type)
+  } // main
+};

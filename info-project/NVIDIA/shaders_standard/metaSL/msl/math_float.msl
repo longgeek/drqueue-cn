@@ -1,0 +1,223 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+shader Math_float_invert
+{
+	input:
+		float scalar = 0
+		{			
+			display_name("Float");
+			soft_range(float(0),float(1));
+			description( "Float to invert." );
+		};
+
+	output:
+		float result;
+
+	void main()
+	{
+		result   = 1 - scalar;
+	}
+}
+{
+	description( "Subtracts the input from 1." );
+}
+;
+
+shader Math_float_expand
+{
+  input:
+    float scalar = 0
+	{		
+		display_name("Float");
+		soft_range(float(0),float(1));
+		description( "Float to scale." );
+	};
+    float low   = 0
+	{	
+		display_name("Low");
+		soft_range(float(0),float(1));
+		description( "Low value of target range." );
+	};
+    float high  = 1
+	{	
+		display_name("High");
+		soft_range(float(0),float(1));
+		description( "High value of the target range." );
+	};
+   
+  output:
+    float result;
+    
+    void main()
+    {
+	result = (scalar - low)/(high - low);
+    }
+}
+{
+	description( "Scales each component of the input from the domain "
+                 "[Low, High] to the range [0, 1]." );
+}
+;
+
+shader Math_float_compress
+{
+  input:
+    float scalar = 0
+	{	
+		display_name("Float");
+		soft_range(float(0),float(1));
+		description( "Float to scale." );
+	};
+    float low   = 0
+	{	
+		display_name("Low");
+		soft_range(float(0),float(1));
+		description( "Low value of the domain." );
+	};
+    float high  = 1
+	{	
+		display_name("High");
+		soft_range(float(0),float(1));
+		description( "High value of the domain." );
+	};
+   
+  output:
+    float result;
+    
+    void main()
+    {
+	result = scalar*(high - low) + low;
+    }
+}
+{
+	description( "Scales each component of the input from the domain [0,1] "
+                 "to the range [Low, High]." );
+}
+;
+
+shader Math_float_threshold
+{
+  input:
+    float scalar     = 0
+	{	
+		display_name("Float");
+		soft_range(float(0),float(1));
+		description( "Float to threshold." );
+	};
+    float threshold = 0
+	{	
+		display_name("Threshold");
+		soft_range(float(0),float(1));
+		description( "Threshold value." );
+	};
+   
+  output:
+    float result;
+    
+    void main()
+    {
+	result = scalar > threshold ? scalar : 0;
+    }
+}
+{
+	description( "Returns the input if it exceeds the threshold and "
+	             "zero otherwise." );
+}
+;
+
+shader Math_float_mix
+{
+	input:
+		float scalar1 = 0
+		{	
+			display_name("Float 1");
+			soft_range(0,1);
+			description( "First scalar to mix." );
+		};
+		float scalar2 = 1
+		{		
+			display_name("Float 2");
+			soft_range(0,1);
+			description( "Second scalar to mix." );
+		};
+		float mix = 0.5
+		{		
+			display_name("Mix");
+			soft_range(0,1);
+			description( "Interpolation weight to apply." );
+		};
+
+	output:
+		float result;
+
+	void main()
+	{
+		result = lerp(scalar1, scalar2, mix);
+	}
+}
+{
+	description( "Performs linear interpolation between the two inputs.");
+}
+;
+
+shader Math_float_modf
+{
+	input:
+		float input = 0.0
+		{			
+			display_name("Float");
+			soft_range(0.0,1.0);
+			description("Float to split.");
+		};
+
+	output:
+		float integral_output
+		{
+			description("Integral part of the input.");
+		};
+		float fractional_output
+		{
+			description("Fractional part of the input.");
+		};
+
+	void main()
+	{
+		fractional_output = modf(input, integral_output);
+	}
+}
+{
+	description( "Splits a scalar into integral and fractional parts." );
+}
+;
+
+shader Math_float_sincos
+{
+	input:
+		float input = 0.0
+		{			
+			display_name("Float");
+			soft_range(0.0,1.0);
+			description("Float on which to calculate sine and cosine.");
+		};
+
+	output:
+		float sine
+		{
+			description("Sine of the input.");
+		};
+		float cosine
+		{
+			description("Cosine of the input.");
+		};
+
+	void main()
+	{
+		sincos(input, sine, cosine);
+	}
+}
+{
+	description( "Calculates the sine and cosine of a scalar." );
+}
+;

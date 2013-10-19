@@ -1,0 +1,276 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shading Models</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node147.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node149.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION146"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_fresnel">mi_fresnel</a></li>
+<li><a href="#api:mi_fresnel_reflection">mi_fresnel_reflection</a></li>
+<li><a href="#api:mi_phong_specular">mi_phong_specular</a></li>
+<li><a href="#api:mi_fresnel_specular">mi_fresnel_specular</a></li>
+<li><a href="#api:mi_cooktorr_specular">mi_cooktorr_specular</a></li>
+<li><a href="#api:mi_blinn_specular">mi_blinn_specular</a></li>
+<li><a href="#api:mi_blong_specular">mi_blong_specular</a></li>
+<li><a href="#api:mi_ward_glossy">mi_ward_glossy</a></li>
+<li><a href="#api:mi_ward_anisglossy">mi_ward_anisglossy</a></li>
+<li><a href="#api:mi_schlick_scattering">mi_schlick_scattering</a></li>
+<li><a href="#api:mi_choose_scatter_type">mi_choose_scatter_type</a></li>
+<li><a href="#api:mi_choose_simple_scatter_type">mi_choose_simple_scatter_type</a></li>
+<li><a href="#api:mi_choose_lobe">mi_choose_lobe</a></li>
+</ul>
+
+<h3>Shading Models</h3>
+<p>The following functions are provided for support of shaders, to
+simplify common mathematical operations required in shaders:</p>
+<p><a id="INDEX717"></a></p>
+<h5 class="anchor" id="api:mi_fresnel">mi_fresnel</h5>
+<pre>
+    miScalar mi_fresnel(
+        miScalar        ior_in,
+        miScalar        ior_out,
+        miScalar        factor1,
+        miScalar        factor2);
+</pre>
+<p>Compute the reflected intensity according to
+<b><a name="INDEX718" id="INDEX718"></a>Fresnel</b>, given the
+<a href="node76.html#INDEX201">index of refraction</a> <i>ior_in</i> in the
+current medium and the index of refraction <i>ior_out</i> in the
+medium on the other side, which the ray is about to enter. The
+factors define the medium opacities.</p>
+<p><a id="INDEX719"></a></p>
+<h5 class="anchor" id="api:mi_fresnel_reflection">mi_fresnel_reflection</h5>
+<pre>
+    miScalar mi_fresnel_reflection(
+        miState         *state,
+        miScalar        ior_in,
+        miScalar        ior_out);
+</pre>
+<p>Call <i><a href="node148.html#INDEX717">mi_fresnel</a></i> with
+parameters appropriate for the given indices of refraction
+<i>ior_in</i> and <i>ior_out</i>, and for the <i>dot_nd</i> state
+variable.</p>
+<p><a id="INDEX720"></a></p>
+<h5 class="anchor" id="api:mi_phong_specular">mi_phong_specular</h5>
+<pre>
+    miScalar mi_phong_specular(
+        miScalar        spec_exp,
+        miState         *state,
+        miVector        *dir);
+</pre>
+<p><a id="INDEX721"></a> Calculate the Phong factor
+based on the direction of illumination <i>dir</i>, the specular
+exponent <i>spec_exp</i>, and the state variables <i>normal</i> and
+<i>dir</i>. The direction must be given in
+<a href="node101.html#INDEX367">internal space</a>.</p>
+<p><a id="INDEX722"></a></p>
+<h5 class="anchor" id="api:mi_fresnel_specular">mi_fresnel_specular</h5>
+<pre>
+    void mi_fresnel_specular(
+        miScalar        *ns,
+        miScalar        *ks,
+        miScalar        spec_exp,
+        miState         *state,
+        miVector        *dir,
+        miScalar        ior_in,
+        miScalar        iot_out);
+</pre>
+<p>Calculate the specular factor <i>ns</i> based on the
+illumination direction <i>dir</i>, the specular exponent
+<i>spec_exp</i>, the inside and outside indices of refraction
+<i>ior_in</i> and <i>ior_out</i>, and the state variables
+<i>normal</i> and <i>dir</i>. <i>ks</i> is the value returned by
+<i><a href="node148.html#INDEX717">mi_fresnel</a></i>, which is
+called by <i><a href="node148.html#INDEX722">mi_fresnel_specular</a></i>.
+The direction must be given in <a href="node101.html#INDEX367">internal
+space</a>.</p>
+<p><a id="INDEX723"></a></p>
+<h5 class="anchor" id="api:mi_cooktorr_specular">mi_cooktorr_specular</h5>
+<pre>
+    miBoolean mi_cooktorr_specular(
+        miColor         *result,
+        miVector        *dir_in,
+        miVector        *dir_out,
+        miVector        *normal,
+        miScalar        roughness,
+        miColor         *ior);
+</pre>
+<p>Calculate the specular color <i>result</i> according to the
+Cook-Torrance reflection model for incident direction
+<i>dir_in</i>, reflection direction <i>dir_out</i> at a surface
+with normal <i>normal</i>. The <i>roughness</i> is the average
+slope of surface microfacets. <i>ior</i> is the relative
+<a href="node76.html#INDEX201">index of refraction</a> for three
+wavelengths (ior_out/ior_in for red, green, and blue). All indices
+must be 1.0 or greater; if not they are clamped to 1.0. See
+<a href="node256.html#Foley90">Foley90</a>.</p>
+<p><a id="INDEX724"></a></p>
+<h5 class="anchor" id="api:mi_blinn_specular">mi_blinn_specular</h5>
+<pre>
+    miScalar mi_blinn_specular(
+        miVector        *dir_in,
+        miVector        *dir_out,
+        miVector        *normal,
+        miScalar        roughness,
+        miScalar        ior);
+</pre>
+<p>Like <i><a href="node148.html#INDEX723">mi_cooktorr_specular</a></i>, but only for
+one wavelength. Only one <a href="node76.html#INDEX201">index of
+refraction</a> <i>ior</i> is needed, and the result is a scalar. If
+<i>ior</i> is less than 1.0, it is clamped to 1.0. See
+<a href="node256.html#Foley90">Foley90</a>.</p>
+<p><a id="INDEX725"></a></p>
+<h5 class="anchor" id="api:mi_blong_specular">mi_blong_specular</h5>
+<pre>
+    miScalar mi_blong_specular(
+        miVector        *dir_in,
+        miVector        *dir_out,
+        miVector        *normal,
+        miScalar        roughness,
+        miScalar        ior);
+</pre>
+<p>This is similar to <i><a href="node148.html#INDEX724">mi_blinn_specular</a></i>,
+but implements a
+hybrid of Blinn and Phong shading instead of true Blinn shading. It
+is included separately to support the Softimage Blinn shading
+model.</p>
+<p><a id="INDEX726"></a></p>
+<h5 class="anchor" id="api:mi_ward_glossy">mi_ward_glossy</h5>
+<pre>
+    miScalar mi_ward_glossy(
+        miVector        *dir_in,
+        miVector        *dir_out,
+        miVector        *normal,
+        miScalar        shiny);
+</pre>
+<p>Calculate the value of the isotropic Ward glossy reflection
+model for incident direction <i>dir_in</i>, reflection direction
+<i>dir_out</i> at a surface with normal <i>normal</i> and shinyness
+<i>shiny</i>. <i>dir_in</i> should point towards the point, while
+<i>dir_out</i> and <i>normal</i> should point away from the point.
+Shiny should be low (for example 5) for wide glossy reflection, and
+high (for example 100) for narrow glossy (nearly specular)
+reflection.</p>
+<p><a id="INDEX727"></a></p>
+<h5 class="anchor" id="api:mi_ward_anisglossy">mi_ward_anisglossy</h5>
+<pre>
+    miScalar mi_ward_anisglossy(
+        miVector        *dir_in,
+        miVector        *dir_out,
+        miVector        *normal,
+        miVector        *u,
+        miVector        *v,
+        miScalar        shiny_u,
+        miScalar        shiny_v);
+</pre>
+<p>Calculate the value of the anisotropic Ward glossy reflection
+model for incident direction <i>dir_in</i>, reflection direction
+<i>dir_out</i>, surface normal <i>normal</i>, and the anisotropic
+orientation determined by two perpendicular vectors <i>u</i> and
+<i>v</i>. The shinyness in the u and v direction is <i>shiny_u</i>
+and <i>shiny_v</i>, respectively. <i>dir_in</i> should point
+towards the point, while <i>dir_out</i> and <i>normal</i> should
+point away from the point. <i>u</i> and <i>v</i> should be
+perpendicular, and also perpendicular to the normal.</p>
+<p><a id="INDEX728"></a></p>
+<h5 class="anchor" id="api:mi_schlick_scattering">mi_schlick_scattering</h5>
+<pre>
+    miScalar mi_schlick_scatter(
+        miVector        *dir_in,
+        miVector        *dir_out,
+        miScalar        directionality);
+</pre>
+<p>Calculate the value of the Schlick volume scattering model for
+incident direction <i>dir_in</i>, scattering direction
+<i>dir_out</i>, and directionality <i>directionality</i>.
+<i>dir_in</i> should point towards the point, while <i>dir_out</i>
+should point away from the point. <i>directionality</i> must be
+between <i>-1</i> and 1. For values between <i>-1</i> and 0 it
+models backscattering (with -1 being the most directional), for a
+value of 0 it models diffuse (isotropic) scattering, and for values
+between 0 and 1 it models forward scattering.</p>
+<p><a id="INDEX729"></a></p>
+<h5 class="anchor" id="api:mi_choose_scatter_type">mi_choose_scatter_type</h5>
+<pre>
+    miRay_type mi_choose_scatter_type(
+        miState         *state,
+        float           transp,
+        miColor         *diffuse,
+        miColor         *glossy,
+        miColor         *specular)
+</pre>
+<p>In photon shaders it is generally important (although not
+required) to generate only one photon per photon interaction. To
+make this happen this function can be used to select one of several
+new photon types. The function returns:
+<tt>miPHOTON_REFLECT_SPECULAR</tt>,
+<tt>miPHOTON_REFLECT_GLOSSY</tt>,
+<tt>miPHOTON_REFLECT_DIFFUSE</tt>,
+<tt>miPHOTON_TRANSMIT_SPECULAR</tt>,
+<tt>miPHOTON_TRANSMIT_GLOSSY</tt>,
+<tt>miPHOTON_TRANSMIT_DIFFUSE</tt> or <tt>miPHOTON_ABSORBED</tt>.
+The return type is based on incoming coefficients and chosen in
+such a way that the most important component is chosen most often.
+Notice that for <a href="node41.html#INDEX86">caustics</a>
+simulations the diffuse and glossy components are ignored. Also
+note that the sum of the diffuse, glossy and specular coefficients
+should be less than or equal to one within each of the red, green,
+and blue color bands, and that
+<i><a href="node148.html#INDEX729">mi_choose_scatter_type</a></i> modifies the
+input coefficients and scales them correctly based on the
+probability of generating a photon of that type. To obtain a
+correct result the shader must use the modified coefficients in the
+computations performed after
+<i><a href="node148.html#INDEX729">mi_choose_scatter_type</a></i> has been
+used. The probability for reflection is <i>1-transp</i>. See page
+<a href="node142.html#scatterfunc">scatterfunc</a> for a more
+detailed explanation.</p>
+<p><a id="INDEX730"></a></p>
+<h5 class="anchor" id="api:mi_choose_simple_scatter_type">mi_choose_simple_scatter_type</h5>
+<pre>
+    miRay_type mi_choose_simple_scatter_type(
+        miState         *state,
+        miColor         *refl_diffuse,
+        miColor         *refl_specular,
+        miColor         *trans_diffuse,
+        miColor         *trans_specular)
+</pre>
+<p>This is a simplified version of
+<i><a href="node148.html#INDEX729">mi_choose_scatter_type</a></i> that simply
+returns the diffuse and specular terms for reflected and
+transmitted light. Unlike
+<i><a href="node148.html#INDEX729">mi_choose_scatter_type</a></i>, it does not
+support glossy interactions.</p>
+<p><a id="INDEX731"></a></p>
+<h5 class="anchor" id="api:mi_choose_lobe">mi_choose_lobe</h5>
+<pre>
+    int mi_choose_lobe(
+        miState         *state,
+        miScalar        r);
+</pre>
+<p>In a two-lobed volume scattering model, choose lobe 1 or 2 based
+on the probability <i>r</i> of the first lobe.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node147.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node149.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

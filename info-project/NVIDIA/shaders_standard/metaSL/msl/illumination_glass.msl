@@ -1,0 +1,91 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+ 
+shader Illumination_glass
+{
+  input:
+    Color color = Color(1,1,1,1)
+    {
+        display_name("Glass Color");
+        soft_range(Color(0,0,0,0),Color(1,1,1,1));
+        hard_range(Color(0,0,0,0),Color(1,1,1,1));
+        description( "The glass color." );
+    };
+
+    float ior = 1.4
+    {
+	display_name("Ior");
+	description("Index of refraction.");
+    };
+
+  output:
+    Color result;
+    Color transparency;
+
+    // Schlick's fresnel approximation (scalar).
+    float schlick_fresnel(
+        float normal_v,
+        float graze_v,
+        float kh)
+    {
+        float f = 1.0 - kh;
+        float f2 = f * f;
+        //float g = (f2 * f2 * f); // 5th power
+        float g = (f2); // use 2nd power, looks more like thick glass
+        return normal_v + (graze_v - normal_v) * g;
+    }
+
+    void main() 
+    {
+	void(ior);
+	
+        // Note that this MetaSL code is only used on hardware renderers,
+        // software renderers will use their builtin BRDF functions.        
+        // We want to achive the translucency and reflections of colorized glass,
+        // but with the internal blending of transparent layers, this is pretty hard.
+        // The color parameter controls the attenuation of the light (translucency)
+        // and the colorization effect. This means, a white color defines maximum
+        // transparency (minimal attenuation), grey color defines middle transparency,
+        // black color minimum transparency. This means we must control transparency
+        // with the color.
+
+        // Attenuation effect from color, proportional to color intensity.
+        float att = (color.r + color.g + color.b) * 0.333333;
+        // Set transparency, for thick glass, it does not need to be Fresnel dependent.
+        transparency = lerp(0.2, 0.9, att);
+
+        // Skip result output for shadow rays
+        if (ray_type == "shadow")
+        {
+            result = Color(0.);
+            return;
+        }
+        
+        // The Fresnel base term based on ior: float Rs = (ior - 1.0) / (ior + 1.0);  Rs = Rs * Rs;
+        float Rs = 0.04;        
+        
+        // Fresnel term, varies between normal_opac and graze_opac.
+        float F = schlick_fresnel( Rs, 1.0, abs(dot_nd) );
+
+        // Compute the specular reflection.
+        float3 refldir = reflect(direction,normal);
+        Ray ray( position, refldir );
+        Trace_options trace_opt;
+        trace_opt.set_ray_type("environment");
+        Ray ray_dx(float3(0), float3(0));
+        Ray ray_dy(float3(0), float3(0));
+        Color reflection(0);
+        trace(ray, ray_dx, ray_dy, trace_opt, "result", reflection);
+
+        // Darken the color, not scale but subtract to keep saturation.
+        Color c = color - 0.5;
+        
+        result = lerp(c, reflection, F);
+    }
+}
+{
+        description( "Simple glass illimination model." );
+}
+;

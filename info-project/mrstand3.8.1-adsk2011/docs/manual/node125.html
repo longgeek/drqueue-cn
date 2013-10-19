@@ -1,0 +1,215 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>State Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="brdf_sh.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node126.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION123"></a>
+<h2 id="sh:state_shaders">State Shaders</h2>
+<p><a id="INDEX491"></a>State shaders are
+functions that are invoked to set up and clean up rendering states, and
+before and after all forms of primary ray casting. They are intended to
+customize the state, control user data, or manipulate the sample values
+prior and after various stages of the rendering process. They don't have the
+limitations of other shader types that are sometimes used for such purposes,
+like lens shaders. State shaders are attached to the scene
+<a href="node76.html#state">options</a>. Multiple state shaders can exist
+in a scene (typically one per shader package) which are called in a sequence.
+<p>
+mental ray usually uses the same state for a number of related shader calls,
+such as for all primary rays of a screen-space tile, which means
+that state shaders are typically called more often in sample than
+state mode. The mode is passed in the structure passed as the
+fourth argument. The following calls occur:</p>
+<ul style="margin-left:1em;list-style-type:none">
+<li>Rendering:
+<ul style="margin-left:-1em;list-style-type:none">
+<li><tt>miSHADERSTATE_STATE_INIT</tt> when a tile of the image starts.</li>
+<li><tt>miSHADERSTATE_SAMPLE_INIT</tt> before each eye ray.</li>
+<li><tt>miSHADERSTATE_SAMPLE_EXIT</tt> after each eye ray, but
+before the result is stored in the frame buffers.</li>
+<li><tt>miSHADERSTATE_STATE_EXIT</tt> when a tile of the image finishes.</li>
+</ul>
+</li>
+<li>Displacement:
+<ul style="margin-left:-1em;list-style-type:none">
+<li><tt>miSHADERSTATE_STATE_INIT</tt> for each displaced subobject.</li>
+<li><tt>miSHADERSTATE_SAMPLE_INIT</tt> before each
+<a href="node127.html#INDEX494">displacement shader</a> call.</li>
+<li><tt>miSHADERSTATE_SAMPLE_EXIT</tt> directly after each
+displacement shader call.</li>
+<li><tt>miSHADERSTATE_STATE_EXIT</tt> after a subobject has been displaced.</li>
+</ul>
+</li>
+<li>Lightmapping:
+<ul style="margin-left:-1em;list-style-type:none">
+<li><tt>miSHADERSTATE_STATE_INIT</tt> before the first vertex of
+each subobject. (Objects may be split into subobjects if they are
+too large.)</li>
+<li><tt>miSHADERSTATE_SAMPLE_INIT</tt> before each
+<a href="node135.html#INDEX501">lightmap shader</a> call, in either vertex
+or output mode.</li>
+<li><tt>miSHADERSTATE_SAMPLE_EXIT</tt> after each
+<a href="node135.html#INDEX501">lightmap shader</a> call, in either vertex
+or output mode.</li>
+<li><tt>miSHADERSTATE_STATE_EXIT</tt> after the
+<a href="node135.html#INDEX501">lightmap shader</a> has been called in
+output mode (ie. for the last time for this subobject).</li>
+</ul>
+</li>
+<li>Photons:
+<ul style="margin-left:-1em;list-style-type:none">
+<li><tt>miSHADERSTATE_STATE_INIT</tt> before starting to cast a
+bundle of photons. A bundle has about 5000-10000 photons.</li>
+<li><tt>miSHADERSTATE_SAMPLE_INIT</tt> before a photon is
+cast.</li>
+<li><tt>miSHADERSTATE_SAMPLE_EXIT</tt> after a photon has been
+cast.</li>
+<li><tt>miSHADERSTATE_STATE_EXIT</tt> after finishing the bundle of
+photons.</li>
+</ul>
+</li>
+<li>Finalgather preprocessing before image rendering starts:
+<ul style="margin-left:-1em;list-style-type:none">
+<li><tt>miSHADERSTATE_STATE_INIT</tt> before a set of finalgather
+points is set.</li>
+<li><tt>miSHADERSTATE_SAMPLE_INIT</tt> before each finalgather
+point is set. (Each point involves a large number of finalgather
+rays.)</li>
+<li><tt>miSHADERSTATE_SAMPLE_EXIT</tt> after each finalgather point
+is finished.</li>
+<li><tt>miSHADERSTATE_STATE_EXIT</tt> after the set of finalgather
+points is finished.</li>
+</ul>
+</li>
+<li>Geometry shader:
+<ul style="margin-left:-1em;list-style-type:none">
+<li><tt>miSHADERSTATE_STATE_INIT</tt> before each geometry shader
+call.</li>
+<li><tt>miSHADERSTATE_SAMPLE_INIT</tt> before each geometry shader
+call.</li>
+<li><tt>miSHADERSTATE_SAMPLE_EXIT</tt> after each geometry shader
+call.</li>
+<li><tt>miSHADERSTATE_STATE_EXIT</tt> after each geometry shader
+call.</li>
+</ul>
+</li>
+<li>Output shader:
+<ul style="margin-left:-1em;list-style-type:none">
+<li><tt>miSHADERSTATE_STATE_INIT</tt> before the first output
+shader is called.</li>
+<li><tt>miSHADERSTATE_SAMPLE_INIT</tt> before each
+<a href="node126.html#INDEX492">output shader</a> call.</li>
+<li><tt>miSHADERSTATE_SAMPLE_EXIT</tt> after each
+<a href="node126.html#INDEX492">output shader</a> call.</li>
+<li><tt>miSHADERSTATE_STATE_EXIT</tt> after the last output shader
+has been called.</li>
+</ul>
+</li>
+</ul>
+<p>Note that
+sample exit shaders are called immediately after the associated
+shader call (lens, material, displacement, etc.), and receive the
+same result pointer as their first argument. This can be used to
+manipulate returned values, especially in cases like
+<a href="node25.html#INDEX49">light map</a>ping where no
+<a href="node124.html#INDEX487">lens shader</a>s are called.</p>
+<pre>
+    struct state_arg {      /* state shader parameters */
+        int     count;
+        float   s;
+    };
+    
+    typedef struct state_x { /* data to store in shaderstate */
+        int     value;
+    } MyStateExt;
+
+    miBoolean state_ext(
+        miColor             *result,
+        miState             *state,
+        struct state_arg    *param,
+        miShader_state_arg  *arg)
+    {
+        const char          *key = "StateExtension";
+        miBoolean           res = miFALSE;
+
+        if (state-&gt;type != miRAY_EYE) {
+                /* state shaders may be called in various situations,
+                 * here we only deal with actual rendering. */
+                return(miFALSE);
+        }
+        switch(arg-&gt;op) {
+          case miSHADERSTATE_STATE_INIT: {
+                MyStateExt myState;     /* prepare state */
+                ....
+                res = mi_shaderstate_set(state, key, &amp;myState,
+                                         sizeof(MyStateExt), miSS_LIFETIME_RECT);
+                } break;
+
+          case miSHADERSTATE_STATE_EXIT:
+                /* cleanup state */
+                ....
+                res = mi_shaderstate_set(state, key, NULL, 0, miSS_LIFETIME_RECT);
+                break;
+
+          case miSHADERSTATE_SAMPLE_INIT: {
+                /* do something before sampling starts */
+                MyStateExt *myState = mi_shaderstate_get(state, key, 0);
+                .....
+                res = miTRUE;
+                } break;
+
+          case miSHADERSTATE_SAMPLE_EXIT:
+                if (arg-&gt;shader_return) {
+                        /* if sampling was successful, do something */
+                        MyStateExt *myState = mi_shaderstate_get(state,key,0);
+                        .....
+                        res = miTRUE;
+                }
+                break;
+
+          default:
+                /* this should never happen, add error handling */
+                break;
+        }
+        return res;
+    }
+</pre>
+<p>The declaration of a state shader looks just like a regular
+shader declaration:</p>
+<pre>
+    declare shader
+        color state_ext(
+                integer "count",
+                scalar  "s"
+        )
+        apply state
+        version 1
+    end declare
+</pre>
+<p>Note, that the <tt>call</tt> statement in the .mi scene description
+language does not cause state shaders to be called.
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="brdf_sh.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node126.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Scene Entities</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node74.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node76.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><br />
+<a id="SECTION73"></a></p>
+<h2>Scene Entities</h2>
+<p>A .mi file contains commands and scene entities in any order,
+with the restriction that an element must be defined before it can
+be referenced. All entities are named; all references are done by
+name. The following entities can be defined:</p>
+<table class="table">
+<tr>
+<td><code class="mi">options</code></td>
+<td>global options</td>
+</tr>
+<tr>
+<td><code class="mi">camera</code></td>
+<td>camera: output files, aperture, resolution, etc.</td>
+</tr>
+<tr>
+<td><code class="mi">material</code></td>
+<td>shading, shadows, volumes, environments, contour, etc.</td>
+</tr>
+<tr>
+<td><code class="mi">texture</code></td>
+<td>procedural texture or texture image</td>
+</tr>
+<tr>
+<td><code class="mi">light</code></td>
+<td>light</td>
+</tr>
+<tr>
+<td><code class="mi">object</code></td>
+<td>polygonal or free-form surface geometry</td>
+</tr>
+<tr>
+<td><code class="mi">instance</code></td>
+<td>places objects, lights, cameras, and groups in 3D space</td>
+</tr>
+<tr>
+<td><code class="mi">instgroup</code></td>
+<td>for grouping instances; the nodes of the <a href="node83.html#INDEX286">scene DAG</a>
+</tr>
+<tr>
+<td><code class="mi">assembly</code></td>
+<td>demand loaded subscene</td>
+</tr>
+<tr>
+<td><code class="mi">shader</code></td>
+<td>optional named shaders</td>
+</tr>
+<tr>
+<td><code class="mi">data</code></td>
+<td>arbitrary user data</td>
+</tr>
+<tr>
+<td><code class="mi">lightprofile</code></td>
+<td>light profile such as IES or Eulumdat</td>
+</tr>
+</table>
+<p>All of these can be defined at any place, as long as they are
+not nested (the definition of an element must be completed before
+the next element can be defined). All these entities can also be
+incrementally changed by introducing the definition with the
+<tt>incremental</tt> keyword, which tells mental ray to re-define
+an existing element instead of starting a new one. The contents of
+the existing element become the defaults for the new one.</p>
+<p><tt>options</tt></p>
+<p>This element contains rendering <a href="node76.html#INDEX0">options</a>
+such as the shadow mode, tracing
+depth, sampling algorithm and its parameters, acceleration
+algorithm and its parameters, dithering and other modes.</p>
+<p><tt>camera</tt></p>
+<p>The <a href="node77.html#INDEX226">camera</a> is a description
+of the camera characteristics such as focal length and aperture
+that determine the field of view.</p>
+<p><tt>texture</tt></p>
+<p>Textures to apply</p>
+<p>2D or 3D color, bump, <a href="node76.html#INDEX200">transparency</a>,</p>
+<p>displacement and other maps to objects. Textures are referenced
+by other shaders that include the texture in their color or other
+computation. Textures may appear verbatim in the file, or may be
+read from a texture file, or may be fully procedural, or a
+combination of these.</p>
+<p><tt>material</tt></p>
+<p>Materials describe the</p>
+<p>surface properties of objects, volumic properties of the space
+enclosed by objects, transparent <a href="node76.html#INDEX197">shadow</a>
+casting, <a href="node21.html#INDEX44">environment map</a>ping, and</p>
+<p><a href="node21.html#INDEX41">displacement map</a>ping, as well
+as a number of property flags.</p>
+<p><tt>light</tt></p>
+<p>Lights illuminate objects and volumes. Lights are referenced in
+materials only (through the light instance), they are not applied
+directly to objects.</p>
+<p>All lights name a shading function; there are predefined shaders
+for points, spots, and directional lights, optionally in
+combination with various types of area light sources.</p>
+<p><tt>object</tt></p>
+<p>Objects describe the actual geometry. Objects may reference
+materials to determine the visual appearance of the surface.
+Various types of geometry descriptions are supported, such as
+<a href="node83.html#INDEX297">polygon</a>al objects and
+<a href="node9.html#INDEX13">free-form surface</a>s. By default, all
+objects are defined in a local coordinate space
+(<a href="node101.html#INDEX369">object space</a>), usually with the origin
+at the center of the object. Options exist to switch to
+<a href="node101.html#INDEX370">camera space</a> instead.</p>
+<p><tt>instance</tt></p>
+<p>When an object, light, camera, or instance group is defined, it
+does not become part of the scene. It must be placed in 3D space
+with an instance, which contains a transformation matrix, inherited
+parameters, and several flags. It is possible to have more than one
+instance reference the same object, light, camera, or instance
+group; this is called "<b><a id="INDEX174"></a>multiple instancing</b>".
+The instanced entity then
+appears several times in the final processed scene. It is possible
+to specify a "<a href="node179.html#INDEX857">geometry shader</a>"
+as the instanced item instead of an object. The
+"<a href="node179.html#INDEX857">geometry shader</a>" is expected to create
+a scene element which is defined in the local coordinate space of
+the instance.</p>
+<p><tt>instgroup</tt></p>
+<p>Instance groups are used to group instances so they can be
+instanced as a unit. Instance groups form the nodes of the
+<a href="node83.html#INDEX286">scene DAG</a> (Directed Acyclic Graph),
+which contains all entities used during processing. The instance
+group at the root of the DAG is called the "<b><a name="INDEX175"
+id="INDEX175"></a>root instance group</b>." Since instance groups
+can themselves be instanced the <a href="node83.html#INDEX286">scene DAG</a>
+can be built with any number
+of levels and sub-DAGs, each with its own local coordinate space.
+<p>
+<tt>assembly</tt><p>
+Assemblies provide on demand loading of entire subscenes,
+containing materials, objects, instances and groups. On demand
+loading reduces memory consumption and allows faster rendering
+depending on visibility. The subscenes can be defined in separate
+files or procedurally.
+<p>
+<tt>shader</tt><p>
+Shaders are user-provided functions used for a variety of purposes.
+They are not normally named; they are defined where they are
+needed, like in a material. An unnamed shader is also called an
+"anonymous shader." The <tt>shader</tt> statement allows giving a
+name to a shader; a named shader can be used in any place where an
+anonymous shader is expected by giving its name, introduced by an
+equals sign.</p>
+<p><tt>data</tt></p>
+<p><a id="INDEX176"></a> User data blocks are
+independent named toplevel scene entities that hold structured or
+unstructured data of any kind. Structured data is declared much
+like shader parameters, while unstructured data is a raw byte
+stream with a fixed size. User data is useful for large amounts of
+shared scene data.</p>
+<p><tt>lightprofile</tt></p>
+<p><a id="INDEX177"></a><a id="INDEX178"></a>
+Light profiles such as IES or
+Eulumdat are files supplied by lamp vendors that describe the
+emission characteristics of physical lights. Light profile blocks
+can be defined in the scene file that reference the lamp vendor
+profile file, and passed to shaders as parameters of type
+<tt>lightprofile</tt>. Shaders can then look up the emission
+characteristics of the light.</p>
+<p>All scene entities are described in more detail in the following
+subsections.</p>
+<p>mental ray allows <b><a id="INDEX179"></a>forward references</b>
+from groups to instances; and
+instances to groups, objects, lights, and cameras. This means that
+it is possible to write a group block that names an instance that
+does not yet exist, for example; mental ray will resolve the
+connection when rendering begins. In all cases not listed above, an
+element must exist before it is used. Although forward references
+could be used to create cyclic dependencies, this is highly
+discouraged because it can lead to inconsistent scene graphs, and
+because the <tt>-echo</tt> command-line option cannot properly
+resolve such dependencies. Forward referencing is useful for
+systems that put together scene files from different sources.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node74.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node76.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

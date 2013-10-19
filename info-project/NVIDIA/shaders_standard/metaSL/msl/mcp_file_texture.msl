@@ -1,0 +1,129 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product shader for looking up 2d file textures
+ *****************************************************************************/
+#include <mcp_lib.msl>
+
+shader Mcp_file_texture{
+  input:
+    texture2D texture
+    {
+        description("The input texture.");
+    };
+    //simple color manipulation
+    Spectrum color_offset = Spectrum(0.0)
+    {
+        description("Fixed offset value added to all texture values.");
+    };
+    Spectrum color_scale = Spectrum(1.0)
+    {
+        description("Fixed scaling factor applied to all texture values.");
+    };
+    Greyscale_source greyscale_source=ALPHA 
+    {
+        description("defines how greyscale_result is computed.");
+    };
+                
+      //the coordinates, normaly come from Mcp_coordinate_source or Mcp_coordinate_transform 	
+    Mcp_coordinate uvw = Mcp_coordinate(
+                texture_coordinate[0].xyz,
+                ddx(texture_coordinate[0]).xyz,
+                ddy(texture_coordinate[0]).xyz,
+                float3(1.,0.,0.),
+                float3(0.,1.,0.)
+                )
+    {
+    }; 
+      //transformations that need affect texture filtering in special ways
+      //those should effectively be handled by the core!
+    float blur = 1.
+    {
+        description("Factor for the bluriness of the texture");
+    };
+    Mcp_texture_placement texture_placement = Mcp_texture_placement(
+                 float2(0.0, 1.0),
+                 float2(0.0, 1.0),
+                 true,
+                 true,
+                 false,
+                 false)
+    {
+        description("Description of bitmap fint into coodinate space");
+    };
+
+
+  output:
+    Spectrum result;
+    float greyscale_result;
+
+    void main(){
+        float3 texcoord = uvw.position;
+        // wrap or clamp u
+        if (!texture_placement.wrap_u)
+            texcoord.x = clamp(texcoord.x, 0.0, 1.0);
+        else if( texcoord.x > 0.){
+            if (texture_placement.mirror_u && int(texcoord.x) % 2 == 1)
+                texcoord.x = 1.0 - fmod(texcoord.x, 1.0);
+            else
+                texcoord.x = fmod(texcoord.x, 1.0);		
+        }
+        else{
+            if (texture_placement.mirror_u && int(texcoord.x) % 2 == 0)
+                texcoord.x = - fmod(texcoord.x, 1.0);
+            else
+                texcoord.x = 1+fmod(texcoord.x, 1.0);		
+        }
+
+        //clamp v
+        if (!texture_placement.wrap_v)
+            texcoord.y = clamp(texcoord.y, 0.0, 1.0);
+        else if( texcoord.y > 0.){
+            if (texture_placement.mirror_v && int(texcoord.y) % 2 == 1)
+                texcoord.y = 1.0 - fmod(texcoord.y, 1.0);
+            else
+                texcoord.y = fmod(texcoord.y, 1.0);		
+        }
+        else{
+            if (texture_placement.mirror_v && int(texcoord.y) % 2 == 0)
+                texcoord.y = - fmod(texcoord.y, 1.0);
+            else
+                texcoord.y = 1+fmod(texcoord.y, 1.0);		
+        }
+        
+        float crop_width_u=texture_placement.crop_u.y - texture_placement.crop_u.x;
+        float crop_width_v=texture_placement.crop_v.y - texture_placement.crop_v.x;
+        // crop
+        texcoord.x = texture_placement.crop_u.x + crop_width_u * texcoord.x;
+        texcoord.y = texture_placement.crop_v.x + crop_width_v * texcoord.y;
+        // perform the look-up
+        Color color_result;
+        Texture2D_sampler_color sampler(texture, 1.,"default");
+        color_result = sampler.lookup(texcoord.xy, uvw.ddx.xy*blur*crop_width_u, uvw.ddy.xy*blur*crop_width_v); 
+        //result = tex2d(texture,texcoord.xy,ddx(texture_coordinate[0]).xy,ddy(texture_coordinate[0]).xy); 
+        //result = sampler.lookup(texture_coordinate[0].xy,ddx(texture_coordinate[0]).xy,ddy(texture_coordinate[0]).xy); 
+ 
+        // scale and add offset
+
+        result = Spectrum(color_result) * color_scale + color_offset;
+
+        //greyscale_result = result.a;
+        switch( greyscale_source ){
+            case ALPHA:
+                greyscale_result=color_result.a;
+            break;
+            case AVERAGE:
+                greyscale_result=(color_result.r+color_result.g+color_result.b)/3.*max_value(color_scale)+max_value(color_offset);
+            break;
+            case LUMINANCE:
+                greyscale_result = luminance(result);
+        }
+    }
+}
+{
+        display_name( "Bitmap texture (MetaSL elemental shader library)" );
+};
+

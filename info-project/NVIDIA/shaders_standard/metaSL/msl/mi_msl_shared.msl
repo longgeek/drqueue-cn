@@ -1,0 +1,485 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+//
+// Illumination Functions - begin
+//
+#include <constants.msl>
+
+void mi_component_illumination_base(
+    Color  ambient_color,			// Color of Ambient Light
+    float ambient_scalar,			// intensity of Ambient Light
+    Color  diffuse_reflectance_color,	// Color of Diffuse portion of BRDF
+    Color  diffuse_color,			// Color of Diffuse Light
+    float diffuse_scalar,			// intensity of Diffuse Light
+    Color  specular_reflectance_color,  // Color of Specular portion of BRDF
+    Color  specular_color,			// Color of Specular Light
+    float specular_scalar,			// intensity of Specular Light
+    out Color sum,				// Sum of all Illumination Components
+    out Color ambient,				// Ambient Illumination Component
+    out Color diffuse,				// Diffuse Illumination Component
+    out Color specular				// Specular Illumination Component
+)
+{
+    sum      = Color(0.0,0.0,0.0,0.0);
+    ambient  = Color(0.0,0.0,0.0,0.0);
+    diffuse  = Color(0.0,0.0,0.0,0.0);
+    specular = Color(0.0,0.0,0.0,0.0);
+
+    ambient = ambient_color * ambient_scalar;
+    sum += ambient;
+    diffuse += diffuse_reflectance_color * diffuse_color * diffuse_scalar;
+    sum += diffuse;
+    specular += specular_reflectance_color * specular_color * specular_scalar;
+    sum += specular;
+
+    sum.a      = 1.0;
+    ambient.a  = 1.0;
+    diffuse.a  = 1.0;
+    specular.a = 1.0;
+}
+
+
+Color mi_ashikhmin_shirley_diffuse(
+	float3		lightDir,       // Direction to light
+	float3		eyeDir,         // Direction from eye
+	float3		n,              // Normal in camera space
+	Color   	Rd,		// Diffuse Albedo
+	Color    	Rs)		// Specular Reflectance
+{
+    float f1 = 1.0 - 0.5 * dot(lightDir,n);
+    float f2 = 1.0 - 0.5 * -dot(eyeDir,n);
+    float d = (28.0 / (23.0 * PI))
+    	     * (1.0 - pow(f1, 5))
+    	     * (1.0 - pow(f2, 5));
+    return Rd * saturate(Color(1.0,1.0,1.0,1.0) - Rs) * d;
+}
+
+
+Color mi_ashikhmin_shirley_glossy(
+	float 	     	shininess_u,	// sharpness in U direction
+	float       	shininess_v,	// sharpness in V direction
+	float3		lightDir,       // Direction to light
+	float3		eyeDir,         // Direction from eye
+	float3		n,              // Normal in camera space
+	float3      	u,          	// surface u direction
+	float3      	v,          	// surface v direction
+	Color		Rs)		// glossy color
+{
+	float3 h = normalize(lightDir - eyeDir);
+
+	float kh = abs(dot(eyeDir,h));
+	float hv = dot(h,v);
+	float hu = dot(h,u);
+	float hn = dot(h,n);
+	float nk1 = abs(dot(n,lightDir));
+	float nk2 = abs(dot(n,eyeDir));
+	float c = sqrt((shininess_u + 1.0) * (shininess_v + 1.0))
+        	 / (8.0 * PI);
+	Color fresnel = Rs + saturate(Color(1.0,1.0,1.0,1.0) - Rs) * pow(max(1.0 - kh, 0.0), 5);
+	Color num;
+	// Issues with pow(1., oo) (Cg 2.0 June 2008)
+	if ( hn<0.9999) {
+		float exponent = (shininess_u * hu * hu + shininess_v * hv * hv) / (1.0 - hn * hn);
+		num = Color(c * pow(hn, exponent));
+	}
+	else {
+		num = Color(c);
+	}
+	return (num / (kh * max(nk1,nk2))) * fresnel;
+}
+
+
+Color mi_ashikhmin_shirley_specular(
+        float           shininess_u,    // sharpness in U direction
+        float           shininess_v,    // sharpness in V direction
+        float3          lightDir,       // Direction to light
+        float3          eyeDir,         // Direction from eye
+        float3          n,              // Normal in camera space
+        float3          u,              // surface u direction
+        float3          v,              // surface v direction
+        Color           Rs)             // specular color
+{
+    return mi_ashikhmin_shirley_glossy(shininess_u,shininess_v,lightDir,eyeDir,n,u,v,Rs);
+}
+
+
+/*
+ * Compute specular contribution according to the Cook-Torrance reflection
+ * model as described in Foley et al, "Computer Graphics", pp. 764--770 and
+ * by Roy Hall, "Illumination and Color", p. 96 plus appendix III.5:
+ *
+ *        F D G
+ *    --------------
+ *    pi (n.v) (n.l)
+ *
+ * where
+ *
+ * D is the Beckmann microfacet distribution function,
+ * G is the geometrical attenuation factor,
+ * F is the Fresnel term (wavelength-dependent).
+ *
+ * The two main features of the Cook-Torrance reflection model are:
+ *   - the reflected color changes with angle.
+ *   - it has an off-specular peak.
+ *
+ * The comment above about terminology ("specular" vs. "glossy") also
+ * applies here.
+ */
+
+float mi_SQR(float x) // Value to Square
+{
+	return ((x)*(x));
+}
+
+Color mi_cooktorr_specular(
+	float3      di,      /* incident direction */
+	float3      dr,      /* direction of reflection */
+	float3      n,       /* normal */
+	float       roughness,/* average microfacet slope */
+	Color        ior)     /* relative index of refraction for 3 wavelengths:
+						ior_out/ior_in for red, green, blue */
+{
+	Color     result;
+
+	Color     F, g;
+	float3   fhalf;
+	float    nh, nv, nl, vh, nh2, m2, t;
+	float    D, G, c, otherterms, expo;
+
+	/* Compute normalized halfway vector */
+	fhalf = dr - di;
+	fhalf = normalize(fhalf);
+
+	/* Compute misc. dot products
+         * v = -di, l = dr, n = state->normal, h = halfway vector
+         */
+	nh = dot(n, fhalf);
+	result = Color(0.0);
+
+	if (nh > 0.0) {
+		nl = dot(n, dr);
+		nv = -dot(n, di);
+		vh = -dot(di, fhalf);
+
+		/* Beckmann distribution function:
+                 *
+                 *           1           (n.h)^2 - 1
+                 * D = ------------- exp(-----------)
+                 *     4 m^2 (n.h)^4     (n.h)^2 m^2
+                 */
+		nh2 = nh * nh;
+		m2 = roughness*roughness;   /* roughness is often denoted m */
+		expo = (nh2 - 1) / (nh2 * m2);
+		D = exp(expo) / (4 * PI * m2 * nh2 * nh2);
+
+		/* Geometrical attenuation factor G:
+                 *
+                 *            2 (n.h) (n.v)  2 (n.h) (n.l)
+                 * G = min(1, -------------, -------------)
+                 *                (v.h)          (v.h)
+                 */
+		G = 2.0 * nh * min(nv, nl) / vh;
+		G = min(G, 1.0);
+
+		/* Fresnel term:
+                 *
+                 *     1 (g-c)^2       [c(g+c)-1]^2
+                 * F = - ------- ( 1 + ------------ )
+                 *     2 (g+c)^2       [c(g-c)+1]^2
+                 *
+                 * -- where c = cos(theta_i) = l.h and g^2 = ior^2 + c^2 - 1.
+                 *
+                 * ior, and therefore g and F are wavelength dependent.
+                 *
+                 * This reflection model assumes the extinction coefficient k=0
+                 * for all materials, see Roy Hall p. 195 and Foley et al. p. 767.
+                 */
+		c = dot(dr, fhalf);
+		/* cos of angle of incidence relative to halfway vector h */
+
+		t = ior.r < 1 ? 1 : ior.r;
+		g.r = sqrt(t*t + c*c - 1);
+		t = ior.g < 1 ? 1 : ior.g;
+		g.g = sqrt(t*t + c*c - 1);
+		t = ior.b < 1 ? 1 : ior.b;
+		g.b = sqrt(t*t + c*c - 1);
+
+		F.r = 0.5 * mi_SQR(g.r-c) /
+            mi_SQR(g.r+c) * (1 + mi_SQR(c*(g.r+c) - 1) /
+                             mi_SQR(c*(g.r-c) + 1));
+		F.g = 0.5 * mi_SQR(g.g-c) /
+            mi_SQR(g.g+c) * (1 + mi_SQR(c*(g.g+c) - 1) /
+                             mi_SQR(c*(g.g-c) + 1));
+		F.b = 0.5 * mi_SQR(g.b-c) /
+            mi_SQR(g.b+c) * (1 + mi_SQR(c*(g.b+c) - 1) /
+                             mi_SQR(c*(g.b-c) + 1));
+		F.a = 1.f;
+
+		/* Compute product of all terms:
+                 *
+                 *        F D G
+                 *    --------------
+                 *    pi (n.v) (n.l)
+                 */
+		otherterms = (G != 0.0) ? D * G / (PI * nv * nl) : D / (PI * nl);
+
+		result = F * otherterms;
+	}
+
+	return result;
+}
+
+float mi_falloff(
+				  float3 direction, // Direction to eye
+				  float3 normal,	 // Normal in Camera space
+				  float  amount)	 // Narrowing factor
+{
+	float f;
+
+	f = saturate(dot(-direction, normal));
+	f = 1.0 - pow(f, 1.0/amount);
+
+	return f;
+}
+
+float mi_orennayar_diffuse(
+	float3		lightDir,        	// Direction to light
+	float3		eyeDir,          	// Direction from eye
+	float3		n,               	// Normal
+	float3		tangent,		// Tangent
+	float      	diffuse_deviation) 	// Diffuse deviation
+{
+    float sigma2 = diffuse_deviation * diffuse_deviation;
+    float A = 1.0 - (sigma2 / (2.0 * (sigma2 + 0.33)));
+    float B = 0.45 * sigma2 / (sigma2 + 0.09);
+
+    float cosThetaI = dot(lightDir,n);
+    float cosThetaO = -dot(eyeDir,n);
+    // max is necessary due to numerical imprecision
+    float sinThetaI = sqrt(max(0.0, 1.0 - cosThetaI * cosThetaI));
+    float sinThetaO = sqrt(max(0.0, 1.0 - cosThetaO * cosThetaO));
+    float cosPhiI = dot(lightDir,tangent);
+    float cosPhiO = -dot(eyeDir,tangent);
+    float sinPhiI = sqrt(max(0.0, 1.0 - cosPhiI * cosPhiI));
+    float sinPhiO = sqrt(max(0.0, 1.0 - cosPhiO * cosPhiO));
+    // max{0, cos(phi_i - phi_o)}
+    float maxcos = max(0.0, cosPhiI * cosPhiO + sinPhiI * sinPhiO);
+    float sinAlpha, tanBeta;
+    if (cosThetaI > cosThetaO) {
+        sinAlpha = sinThetaO;
+        tanBeta = sinThetaI / cosThetaI;
+    }
+    else {
+        sinAlpha = sinThetaI;
+        tanBeta = sinThetaO / cosThetaO;
+    }
+    return saturate((A + B * maxcos * sinAlpha * tanBeta) / PI);
+}
+
+float mi_phong_glossy(
+	float3		lightDir,        // Direction to light
+	float3		eyeDir,          // Direction from eye
+	float3		n,               // Normal in camera space
+	float      	exponent)        // sharpness
+{
+    float3 refl = (2.f * -dot(eyeDir,n)) * n + eyeDir;
+    float h = dot(refl,lightDir);
+    return pow(max(h,0.f),exponent)
+    	 * (exponent + 2.f)
+    	 / (2.0 * PI);
+}
+
+float mi_phong_specular(
+        float3          lightDir,        // Direction to light
+        float3          eyeDir,          // Direction from eye
+        float3          n,               // Normal in camera space
+        float           exponent)        // sharpness
+{
+    return mi_phong_glossy(lightDir,eyeDir,n,exponent);
+}
+
+/*
+* The anisotropic Ward reflection model of glossy reflection.
+* Developed in "Measuring and modeling anisotropic reflection" by
+* Gregory J. Ward, Siggraph '92, pp. 265--272.
+* This is a corrected formula: the article has a mistake substituting
+* for d = angle (h,n)  cos^2 d with (1 + cos d) / 2, not with
+* (1 + cos 2d) / 2. As a result, anisotropic glossy with
+* shiny_u approx. equal shiny_v looks mish brighter than
+* the corresponding isotropic glossy.
+*
+* The inputs are the incident and reflected directions di and dr, the
+* surface normal n, and perpendicular vertices u and v on the
+* surface.  These vectors are assumed to be normalized.  di points
+* towards the patch, and dr points away.  The last parameters are
+* shiny_u and shiny_v, glossyness terms in the range 5--100 with 5
+* being fairly wide glossy and 100 being close to specular.
+* The output is f, the glossy part of the BRDF:
+*
+*                      (h.u / alpha_u)^2 + (h.v / alpha_v)^2
+*            exp( - ------------------------------------- )
+*                                 (h.n) ^2
+* f = --------------------------------------------------------------
+*      sqrt(cos(theta_i)*cos(theta_r)) * 4 * pi * alpha_u * alpha_v
+*/
+
+float
+mi_ward_anisglossy(
+	float3      di,         /* incident direction */
+	float3      dr,         /* direction of reflection */
+	float3      n,          /* normal */
+	float3      u,          /* surface u direction */
+	float3      v,          /* surface v direction */
+	float       shiny_u,    /* shiny coefficient in u direction (5--100) */
+	float       shiny_v)    /* shiny coefficient in v direction (5--100) */
+{
+	float3 h;   /* halfway vector */
+	float  cosr, cosi, shiny_u2, shiny_v2;
+	float  hn, hu, hv, expo;
+	float  result = 0;
+
+	cosr = dot(dr, n);
+	cosi = -dot(di, n);
+
+	if (cosi * cosr >= MI_EPS) {
+		shiny_u2 = shiny_u * shiny_u;
+		shiny_v2 = shiny_v * shiny_v;
+
+		h = dr - di;
+		h = normalize(h);
+		hn = dot(h, n);
+		hn *= hn;
+		if (hn > 1.0) hn = 1.0;
+		/*to avoid numerical instability when dot = 1*/
+		hu = dot(h, u);
+		hu *= hu;
+		hv = dot(h, v);
+		hv *= hv;
+
+		/* exp will return 0 for small hn */
+		if(hn >= MI_EPS * (hu*shiny_u2 + hv*shiny_v2)) {
+			expo = - (hu*shiny_u2 + hv*shiny_v2) / hn;
+			result = exp(expo) *
+				shiny_u * shiny_v / (sqrt(cosi*cosr) * 4.0 * PI);
+		}
+	}
+	return (result);
+}
+
+//
+// Illumination Functions - end
+//
+
+//
+// Color Functions - begin
+//
+Color rgb_to_hsv(
+	Color rgb )	// Color
+{
+	Color result;
+	result.a = rgb.a;	// use Color3 once available
+
+	float channelMin, channelMax, delta;
+	channelMin = min( rgb.r, min( rgb.g, rgb.b ) );
+	channelMax = max( rgb.r, max( rgb.g, rgb.b ) );
+
+	result.b = channelMax;					// v
+	delta = channelMax - channelMin;
+	if( channelMax != 0 )
+		result.g = delta / channelMax;		// s
+	else
+	{
+		// r = g = b = 0		// s = 0, v is undefined
+		result.g = 0;
+		result.r = -1;
+		return result;
+	}
+
+	if( rgb.r == channelMax )
+		result.r = ( rgb.g - rgb.b ) / delta;		// between yellow & magenta
+	else if( rgb.g == channelMax )
+		result.r = 2 + ( rgb.b - rgb.r ) / delta;	// between cyan & yellow
+	else
+		result.r = 4 + ( rgb.r - rgb.g ) / delta;	// between magenta & cyan
+	result.r *= 60;				// degrees
+
+	if( result.r < 0 )
+		result.r += 360;
+
+	return result;
+}
+
+Color hsv_to_rgb(
+	Color hsv )	// HSV
+{
+	Color result;
+
+	int i;
+	float f, p, q, t;
+
+	if( hsv.g == 0 )
+	{
+		// achromatic (grey)
+		//*r = *g = *b = v;
+		result = Color(hsv.b);
+		return result;
+	}
+
+	hsv.r /= 60;			// sector 0 to 5
+	i = int(floor( hsv.r ));
+	f = hsv.r - i;			// factorial part of h
+	p = hsv.b * ( 1 - hsv.g );
+	q = hsv.b * ( 1 - hsv.g * f );
+	t = hsv.b * ( 1 - hsv.g * ( 1 - f ) );
+	switch( i ) {
+		case 0:
+			result.r = hsv.b;
+			result.g = t;
+			result.b = p;
+			break;
+		case 1:
+			result.r = q;
+			result.g = hsv.b;
+			result.b = p;
+			break;
+		case 2:
+			result.r = p;
+			result.g = hsv.b;
+			result.b = t;
+			break;
+		case 3:
+			result.r = p;
+			result.g = q;
+			result.b = hsv.b;
+			break;
+		case 4:
+			result.r = t;
+			result.g = p;
+			result.b = hsv.b;
+			break;
+		default:		// case 5:
+			result.r = hsv.b;
+			result.g = p;
+			result.b = q;
+			break;
+	}
+
+	return result;
+}
+
+//
+// Color Functions - end
+//
+
+#define MI_UPPER_COL Color(0.9, 0.9, 0.9, 1)
+#define MI_LOWER_COL Color(0.25, 0.5, 0.8, 1)
+
+
+float mi_gain_func(float t, float a) {
+	if(t < 0.5) 
+		return t/((1/a - 2)*(1-2*t)+1);
+	else
+		return ((1/a -2)*(1-2*t)-t)/((1/a -2)*(1-2*t)-1);
+}

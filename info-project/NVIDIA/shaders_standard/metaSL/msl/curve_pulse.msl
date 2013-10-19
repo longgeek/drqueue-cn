@@ -1,0 +1,77 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#include <mi_msl_shared.msl>
+
+shader Curve_pulse
+{
+  input:
+    float t = texture_coordinate[0].x {
+        display_name("Input");
+    };
+    float frequency = 1.0 {
+        display_name("Frequency");
+        description("Ajusts the frequency of the pulse");
+    };
+    float pulse_position = 0.5 {
+        display_name("Pulse position");
+        description("The position of the pulse");
+    };
+    float pulse_width = 0.2 {
+        display_name("Pulse Width");
+        description("Sets the width of the pulse");
+    };
+    float plateau = 0.0 {
+        display_name("Peak Width");
+        description("Sets the width of the peak. 0 means that there is no "
+        " plateau while a value of 1 will result in a rectangular pulse.");
+        hard_range(0.0, 1.0);
+    };
+    float a = 0.5    {
+        display_name("Transition Shape");
+        description("Changes the shape of the transition");
+    };
+    float pulse_amplitude  = 1.0 {
+        display_name("Pulse amplitude");
+        description("The amplitude of the pulse");
+    };
+
+  output:
+    float result;
+    Color graph_out;
+    
+    void main() {
+        float t_in  = frac(t*frequency );
+        float s0, s1, s2, s3;
+        
+        float plateau_width = pulse_width * plateau;
+        
+        s0 = pulse_position - pulse_width/2.0;
+        s1 = pulse_position - plateau_width/2.0;
+        
+        s2 = pulse_position + plateau_width/2.0;
+        s3 = pulse_position + pulse_width/2.0;
+        
+        float s01 = ((t_in-s0)/(s1-s0))*0.5; // (s01*2)/((1/a - 2)*(1-2*s01)+1)
+        float s23 = 0.5-((t_in-s2)/(s3-s2))*0.5; // (s23*2)/((1/a - 2)*(1-2*s23)+1))
+        
+        result = t_in < s0 ? 0.0 : 
+                 t_in < s1 ? lerp(0, 
+                                pulse_amplitude, 
+                                smoothstep(0, 1, (s01*2)/((1/a - 2)*(1-2*s01)+1))
+                                ) : 
+                 t_in < s2 ? pulse_amplitude : 
+                 t_in < s3 ? lerp(0, 
+                                pulse_amplitude, 
+                                smoothstep(0, 1, (s23*2)/((1/a - 2)*(1-2*s23)+1))
+                                ) : 
+                 0.0;
+                 
+        graph_out = texture_coordinate[0].y < result ? MI_LOWER_COL : MI_UPPER_COL;
+    }    
+};
+
+// declaration for curve shader pack backwards compatibility
+shader curve_pulse : Curve_pulse { };

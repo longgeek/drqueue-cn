@@ -1,0 +1,76 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+shader misss_lambert_gamma {
+ input:
+  Color ambient = Color(0.0, 0.0, 0.0, 1.0) {
+  };
+  Color ambience = Color(0.0, 0.0, 0.0, 1.0) {
+  };
+  Color diffuse = Color(1.0, 1.0, 1.0, 1.0) {
+  };
+  bool indirect = true {
+  };
+  float diffuse_curve = 0.75 {
+  };
+  int flip = 0 {
+  };
+  int mode = 0 {
+  };
+ output:
+  Color result;
+
+  void main() {
+      
+      float curve = diffuse_curve;
+      if (curve <= 0.0) curve = 1.0;
+      
+      int times = flip==2? 2 : 1;
+     
+      result = ambience;
+      Color color = ambient;
+      result.rgb *= color.rgb;
+      result.a    = 1.0f;      
+      
+      float3 vdir = direction;
+
+      Color sum;
+
+      for (int m = 0; m < times; m++)      
+      {
+          if (flip == 1 || m==1) {
+              normal   = -normal;
+              // TODO: backside = !backside;
+          }
+          // enumerate lights
+          
+          // TODO: Diffuse/Specular lighting feature
+          //       is not determined the interface for
+          //       yet.
+          
+          Light_iterator light;
+          foreach (light)
+          {
+              float cos = pow(saturate(light.dot_nl), curve);
+              if (cos > 0.0) {
+                  sum += cos * light.contribution/PI;
+              }
+          }
+      }
+      
+      if (indirect)
+      {
+          // irradiance term
+          Irradiance_options irradiance_options;
+          sum +=  irradiance(irradiance_options) / PI;
+      }
+
+      sum.rgb *= diffuse.rgb;
+      
+      result = sum;
+  } // main
+};

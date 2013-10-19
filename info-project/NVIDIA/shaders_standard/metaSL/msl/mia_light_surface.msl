@@ -1,0 +1,94 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+shader mia_light_surface {
+ input:
+    Color color = Color(1.0, 1.0, 1.0, 1.0){
+    };
+    float intensity = 1.0{
+    };
+    float fg_contrib = 0.0{
+    };
+    float refl_contrib = 0.0{
+    };
+    bool use_lights = false{
+    };
+    float lights_multiplier = 1.0{
+    };
+    float3 lights_eval_point = float3(0.0, 0.0, 0.0){
+    };
+    
+ output:
+  Color result;
+
+  void main() {
+
+      result = Color(0.0, 0.0, 0.0, 0.0);
+      Color local_color  = Color(0.0, 0.0, 0.0, 0.0);
+      float local_weight = 0.0;
+      float local_lightweight = 0.0;
+      Color local_lcolor = Color(0.0, 0.0, 0.0, 0.0);
+      float local_weightweight = 1.0;
+
+       /* check for illegal calls */
+      if(ray_shader == "displace")return;
+
+      /* Shadow? Transparent! */
+      if(ray_type == "shadow"){
+
+          return;
+      }
+
+      if (is_ray_history_group("final_gather"))
+      {
+          local_weightweight *= fg_contrib;
+      }
+
+      if(ray_type == "reflect") {
+          local_weightweight *= refl_contrib;
+      }
+
+      if (local_weightweight <= 0.0) return;
+
+      local_lcolor = color;
+      result = local_lcolor;
+      local_weight = intensity*local_weightweight;
+      result.rgb *= local_weight;
+
+
+      if (!use_lights) 
+          return;
+
+      local_lightweight = lights_multiplier *local_weightweight;
+
+      if(local_lightweight > 0.0)
+      {
+          float3 lp = lights_eval_point;
+          bool do_lp = lp.x != 0.0 || lp.y != 0.0 || lp.z != 0.0;
+
+          float3 orig_n = normal;
+
+          /* Disable side-testing */
+          normal = float3(0.0, 0.0, 0.0);
+
+          /* Set evaluation point */
+          if (do_lp)
+              position = transform_point("light", "internal", lp);
+
+          Light_iterator_options loptions;
+          loptions.set_cone(normal, 180);
+          Light_iterator light(loptions);
+
+          foreach(light)
+          {
+              local_color += light.contribution;
+          }
+          result.rgb += local_color.rgb * local_lcolor.rgb * local_lightweight;
+          normal = orig_n;
+      }//local_lightweight                    
+  } // main
+};

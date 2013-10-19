@@ -1,0 +1,140 @@
+#*****************************************************************************
+# Copyright 2007 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	Pierre-Felix Breton
+# Purpose:	Simplified Marble map based on the 3ds max Marble map
+#
+# History:
+#
+# 2007 feb 15th - pfbreton, initial implementation
+# 
+#****************************************************************************/
+
+min version "3.4"
+
+#------------------------------------------------------------------------
+# Phenomenon
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Map_Simple_Marble" 
+  (
+      #-------------------------------------
+			# Main parameters
+			#-------------------------------------
+      struct "m" 
+      {
+      	color "Color1",
+      	color "Color2",
+      	scalar "Size",
+      	scalar "Width"
+      },
+      
+			#-------------------------------------
+			# XYZ Generator Parameters
+			# 		This is a temporary solution
+			#			minimal set of parameters exposed
+			#			more design work needs to be done
+			#-------------------------------------
+      struct "u" 
+      {
+      	vector "Offset",
+      	vector "Tiling",
+      	vector "Angle"
+
+      },
+      integer "mode",
+      array light "lights"
+      	
+   )#end phenomenon
+
+
+#-------------------------------------
+# XYZ Generator Shader
+#-------------------------------------
+shader "XYZGen|Shader" "max_base_XYZGenerator" 
+(
+	"CoordinateSystem" 0, 				#ObjectXYZ | WorldXYZ | ExplicitMapChannel | VertexColorChannel
+	"MapChannel" 1,  							#Unused in this case, since we are using the ObjectXYZ coordinatesystem
+	#--------------			
+	"Offset" = interface "u.Offset", 
+	"Tiling" = interface "u.Tiling", 
+	"Angle" = interface "u.Angle", 
+	#-------------------
+	"Blur" 1, 
+	"BlurOffset" 0
+)#end shader
+
+
+#------------------------------------------------------------------------
+# Marble Map Shader
+#------------------------------------------------------------------------
+shader "Map_Marble|Texmap|Shader" "max_Marble" 
+	(
+		"Parameters" 
+		{
+			"Width" = interface "m.Width", 
+			"Size" = interface "m.Size", 
+			"Color1" = interface "m.Color1", 
+			"Color2" = interface "m.Color2", 
+			"Map1Enabled" off, 
+			"Map2Enabled" off, 
+			"Coords" "XYZGen|Shader"
+			}, 
+		"ExtraParameters" 
+		{
+			"GBufferID" 0	
+		}
+
+	)#end shader
+
+#------------------------------------------------------------------------
+#  Connections
+#------------------------------------------------------------------------
+root = "Map_Marble|Texmap|Shader"
+apply texture
+
+#------------------------------------------------------------------------
+# UI
+#------------------------------------------------------------------------
+
+	gui "gui_adsk_Map_Simple_Marble"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "Simple Marble Map (adsk)", "category" "Texture", "hidden" )
+	
+		#-------------------------------------
+		#  Map Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Simple Marble Map Parameters")
+		{
+			#----------------------------------
+			control "Color1" "color" ("uiName" "Color 1","value" 0 0 0 1.0)
+			control "Color2" "color" ("uiName" "Color 2","value" 1 1 1 1.0)
+			control "Size" "float" ("nonConnectable", "uiName" "Size", "value" 70, "range" 0 100)
+			control "Width" "float" ("nonConnectable", "uiName" "Vein Width", "value" 0.025, "range" 0 100)
+     
+		}#end control
+		
+		
+		#-------------------------------------
+		# XYZ Generator Parameters
+		# 		This is a temporary solution
+		#			minimal set of parameters exposed
+		#			more design work needs to be done
+		#-------------------------------------
+		control "u" "struct" ("uiName" "Texture Coordinates Parameters")
+    {  
+         control "Offset" "vector" ("nonConnectable", "value" 0 0 0)
+         control "Tiling" "vector" ("nonConnectable", "value" 1 1 1)
+         control "Angle" "vector" ("nonConnectable", "value" 0 0 0)     
+   }#end struct
+		
+		
+	  #----------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+
+	}#end gui
+
+end declare #end declare phenomenon

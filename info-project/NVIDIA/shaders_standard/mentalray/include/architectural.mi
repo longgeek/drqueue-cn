@@ -1,0 +1,680 @@
+#*****************************************************************************
+# Copyright 1986, 2013 NVIDIA Corporation. All rights reserved.
+#*****************************************************************************
+# Author:   Zap 
+# Created:  25.01.2006
+# Module:   architectural
+# Purpose:  .mi declarations for architectural shaders
+#
+# Exports:
+#   mia_physicalsun
+#   mia_physicalsky
+#   mia_material   (compatible version 14 interface)
+#   mia_material_x (extended version 15 with multiple outputs)
+#   mia_roundcorners
+#   mia_exposure_simple
+#   mia_exposure_photographic
+#   mia_exposure_photographic_rev
+#   mia_light_surface
+#   mia_portal_light
+#   mia_envblur
+#
+# History:
+#   25.01.06 zap:  Created
+#   10.05.06 zap:  New version
+#   01.06.06 zap:  Updated
+#   20.01.07 zap:  Added portal lights shader
+#   12.02.07 zap:  Added light surface shader
+#   27.03.07 zap:  Added mia_lens_bokeh
+#   12.04.07 zap:  Added mia_material_x (extended)
+#   13.04.07 zap:  Added mia_envblur
+#   18.04.07 zap:  Updated mia_portal_light, fixed typo
+#   16.05.07 zap:  Updated mia_roundcorners
+#   18.10.07 zap:  Added mia_ciesky, expanded mia_physicalsky w. 
+#                  explicit Perez parameters.
+#   05.11.07 zap:  Expanded mia_physicalsun w. explicit illuminance param.
+#   28.04.09 zap:  Added mia_photometric_light
+#   03.03.11 zap:  Added mia_exposure_photographic_rev
+#
+#****************************************************************************/
+
+# guard against multiple inclusions
+$ifndef "architectural_mi_included"
+set "architectural_mi_included" "true"
+
+#
+# Shader for the mental ray physical sun
+#
+declare shader "mia_physicalsun" (
+        boolean "on"                   default on,
+        scalar  "multiplier"           default 1.0,
+        color   "rgb_unit_conversion"  default 0.0001 0.0001 0.0001,
+        scalar  "haze"                 default 0.0,
+        scalar  "redblueshift"         default 0.0,
+        scalar  "saturation"           default 1.0,
+        scalar  "horizon_height"       default 0.0,
+        scalar  "shadow_softness"      default 1.0,
+        integer "samples"              default 8,
+        vector  "photon_bbox_min",
+        vector  "photon_bbox_max",
+        boolean "automatic_photon_energy",
+        boolean "y_is_up",
+        #
+        # New version 6 parameters (for analysis use)
+        # Mode=0: compatible,
+        # Mode=1: Use specific direct normal illuminance (lux)
+        #
+        integer "illuminance_mode"           default 0,
+        scalar  "direct_normal_illuminance"  default 0.0
+    )
+
+    version 6
+    apply light, emitter
+   
+end declare
+
+
+#
+# Shader for the mental ray physical sky
+# 
+declare shader "mia_physicalsky" (
+        boolean "on"                  default on,
+        scalar  "multiplier"          default 1.0,
+        color   "rgb_unit_conversion" default 0.0001 0.0001 0.0001,
+        scalar  "haze"                default 0.0,
+        scalar  "redblueshift"        default 0.0,
+        scalar  "saturation"          default 1.0,
+
+        scalar  "horizon_height"      default 0.0,
+        scalar  "horizon_blur"        default 0.1,
+        color   "ground_color"        default 0.2 0.2 0.2,
+        color   "night_color"         default 0 0 0,
+
+        vector  "sun_direction",
+        light   "sun",   
+
+        # The following parameters are only useful
+        # when the shader is used as environment
+        scalar  "sun_disk_intensity"  default 1.0,
+        scalar  "sun_disk_scale"      default 4.0,
+        scalar  "sun_glow_intensity"  default 1.0,
+
+        boolean "use_background",
+        shader  "background",
+
+        # For the lens/volume shader mode
+        scalar  "visibility_distance",
+
+        boolean "y_is_up",
+        integer "flags",
+        
+        # New version 5 parameters (for analysis use)
+        # Mode=0: compatible,
+        # Mode=1: Use Perez luminance model
+        integer "sky_luminance_mode" default 0,
+
+        # Sky luminance as a zenith luminance value
+        scalar  "zenith_luminance"               default 0.0,
+        # Sky luminance as a diffuse horizontal illuminance
+        scalar  "diffuse_horizontal_illuminance" default 0.0,
+        # Perez model luminance distribution parameters
+        scalar  "a",
+        scalar  "b",
+        scalar  "c",
+        scalar  "d",
+        scalar  "e",
+        
+        # New version 6 parameters
+        # Makes the sun disk & glow be physically scaled (i.e. as bright as mia_physicalsun);
+        # useful for IBL. A sun_disk_intensity value of 1.0 results in a physically scaled sun.
+        # sun_glow_intensity scales the ratio of energy assigned to the glow and subtracted from the sun disk,
+        # but does not affect the overall intensity.
+        boolean "physically_scaled_sun"			default off     
+    )
+
+    version 6
+    apply environment, texture, lens, volume
+
+end declare
+
+
+#
+# The "Architectural" monolithic material, backwards compatible interface
+#
+
+declare shader "mia_material" (
+        scalar  "diffuse_weight"      default 1.0, #: min 0.0 max 1.0
+        color   "diffuse"             default 0.5 0.5 0.5,
+        scalar  "diffuse_roughness"   default 0.0, #: min 0.0 max 1.0
+
+        scalar  "reflectivity"        default 0.6, #: min 0.0 max 1.0
+        color   "refl_color"          default 1.0 1.0 1.0,
+        scalar  "refl_gloss"          default 1.0, #: min 0.0 max 1.0
+        integer "refl_gloss_samples"  default 8,   #: min 0 softmax 128
+        boolean "refl_interpolate"    default off,
+        boolean "refl_hl_only"        default off,
+        boolean "refl_is_metal"       default off,
+
+        scalar  "transparency"        default 0.0, #: min 0.0 max 1.0
+        color   "refr_color"          default 1.0 1.0 1.0,
+        scalar  "refr_gloss"          default 1.0, #: min 0.0 max 1.0
+        scalar  "refr_ior"            default 1.4, #: min 0.1 softmax 2.0
+        integer "refr_gloss_samples"  default 8,   #: min 0 softmax 128
+        boolean "refr_interpolate"    default off,
+        boolean "refr_translucency"   default off,
+        color   "refr_trans_color"    default 0.7 0.6 0.5,
+        scalar  "refr_trans_weight"   default 0.5, #: min 0.0 max 1.0
+
+        scalar  "anisotropy"          default 1.0, #: min 0.1 softmax 10
+        scalar  "anisotropy_rotation" default 0.0, #: softmin 0 softmax 1
+        integer "anisotropy_channel"  default -1,  #: min -1  softmax 64
+
+        boolean "brdf_fresnel"         default off,
+        scalar  "brdf_0_degree_refl"   default 0.2, #: min 0.0 max 1.0
+        scalar  "brdf_90_degree_refl"  default 1.0, #: min 0.0 max 1.0
+        scalar  "brdf_curve"           default 5.0, #: min 0.1 softmax 20
+        boolean "brdf_conserve_energy" default on,
+
+        # Interpolation settings
+        
+        integer "intr_grid_density"   default 2,    #: min 0 max 5
+        integer "intr_refl_samples"   default 2,    #: min 0 softmax 5
+        boolean "intr_refl_ddist_on"  default off,
+        scalar  "intr_refl_ddist"     default 0.0,
+        integer "intr_refr_samples"   default 2,    #: min 0 softmax 5
+        boolean "single_env_sample"   default off,
+
+        # Reflection/Refraction optimizations & falloffs
+
+        boolean  "refl_falloff_on"       default off,
+        scalar   "refl_falloff_dist"     default 0.0,
+        boolean  "refl_falloff_color_on" default off,
+        color    "refl_falloff_color"    default 0 0 0,
+        integer  "refl_depth"            default 5,    #: min 0 softmax 10
+        scalar   "refl_cutoff"           default 0.01, #: min 0.0 max 1.0
+
+        boolean  "refr_falloff_on"       default off,
+        scalar   "refr_falloff_dist"     default 0.0,
+        boolean  "refr_falloff_color_on" default off,
+        color    "refr_falloff_color"    default 0 0 0,
+        integer  "refr_depth"            default 5,    #: min -1 softmax 10
+        scalar   "refr_cutoff"           default 0.01, #: min 0.0 max 1.0
+
+        # Factors
+
+        scalar   "indirect_multiplier"   default 1.0,  #: min 0 softmax 1.0
+        scalar   "fg_quality"            default 1.0,  #: min 0 softmax 10.0
+        scalar   "fg_quality_w"          default 1.0,  #: min 0 softmax 1.0
+
+        # Built in AO
+        
+        boolean  "ao_on"          default off,
+        integer  "ao_samples"     default 16,          #: min 0 softmax 128
+        scalar   "ao_distance"    default 10.0,
+        color    "ao_dark"        default 0.2 0.2 0.2,
+        color    "ao_ambient"     default 0.0 0.0 0.0,
+        boolean  "ao_do_details"  default on,
+
+        # Options
+
+        boolean  "thin_walled"            default off,
+        boolean  "no_visible_area_hl"     default on,
+        boolean  "skip_inside_refl"       default on,
+        boolean  "do_refractive_caustics" default off,
+        boolean  "backface_cull"          default off,
+        boolean  "propagate_alpha"        default off,    
+
+        # Other effects
+        
+        scalar   "hl_vs_refl_balance"     default 1.0,   #: min 0.0 softmax 1.0
+        scalar   "cutout_opacity"         default 1.0,   #: min 0.0 max 1.0
+        color    "additional_color"       default 0 0 0 0,
+        shader   "bump",
+        boolean  "no_diffuse_bump"        default off,
+
+        integer     "mode",
+        array light "lights"
+    )
+    version 14
+    apply material, photon, shadow    
+end declare
+
+#
+# The "Architectural" monolithic material, extended version (with
+# structure output and new/updated parameters)
+#
+declare shader 
+    struct {
+        color   "result",         # main output
+        
+        color "diffuse_result",
+        color "diffuse_raw",
+        color "diffuse_level",
+        
+        color "spec_result",
+        color "spec_raw",
+        color "spec_level",
+        
+        color "refl_result",
+        color "refl_raw",
+        color "refl_level",
+        
+        color "refr_result",
+        color "refr_raw",
+        color "refr_level",
+        
+        color "tran_result",
+        color "tran_raw",
+        color "tran_level",
+        
+        color "indirect_result",
+        color "indirect_raw",
+        color "indirect_post_ao",
+        color "ao_raw",
+        
+        color "add_result",
+        
+        color  "opacity_result",
+        color  "opacity_raw",
+        scalar "opacity"
+    } "mia_material_x" (
+        scalar  "diffuse_weight"      default 1.0, #: min 0.0 max 1.0
+        color   "diffuse"             default 0.5 0.5 0.5,
+        scalar  "diffuse_roughness"   default 0.0, #: min 0.0 max 1.0
+
+        scalar  "reflectivity"        default 0.6, #: min 0.0 max 1.0
+        color   "refl_color"          default 1.0 1.0 1.0,
+        scalar  "refl_gloss"          default 1.0, #: min 0.0 max 1.0
+        integer "refl_gloss_samples"  default 8,   #: min 0 softmax 128
+        boolean "refl_interpolate"    default off,
+        boolean "refl_hl_only"        default off,
+        boolean "refl_is_metal"       default off,
+
+        scalar  "transparency"        default 0.0, #: min 0.0 max 1.0
+        color   "refr_color"          default 1.0 1.0 1.0,
+        scalar  "refr_gloss"          default 1.0, #: min 0.0 max 1.0
+        scalar  "refr_ior"            default 1.4, #: min 0.1 softmax 2.0
+        integer "refr_gloss_samples"  default 8,   #: min 0 softmax 128
+        boolean "refr_interpolate"    default off,
+        boolean "refr_translucency"   default off,
+        color   "refr_trans_color"    default 0.7 0.6 0.5,
+        scalar  "refr_trans_weight"   default 0.5, #: min 0.0 max 1.0
+
+        scalar  "anisotropy"          default 1.0, #: min 0.1 softmax 10
+        scalar  "anisotropy_rotation" default 0.0, #: softmin 0 softmax 1
+        integer "anisotropy_channel"  default -1,  #: min -1  softmax 64
+
+        boolean "brdf_fresnel"         default off,
+        scalar  "brdf_0_degree_refl"   default 0.2, #: min 0.0 max 1.0
+        scalar  "brdf_90_degree_refl"  default 1.0, #: min 0.0 max 1.0
+        scalar  "brdf_curve"           default 5.0, #: min 0.1 softmax 20
+        boolean "brdf_conserve_energy" default on,
+
+        # Interpolation settings
+        
+        integer "intr_grid_density"   default 2,    #: min 0 max 5
+        integer "intr_refl_samples"   default 2,    #: min 0 softmax 5
+        boolean "intr_refl_ddist_on"  default off,
+        scalar  "intr_refl_ddist"     default 0.0,
+        integer "intr_refr_samples"   default 2,    #: min 0 softmax 5
+        boolean "single_env_sample"   default off,
+
+        # Reflection/Refraction optimizations & falloffs
+
+        boolean  "refl_falloff_on"       default off,
+        scalar   "refl_falloff_dist"     default 0.0,
+        boolean  "refl_falloff_color_on" default off,
+        color    "refl_falloff_color"    default 0 0 0,
+        integer  "refl_depth"            default 5,    #: min 0 softmax 10
+        scalar   "refl_cutoff"           default 0.01, #: min 0.0 max 1.0
+
+        boolean  "refr_falloff_on"       default off,
+        scalar   "refr_falloff_dist"     default 0.0,
+        boolean  "refr_falloff_color_on" default off,
+        color    "refr_falloff_color"    default 0 0 0,
+        integer  "refr_depth"            default 5,    #: min -1 softmax 10
+        scalar   "refr_cutoff"           default 0.01, #: min 0.0 max 1.0
+
+        # Factors
+
+        scalar   "indirect_multiplier"   default 1.0,  #: min 0 softmax 1.0
+        scalar   "fg_quality"            default 1.0,  #: min 0 softmax 10.0
+        scalar   "fg_quality_w"          default 1.0,  #: min 0 softmax 1.0
+
+        # Built in AO
+        
+        boolean  "ao_on"          default off,
+        integer  "ao_samples"     default 16,          #: min 0 softmax 128
+        scalar   "ao_distance"    default 10.0,
+        color    "ao_dark"        default 0.2 0.2 0.2,
+        color    "ao_ambient"     default 0.0 0.0 0.0,
+        integer  "ao_do_details"  default 0,           #: min 0 max 2
+
+        # Options
+
+        boolean  "thin_walled"            default off,
+        boolean  "no_visible_area_hl"     default on,
+        boolean  "skip_inside_refl"       default on,
+        boolean  "do_refractive_caustics" default off,
+        boolean  "backface_cull"          default off,
+        boolean  "propagate_alpha"        default off,    
+
+        # Other effects
+        
+        scalar   "hl_vs_refl_balance"     default 1.0,   #: min 0.0 softmax 1.0
+        scalar   "cutout_opacity"         default 1.0,   #: min 0.0 max 1.0
+        color    "additional_color"       default 0 0 0 0,
+        shader   "bump",
+        boolean  "no_diffuse_bump"        default off,
+
+        integer     "mode",
+        array light "lights",
+        
+        # Additional bump handling
+        integer     "bump_mode", 
+        vector      "overall_bump",
+        vector      "standard_bump",
+        
+        # Input/output flags
+        boolean     "multiple_outputs"    default on,
+
+        # Base reflection
+        scalar  "refl_base"               default 0.0, #: min 0.0 max 1.0
+        color   "refl_base_color"         default 1.0 0.3 0.0,
+        scalar  "refl_base_gloss"         default 1.0, #: min 0.0 max 1.0
+        integer "refl_base_gloss_samples" default 8,   #: min 0 softmax 128
+        vector  "refl_base_bump"          default 0.0 0.0 0.0
+    )
+    version 17
+    apply material, photon, shadow    
+end declare
+
+
+#
+# - Round corners bump shader
+#   Creates an emulated "roundness" to edges as a 
+#   shading effect (i.e. an on-the-fly bump map that
+#   fillets of edges).
+#   NEW version: 
+#      Accepts and returns bumps as vectors
+#      if bump_mode > 0 (otherwise compatible behaviour)
+#
+declare shader vector "mia_roundcorners" (
+        scalar "radius",
+        boolean "allow_different_materials",
+        shader  "bump",
+        integer "bump_mode",
+        vector  "bump_vector",
+    )
+    version 3
+    apply texture
+end declare	
+
+
+#
+#  Simple compressed exposure tone operator. Use as lens
+#  or output shader. 
+#
+declare shader  "mia_exposure_simple" (
+		scalar  "pedestal"       default 0.0,
+		scalar  "gain"           default 1.0,
+		scalar  "knee"           default 0.5,
+		scalar  "compression"    default 2.0,
+		scalar  "gamma"          default 2.2,
+		color   texture "preview",
+		boolean "use_preview"
+	)
+	version 1
+	apply lens, output
+end declare	
+
+#
+#  Shader to make a 'hole' into the environment. Must be
+#  applied to a rectangular area light which has it's
+#  extension in the light-spaces XY plane (i.e. it's 
+#  direction in light space is 0,0,-1 or 0,0,1
+#
+#  The shader then blocks FG rays and replaces them with
+#  direct light of high quality with the same intensity
+#  and color. Also emits photons in a similar way.
+#
+declare shader "mia_portal_light" (
+        boolean "on"                     default on,
+        scalar  "multiplier"             default 1.0,    #: min 0.0 softmax 1.0
+        color   "tint_color"             default 1 1 1,  
+        boolean "reverse"                default off,
+        scalar  "cutoff_threshold"       default 0.005,
+        boolean "shadows"                default true,
+        boolean "use_custom_environment" default off,
+        shader  "custom_environment",
+        boolean "visible"                default off,
+        boolean "lookup_using_fg_rays"   default on,
+        scalar  "shadow_ray_extension"   default 0.0,
+        boolean "emit_direct_photons"    default off,
+        color   "transparency"           default 1 1 1
+    )
+    version 9
+    apply light, emitter
+end declare
+
+#
+#  Shader intended to "visually represent" the surface
+#  of some existing lightsource, (which is already 
+#  illuminating the scene), and hence should not
+#  contribute to FG (since that would cause "double light").
+#
+#  The shader can also be used as a general "incandescent object"
+#  shader with good control over if it is visible to FG or in
+#  reflections, and can be driven by actual lights, or use
+#  a custom "manual" intensity.
+#
+declare shader "mia_light_surface" (
+        color		"color"        default 1 1 1,
+        scalar      "intensity"    default 1.0,  #: min 0.0 softmax 10.0
+        scalar      "fg_contrib"   default 0.0,  #: min 0.0 softmax 1.0
+        scalar      "refl_contrib" default 0.0,  #: min 0.0 softmax 1.0
+        boolean     "use_lights",
+        scalar      "lights_multiplier" default 1.0, #: min 0.0 softmax 1.0
+        vector      "lights_eval_point" default 0.0 0.0 0.0,
+        array light "lights"
+    )
+    
+    version 3
+    apply texture
+end declare
+
+
+
+#
+#    New photography-inspired tone mapper/camera shader 
+# 
+
+declare shader "mia_exposure_photographic" (
+        #
+        # Initial color transformation 
+        #
+        # Factor to convert render pixel luminance 
+        # values to c/m^2 (candela per square meter)        
+        scalar "cm2_factor"         default 1.0,    #: min 0.0 softmax 10000.0
+        # Whitepoint (will be normalized to maintain intensity)
+        color  "whitepoint"         default 1 1 1,
+        # Film iso number
+        scalar "film_iso"           default 100,    #: min 0
+        # Shutter in fraction of seconds, i.e. 1/100 would be 100.0
+        scalar "camera_shutter"     default 100.0,  #: min 0.0 softmax 1000.0
+        # The f-stop as the f-number, i.e. f/11 would be 11.0
+        scalar "f_number"           default 16.0,   #: min 0.0 softmax 64.0
+        # The vignetting (edge darkening) effect
+        scalar "vignetting"         default  1.0,   #: min 0.0 softmax 25.0
+        
+        #
+        # Tone mapping options
+        #
+        # Amount of 'overexposure" allowed
+        scalar "burn_highlights"    default 0.0,    #: min 0.0 max 1.0
+        # Amount of 'underexposure" allowed
+        scalar "crush_blacks"       default 0.25,   #: min 0.0 max 1.0
+        #  Overall saturation of image
+        scalar "saturation"         default 1.0,    #: min 0.0 softmax 2.0
+        # The gamma applied by the tonemapper. Can be
+        # set to 1.0 to apply gamma later in the pipeline
+        scalar "gamma"              default 2.2,    #: min 0.0 softmax 3.0
+
+
+        # Side channel
+        integer "side_channel_mode" default 0,
+        string  "side_channel",
+        
+        # Preview feature
+        color   texture "preview",
+        boolean "use_preview"
+    )
+    version 4
+    apply lens, output
+end declare
+
+#
+#    Inverse function for photographic tonemapper.
+#    Approximately (NOT exactly - some math is no exactly
+#    reversible) has the inverse transform of the 
+#    mia_exposure_photographic
+#
+
+declare shader "mia_exposure_photographic_rev" (
+        # The input color to be inverse tonemapped 
+        color   "input",
+        #
+        # Initial color transformation 
+        #
+        # Factor to convert render pixel luminance 
+        # values to c/m^2 (candela per square meter)        
+        scalar "cm2_factor"         default 1.0,    #: min 0.0 softmax 10000.0
+        # Whitepoint (will be normalized to maintain intensity)
+        color  "whitepoint"         default 1 1 1,
+        # Film iso number
+        scalar "film_iso"           default 100,    #: min 0
+        # Shutter in fraction of seconds, i.e. 1/100 would be 100.0
+        scalar "camera_shutter"     default 100.0,  #: min 0.0 softmax 1000.0
+        # The f-stop as the f-number, i.e. f/11 would be 11.0
+        scalar "f_number"           default 16.0,   #: min 0.0 softmax 64.0
+        # The vignetting (edge darkening) effect
+        scalar "vignetting"         default  1.0,   #: min 0.0 softmax 25.0
+        
+        #
+        # Tone mapping options
+        #
+        # Amount of 'overexposure" allowed
+        scalar "burn_highlights"    default 0.0,    #: min 0.0 max 1.0
+        # Amount of 'underexposure" allowed
+        scalar "crush_blacks"       default 0.25,   #: min 0.0 max 1.0
+        #  Overall saturation of image
+        scalar "saturation"         default 1.0,    #: min 0.0 softmax 2.0
+        # The gamma applied by the tonemapper. Can be
+        # set to 1.0 to apply gamma later in the pipeline
+        scalar "gamma"              default 2.2,    #: min 0.0 softmax 3.0
+    )
+    version 4
+    apply texture
+end declare
+
+
+#
+# Photographic "Depth of Field" shader
+#
+
+declare shader "mia_lens_bokeh" (
+        boolean "on"          default on,
+        scalar  "plane"       default 100.0,  #: min 0.0 softmax 10000.0
+        scalar  "radius"      default 1.0,    #: min 0.0 softmax 100.0
+        integer "samples"     default 4,      #: min 0 softmax 128
+        scalar  "bias"        default 1.0,    #: min 0.01 softmax 2.0
+        integer "blade_count" default 0,      #: min 0 softmax 12
+        scalar  "blade_angle" default 0,      #: min 0.0 max 1.0
+        boolean "use_bokeh"   default off,
+        color texture "bokeh"
+    )
+    version 4
+    apply lens
+    scanline off
+end declare
+
+#
+# Environment blur shader. Takes an environment,
+# rasterizes it into an internal mipmap and then
+# does elliptically filtered lookups into it.
+# The shader is best used from the mia_material when
+# the "single_environment_sample" mode is on, and
+# it can detect the glossiness setting from 
+# mia_material and blur accordingly automatically.
+#
+
+declare shader "mia_envblur" (
+        shader  "environment",
+        scalar  "blur"               default 0.0, #: min 0.0 softmax 10.0
+        boolean "mia_material_blur"  default on,  
+        integer "resolution"         default 200  #: min 0 softmax 1000
+    )
+    version 1
+    apply environment, texture
+end declare
+
+
+
+declare shader "mia_ciesky" (
+        boolean "on"                  default on,
+        color   "rgb_unit_conversion" default 0.0001 0.0001 0.0001,
+
+        # Luminance parameters
+        boolean "auto_luminance"                 default on,
+        scalar  "zenith_luminance"               default 0.0,
+        scalar  "diffuse_horizontal_illuminance" default 0.0,
+
+        # CIE specific parameters. 0 = clear sky, 1 = overcast
+        scalar  "overcast"            default 0.0,
+
+        # Sun direction
+        vector  "sun_direction",
+        light   "sun",   
+
+        # Y vector
+        boolean "y_is_up",
+    )
+
+    version 1
+    apply environment, texture
+end declare
+
+
+declare shader "mia_photometric_light" (
+       boolean "on"           default on,
+       scalar  "multiplier"   default 1.0,
+       color   "color"        default 1.0 1.0 1.0,
+
+       # How to define the light intensity
+       #   0 = using a manual peak intensity in candela (cd)
+       #   1 = using a total flux in lumen (lm)
+       #   2 = using the information stored in the IES file
+       integer      "intensity_mode",
+             
+       scalar       "manual_peak_intensity_cd",
+       scalar       "manual_flux_lm",
+
+       # How to define the light distribution
+       #   0 = Isotropic spherical distribution
+       #   1 = Spotlight distribution
+       #   2 = using the information stored in the IES file
+       integer      "distribution_mode"   default 0,
+                            
+       scalar       "spotlight_cosine_bias",
+       lightprofile "profile",                  
+
+       # Scene and lighting unit management 
+       scalar      "units_to_meter_scale" default 1.0,
+       scalar      "cm2_factor"           default 1.0
+    )
+    version 2
+    apply   light, emitter
+end declare
+
+
+$endif # if not "architectural_mi_included"

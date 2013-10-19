@@ -1,0 +1,683 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	mtarpini
+# Purpose:	Masonry/CMU Material 
+#
+# ---------------------------------------------
+# Exports:
+#
+# - adsk_Shd_MasonryCMU		(hidden)
+# - adsk_Mtl_MasonryCMU
+#
+#
+# Imports:
+#
+# - 3dsmax9
+# - adsk_Mtl_Spider
+# - adsk_Utility_shaders
+#
+# ---------------------------------------------
+# Description:
+#
+# Basically the workflow for the phen class implementation looks like this:
+#
+#   - a first low level phen, the appearance shader.
+#
+#   - a controller shader that takes the UI specs and outputs values to drive
+#     the exposed parameters in the appearance shader.
+#
+#   - the actual material class phen which encapsulates the above shaders.
+#
+#
+# ---------------------------------------------
+# History:
+#
+# July 16, 2007 - mtarpini, Apparence shader
+# July 17, 2007 - mtarpini, Material phenomenon
+# Nov 27, 2007 - mtarpini, Added rcorners and ao checkboxes, 'appearence' phen has now a 'struct' output
+# Nov 27, 2007 - mtarpini, Removed hidden bump, it was a leftover from previous tests
+# Feb 06, 2008 - laperrr, Updated UI name and Tooltips
+# Jan 02, 2009 - mtarpini, nodevisibility support
+#
+#
+#****************************************************************************
+
+min version "3.6"
+
+
+
+
+
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+# adsk_Shd_MasonryCMU (appearance phen)
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+declare phenomenon
+ 	struct 
+ 	{
+		#-------------------------------------
+        color   "result",         #main output
+        
+        color "diffuse_result",
+        color "diffuse_raw",
+        color "diffuse_level",
+        
+        color "spec_result",
+        color "spec_raw",
+        color "spec_level",
+        
+        color "refl_result",
+        color "refl_raw",
+        color "refl_level",
+        
+        color "refr_result",
+        color "refr_raw",
+        color "refr_level",
+        
+        color "tran_result",
+        color "tran_raw",
+        color "tran_level",
+        
+        color "indirect_result",
+        color "indirect_raw",
+        color "indirect_post_ao",
+        color "ao_raw",
+        
+        color "add_result",
+        
+        color  "opacity_result",
+        color  "opacity_raw",
+        scalar "opacity"
+        
+    } 
+    "adsk_Shd_MasonryCMU"
+	(
+		#-------------------------------------
+		# Main Parameters
+		#-------------------------------------
+		struct "m"
+		{	
+			#----------------------------------
+			color "diffuse_color",
+
+			#----------------------------------
+			scalar "diffuse_roughness",
+
+			#----------------------------------
+			scalar "reflectivity",
+			scalar "refl_gloss",
+			
+			#----------------------------------
+			scalar  "brdf_0_degree_refl",
+			scalar  "brdf_curve",
+			boolean "refl_hl_only",
+
+			#----------------------------------
+			integer "pattern_enable",
+			scalar  "pattern_amount",
+			shader  "pattern_map"
+		},
+
+		#-------------------------------------
+		# Ambient Occlusion 
+		#-------------------------------------
+		struct "o"
+		{
+			#----------------------------------
+			boolean  "ao_on",
+			integer  "ao_samples",
+			scalar   "ao_distance",
+			integer  "ao_do_details"
+		},
+		
+		#-------------------------------------
+	    # Round Corners
+	    #-------------------------------------
+  		struct "r"
+  		{
+  			#----------------------------------
+  			scalar  "roundcorners_radius",
+  			boolean "roundcorners_allow_different_materials"	      	
+	     },
+	     
+		#-------------------------------------
+		# Performance Tuning Parameters
+		#-------------------------------------
+		struct "p"
+		{
+			#----------------------------------
+	      	integer "reflection_glossy_samples",
+	      	integer "refl_depth"
+		},
+
+		#-------------------------------------
+		# Unit Scalable Parameters
+		#-------------------------------------
+		struct "k"
+		{
+			#----------------------------------
+	      	vector "noise_tiling"
+		},
+
+		#----------------------------------
+		# Lights and Mode Parameters
+		#----------------------------------
+		integer "mode",
+		array light "lights"
+
+	)
+
+	apply material, photon, shadow
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# -> begin Refl_map switcher  ###########################################
+	#------------------------------------------------------------------------	
+	#------------------------------------------------------------------------
+	# Dummy, to pass White
+	#------------------------------------------------------------------------	
+	shader "whitecolor__instance" "adsk_Utility_ColorState" 
+	(
+		"the_color" 1 1 1 1
+	)		
+	#------------------------------------------------------------------------
+	# Shaders Switcher (utility)
+	#------------------------------------------------------------------------		
+	shader "reflect_switcher__instance" "adsk_Utility_Switch8Shader" (
+		"switcher" = interface "m.pattern_enable",
+		"type" 0,
+		"shader_1" "whitecolor__instance",
+		"shader_2" = interface "m.pattern_map"
+	)
+	#------------------------------------------------------------------------
+	# <- end Refl_map switcher ##############################################
+	#------------------------------------------------------------------------	
+	
+		
+
+	#------------------------------------------------------------------------
+	# -> begin Pattern (plus RoundCorners) ##################################
+	#------------------------------------------------------------------------	
+	#------------------------------------------------------------------------
+	# Pattern switcher
+	#------------------------------------------------------------------------	
+	shader "pattern_switcher__instance" "adsk_Utility_Switch8Shader" 
+	(
+		"switcher" = interface "m.pattern_enable",
+		"type" 2,
+		"shader_1" "blackcolor__instance",
+		"shader_2" = interface "m.pattern_map"
+	)
+	shader "bump__instance" "adsk_Utility_Mix3Bump"
+	(
+		"bump_1" "pattern_switcher__instance",
+		"factor_1" = interface "m.pattern_amount", 
+	)
+	shader "bump_vector__instance" "adsk_Utility_Color_to_Float3"
+	(
+		"the_color" = "bump__instance"
+	)
+	#------------------------------------------------------------------------
+	# Round Corners
+	#------------------------------------------------------------------------	
+	shader "roundcorners__instance" "mia_roundcorners"
+	(
+		"radius" = interface "r.roundcorners_radius",
+		"allow_different_materials" = interface "r.roundcorners_allow_different_materials"
+	)
+	#------------------------------------------------------------------------
+	# <- end Pattern ########################################################
+	#------------------------------------------------------------------------
+	
+
+    #------------------------------------------------------------------------
+    # Visibility Track Support
+    #------------------------------------------------------------------------
+	shader "node_visibility__instance" "adsk_Utility_NodeVisibility" 
+	(
+		"input" 1 1 1 1, 		#this is controlled internally
+		"mode" 0
+	)
+	
+	
+	
+	#------------------------------------------------------------------------	
+	#------------------------------------------------------------------------
+	# Arch & Design Shader (Main Shader)
+	#------------------------------------------------------------------------
+	shader "mia_material__instance" "mia_material_x"
+	(
+		#----------------------------------
+		"diffuse_weight" 1.0,
+		"diffuse" = interface "m.diffuse_color",
+		"diffuse_roughness" = interface "m.diffuse_roughness",
+
+		#----------------------------------
+		"reflectivity" = interface "m.reflectivity",
+		"refl_color" = "reflect_switcher__instance",
+		"refl_gloss" = interface "m.refl_gloss",
+		"refl_gloss_samples" = interface "p.reflection_glossy_samples",
+		"refl_interpolate" off,
+		"refl_hl_only" = interface "m.refl_hl_only",
+		"refl_is_metal" off,
+
+		#----------------------------------
+		"transparency" 0.0,
+		"refr_color" 1 1 1 0,
+		"refr_gloss" 1,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.6 0.5 0,
+		"refr_trans_weight" 0.5,
+
+		#----------------------------------
+		"anisotropy" 1.0,
+		"anisotropy_rotation" 0.0,
+		"anisotropy_channel" -1,
+
+		#----------------------------------
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" = interface "m.brdf_0_degree_refl",
+		"brdf_90_degree_refl" 1.0,
+		"brdf_curve" = interface "m.brdf_curve",
+		"brdf_conserve_energy" on,
+
+		#----------------------------------
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.0,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+
+		#----------------------------------
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.0,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.0 0.0 0.0,
+		"refl_depth" = interface "p.refl_depth",
+		"refl_cutoff" 0.0,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.0,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.0 0.0 0.0,
+		"refr_depth" 5,
+		"refr_cutoff" 0.0,
+
+		#----------------------------------
+		"indirect_multiplier" 1,
+		"fg_quality" 1,
+		"fg_quality_w" 1,
+
+		#----------------------------------
+		"ao_on"  = interface "o.ao_on",
+		"ao_samples"  = interface "o.ao_samples",
+		"ao_distance"  = interface "o.ao_distance",
+		"ao_dark"  0.2 0.2 0.2,
+		"ao_ambient" 0 0 0,
+		"ao_do_details"  = interface "o.ao_do_details",
+
+		#----------------------------------
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" on, 
+		"hl_vs_refl_balance" 1,
+        "cutout_opacity" = "node_visibility__instance",			#nodevisibility hook
+		"additional_color" 0.0 0.0 0.0,
+
+		#----------------------------------
+		"mode" = interface "mode",
+		"lights" = interface "lights",
+
+		#----------------------------------
+        "bump_mode" 1, 
+        "overall_bump" = "roundcorners__instance",
+        "standard_bump" = "bump_vector__instance",
+        
+        #----------------------------------
+        "multiple_outputs" off
+
+	)#end shader
+	
+	
+	
+	#------------------------------------------------------------------------
+	# Phenomenon Root
+	#------------------------------------------------------------------------
+	root = "mia_material__instance"
+
+
+
+
+
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_MasonryCMU"	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_MasonryCMU", "category" "Material"
+		, "hidden"
+		)
+		
+		#-------------------------------------
+		# Lights and Mode Parameters
+		#-------------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+	}
+
+end declare #
+#---------------------------------------------------------------------------------
+# <- end, declare phenomenon
+#---------------------------------------------------------------------------------
+
+
+
+
+
+
+#/////////////////////////////////////////////////////////////////////////////////
+#---------------------------------------------------------------------------------
+# adsk_Mtl_MasonryCMU (the Material phen)
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+declare phenomenon
+ 	material "adsk_Mtl_MasonryCMU"
+	(
+		#-------------------------------------
+		# Main Parameters
+		#-------------------------------------
+		struct "m"
+		{
+			#-------------------------------------
+			integer "type",
+			color   "diffuse_color",
+
+			#-------------------------------------
+			integer "application",
+			
+			#-------------------------------------
+			integer "pattern_enable",
+			shader 	"pattern_map",
+			scalar	"pattern_amount"	
+		},
+		
+		#-------------------------------------
+		# Special Effects
+		#-------------------------------------
+		struct "o"
+		{
+			#----------------------------------
+			boolean  "ao_on",
+			integer  "ao_samples",
+			scalar   "ao_distance",
+			boolean  "ao_do_details",
+		
+  			#----------------------------------
+			boolean  "roundcorners_on",  			
+  			scalar "roundcorners_radius",
+  			boolean "roundcorners_allow_different_materials"	      	
+	     },
+	     				
+		#-------------------------------------
+		# Performance Tuning Parameters
+		#-------------------------------------
+		struct "p"
+		{
+			#----------------------------------
+	      	integer "reflection_glossy_samples",
+	      	integer "refl_depth"
+		},
+						    	
+		#-------------------------------------
+		# Internals
+		#-------------------------------------
+		struct "x"
+		{
+			#----------------------------------
+	      	integer "gbuffer_id"
+		},
+								    	
+		#----------------------------------
+		# Lights Parameters
+		#----------------------------------
+		integer "mode",
+		array light "lights"
+
+	)#end material
+	
+	
+	
+	#------------------------------------------------------------------------
+	# Spider
+	#------------------------------------------------------------------------
+	shader "spider_instance" "adsk_Shd_MasonryCMU_spider"
+	(
+		"type" = interface "m.type",
+		"application" = interface "m.application",
+		
+		
+		"roundcorners_on" = interface "o.roundcorners_on",
+		"roundcorners_radius_i" = interface "o.roundcorners_radius",
+		
+		"ao_do_details_i" = interface "o.ao_do_details"
+	)
+    
+    #------------------------------------------------------------------------
+    # Reflection Blur Multiplication
+    #------------------------------------------------------------------------
+    shader "reflection_gloss_sample|shader" "adsk_blurred_reflection_multiplier"
+    (
+        "blurred_reflection_value" = interface "p.reflection_glossy_samples"
+    )
+    
+    
+	#------------------------------------------------------------------------
+	# adsk_Shd_MasonryCMU
+	#------------------------------------------------------------------------	
+	shader "adsk_Shd_MasonryCMU__instance" "adsk_Shd_MasonryCMU"
+	(
+	
+		#-------------------------------------
+		# Main Parameters
+		#-------------------------------------
+		"m"
+		{
+			#----------------------------------
+			"diffuse_color" = interface "m.diffuse_color",
+			
+			#----------------------------------
+			"diffuse_roughness" = "spider_instance.diffuse_roughness",
+						
+			#----------------------------------
+			"reflectivity" = "spider_instance.reflectivity",
+			"refl_gloss" = "spider_instance.refl_gloss",
+			
+			#----------------------------------
+			"brdf_0_degree_refl" = "spider_instance.brdf_0_degree_refl",			
+			"brdf_curve" = "spider_instance.brdf_curve",		
+			"refl_hl_only" = "spider_instance.refl_hl_only",			
+			
+			#----------------------------------
+			"pattern_enable" = interface "m.pattern_enable",
+			"pattern_amount" = interface "m.pattern_amount",
+			"pattern_map" = interface "m.pattern_map"
+		},
+		
+		#-------------------------------------
+		# Ambient Occlusion 
+		#-------------------------------------
+		"o"
+		{
+			#----------------------------------			
+			"ao_on"  = interface "o.ao_on",
+			"ao_samples"  = interface "o.ao_samples",
+			"ao_distance" = interface "o.ao_distance",
+			"ao_do_details" = "spider_instance.ao_do_details"
+		},
+		
+		#-------------------------------------
+		# Round Corners Parameters
+		#-------------------------------------
+		"r"
+		{
+			#----------------------------------
+	      	"roundcorners_radius" = "spider_instance.roundcorners_radius",
+	      	"roundcorners_allow_different_materials" = interface "o.roundcorners_allow_different_materials"
+		},	
+				
+		#-------------------------------------
+		# Performance Tuning Parameters
+		#-------------------------------------
+		"p"
+		{
+			#----------------------------------
+	      	"reflection_glossy_samples" = "reflection_gloss_sample|shader",
+	      	"refl_depth" = interface "p.refl_depth"
+		},
+
+		#-------------------------------------
+		# Unit Scalable Parameters
+		#-------------------------------------
+		"k"
+		{
+			#----------------------------------
+	      	"noise_tiling" = "spider_instance.noise_tiling"
+		},
+		
+		#----------------------------------
+		# Lights Parameters
+		#----------------------------------
+		"mode" = interface "mode",
+		"lights" = interface "lights"	
+	)
+
+
+	#------------------------------------------------------------------------
+	# Render Elements support  ##############################################
+	#------------------------------------------------------------------------	
+	shader "max_mia_mat_renderelem__instance" "adsk_Utility_MiaDecomposer"
+	(
+		"mia_material" "adsk_Shd_MasonryCMU__instance",
+		"GBufferID" = interface "x.gbuffer_id"
+	)
+	
+	
+
+	#------------------------------------------------------------------------	
+	#------------------------------------------------------------------------
+	# Material Connections
+	#------------------------------------------------------------------------
+	material "mat"
+						= "max_mia_mat_renderelem__instance"					
+		photon			= "adsk_Shd_MasonryCMU__instance"
+		shadow			= "adsk_Shd_MasonryCMU__instance"
+	end material
+	root material "mat"
+
+
+
+	#------------------------------------------------------------------------
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Mtl_MasonryCMU"
+	{
+		#----------------------------------
+		control "Global" "Global" 
+		(
+			"uiName" "ProMaterials: Masonry/CMU", "category" "Material",          
+			"viewport_diffuse" "m.diffuse_color",
+			"viewport_specular" 1.0 1.0 1.0,
+			"viewport_shininess" 1,
+			"hidden"
+		)
+
+		#-------------------------------------
+		#  Material Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Masonry/CMU Material Parameters", "openstate" "true")
+		{
+			control "type" "integer" ("enum", "nonConnectable", "uiName" "Type", "value" "0 CMU, 1 Masonry", "range" 0 1)
+			control "diffuse_color"  "color" ("uiName"  "Color (Reflectance)", "value" 0.7 0.7 0.7 1.0)
+		
+			control "application" "integer" ("enum", "nonConnectable", "uiName" "Surface Finish", "value" "0 Glossy, 1 Matte, 2 Unfinished", "range" 0 2,
+												"helpText" "Level of reflectivity")
+			
+			control "pattern_enable" "integer" ("enum", "nonConnectable", "uiName" "Pattern", "value" "0 None, 1 Custom", "range" 0 1)
+			control "pattern_map"  "shader" ("uiName"  "-> Custom Map",
+												"helpText" "Use when 'Pattern: Custom' is selected")
+			control "pattern_amount" "integer" ("nonConnectable", "uiName" "-> Height", "value" 0.25,  "range" 0.01 10.0,
+												"helpText" "Height of custom pattern map")
+		}
+
+		#-------------------------------------
+		#  Special Effects
+		#-------------------------------------
+		control "o" "struct" ("uiName" "Special Effects", "openstate" "false")
+		{
+			#----------------------------------
+			control "ao_on" "boolean" ("uiName" "Ambient Occlusion", "value" 0, "nonConnectable", "enables" "ao_samples, ao_distance, ao_do_details",
+												"helpText" "Enables Ambient Occlusion. Emulates the look of true global illumination by using shaders to calculate the extent that an area is occluded or prevented from receiving incoming light. Use this effect with indirect light.")	
+			control "ao_samples"  "integer" ("uiName"  "-> Samples", "value" 16, "range" 2 256, "nonConnectable",
+												"helpText" "Ambient occlusion quality (High= Smoother/Slower; Low= Grainier/Faster)")
+			control "ao_distance"  "scalar" ("uiName"  "-> Max Distance", "value" 4, "units" "world", "nonConnectable",
+												"helpText" "Defines the ambient occlusion radius (High= Large coverage area/Slower; Low= Small coverage area/Faster)")
+			control "ao_do_details" "integer" (enum, "uiName" "-> Use Color From Other Mats (Exact AO)", "value" off, "nonConnectable",
+												"helpText" "Enables a more complex mode of Ambient Occlusion that takes object color into account. Note: This improves excessive 'corner darkening' and solves the creation of 'dark rims' by AO around self-illuminating objects.")
+			
+			#----------------------------------
+			control "roundcorners_on" "boolean" ("uiName"  "Round Corners", "value" 0, "nonConnectable", "enables" "roundcorners_radius, roundcorners_allow_different_materials",
+												"helpText" "Enables simulated round corners. Note: This is only a shading effect, similar to a bump map, whereby no actual geometric changes occur. This effect only works properly on straight edges.")	
+			control "roundcorners_radius"  "scalar" ("uiName"  "-> Fillet Radius", "value" 0.25, "units" "world",
+												"helpText" "Adjusts the radius of the round corner effect")
+			control "roundcorners_allow_different_materials"  "boolean" ("uiName"  "-> Blend with Other Materials", "nonConnectable",
+												"helpText" "Activate to apply corner rounding effects to any material. Disable to apply corner rounding effects to the surface of the current material only.")
+		}
+		
+ 		#-------------------------------------
+		# Performance Tuning Parameters
+ 		#-------------------------------------
+		control "p" "struct" ("uiName" "Performance Tuning Parameters", "openstate" "false")
+		{
+			#----------------------------------
+			#quality controls
+			control "reflection_glossy_samples"  "integer" ("nonConnectable", "uiName"  "Reflection Glossy Samples", "value" 8, "range" 0 128,
+												"helpText" "Defines the maximum number of samples (rays) that mental ray computes to create glossy reflections")
+			#must be visible in applications like 3ds max but hidden in applications like Revit
+			control "refl_depth"  "integer" ("nonConnectable", "uiName"  "Reflection Max Trace Depth", "value" 0, "range" 0 20,
+												"helpText" "Number of times each ray is reflected. When set to zero, global render settings take precedence.")
+		}
+	
+ 		#-------------------------------------
+		# Internal (hidden)
+ 		#-------------------------------------
+		control "x" "struct" ("uiName" "Internals", "openstate" "false")
+		{
+			#----------------------------------
+			control "gbuffer_id"  "integer" (hidden, "nonConnectable", "uiName"  "Translator must link here to pass a different ID", "value" 8)
+		}
+
+		#-------------------------------------
+		# Lights and Mode Parameters
+		#-------------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+
+	}#end gui
+
+end declare
+#---------------------------------------------------------------------------------
+# <- end, declare phenomenon
+#---------------------------------------------------------------------------------

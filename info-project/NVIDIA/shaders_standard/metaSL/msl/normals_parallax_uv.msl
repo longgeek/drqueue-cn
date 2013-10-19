@@ -1,0 +1,58 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Normals_parallax_uv
+{
+	input:    
+		Texture2d height_tex = "brickwall_height.dds"
+		{
+			display_name("Height Texture");
+			description( "Texture used to specify surface height, "
+			             "relative to the base surface." );
+		};
+		int texture_space    = 0 
+		{ 
+			display_name("Texture Space");
+			literal(); 
+			description( "Texture coordinates to use when sampling "
+			             "the input texture." );
+		};
+		float amount        = 0.05
+		{				
+			display_name("Amount");
+			soft_range(float(-1),float(1));
+			description( "Degree to which the normals and texture "
+			             "coordinates will be perturbed." );
+		};
+
+	output:
+		float4 result;
+
+	void main()
+	{
+		// Sample the height and center on 0.0 (scaled down too)
+		float h = tex2D(height_tex, texture_coordinate[texture_space].xy).x;
+		h = h*amount - amount*0.5;
+
+		// The view direction in tangent space. 
+		float3 vtan = tangent_space[0]*direction;
+
+		// perturb the vertex coords. Move the texture torward the eye when
+		// the height is negative and away when positive
+		float4 uv = texture_coordinate[texture_space];
+		uv.x -= vtan.x*h;
+		uv.y -= vtan.y*h;
+
+		// assign to result
+		result = uv;
+	}
+}
+{
+	description( "Uses viewing direction to modify shading point texture "
+	             "coordinates." );
+}
+;
+
+

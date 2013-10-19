@@ -1,0 +1,85 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+#import <mi_msl_shared.msl>
+
+shader Component_illumination_base
+{
+  input:    
+    Color  diffuse_reflectance_color = Color(0,0,0,0)
+	{	
+		display_name("Diffuse Reflectance Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color of the Diffuse Reflectance from a Surface." );
+	};
+    Color  diffuse_color = Color(1,1,1,1)
+	{	
+		display_name("Diffuse Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color used to tint the Diffuse Reflectance Color." );
+	};
+    float diffuse_scalar = 1
+	{	
+		display_name("Diffuse Float");
+		soft_range(float(0),float(1));
+		description( "The intensity of the light diffusely reflected from "
+					 "this surface." );
+	};
+    Color  specular_reflectance_color = Color(0,0,0,0)
+	{	
+		display_name("Specular Reflectance Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color of the Specular Reflectance from a Surface." );
+	};
+    Color  specular_color = Color(1,1,1,1)
+	{	
+		display_name("Specular Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color used to tint the Specular Reflectance "
+					 "Color." );
+	};
+    float specular_scalar = 1
+	{	
+		display_name("Specular Float");
+		soft_range(float(0),float(1));
+		description( "The intensity of the specular light reflections from "
+					 "this surface." );
+	};
+    
+  output:
+	Color  sum;
+    Color  diffuse;
+    Color  specular;
+      
+    void main() 
+    {        
+    // irradiance term
+	Irradiance_options irradiance_options;
+	irradiance_options.set_importance(diffuse_scalar);
+	
+	Color ambient_color = diffuse_color 
+			    * (diffuse_scalar/PI) 
+			    * irradiance(irradiance_options);
+	Color  dummy_ambient;
+
+	mi_component_illumination_base(
+		ambient_color,
+		1.0,
+		diffuse_reflectance_color,
+		diffuse_color,
+		diffuse_scalar,
+		specular_reflectance_color,
+		specular_color,
+		specular_scalar,
+		sum,
+		dummy_ambient,
+		diffuse,
+		specular);
+    }
+}
+{
+	description( "Standard way to accumulate ambient, diffuse, and specular "
+	             "contributions of material nodes." );
+}
+;

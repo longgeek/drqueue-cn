@@ -1,0 +1,238 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Materials</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node78.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node80.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION77"></a>
+<h3 id="mi:material">Materials</h3>
+
+<a id="material"></a>
+<pre>
+    material "<i>material_name</i>"
+        [opaque]
+        <i>shader_list</i>
+        [ displace [<i>shader_list</i>] ]
+        [ shadow [<i>shader_list</i>] ]
+        [ volume [<i>shader_list</i>] ]
+        [ environment [<i>shader_list</i>] ]
+        [ contour [<i>shader_list</i>] ]
+        [ photon [<i>shader_list</i>] ]
+        [ photonvol [<i>shader_list</i>] ]
+        [ lightmap [<i>shader_list</i>] ]
+        [ bsdf [<i>shader_list</i>] ] <span class="recent">3.7</span>
+    end material
+</pre>
+<p><a id="INDEX242"></a><a id="INDEX243"></a>
+Materials determine the look of geometric objects.
+They are referenced by <i>material_name</i> in the geometry
+definition in <tt>object</tt> statements (see below). Lights and
+textures cannot be referenced by objects; they are referenced by
+the material which uses them to compute the color of a point on the
+object's surface. All built-in material shaders accept
+<a href="node78.html#INDEX236">texture</a>s and light instances as shader
+parameters.</p>
+<p>When a <a href="node124.html#INDEX489">primary ray</a> cast from
+the camera hits an object, that object's material shader (the first
+<i>shader_list</i>) is called. The material shader may be omitted
+in fully transparent objects. Such objects are useful as
+<b><a id="INDEX244"></a>hull object</b>s for volume
+effects such as visible light cones. Such objects will generally
+specify <tt>shadowmap off</tt> as well.</p>
+<p>The material shader then calculates a color (and certain other
+optional values such as <b><a id="INDEX245"></a>label</b>s, Z
+<b><a id="INDEX246"></a>depth</b>s, and
+<a href="node83.html#INDEX289">normal vector</a>s that can be written to
+special output files). This color may then be modified by the
+optional <a href="node117.html#INDEX460">volume shader</a> if
+present. The resulting color is stored in the output
+<a href="node144.html#INDEX617">frame buffer</a>, which is written to the
+output picture file when rendering has finished. In order to
+calculate the color, the material shader may cast secondary
+<a href="node142.html#INDEX581">reflection</a>,
+<a href="node115.html#INDEX446">refraction</a>, or
+<a href="node76.html#INDEX200">transparency</a> rays, which in turn may hit
+objects and cause other (or the same; multiple objects may share a
+material) material shaders to be called. The material shader bases
+the decision whether to cast secondary rays on its parameters,
+which are part of the scene description and may contain parameters
+such as the material's <a href="node19.html#INDEX30">diffuse
+color</a> or its reflectivity and <a href="node76.html#INDEX200">transparency</a>,
+light instances, and
+<a href="node78.html#INDEX236">texture</a>s. The parameters depend
+entirely on the material shader. In this sense, material shaders
+are "primary" shaders that get help from "secondary" texture and
+light shaders.</p>
+<p>It is possible to specify a shader type such as <tt>shadow</tt>
+without following it with a <i>shader_list</i>. This is useful if
+an <a href="node60.html#INDEX110">incremental change</a> is done to
+the material. The incremental change leaves the contents of the
+material undisturbed except where explicitly rewritten, so the
+shadow shader list remains intact. It can be replaced by specifying
+a new one, but it can only be deleted with a <tt>shadow</tt>
+keyword not followed by any shaders. In an incremental change, the
+first statement (say, <tt>volume</tt>) first resets the old volume
+list; every subsequent <tt>volume</tt> statement in the same
+material block adds to the list.</p>
+<p>The <i>material_name</i> should be quoted to avoid conflicts
+with reserved names and non-alphabetic characters. The
+<tt>opaque</tt> flag, if present, informs mental ray that this
+material is not transparent (i.e., it does not cast
+<a href="node115.html#INDEX446">refraction</a> or
+<a href="node76.html#INDEX200">transparency</a> rays and always sets its
+alpha result value to 1); this allows certain optimizations that
+improve rendering speed. The material shader and its parameters are
+the only mandatory part of a material.</p>
+<p>There are several optional functions that can be listed in a
+material. The <a href="node127.html#INDEX494">displacement
+shader</a> is a function returning a scalar that displaces the
+object's surface in the direction of its normal, or in arbitrary
+directions. Displacement shaders can be applied to both free-form
+surface objects and polygonal objects.</p>
+<p>The <b><a id="INDEX247"></a>shadow shader</b> is
+called when a <a href="node76.html#INDEX197">shadow</a> calculation
+is done, and the <a href="node120.html#INDEX472">shadow ray</a>
+from the light source towards the point in shadow intersects with
+this material. The shadow shader then changes the color of the ray,
+which is initially the (possibly attenuated) color of the light to
+another color, typically a darker or tinted color if the material
+is colored glass. It returns black if the material is totally
+opaque, which is also the default if no shadow shader is present.
+Shadow shaders are usually reduced versions of the material
+shaders; they evaluate transparencies and colors but cast no
+secondary rays. Shadow shaders are only required for transparent
+objects. If <a href="node48.html#INDEX95">global illumination</a>
+is enabled, no shadow shaders should be used because global
+illumination provides a more powerful way to compute light
+transmission, and using two "competing" methods at the same time
+for the same object may produce incorrect results.</p>
+<p>It is possible to use the material shader as a shadow shader;
+material shaders can find out whether they are called as material
+or shadow shaders and do only the required subset in the latter
+case. This is done by naming the material shader after the
+<tt>shadow</tt> keyword, and giving no parameters (i.e., giving
+<tt>()</tt>). mental ray will notice the absence of parameters and
+pass the material parameters instead. If the shadow shader has no
+parameters of its own, it is not defined whether it receives a
+pointer to the material shader parameters, or a pointer to a copy
+of the material shader parameters.</p>
+<p>A <a href="node117.html#INDEX460">volume shader</a> affects rays
+traveling inside an object. Volume shaders are conceptually similar
+to <a href="node117.html#INDEX461">fog</a> or
+<a href="node117.html#INDEX462">atmosphere</a> shaders of other rendering
+programs. When a ray (either from the eye or from a light source)
+hits this material, the volume shader, if present, is called to
+change the color returned by the ray based on the distance the ray
+has traveled, and atmospheric or material parameters. A volume
+shader can also be named in the <tt>camera</tt> (see above); that
+shader is used for rays traveling outside objects. It is the
+material shader's responsibility to determine inside and outside of
+objects.</p>
+<p>The <a href="node119.html#INDEX468">environment shader</a> is
+called when a <a href="node142.html#INDEX581">reflection</a> or
+<a href="node115.html#INDEX446">refraction</a> ray cast by the
+material shader leaves the scene entirely without striking another
+object. For example, the environment shader may map a texture on a
+sphere with an infinite radius surrounding the scene. (This is
+another example for an application of a texture; a texture name
+must be used as a parameter for the environment shader for this to
+work.) The <tt>camera</tt> statement also allows naming an
+environment shader; that shader is used when the ray leaves the
+scene without ever striking any object (or exceeding the
+<a href="node76.html#INDEX196">trace depth</a>).</p>
+<p>If a <a href="node92.html#INDEX0">contour</a> shader is given,
+it is called when contours are enabled with an appropriate
+<a href="node77.html#INDEX227">output statement</a> in the camera element,
+and certain contour store and contour contrast shaders are
+specified in the options element. For more information on contour
+rendering see section <a href="node92.html#contour">contour</a>.</p>
+<p>If caustics or global illumination computation is enabled, the
+photon shader is called during a preprocessing stage (before
+rendering) to determine the light distribution in the scene. Like
+shadow shaders, photon shaders without parameter lists are called
+with the material shader parameter lists.</p>
+<p>A <b><a id="INDEX248"></a>volume photon
+shader</b> affects photons traveling inside an object. When a
+photon hits this material, the volume photon shader, if present, is
+called to trace the photon through the volume. Volume photon
+shaders are to volume shaders what photon shaders are to material
+shaders.</p>
+<p>The <a href="node135.html#INDEX501">lightmap shader</a>,
+if present, is called for the object that the material is attached to,
+and is expected to create a <a href="node25.html#INDEX49">light map</a> 
+other information collection about the object that can be saved to disk
+or used during rendering. In its most common form, the shader creates a
+texture that contains the illumination of the object; hence the term
+"<a href="node25.html#INDEX49">light map</a>".</p>
+<p id="mi:material_bsdf"><span class="recent">3.7</span>
+The <a href="brdf_sh.html">BRDF shader</a> attached to the
+<code class="mi">bsdf</code> slot specifies a common shading model to be used
+for illumination effects where the corresponding shader is not available,
+including the main material shader.
+</p>
+
+<p id="matphen">
+Materials can be replaced with phenomena. In all places where the name of a
+material may be given, the name of a shader that references a phenomenon
+declaration of type <tt>material</tt> is legal. Given the following scene
+fragment:</p>
+<pre>
+     declare phenomenon
+          material "phen_mtl" (color "param")
+          material "mtl" opaque
+               "shader" ("diffuse" = interface "param")
+          end material
+          root material "mtl"
+     end declare
+
+     shader "mtl_sh" "phen_mtl" ("param" 1.0 0.7 0.3)
+</pre>
+<p>the name <tt>mtl_sh</tt> can be used like a
+<i>material_name</i>, for example in polygon or free-form surface
+definitions in objects. For more information on material phenomena,
+see section <a href="node179.html#phenomenon">phenomenon</a>.</p>
+<p>Note that there are three ways to use materials in a scene:</p>
+<ul>
+<li>Every polygon and surface in an object specifies a material.
+They can be omitted but default to the previous polygon or surface
+in the object, but this is only a syntactical simplification.
+Effectively, every polygon and surface brings its own material, and
+no <a href="node90.html#INDEX344">material inheritance</a> takes
+place.</li>
+<li>If the object is marked <tt>tagged</tt>, polygons and surfaces
+do not specify materials but integer labels. In this case the
+inherited material in the instance is used. That material can use
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> to obtain the
+label and modify its behavior based on the label.</li>
+<li>As a variation of the previous method, the instance may specify
+not a single material but a list of materials. In this case, mental
+ray will use the <i>n</i>-th material in the list if the label of
+the intersected primitive is <i>n</i> (or the first material if the
+label is greater than or equal to the number of materials in the
+list).</li>
+</ul>
+<p>See section <a href="node90.html#instance">instance</a> for more
+details on material lists and material inheritance.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node78.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node80.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,1642 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	mtarpini
+# Purpose:	Metal Material
+#
+#----------------------------------------------
+# Exports:
+#
+# - adsk_Metal_switch_color_shader			(sub-phen, hidden)
+# - adsk_Metal_Noise_Anodized				(sub-phen, hidden)
+# - adsk_Metal_Patterns__Knurls				(sub-phen, hidden)
+# - adsk_Metal_Cutouts_Shape				(sub-phen, hidden)
+# - adsk_Shd_Metal__Blender					(sub-phen, hidden)
+# - adsk_Shd_Metal							(hidden)
+# - adsk_Mtl_Metal
+#
+#
+# Imports:
+#
+# - adsk_Mtl_Spider
+# - adsk_Utility_Shaders
+#
+#----------------------------------------------
+# History:
+#
+# Apr 25, 2007 - mtarpini, initial implementation
+# May 01, 2007 - mtarpini, adsk_Shd_Metal, - the 'appearance' phen
+# May 03, 2007 - mtarpini, encapsulating shader graphs for bump and cutouts
+# May 08, 2007 - mtarpini, adsk_Shd_Metal__Bronze, - special apparence phen
+# May 28, 2007 - mtarpini, implementing unit scale handles
+# Dec 08, 2007 - mtarpini, redesign patina support
+# Dec 09, 2007 - mtarpini, update bitmap shader definitions to support uvchanneling
+# Dec 14, 2007 - mtarpini, phenomena redesigned to avoid multiple mia instances and to support properly photons
+# Feb 06, 2008 - laperrr,  Updated UI name and Tooltips
+# Nov 05, 2009 - mtarpini, demax stuff
+#
+#****************************************************************************/
+
+min version "3.5"
+
+
+
+
+
+#------------------------------------------------------------------------
+# adsk_Metal_switch_color_shader
+#------------------------------------------------------------------------
+declare phenomenon
+	color "adsk_Metal_switch_color_shader"
+	(
+		integer "switcher",
+		color "color",
+		shader "user_map",				#custom relief map
+		color texture "default_map01",	#brush map
+		color texture "default_map02",	#break map
+		scalar "map_amount",
+		scalar "Uscale",				#
+		scalar "Vscale",				#actually is Tiling and it's like that U=V, ie. a single param
+		shader "extra_map_01"			#for galvanized aluminum
+	)
+	apply texture
+	version 1
+
+
+	#--------------------------
+	shader "get_acolor__instance" "adsk_Utility_ColorPassThrough"
+	(
+		"color" = interface "color"
+	)
+	#--------------------------	
+	shader "brush_bitmap__instance" "adsk_Utility_Bitmap_Tweak"
+	(
+		"color_texture" = interface "default_map01",
+		"RGBAmount" = interface "map_amount",
+		"RGBOffset" 0,		
+		"OutputAmount" 1,
+		
+		"Uscale" = interface "Uscale",
+		"Vscale" = interface "Vscale",
+		"UVchannel" 1
+	)
+	#--------------------------	
+	shader "break_bitmap__instance" "adsk_Utility_Bitmap_Tweak"
+	(
+		"color_texture" = interface "default_map02",
+		"RGBAmount" = interface "map_amount",
+		"RGBOffset" 0,		
+		"OutputAmount" 1,
+		
+		"Uscale" = interface "Uscale",
+		"Vscale" = interface "Vscale",
+		"UVchannel" 1
+	)	
+	#--------------------------	
+	shader "switch_color_bitmap__instance" "adsk_Utility_Switch8Shader"
+	(
+		"switcher" = interface "switcher",
+		"type" 0,
+		"shader_1" "get_acolor__instance",
+		"shader_2" = interface "user_map"	,	
+		"shader_3" "brush_bitmap__instance",
+		"shader_4" "break_bitmap__instance",
+		"shader_5" = interface "extra_map_01"		
+	)
+
+
+	root = "switch_color_bitmap__instance"
+	
+	#------------------------------------------------------------------------
+	# GUI
+	#------------------------------------------------------------------------	
+	gui "gui_adsk_Metal_switch_color_shader" {	
+		control "Global" "Global" (
+				"hidden"
+			)
+	}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Metal_Noise_Anodized
+#------------------------------------------------------------------------
+declare phenomenon
+	color "adsk_Metal_Noise_Anodized"
+	(
+		vector "tiling"
+	)
+	apply texture
+	version 1
+
+
+	shader "base_XYZGen__instance" "adsk_Utility_XYZGenerator"
+	(
+		"CoordinateSystem" 0, 
+		"MapChannel" 1, 
+		"Offset" 0 0 0, 
+		"Tiling" = interface "tiling",	# 1 1 1, 
+		"Angle" 0 0 0, 
+		"Blur" 0.01, 
+		"BlurOffset" 0
+	)
+
+
+	shader "base_Output__instance" "adsk_Utility_Output"
+	(
+		"RGBAmount" 1,
+		"RGBOffset" 0,
+		"OutputAmount" 1,
+		"BumpAmount" 1,
+		"Invert" off,
+		"Clamp" off,
+		"AlphaFromRGB" off,
+		"UseColorMap" off,
+		"UseRGBCurve" off
+	)
+
+	shader "Concrete_GenericNoise" "adsk_Utility_Noise"
+	(
+		"Parameters" {
+			"Color1" 0.501961 0.501961 0.501961 1, 
+			"Color2" 0.098 0.098 0.098 1,
+			"Map1Enabled" on, 
+			"Map2Enabled" on, 
+			"Size" 1, 
+			"Phase" 0.5, 
+			"Levels" 5, 
+			"ThresholdLow" 0.2,
+			"ThresholdHigh" 0.25, 
+			"Type" 2, 
+			"Coords" "base_XYZGen__instance", 
+			"Output" "base_Output__instance"	
+		}, 
+		"ExtraParameters" {
+			"GBufferID" 0	
+		}
+	)
+	
+	root = "Concrete_GenericNoise"
+	
+	#------------------------------------------------------------------------
+	# GUI
+	#------------------------------------------------------------------------	
+	gui "gui_adsk_Metal_Noise_Anodized" {	
+		control "Global" "Global" (
+				"hidden"
+			)
+	}
+end declare
+
+
+#------------------------------------------------------------------------
+# Relief Pattern - Knurls
+#------------------------------------------------------------------------
+declare phenomenon
+ 	color "adsk_Metal_Patterns__Knurls"
+	(
+		scalar "Scale"
+	)
+	apply texture
+	version 1
+
+
+	shader "input_vec" "adsk_Utility_Float_to_Float3" 
+	(
+		"the_scalar" = interface "Scale"
+	)
+	
+	shader "factor" "adsk_Utility_Float_to_Float3" 
+	(
+		"the_scalar" 10
+	)	
+	
+	shader "multdiv__instance" "adsk_Utility_MultiplyDivide" 
+	(
+		"operation" 1,
+		"input1" = "input_vec",
+		"input2" = "factor"
+	)
+	shader "toscalar" "adsk_Utility_Float3_to_Float" 
+	(
+		"the_vector" = "multdiv__instance"
+	)
+	
+
+	shader "|UVGen|Shader" "adsk_base_UVGenerator" 
+	(
+		"MapSlotType" 0, 
+		"EnvType" 4, 
+		"MapChannel" 1, 
+		"UVWSource" 0, 
+		"ShowMapOnBack" on, 
+		"UOffset" 0, 
+		"UScale" = "toscalar", 
+		"UWrap" on, 
+		"UMirror" off, 
+		"VOffset" 0, 
+		"VScale" = "toscalar", 
+		"VWrap" on, 
+		"VMirror" off, 
+		"UAngle" 0, 
+		"VAngle" 0, 
+		"WAngle" 0, 
+		"UVAxis" 0, 
+		"Clip" on, 
+		"Blur" 0.01, 
+		"BlurOffset" 0, 
+		"Noise" off, 
+		"Animate" off, 
+		"Amount" 1, 
+		"Size" 1, 
+		"Level" 1, 
+		"Phase" 0, 
+		"RealWorldMapSize" off, 
+		"XCanvasSize" 0, 
+		"YCanvasSize" 0
+	)
+	
+	shader "patterns_knurls__instance" "adsk_Tex_Gradient"
+	(
+		"grad_type"			1,
+		"grad_interp"		0,
+
+		"noise_amount"		0,
+		"noise_size"		1,
+		"noise_phase"		0,
+		"noise_type"		1,
+		"noise_levels"		4,
+
+		"noise_th_low"		0,
+		"noise_th_high"		1,
+		"noise_th_smooth"	0,
+
+		"uv_coords"			"|UVGen|Shader",
+
+		"flag_position"             [0, 1],
+		"flag_interpolation"        [0, 0],
+    	"flag_color"				[1 1 1 1, 0 0 0 1]
+	)
+
+
+	root = "patterns_knurls__instance"
+	
+	#------------------------------------------------------------------------
+	# GUI
+	#------------------------------------------------------------------------	
+	gui "gui_adsk_Metal_Patterns__Knurls" {	
+		control "Global" "Global" (
+				"hidden"
+			)
+	}
+end declare
+
+
+#------------------------------------------------------------------------
+# Cutouts/Perforations - Square
+#------------------------------------------------------------------------
+declare phenomenon
+ 	color "adsk_Metal_Cutouts_Shape"
+	(
+		scalar	"scale",
+		integer	"shape"
+	)
+	apply texture
+	version 1
+	
+
+	shader "UVGen_Shader" "adsk_base_UVGenerator"
+	(
+		"MapSlotType" 0, 
+		"EnvType" 4, 
+		"MapChannel" 1, 
+		"UVWSource" 0, 
+		"ShowMapOnBack" on, 
+		"UOffset" 0, 
+		"UScale" = interface "scale", 
+		"UWrap" on, 
+		"UMirror" off, 
+		"VOffset" 0, 
+		"VScale" = interface "scale",
+		"VWrap" on, 
+		"VMirror" off, 
+		"UAngle" 0, 
+		"VAngle" 0, 
+		"WAngle" 0, 
+		"UVAxis" 0, 
+		"Clip" on, 
+		"Blur" 1, 
+		"BlurOffset" 0, 
+		"Noise" off, 
+		"Animate" off, 
+		"Amount" 1, 
+		"Size" 1, 
+		"Level" 1, 
+		"Phase" 0, 
+		"RealWorldMapSize" off, 
+		"XCanvasSize" 0, 
+		"YCanvasSize" 0
+	)
+
+	shader "cutouts_square" "adsk_Tex_Gradient"
+	(
+		"grad_type"			1,
+		"grad_interp"		5,
+
+		"noise_amount"		0,
+		"noise_size"		1,
+		"noise_phase"		0,
+		"noise_type"		1,
+		"noise_levels"		4,
+
+		"noise_th_low"		0,
+		"noise_th_high"		1,
+		"noise_th_smooth"	0,
+
+		"uv_coords"			"UVGen_Shader",
+
+		"flag_position"             [0, 1, 0.5],
+		"flag_interpolation"        [5, 5, 5],
+    	"flag_color"				[0 0 0 1, 1 1 1 1, 1 1 1 1]
+	)
+
+
+	shader "cutouts_round" "adsk_Tex_Gradient"
+	(
+		"grad_type"			8,
+		"grad_interp"		5,
+
+		"noise_amount"		0,
+		"noise_size"		1,
+		"noise_phase"		0,
+		"noise_type"		1,
+		"noise_levels"		4,
+
+		"noise_th_low"		0,
+		"noise_th_high"		1,
+		"noise_th_smooth"	0,
+
+		"uv_coords"			"UVGen_Shader",
+
+		"flag_position"             [0, 1, 0.5],
+		"flag_interpolation"        [5, 5, 5],
+    	"flag_color"				[0 0 0 1, 1 1 1 1, 1 1 1 1]
+	)
+
+	shader "cutouts_none" "adsk_Utility_ColorPassThrough"	( "color" 1 1 1 1 )
+	shader "cutouts_switcher" "adsk_Utility_Switch8Shader"
+	(
+		"switcher" = interface "shape",
+		"type" 0,
+		"shader_1" "cutouts_none",
+		"shader_2" "cutouts_round",
+		"shader_3" "cutouts_square"
+	)
+	
+	root = "cutouts_switcher"
+	
+	#------------------------------------------------------------------------
+	# GUI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Metal_Cutouts_Shape" {	
+		control "Global" "Global" (
+				"hidden"
+			)
+	}
+end declare
+
+
+#----------------------------------------------------------------------------------------
+# adsk_Shd_Metal__Blender
+#----------------------------------------------------------------------------------------
+declare phenomenon
+	scalar "adsk_Shd_Metal__Blender"
+	(
+		
+		scalar "brightness_var",
+		
+		#--------------------------	
+		scalar "shapebasednoise_scale",		
+		scalar "shapebasednoisevertical_scale"
+	)
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# Landscape - Blending Factor
+	#------------------------------------------------------------------------
+	shader "landscape_blend_fx__instance" "Landscape" 
+	(
+		"Base Color" 0 0 0 1, 
+		"Overlay Color" 1 1 1 1, 
+		"Blur" 0.1, 
+		"Relative to Object" on, 
+		"Relative to World" off, 
+		"Base Plane Normal" 0 0 1, 
+		"Base Plane Distance" 0, 
+		"Texture" {
+			"Active" off, 
+			"Influence" 1, 
+			"Use Alpha Component" off, 
+			"Use Red Component" on, 
+			"Use Green Component" on, 
+			"Use Blue Component" on	}, 
+		"Height" {
+			"Active" off, 
+			"Influence" 1, 
+			"Upside Down" off, 
+			"Height" 20, 
+			"Spread" 2	}, 
+		"Slope" {
+			"Active" off, 
+			"Influence" 1, 
+			"Upside Down" off, 
+			"Angle" 40	}, 
+		"Positional Noise" {
+			"Active" off, 
+			"Influence" 1, 
+			"Scale" 0.5, 
+			"Roughness" 0.25, 
+			"Coverage" 0.25, 
+			"Vertical Scale" 1	}, 
+		"Shape Based Noise" {
+			"Active" on, 
+			"Influence" 5, 
+			"Scale" = interface "shapebasednoise_scale",		#10, 
+			"Roughness" 0.4, 
+			"Coverage" = interface "brightness_var", 
+			"Vertical Scale" = interface "shapebasednoisevertical_scale" }, 
+		"Stain" {
+			"Active" off, 
+			"Influence" 1, 
+			"Thickness" 0	}
+	)
+
+	
+	shader "coltofloat" "adsk_Utility_Color_to_Float"
+	(
+		"the_color" = "landscape_blend_fx__instance"
+	)
+	
+	
+	root = "coltofloat"
+	
+	#------------------------------------------------------------------------
+	# GUI
+	#------------------------------------------------------------------------	
+	gui "gui_adsk_Shd_Metal__Blender" {	
+		control "Global" "Global" (
+				"hidden"
+			)
+	}
+end declare
+
+
+
+
+#------------------------------------------------------------------------
+#------------------------------------------------------------------------
+# adsk_Shd_Metal (appearance shader)
+#------------------------------------------------------------------------
+declare phenomenon
+	struct {
+		#-------------------------------------
+        color   "result"
+    } 
+    "adsk_Shd_Metal"
+	(
+		#-------------------------------------
+		# main parameters
+		#-------------------------------------
+		struct "m"
+		{
+			#----------------------------------
+			scalar			"diffuse_weight",
+			scalar			"diffuse_roughness",
+
+			#----------------------------------
+			scalar			"reflectivity",
+			scalar			"refl_gloss",
+			boolean			"refl_is_metal",			
+
+			#----------------------------------
+			scalar			"brdf_0_degree_refl",
+			scalar			"brdf_curve",
+
+			#----------------------------------
+			scalar			"bump_local_amount",
+			scalar			"bump_global_amount"			
+		},
+
+		#-------------------------------------
+		# Map Switchers 
+		#-------------------------------------
+		struct "s"
+		{			
+			#----------------------------------	
+			integer			"diffuse_switcher",
+			integer			"reflect_switcher",
+			integer			"bump_switcher",
+			integer			"aniso_switcher",
+			integer			"anisorot_switcher",
+
+			#----------------------------------
+			shader			"user_map",
+			scalar			"map_scale",
+
+			#----------------------------------
+			color			"diffuse_color",
+
+			#----------------------------------
+			color			"reflect_color",
+			scalar			"reflect_map_amount",
+
+			#----------------------------------
+			color			"aniso_color",
+			scalar			"aniso_map_amount",
+			color			"anisorot_color",
+			scalar			"anisorot_map_amount",
+			
+			#----------------------------------						
+			color			"patina_color",
+			scalar			"patina_amount",
+			integer			"patina_switcher",
+			scalar			"patina_noise_scale",
+			scalar			"patina_noisev_scale",
+			
+			scalar			"patina_refl",
+			scalar			"patina_gloss",
+			scalar			"patina_is_metal",
+			scalar			"patina_brdf_0_degree",
+			scalar			"patina_rough"
+		},
+
+		#-------------------------------------
+		# Cutouts
+		#-------------------------------------
+		struct "c"
+		{
+			#----------------------------------
+			integer  		"cutouts_switcher",
+			shader  		"cutouts_user_map"
+		},
+
+		#-------------------------------------
+		# Ambient Occlusion 
+		#-------------------------------------
+		struct "o"
+		{
+			#----------------------------------
+			boolean  		"ao_on",
+			integer  		"ao_samples",
+			scalar   		"ao_distance",
+			integer  		"ao_do_details"
+		},
+		
+		#-------------------------------------
+	    # Round Corners
+	    #-------------------------------------
+  		struct "r"
+  		{
+  			#----------------------------------
+  			scalar  "roundcorners_radius",
+  			boolean "roundcorners_allow_different_materials"	      	
+		},
+
+		#-------------------------------------
+		# Performance Tuning Parameters
+		#-------------------------------------
+		struct "p"
+		{
+			#----------------------------------
+			integer 	"reflection_glossy_samples",
+			integer 	"refl_depth"
+		},
+
+		#-------------------------------------
+		# Textures 
+		#-------------------------------------
+		struct "t"
+		{
+			#----------------------------------
+			color texture "brush_def_map",
+			color texture "break_def_map",
+			color texture "bump_diamond_map",
+			color texture "bump_checker_map"			
+			
+		},
+
+		#-------------------------------------
+		# UV Coords Parameters
+		#-------------------------------------
+		struct "u"
+		{
+		#----------------------------------
+			integer "uv_channel",
+	      	scalar  "uv_scale",
+	      	scalar  "other_scale"
+		},
+
+		#-------------------------------------
+		# Unit Scalable Parameters
+		#-------------------------------------
+		struct "x"
+		{
+			#----------------------------------
+	      	vector  "noise_tiling",			
+	      	vector  "noiseanodized_tiling",	      	
+	      	vector  "bumpnoise_tiling"
+		},
+
+		#----------------------------------
+		# Lights and Mode Parameters
+		#----------------------------------
+		integer		"mode",
+		array light "lights"
+	)	
+	apply texture
+	version 1
+
+
+
+
+
+	#------------------------------------------------------------------------
+	# -> begin Maps definition ##############################################
+	#------------------------------------------------------------------------
+	#--------------------------
+	shader "noise__instance" "adsk_Utility_Noise_Tweakable"
+	(
+		"noise_size" 10,		
+		"noise_color1" 0.2 0.2 0.2 1,
+		"noise_color2" 0.88 0.88 0.88 1,
+		"low" 0.0,
+		"high" 1.0,
+		"tiling" = interface "x.noise_tiling",					# 1 0.1 0.1,
+		"angle" 0 0 0.78
+	)	
+	#--------------------------
+	shader "noise_anodized__instance" "adsk_Metal_Noise_Anodized"
+	(
+		"tiling" = interface "x.noiseanodized_tiling"
+	)
+	#--------------------------
+	shader "reflect_switcher__instance" "adsk_Metal_switch_color_shader"
+	(
+		"switcher" = interface "s.reflect_switcher",
+		"color" = interface "s.reflect_color",
+		"user_map" = interface "s.user_map",
+		"default_map01" = interface "t.brush_def_map",
+		"default_map02" = interface "t.break_def_map",
+		"map_amount" = interface "s.reflect_map_amount",
+		"Uscale" = interface "u.uv_scale",
+		"Vscale" = interface "u.uv_scale",
+		"extra_map_01" "noise_anodized__instance"
+	)
+	
+	#--------------------------			
+	shader "aniso_switcher__instance" "adsk_Metal_switch_color_shader"
+	(
+		"switcher" = interface "s.aniso_switcher",
+		"color" = interface "s.aniso_color",
+		"user_map" "noise__instance",
+		"default_map01" = interface "t.brush_def_map",
+		"default_map02" = interface "t.break_def_map",
+		"map_amount" = interface "s.aniso_map_amount",
+		"Uscale" = interface "u.uv_scale",
+		"Vscale" = interface "u.uv_scale",
+		"extra_map_01" "noise_anodized__instance"
+	)
+	shader "col_tofloat_aniso" "adsk_Utility_Color_to_Float"
+	(
+		"the_color" = "aniso_switcher__instance"
+	)
+	
+	#--------------------------	
+	shader "anisorot_switcher__instance" "adsk_Metal_switch_color_shader"
+	(
+		"switcher" = interface "s.anisorot_switcher",
+		"color" = interface "s.anisorot_color",
+		"user_map" "noise__instance",
+		"default_map01" = interface "t.brush_def_map",
+		"default_map02" = interface "t.break_def_map",
+		"map_amount" = interface "s.anisorot_map_amount",
+		"Uscale" = interface "u.uv_scale",
+		"Vscale" = interface "u.uv_scale",
+		"extra_map_01" "noise_anodized__instance"
+	)	
+	shader "col_tofloat_anisorot" "adsk_Utility_Color_to_Float"
+	(
+		"the_color" = "anisorot_switcher__instance"
+	)
+	#------------------------------------------------------------------------	
+	# <- end Maps definition ##########################################
+	#------------------------------------------------------------------------	
+	
+
+			
+						
+	#------------------------------------------------------------------------
+	# Blend parameters ######################################################
+	#------------------------------------------------------------------------
+	shader "blender__instance" "adsk_Shd_Metal__Blender"
+	(
+		"brightness_var" = interface "s.patina_amount",
+		"shapebasednoise_scale" = interface "s.patina_noise_scale",		
+		"shapebasednoisevertical_scale" = interface "s.patina_noisev_scale"
+	)
+	#------------------------------------------------------------------------
+	# Diffuse
+	#------------------------------------------------------------------------
+	shader "diffuse_A_color" "adsk_Utility_ColorState" 
+	(
+		"the_color" = interface "s.patina_color"	
+	)	
+	shader "diffuse_B_color" "adsk_Utility_ColorState" 
+	(
+		"the_color" = interface "s.diffuse_color"
+	)	
+	shader "diffuse_color__instance" "adsk_Utility_Mix2Shader"
+	(
+		"shader1" "diffuse_A_color",
+		"shader2" "diffuse_B_color",
+		"mixing_mode" 0,
+		"mixing_factor" = "blender__instance"
+	)
+	shader "diffuse_patina_switcher__instance" "adsk_Utility_Switch8Shader" 
+	(
+		"switcher" = interface "s.patina_switcher",		
+		"type" 0,
+		"shader_1" "diffuse_B_color",
+		"shader_2" "diffuse_color__instance"
+	)	
+	#--------------------------
+	shader "diffuse_switcher__instance" "adsk_Metal_switch_color_shader"
+	(
+		"switcher" = interface "s.diffuse_switcher",
+		"color" = "diffuse_patina_switcher__instance"
+	)
+	#------------------------------------------------------------------------
+	# Reflectivity
+	#------------------------------------------------------------------------	
+	shader "reflect_A_color" "adsk_Utility_Float_to_Color" 
+	(
+		"the_scalar" = interface "s.patina_refl"
+	)
+	shader "reflect_B_color" "adsk_Utility_Float_to_Color" 
+	(
+		"the_scalar" = interface "m.reflectivity"
+	)	
+	shader "reflect__blend" "adsk_Utility_Mix2Shader"
+	(
+		"shader1" "reflect_A_color",
+		"shader2" "reflect_B_color",
+		"mixing_mode" 0,
+		"mixing_factor" = "blender__instance"
+	)
+	shader "reflect_patina_switcher__instance" "adsk_Utility_Switch8Shader" 
+	(
+		"switcher" = interface "s.patina_switcher",
+		"type" 0,
+		"shader_1" "reflect_B_color",
+		"shader_2" "reflect__blend"
+	)
+	shader "reflectivity_color__instance" "adsk_Utility_Color_to_Float" 
+	(
+		"the_color" = "reflect_patina_switcher__instance"
+	)
+	#------------------------------------------------------------------------
+	# Glossiness
+	#------------------------------------------------------------------------	
+	shader "glossy_A_color" "adsk_Utility_Float_to_Color" 
+	(
+		"the_scalar" = interface "s.patina_gloss"
+	)	
+	shader "glossy_B_color" "adsk_Utility_Float_to_Color" 
+	(
+		"the_scalar" = interface "m.refl_gloss"
+	)	
+	shader "glossy__blend" "adsk_Utility_Mix2Shader"
+	(
+		"shader1" "glossy_A_color",
+		"shader2" "glossy_B_color",
+		"mixing_mode" 0,
+		"mixing_factor" = "blender__instance"
+	)
+	shader "glossy_patina_switcher__instance" "adsk_Utility_Switch8Shader" 
+	(
+		"switcher" = interface "s.patina_switcher",
+		"type" 0,
+		"shader_1" "glossy_B_color",
+		"shader_2" "glossy__blend"
+	)
+	shader "glossy_color__instance" "adsk_Utility_Color_to_Float" 
+	(
+		"the_color" = "glossy_patina_switcher__instance"
+	)	
+	#------------------------------------------------------------------------
+	# Brdf
+	#------------------------------------------------------------------------	
+	shader "brdf_A_color" "adsk_Utility_Float_to_Color" 
+	(
+		"the_scalar" = interface "s.patina_brdf_0_degree"
+	)		
+	shader "brdf_B_color" "adsk_Utility_Float_to_Color" 
+	(
+		"the_scalar" = interface "m.brdf_0_degree_refl"
+	)	
+	shader "brdf__blend" "adsk_Utility_Mix2Shader"
+	(
+		"shader1" "brdf_A_color",
+		"shader2" "brdf_B_color",
+		"mixing_mode" 0,
+		"mixing_factor" = "blender__instance"
+	)
+	shader "brdf_patina_switcher__instance" "adsk_Utility_Switch8Shader" 
+	(
+		"switcher" = interface "s.patina_switcher",
+		"type" 0,
+		"shader_1" "brdf_B_color",
+		"shader_2" "brdf__blend"
+	)
+	shader "brdf_color__instance" "adsk_Utility_Color_to_Float" 
+	(
+		"the_color" = "brdf_patina_switcher__instance"
+	)
+	#------------------------------------------------------------------------
+	# Is_metal
+	#------------------------------------------------------------------------	
+	shader "ismetal_A_color" "adsk_Utility_Float_to_Color"
+	(
+		"the_scalar" = interface "s.patina_is_metal"
+	)	
+	shader "bool_to_int" "adsk_Utility_Bool_to_Int"
+	(
+		"bool_in" = interface "m.refl_is_metal"
+	)
+	shader "int_to_float" "adsk_Utility_Int_to_Float" 
+	(
+		"the_int" = "bool_to_int"
+	)
+	shader "ismetal_B_color" "adsk_Utility_Float_to_Color" 
+	(
+		"the_scalar" = "int_to_float"
+	)
+	shader "ismetal__blend" "adsk_Utility_Mix2Shader"
+	(
+		"shader1" "ismetal_A_color",
+		"shader2" "ismetal_B_color",
+		"mixing_mode" 0,
+		"mixing_factor" = "blender__instance"
+	)
+	shader "ismetal_patina_switcher__instance" "adsk_Utility_Switch8Shader" 
+	(
+		"switcher" = interface "s.patina_switcher",
+		"type" 0,
+		"shader_1" "ismetal_B_color",
+		"shader_2" "ismetal__blend"
+	)
+	shader "ismetal_bool__instance" "adsk_Utility_Color_to_Bool" 
+	(
+		"color" = "ismetal_patina_switcher__instance",
+		"threshold" 0.2
+	)
+	#------------------------------------------------------------------------
+	# <- end blending parameters ############################################
+	#------------------------------------------------------------------------	
+	
+	
+
+	
+	#------------------------------------------------------------------------
+	# -> begin Relief #######################################################
+	#------------------------------------------------------------------------	
+	#--------------------------		
+	shader "bump_knurls__instance" "adsk_Metal_Patterns__Knurls"
+	(
+        "Scale" = interface "u.uv_scale"
+    )
+	#--------------------------
+	shader "bump_diamond__instance" "adsk_Utility_Bitmap_Tweak"
+	(
+		"color_texture" = interface "t.bump_diamond_map",
+		"RGBAmount" 1,
+		"RGBOffset" 0,
+		"OutputAmount" 1,
+		"Uscale" = interface "u.uv_scale",
+		"Vscale" = interface "u.uv_scale",
+		"UVchannel" = interface "u.uv_channel"
+	)
+	#--------------------------
+	shader "bump_checker__instance" "adsk_Utility_Bitmap_Tweak"
+	(
+		"color_texture" = interface "t.bump_checker_map",
+		"RGBAmount" 1,
+		"RGBOffset" 0,
+		"OutputAmount" 1,
+		"Uscale" = interface "u.uv_scale",
+		"Vscale" = interface "u.uv_scale",
+		"UVchannel" = interface "u.uv_channel"
+	)	
+	#--------------------------	
+	shader "bump_switcher__instance" "adsk_Utility_Switch8Shader"
+	(
+		"switcher" = interface "s.bump_switcher",
+		"type" 2,
+		"shader_1" "",
+		"shader_2" = interface "s.user_map",
+		"shader_3" "bump_knurls__instance",
+		"shader_4" "bump_diamond__instance",
+		"shader_5" "bump_checker__instance"		
+	)
+	#--------------------------		
+	shader "bump__instance" "adsk_Utility_Mix3Bump"
+	(	
+		"bump_1" "bump_switcher__instance",
+		"factor_1" = interface "m.bump_local_amount"
+	)
+	shader "bump_vector__instance" "adsk_Utility_Color_to_Float3"
+	(
+		"the_color" = "bump__instance"
+	)
+	#------------------------------------------------------------------------	
+	# <- end Relief (local bump) ############################################
+	#------------------------------------------------------------------------
+	
+	
+	
+	
+	#------------------------------------------------------------------------
+	# -> begin Round Corners ################################################
+	#------------------------------------------------------------------------
+	#------------------------------------------------------------------------
+	# Round Corners Bump Shader
+	#------------------------------------------------------------------------
+	shader "roundcorners__instance" "mia_roundcorners"
+	(
+		"radius" = interface "r.roundcorners_radius",
+		"allow_different_materials" = interface "r.roundcorners_allow_different_materials"
+	)
+	#------------------------------------------------------------------------
+	# Global Bump Noise
+	#------------------------------------------------------------------------
+	shader "bumpnoise__instance" "adsk_Utility_Noise_Tweakable"
+	(
+		"noise_size" 15,
+		"noise_color1" 0.0 0.0 1.0 1,
+		"noise_color2" 1.0 1.0 1.0 1,
+		"low" 0.35,
+		"high" 1.0,
+		"tiling" = interface "x.bumpnoise_tiling",	# 1 0.25 0.25,
+		"angle" 0 0 0.78
+	)
+	#------------------------------------------------------------------------
+	# adsk_Utility_Combine2Bump (utility)
+	#------------------------------------------------------------------------
+	shader "mix2bump__instance" "adsk_Utility_Mix3Bump"
+	(		
+		"bump_1" "bumpnoise__instance",
+		"factor_1" = interface "m.bump_global_amount",
+	
+		"bump_2" "roundcorners__instance",
+		"factor_2" 1.0
+	)
+	shader "overall_bump_vector__instance" "adsk_Utility_Color_to_Float3"
+	(
+		"the_color" = "mix2bump__instance"
+	)
+	#------------------------------------------------------------------------	
+	# <- end Global Bump ####################################################
+	#------------------------------------------------------------------------
+	
+
+	#------------------------------------------------------------------------
+	# -> begin Cutouts ######################################################
+	#------------------------------------------------------------------------	
+	
+	shader "co_none__instance" "adsk_Utility_ColorPassThrough"
+	(
+		"color" 1 1 1 1 
+	)
+
+	shader "co_shape__instance" "adsk_Metal_Cutouts_Shape"
+	(
+		"scale" = interface "u.other_scale",
+		"shape" = interface "c.cutouts_switcher",
+	)
+
+	#--------------------------	
+	shader "switch_cutouts__instance" "adsk_Utility_Switch8Shader"
+	(
+		"switcher" = interface "c.cutouts_switcher",
+		"type" 0,
+		"shader_1" "co_none__instance",
+		"shader_2" "co_shape__instance",
+		"shader_3" "co_shape__instance",	
+		"shader_4" = interface "c.cutouts_user_map"
+	)
+	#------------------------------------------------------------------------	
+	# <- end Cutouts ########################################################
+	#------------------------------------------------------------------------	
+	
+	
+    #------------------------------------------------------------------------
+    # Visibility Track Support
+    #------------------------------------------------------------------------
+	shader "node_visibility__instance" "adsk_Utility_NodeVisibility" 
+	(
+		"input" 1 1 1 1, 		#this is controlled internally
+		"mode" 0
+	)
+    #------------------------------------------------------------------------
+    # We need to multiply cutput_map by node_visibility
+    #------------------------------------------------------------------------
+    shader "compose_visibility__instance" "adsk_Utility_Mix8Shader" 
+    (
+        "shader1" "switch_cutouts__instance",
+        
+        "shader2" "node_visibility__instance",
+        "mix2_mode" 2,
+        "mix2_factor" 1 1 1 1
+    )
+	shader "col_tofloat_visibility" "adsk_Utility_Color_to_Float"
+	(
+		"the_color" = "compose_visibility__instance"
+	)
+
+
+			
+	#------------------------------------------------------------------------
+	# Arch & Design Shader
+	#------------------------------------------------------------------------ 
+	shader "adsk_mia_Metal__instance" "mia_material_x"
+	(
+		#----------------------------------
+		"diffuse_weight" =					interface "m.diffuse_weight",
+		"diffuse" =							"diffuse_switcher__instance",
+		"diffuse_roughness" =				interface "m.diffuse_roughness",
+
+		#----------------------------------		
+		"reflectivity" =					"reflectivity_color__instance",
+		"refl_color" =						"reflect_switcher__instance",  
+		"refl_gloss" =						"glossy_color__instance",
+		"refl_gloss_samples" =				interface "p.reflection_glossy_samples",
+		"refl_interpolate" off,
+		"refl_hl_only" off,
+		"refl_is_metal"	=					"ismetal_bool__instance.r_bool",
+
+		#----------------------------------			
+		"transparency" 0,
+		"refr_color" 1 1 1 1,
+		"refr_gloss" 1,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.0 0.0 0.0 1,
+		"refr_trans_weight" 0.5,
+
+		#----------------------------------			
+		"anisotropy" =						"col_tofloat_aniso",
+		"anisotropy_rotation" =				"col_tofloat_anisorot",
+		"anisotropy_channel" -1,
+
+		#----------------------------------			
+		"brdf_fresnel" off, 
+		"brdf_0_degree_refl" =				"brdf_color__instance",
+		"brdf_90_degree_refl" 1.0, 
+		"brdf_curve" =						interface "m.brdf_curve", 
+		"brdf_conserve_energy" on, 
+
+		#----------------------------------			
+		"intr_grid_density" 2, 
+		"intr_refl_samples" 4, 
+		"intr_refl_ddist_on" on, 
+		"intr_refl_ddist" 4, 
+		"intr_refr_samples" 4, 
+		"single_env_sample" off, 
+		
+		"refl_falloff_on" off, 
+		"refl_falloff_dist" 0, 
+		"refl_falloff_color_on" off, 
+		"refl_falloff_color" 0.2 0.2 0.2 1, 
+		"refl_depth" =						interface "p.refl_depth", 
+		"refl_cutoff" 0.0, 
+		"refr_falloff_on" off, 
+		"refr_falloff_dist" 0, 
+		"refr_falloff_color_on" off, 
+		"refr_falloff_color" 0.2 0.2 0.2 1, 
+		"refr_depth" 6, 
+		"refr_cutoff" 0.0, 
+		
+		#----------------------------------
+		"indirect_multiplier" 1, 
+		"fg_quality" 1, 
+		"fg_quality_w" 1,
+
+		#----------------------------------
+		"ao_on"  =							interface "o.ao_on",
+		"ao_samples"  =						interface "o.ao_samples",
+		"ao_distance"  =					interface "o.ao_distance",
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0 0 0,
+		"ao_do_details"  =					interface "o.ao_do_details",
+
+		#----------------------------------
+		"thin_walled" off, 
+		"no_visible_area_hl" on, 
+		"skip_inside_refl" on, 
+		"do_refractive_caustics" off, 
+		"backface_cull" off, 
+		"propagate_alpha" on, 
+		"hl_vs_refl_balance" 1, 
+		"cutout_opacity" =					"col_tofloat_visibility", 
+		"additional_color" 0 0 0 1, 
+
+		#----------------------------------
+		"mode" = interface "mode",
+		"lights" =	interface "lights",
+		
+        #----------------------------------
+        "bump_mode" 1, 
+        "overall_bump" =					"overall_bump_vector__instance",
+        "standard_bump" =					"bump_vector__instance",
+
+		#----------------------------------
+        "multiple_outputs" off
+
+	)#end shader
+
+	#------------------------------------------------------------------------
+	# Root(ing)
+	#------------------------------------------------------------------------
+	root = "adsk_mia_Metal__instance"
+
+
+
+	#------------------------------------------------------------------------
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Metal"
+	{
+		#----------------------------------
+		control "Global" "Global" 
+		("uiName" "Simple Mtl Metal (adsk)", "category" "Material"
+			, "hidden" 
+		)
+	}
+end declare
+
+
+
+
+
+
+
+#----------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
+# Metal Material Class
+#----------------------------------------------------------------------------------------
+declare phenomenon
+ 	material "adsk_Mtl_Metal"
+	(
+		#-------------------------------------
+		# Main Parameters
+		#-------------------------------------
+		struct "m"
+		{
+			#----------------------------------			
+			integer			"type",
+			
+			color			"diffuse_color",
+			scalar			"brightness_var",
+			
+			integer			"application",
+			
+			integer			"bump_enable",
+			scalar			"bump_amount",
+			shader			"bump_map",
+					
+			integer			"cutouts_enable",
+			shader			"cutouts_map"
+		},
+		
+		#-------------------------------------
+		# Special Effects
+		#-------------------------------------
+		struct "o"
+		{
+			#----------------------------------
+			boolean  "ao_on",
+			integer  "ao_samples",
+			scalar   "ao_distance",
+			boolean  "ao_do_details",	
+		
+  			#----------------------------------
+			boolean  "roundcorners_on",  			
+  			scalar "roundcorners_radius",
+  			boolean "roundcorners_allow_different_materials"	      	
+	     },
+	     						
+		#-------------------------------------
+		# Performance Tuning Parameters
+		#-------------------------------------
+		struct "p"
+		{
+			#----------------------------------
+	      	integer "reflection_glossy_samples",
+	      	integer "refl_depth"
+		},
+
+		#-------------------------------------
+		# Unit Scalable Parameters
+		#-------------------------------------
+		struct "u"
+		{
+			#----------------------------------
+            integer "uv_channel" default 1,
+            scalar "scale" default 1
+		},
+
+		#-------------------------------------
+		# Texture Parameters
+		#-------------------------------------
+		struct "t"
+		{			
+			#----------------------------------			
+			color texture "brush_def_map",
+			color texture "break_def_map",
+			color texture "bump_diamond_map",
+			color texture "bump_checker_map"
+		},
+							    	
+		#-------------------------------------
+		# Internals
+		#-------------------------------------
+		struct "x"
+		{
+			#----------------------------------
+	      	integer "gbuffer_id"
+		},
+									    	
+		#----------------------------------
+		# Lights Parameters
+		#----------------------------------
+		integer "mode",
+		array light "lights"
+
+	)#end material
+	
+	
+	
+	
+	
+	#------------------------------------------------------------------------
+	# Spider - For main Metal Apparence
+	#------------------------------------------------------------------------
+	shader "spider_instance" "adsk_Shd_Metal_spider"
+	(
+		"type"				= interface "m.type",
+		
+		"diffuse_color_i"	= interface "m.diffuse_color",
+		"brightness_var_i"	= interface "m.brightness_var",
+		
+		"application"		= interface "m.application",
+
+		"patterns"			= interface "m.bump_enable",
+
+		"cutouts"			= interface "m.cutouts_enable",
+		"cutouts_size_i"	1,
+		"cutouts_center_i"	0.5,
+		"cutouts_space_i"	0.1,
+		
+		"roundcorners_on"	= interface "o.roundcorners_on",
+		"roundcorners_radius_i" = interface "o.roundcorners_radius",
+		
+		"ao_do_details_i"	= interface "o.ao_do_details",
+		
+		"rw_uv_scale_i"		= interface "u.scale"
+	)
+
+    #------------------------------------------------------------------------
+    # Reflection Blur Multiplication
+    #------------------------------------------------------------------------
+    shader "reflection_gloss_sample_global" "adsk_blurred_reflection_multiplier"
+    (
+        "blurred_reflection_value" = interface "p.reflection_glossy_samples"
+    )
+    
+    
+    
+    
+	#------------------------------------------------------------------------
+	# adsk_Shd_Metal - Main Metal Apparence
+	#------------------------------------------------------------------------	
+	shader "adsk_Shd_Metal__instance" "adsk_Shd_Metal"
+	(
+	
+		#-------------------------------------
+		# Main Parameters
+		#-------------------------------------
+		"m"
+		{
+			#----------------------------------
+			"diffuse_weight" = "spider_instance.diffuse_weight",
+			"diffuse_roughness" = "spider_instance.diffuse_roughness",
+
+			#----------------------------------
+			"reflectivity" = "spider_instance.reflectivity",
+			"refl_gloss" = "spider_instance.refl_gloss",
+			"refl_is_metal" = "spider_instance.refl_is_metal",
+
+			#----------------------------------
+			"brdf_0_degree_refl" = "spider_instance.brdf_0_degree_refl",
+			"brdf_curve" = "spider_instance.brdf_curve",
+
+			#----------------------------------			
+			"bump_local_amount" = interface "m.bump_amount",
+			"bump_global_amount" = "spider_instance.bump_global_amount"			
+		},
+		"s"
+		{
+			"diffuse_switcher" = "spider_instance.diffuse_switcher",
+			"reflect_switcher" = "spider_instance.reflect_switcher",
+			"bump_switcher" = "spider_instance.bump_switcher",
+			"aniso_switcher" = "spider_instance.aniso_switcher",
+			"anisorot_switcher" = "spider_instance.anisorot_switcher",
+
+			#----------------------------------
+			"user_map" = interface "m.bump_map",
+
+			#----------------------------------
+			"diffuse_color" = "spider_instance.diffuse_color",
+
+			#----------------------------------
+			"reflect_color" = "spider_instance.reflect_color",
+			"reflect_map_amount" = "spider_instance.reflect_map_amount",
+
+			#----------------------------------
+			"aniso_color" = "spider_instance.aniso_color",
+			"aniso_map_amount" = "spider_instance.aniso_map_amount",
+			"anisorot_color" = "spider_instance.anisorot_color",
+			"anisorot_map_amount" = "spider_instance.anisorot_map_amount",
+
+			#----------------------------------			
+			"patina_color" = "spider_instance.patina_color",
+			"patina_amount" = "spider_instance.brightness_var",
+			"patina_switcher" = "spider_instance.patina_switcher",
+			"patina_noise_scale" = "spider_instance.shapebasednoise_scale",
+			"patina_noisev_scale" = "spider_instance.shapebasednoisevertical_scale",
+			"patina_refl" = "spider_instance.patina_refl",
+			"patina_gloss" = "spider_instance.patina_gloss",
+			"patina_is_metal" = "spider_instance.patina_is_metal",
+			"patina_brdf_0_degree" = "spider_instance.patina_brdf_0_degree",
+			"patina_rough" = "spider_instance.patina_rough"
+		
+		},	
+
+		#-------------------------------------
+		# Cutouts
+		#-------------------------------------
+		"c"
+		{
+			#----------------------------------
+			"cutouts_switcher"	= interface "m.cutouts_enable",
+			"cutouts_user_map"	= interface "m.cutouts_map"
+		},
+
+		#-------------------------------------
+		# Ambient Occlusion Parameters
+		#-------------------------------------
+		"o"
+		{
+			#----------------------------------			
+			"ao_on"  = interface "o.ao_on",
+			"ao_samples"  = interface "o.ao_samples",
+			"ao_distance" = interface "o.ao_distance",
+			"ao_do_details" = "spider_instance.ao_do_details"
+		},
+
+		#-------------------------------------
+		# Round Corners Parameters
+		#-------------------------------------
+		"r"
+		{
+			#----------------------------------
+	      	"roundcorners_radius" = "spider_instance.roundcorners_radius",
+	      	"roundcorners_allow_different_materials" = interface "o.roundcorners_allow_different_materials"
+		},	
+		
+		#-------------------------------------
+		# Performance Tuning Parameters
+		#-------------------------------------
+		"p"
+		{
+			#----------------------------------
+	      	"reflection_glossy_samples" = "reflection_gloss_sample_global",
+	      	"refl_depth" = interface "p.refl_depth"
+		},
+
+		#-------------------------------------
+		# UV Coords Parameters
+		#-------------------------------------
+		"u"
+        {
+		#----------------------------------
+            "uv_channel" = interface "u.uv_channel",
+	      	"uv_scale" = "spider_instance.rw_uv_scale",
+	      	"other_scale" = "spider_instance.rw_ot_scale"	      		      	
+        },
+
+		#-------------------------------------
+		# Texture Parameters
+		#-------------------------------------
+		"t"
+		{
+			#----------------------------------			
+			"brush_def_map" = interface "t.brush_def_map",
+			"break_def_map" = interface "t.break_def_map",
+			"bump_diamond_map" = interface "t.bump_diamond_map",
+			"bump_checker_map" = interface "t.bump_checker_map"		
+		},
+
+		#-------------------------------------
+		# Unit Scalable Parameters
+		#-------------------------------------
+		"x"
+		{
+			#----------------------------------
+	      	"noise_tiling" = "spider_instance.noise_tiling",			
+	      	"noiseanodized_tiling" = "spider_instance.noiseanodized_tiling",
+	      	"bumpnoise_tiling" = "spider_instance.bumpnoise_tiling"
+		},
+
+		#----------------------------------
+		# Lights Parameters
+		#----------------------------------
+		"mode" = interface "mode",
+		"lights" = interface "lights"	
+	)
+	
+	
+
+	#------------------------------------------------------------------------
+	# Render Elements support
+	#------------------------------------------------------------------------	
+	shader "mia_mat_renderelem__instance" "adsk_Utility_MiaDecomposer" 
+	(
+		"mia_material" "adsk_Shd_Metal__instance", 
+		"GBufferID" = interface "x.gbuffer_id"
+	)
+
+	
+	
+	#------------------------------------------------------------------------
+	#------------------------------------------------------------------------
+	# Material Connections
+	#------------------------------------------------------------------------
+	material "mat"
+					= "mia_mat_renderelem__instance"
+		photon		= "adsk_Shd_Metal__instance"
+		shadow		= "adsk_Shd_Metal__instance"
+	end material
+	root material "mat"
+	
+
+
+
+
+	#------------------------------------------------------------------------	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Mtl_Metal"
+	{
+		#----------------------------------
+		control "Global" "Global" 
+		(
+			"uiName" "ProMaterials: Metal", "category" "Material",          
+			"viewport_diffuse" "m.diffuse_color",
+			"viewport_specular" 1.0 1.0 1.0,
+			"viewport_shininess" 1,
+			"hidden"
+		)
+		#-------------------------------------
+		#  Material Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Metal Material Parameters", "openstate" "true")
+		{		
+			control "type" "integer" ("enum", "nonConnectable", 
+				"uiName" "Type", "value" "0 Aluminum, 1 Anodized Aluminum, 2 Chrome, 3 Copper, 4 Brass, 5 Bronze, 6 Stainless Steel, 7 Zinc", 
+				"range" 0 7)
+				
+			control "diffuse_color" "color" ("nonConnectable", "uiName" "Color (Reflectance)", "value" 0.808 0.824 0.839,
+												"helpText" "Color (Reflectance). Affects only Anodized Aluminum metal type")
+			control "brightness_var" "scalar" ("nonConnectable", "uiName" "Patina", "value" 0.0, "range" 0 1,
+												"helpText" "Level of metal oxidation. Affects only Copper and Bronze metal types")
+
+			control "application" "integer" ("enum", "nonConnectable",
+												"uiName" "Surface Finish",  "value" "0 Polished, 1 Semi-Polished, 2 Satin, 3 Brushed", "range" 0 3,
+												"helpText" "Level of reflectivity")
+
+			control "bump_enable" "integer" ("enum", "nonConnectable", "uiName" "Relief Pattern", "value" "0 None, 1 Knurl, 2 Diamond Plate, 3 Checker Plate, 4 Custom", "range" 0 4)
+			control "bump_amount" "scalar" ("nonConnectable", "uiName" "-> Pattern Height", "value" 0.3, "range" 0.01 10.0,
+												"helpText" "Bump amount of pattern height")
+			control "bump_map" "shader" ("nonConnectable", "uiName" "-> Custom Map",
+												"helpText" "Use when 'Relief Pattern: Custom' is selected")
+			
+			control "cutouts_enable" "integer" ("enum", "nonConnectable", "uiName" "Cutouts/Perforations", 
+												"value" "0 None, 1 Round Holes, 2 Square Holes, 3 Custom", 
+												"range" 0 3)
+			control "cutouts_map" "shader" ("nonConnectable", "uiName" "-> Custom Map",
+												"helpText" "Used when 'Cutouts/Perforations: Custom' is selected")
+		}
+
+		#-------------------------------------
+		#  Special Effects
+		#-------------------------------------
+		control "o" "struct" ("uiName" "Special Effects", "openstate" "false")
+		{
+			#----------------------------------
+			control "ao_on" "boolean" ("uiName" "Ambient Occlusion", "value" 0, "nonConnectable", "enables" "ao_samples, ao_distance, ao_do_details",
+												"helpText" "Enables Ambient Occlusion. Emulates the look of true global illumination by using shaders to calculate the extent that an area is occluded or prevented from receiving incoming light. Use this effect with indirect light.")	
+			control "ao_samples"  "integer" ("uiName"  "-> Samples", "value" 16, "range" 2 256, "nonConnectable",
+												"helpText" "Ambient occlusion quality (High= Smoother/Slower; Low= Grainier/Faster)")
+			control "ao_distance"  "scalar" ("uiName"  "-> Max Distance", "value" 4, "units" "world", "nonConnectable",
+												"helpText" "Defines the ambient occlusion radius (High= Large coverage area/Slower; Low= Small coverage area/Faster)")
+			control "ao_do_details" "boolean" ("uiName" "-> Use Color From Other Mats (Exact AO)", "value" off, "nonConnectable",
+												"helpText" "Enables a more complex mode of Ambient Occlusion that takes object color into account. Note: This improves excessive 'corner darkening' and solves the creation of 'dark rims' by AO around self-illuminating objects.")
+			
+			#----------------------------------
+			control "roundcorners_on" "boolean" ("uiName"  "Round Corners", "value" 0, "nonConnectable", "enables" "roundcorners_radius, roundcorners_allow_different_materials",
+												"helpText" "Enables simulated round corners. Note: This is only a shading effect, similar to a bump map, whereby no actual geometric changes occur. This effect only works properly on straight edges.")	
+			control "roundcorners_radius"  "scalar" ("uiName"  "-> Fillet Radius", "value" 0.25, "units" "world",
+												"helpText" "Adjusts the radius of the round corner effect")
+			control "roundcorners_allow_different_materials"  "boolean" ("uiName"  "-> Blend with Other Materials", "nonConnectable",
+												"helpText" "Activate to apply corner rounding effects to any material. Disable to apply corner rounding effects to the surface of the current material only.")
+		}
+		
+ 		#-------------------------------------
+		# Performance Tuning Parameters
+ 		#-------------------------------------
+		control "p" "struct" ("uiName" "Performance Tuning Parameters", "openstate" "false")
+		{
+			#----------------------------------
+			#quality controls...
+			control "reflection_glossy_samples"  "integer" ("nonConnectable", "uiName"  "Reflection Glossy Samples", "value" 8, "range" 0 128,
+												"helpText" "Defines the maximum number of samples (rays) that mental ray computes to create glossy reflections")
+			control "refl_depth"  "integer" ("nonConnectable", "uiName"  "Reflection Max Trace Depth", "value" 0, "range" 0 20,
+												"helpText" "Number of times each ray is reflected. When set to zero, global render settings take precedence.")
+		}
+				
+ 		#-------------------------------------
+		#  UV options
+ 		#-------------------------------------
+		control "u" "struct" ("uiName" "(Texture) Coordinates For Built-In Textures", "openstate" "false")
+		{
+			#----------------------------------
+			control "uv_channel"  "integer" ("nonConnectable", "uiName"  "UV Channel", 
+												"value" 1, "range" 0 64, 
+												"helpText" "UV Map Channel assignment for built-in texture")	
+			control "scale"  "scalar" ("nonConnectable", "uiName"  "Tiling", 
+										"value" 1.0, "range" 0.0001 1000000, 
+										"helpText" "Tiling amount")
+		}	
+
+ 		#-------------------------------------
+		# Texture parameters
+ 		#-------------------------------------
+		control "t" "struct" ("uiName" "Texture Parameters", "openstate" "false")
+		{
+			#----------------------------------
+			control "brush_def_map" "color texture" ("nonConnectable", "uiName"  "Fixed Tex for Reflection, Aniso - Brush"
+				, "value" "Simple_Metal_Mtl_Brush_pattern.jpg", "hidden")
+			control "break_def_map" "color texture" ("nonConnectable", "uiName"  "Fixed Tex for Reflection - Break"
+				, "value" "Simple_Metal_Mtl_Break_pattern.jpg", "hidden")		
+			
+			control "bump_diamond_map" "color texture" ("nonConnectable", "uiName"  "Fixed Tex for Pattern - Diamond"
+				, "value" "Simple_Metal_Mtl_DiamondPlate_pattern.jpg", "hidden")
+			control "bump_checker_map" "color texture" ("nonConnectable", "uiName"  "Fixed Tex for Pattern - Checker"
+				, "value" "Simple_Metal_Mtl_CheckerPlate_pattern.jpg", "hidden")		
+		}
+				
+ 		#-------------------------------------
+		# Internal
+ 		#-------------------------------------
+		control "x" "struct" ("uiName" "Internals", "openstate" "false")
+		{
+			#----------------------------------
+			control "gbuffer_id"  "integer" (hidden, "nonConnectable", "uiName"  "Translator must link here to pass a different ID", "value" 8)
+		}		
+
+		#-------------------------------------
+		# Lights and Mode Parameters
+		#-------------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+	}	
+end declare	

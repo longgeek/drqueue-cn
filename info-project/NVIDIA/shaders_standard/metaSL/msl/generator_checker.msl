@@ -1,0 +1,57 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Generator_checker
+{
+  input:
+		Color color1 = Color(1,1,1,1)
+		{			
+			display_name("Color 1");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The first color in the signal." );
+		};
+		Color color2 = Color(0,0,0,1)
+		{		
+			display_name("Color 2");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The second color in the signal." );
+		};
+		float checkerSize  = 0.2
+		{		
+			display_name("Checker Size");
+			soft_range(float(0),float(1));
+			description( "The size of each square within the valid range." );
+		};
+		int texture_space = 0 
+		{ 
+			display_name("Texture Space");
+			literal(); 
+			description( "Texture coordinates to use for generating the "
+						 "checker." );		
+			hard_range(0, 3);
+		};
+		float2 texture_uv = float2(texture_coordinate[texture_space].x,
+                                  texture_coordinate[texture_space].y)
+		{
+			display_name("Custom UV Input");
+			description("When this parameter is connected, the shader will read "
+                         "the UV values from there. No effect when not connected.");
+		};
+    
+  output:
+    Color result;
+    
+    void main()
+    {
+		float2 m = fmod(abs(texture_uv), checkerSize)/
+						checkerSize;
+		result    = lerp(color1, color2,
+                                    (m.x < 0.5 == m.y < 0.5) ? 1.0 : 0.0);
+    }
+}
+{
+	description( "Generates a checker pattern based on the location of "
+	             "the input in the range [0-1] x [0-1]." );
+};

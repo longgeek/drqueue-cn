@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Database Functions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node138.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node140.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION137"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_db_type">mi_db_type</a></li>
+<li><a href="#api:mi_db_size">mi_db_size</a></li>
+<li><a href="#api:mi_db_access">mi_db_access</a></li>
+<li><a href="#api:mi_db_unpin">mi_db_unpin</a></li>
+<li><a href="#api:mi_db_flush">mi_db_flush</a></li>
+</ul>
+
+<h3>Database Functions</h3>
+<p><a id="INDEX533"></a><a id="INDEX534"></a>
+Database access functions can be used to convert
+pointers into tags, and to get the type of a tag. The scene
+database contains only tags and no pointers at all, because
+pointers are not valid on other machines. A tag is a 32-bit integer
+value that uniquely identifies a piece of data in mental ray's
+<b><a id="INDEX535"></a>virtual shared
+database</b>. It acts like a pointer except that it is valid across
+all machines on the network.</p>
+<p><a id="INDEX536"></a></p>
+<h5 class="anchor" id="api:mi_db_type">mi_db_type</h5>
+<pre>
+    int mi_db_type(
+        const miTag tag)
+</pre>
+<p><a id="INDEX537"></a> Return the type of a
+database item. The tag must exist. Valid types that are of interest
+in shaders are:</p>
+<pre>
+    miSCENE_FUNCTION <i>Function to call, such as a shading function</i>
+    miSCENE_MATERIAL <i>Material containing shaders and flags</i>
+    miSCENE_LIGHT <i>Light source</i>
+    miSCENE_IMAGE <i>Image in memory</i>
+</pre>
+<p>The most important are functions and images, because
+general-purpose texture shaders need to distinguish procedural and
+<a href="node116.html#INDEX456">image texture</a>s. See the texture
+shader example on page <a href="node116.html#texshaderex">texshaderex</a>.</p>
+<p><a id="INDEX538"></a></p>
+<h5 class="anchor" id="api:mi_db_size">mi_db_size</h5>
+<pre>
+    int mi_db_size(
+        const miTag tag)
+</pre>
+<p><a id="INDEX539"></a> Return the size of a
+database item in bytes. The tag must exist. This function should be
+avoided if possible because it has poor performance and can lead to
+inefficient execution orders in mental ray 3.0 in certain
+situations.</p>
+<p><a id="INDEX540"></a></p>
+<h5 class="anchor" id="api:mi_db_access">mi_db_access</h5>
+<pre>
+    void *mi_db_access(
+        const miTag tag)
+</pre>
+<p>Look up the tag in the database, pin it, and return a pointer to
+the<a id="INDEX541"></a> referenced item. Pinning
+means that the database item is guaranteed to stay in memory at the
+same location until the item is explicitly unpinned. Rendering
+aborts if the given <i>tag</i> does not exist.
+<i><a href="node139.html#INDEX540">mi_db_access</a></i> always returns a valid
+pointer. If an item is accessed twice, it must be unpinned twice;
+<i>pinned</i> is a counter, not a flag. The maximum number of
+simultaneous pins on a single database element is 65535.</p>
+<p><a id="INDEX542"></a></p>
+<h5 class="anchor" id="api:mi_db_unpin">mi_db_unpin</h5>
+<pre>
+    void mi_db_unpin(
+        const miTag tag)
+</pre>
+<p>Every tag that was accessed with
+<i><a href="node139.html#INDEX540">mi_db_access</a></i> must be
+unpinned<a id="INDEX543"></a> with this function
+when the pointer is no longer needed. Failure to unpin can cause a
+pin overflow, which may abort rendering. After unpinning, the
+pointer may not be used any more.</p>
+<p><a id="INDEX544"></a></p>
+<h5 class="anchor" id="api:mi_db_flush">mi_db_flush</h5>
+<pre>
+    void mi_db_flush(
+        const miTag tag)
+</pre>
+<p>This call is obsolete. It made the assumption that
+<i><a href="node139.html#INDEX540">mi_db_access</a></i> could be used for
+writing to data. This is no longer true. Do not use
+<i><a href="node139.html#INDEX544">mi_db_flush</a></i>.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node138.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node140.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

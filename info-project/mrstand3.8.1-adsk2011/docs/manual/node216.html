@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Surfaces: Basis Lists</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node215.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node217.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION214"></a>
+<h3>Surfaces: Basis Lists</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_BASIS_LIST</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miBasis_list[ ]</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>int no_bases, int no_scalars</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls</td>
+</tr>
+</table>
+<pre>
+enum miBasis_type {
+        miBASIS_NONE = 0,               /* for internal use */
+        miBASIS_BEZIER,
+        miBASIS_BSPLINE,
+        miBASIS_CARDINAL,
+        miBASIS_MATRIX,
+        miBASIS_TAYLOR
+};
+
+typedef struct {
+        miGeoIndex      no_bases;
+        miGeoIndex      no_scalars;
+        miBasis         bases[1];
+} miBasis_list;
+
+typedef struct miBasis {
+        enum miBasis_type type;
+        miGeoIndex      degree;         /* undefined for Cardinal */
+        miGeoIndex      stepsize;       /* only for miBASIS_MATRIX */
+        miGeoIndex      value_idx;      /* index into the basis scalar list */
+} miBasis;
+</pre>
+<p>A translator must provide: <tt>type</tt>, <tt>degree</tt>; if
+the type is basis matrix, also <tt>stepsize</tt> and
+<tt>value_idx</tt>.</p>
+<p><b>no_bases</b> specifies the number of bases in the basis
+list.</p>
+<p><b>no_scalars</b> specifies the number of scalars that follow
+the basis list. Scalars are used for basis matrix bases, which
+require <i>degree^2</i> scalars for a matrix defining the basis.
+The first scalar in the list has index 0.</p>
+<p><b>bases</b> is the basis array. It is actually allocated
+larger.</p>
+<p><b>type</b> is one of <tt>miBASIS_BEZIER</tt>,
+<tt>miBASIS_BSPLINE</tt>, <tt>miBASIS_CARDINAL</tt>,
+<tt>miBASIS_MATRIX</tt>, and <tt>miBASIS_TAYLOR</tt>.</p>
+<p><b>degree</b> is the degree of the basis.</p>
+<p><b>stepsize</b> is used for basis matrix bases only.</p>
+<p>For an explanation, see the description of bases in the mental
+ray User Manual.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node215.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node217.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,633 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision: 1071 $
+
+// #define VERBOSE
+
+// see gamma.h
+#define DEFAULT_GAMMA 0.68
+
+shader Glass {
+ input:                       // see struct lumeGlassin Glass.c
+  Color Surface_Material;     // material
+  Color Diffuse;	      // diffuse
+  float Reflectivity;	      // reflectivity
+  float Transparency;	      // transparency
+  float Index_Of_Refraction;  // ior
+  struct Transparency_Tint_struct { // tint
+    bool On;		      // on
+    bool Use_Diffuse;	      // diffuse_on
+    bool Use_Color;	      // solid_on
+    Color Color;              // solid_color
+  };
+  struct Blur_Transparency_struct { // tblur
+    bool On;		      // on
+    float Spread;	      // spread
+    int Samples;	      // samples
+  };
+  struct Blur_Reflection_struct { // rblur
+    bool On;		      // on
+    float Spread;	      // spread
+    int Samples;	      // samples
+  };
+  struct Edge_Transparency_struct { // tedge
+    bool None;		      // none_on
+    bool Fresnel_Effect;      // fresnel_on
+    bool Custom_Effect;	      // custom_on
+    float Middle;	      // custom_middle
+    float Edge;		      // custom_edge
+    float Shift;	      // custom_shift
+  };
+  struct Edge_Shadow_struct { // sedge
+    bool None;		      // none_on
+    bool Custom_Effect;	      // custom_on
+    float Middle;	      // custom_middle
+    float Edge;		      // custom_edge
+    float Shift;	      // custom_shift
+  };
+  struct Translucency_struct { // translucency
+    bool None;		      // none_on
+    bool Fixed;		      // fixed_on
+    float Value;	      // fixed_value
+    bool Scale;		      // scale_on
+    float Scale_Amount;	      // scale_value
+  };
+  // array light Lights;
+  int lights = 0 { // dummy
+    literal();
+  };
+  int lights2 = 0 { // dummy
+    literal();
+  };
+  int lights3 = 0 { // dummy
+    literal();
+  };
+  Transparency_Tint_struct Transparency_Tint = 
+    Transparency_Tint_struct(true,   // On
+			     true,   // Use_Diffuse
+			     false,  // Use_Color
+			     //      // Transparency_Color
+			     Color(1.0, 1.0, 1.0, 1.0));
+  Blur_Transparency_struct Blur_Transparency = 
+    Blur_Transparency_struct(false,  // On
+			     1.0,    // Spread
+			     2);     // Samples
+  Blur_Reflection_struct Blur_Reflection = 
+    Blur_Reflection_struct(false,    // On
+			   1.0,      // Spread
+			   2);       // Samples
+  Edge_Transparency_struct Edge_Transparency = 
+    Edge_Transparency_struct(false,  // None
+			     true,   // Fresnel_Effect
+			     false,  // Custom_Effect
+			     0.5,    // Middle
+			     0.0,    // Edge
+			     1.0);   // Shift
+  Edge_Shadow_struct Edge_Shadow = 
+    Edge_Shadow_struct(true,         // None
+		       false,        // Custom_Effect
+		       0.5,          // Middle
+		       0.0,          // Edge
+		       1.0);         // Shift
+  Translucency_struct Translucency = 
+    Translucency_struct(true,        // None
+			false,       // Fixed
+			0.5,         // Value
+			false,       // Scale
+			1.0);        // Scale_Amount
+
+ output:
+  Color result;
+
+  // see mia_material
+#ifdef VERBOSE
+  void check_almost_equal(in float a, in float b) {
+    if (abs(a-b) > 0.0001) error("check_almost_equal(%f, %f)", a, b);
+  } // check_almost_equal
+
+  void check_almost_zero(in float a) {
+    if (abs(a) > 0.0001) error("check_almost_zero(%f)", a);
+  } // check_almost_zero
+#endif
+
+  // see mia_material (I had the source code for that mental ray function)
+  bool mi_refraction_dir(inout float3 refr_dir,
+			 in float ior_in,
+			 in float ior_out) {
+    if (ior_out <= 0.0) {
+      return false;
+    } // if (ior_out <= 0.0)
+    else {
+#ifdef VERBOSE
+      check_almost_equal(length(direction), 1.0);
+      check_almost_equal(length(normal), 1.0);
+      check_almost_equal(length(geometry_normal), 1.0);
+#endif
+      float ior = ior_in / ior_out;
+      float n_fac = 1.0 - ior * ior * (1.0 - dot_nd * dot_nd);
+      if (n_fac < 0.0) {
+	return false;
+      } // if (n_fac < 0.0)
+      else {
+	if (n_fac == 0.0) {
+	  refr_dir = direction;
+	  return true;
+	} // if (n_fac == 0.0)
+	else {
+	  n_fac = -ior * dot_nd - sqrt(n_fac);
+	  refr_dir = n_fac * normal + ior * direction;
+	  if (dot(refr_dir, geometry_normal) > 0.0) {
+	    refr_dir = direction;
+	    return true;
+	  } // if (dot(refr_dir, geometry_normal) > 0.0)
+	  else {
+	    refr_dir = normalize(refr_dir);
+	    return true;
+	  } // else [ if (dot(refr_dir, geometry_normal) > 0.0) ]
+	} // else [ if (n_fac == 0.0) ]
+      } // else [ if (n_fac < 0.0) ]
+    } // else [ if (ior_out <= 0.0) ]
+  } // mi_refraction_dir
+
+  // see mia_material (I had the source code for that mental ray function)
+  float mi_fresnel(in float n1,
+		   in float n2,
+		   in float t1,
+		   in float t2) {
+    float d_p;
+    float d_o;
+    float r_p;
+    float r_o;
+    
+    if (n1 == n2) {
+      return 0.0;
+    } // if (n1 == n2)
+    else {
+      d_p = n1 * t2 + n2 * t1;
+      if (d_p == 0.0) {
+	r_p = 1.0;
+      }
+      else {
+	r_p = (n1 * t2 - n2 * t1) / d_p;
+      }
+      d_o = n1 * t1 + n2 * t2;
+      if (d_o == 0.0) {
+	r_o = 1.0;
+      }
+      else {
+	r_o = (n1 * t1 - n2 * t2) / d_o;
+      }
+      
+      return 0.5 * (r_p * r_p + r_o * r_o);
+    } // else [ if (n1 == n2) ]
+  } // mi_fresnel
+
+  // see mia_material (I had the source code for that mental ray function)
+  float mi_fresnel_reflection(in float ior_in, 
+			      in float ior_out) {
+    float ior;
+    float theta;
+
+    ior = ior_in / ior_out;
+    theta = 1.0 - ior * ior * (1.0 - dot_nd * dot_nd);
+    if (theta > 0.0) {
+      return mi_fresnel(ior_in, ior_out, dot_nd, -sqrt(theta));
+    } // if (theta > 0.0)
+    else {
+      return 1.0;
+    } // else [ if (theta > 0.0) ]
+  } // mi_fresnel_reflection
+
+  // see Glass.c
+  bool lume_glass_trace_reflection(inout Color local_result,
+				   // paras
+				   in int paras_rblur_samples,
+				   // others
+				   in float3 dir) {
+    Ray ray;
+    Ray ray_dx; // ignore for the moment
+    Ray ray_dy; // ignore for the moment
+    String gather_output_name;
+    ray = Ray(position, dir);
+    Trace_options trace_options;
+    gather_output_name = "result"; // has to be "result" !!!
+    trace_options.set_ray_type("reflect");
+    // smooth surface case (use importance instead of lume_did_multiray(...)
+    if (!(Blur_Reflection.On) || importance == 0.0) {
+      if (!trace(ray, ray_dx, ray_dy, trace_options, gather_output_name, 
+		 local_result)) {
+	trace_options.set_ray_type("environment");
+	trace(ray, ray_dx, ray_dy, trace_options, gather_output_name, 
+	      local_result);
+      }
+      return true;
+    }
+    // blurred surface case
+    if (Blur_Reflection.On) {
+      Color mix = Color(0.0, 0.0, 0.0, 0.0);
+      Color color = Color(0.0, 0.0, 0.0, 0.0);
+      int mix_count = 0;
+      float3 r = float3(0.0, 0.0, 0.0);
+      float3 new_dir = float3(0.0, 0.0, 0.0);
+      bool hit = false;
+
+      int no_samples = paras_rblur_samples;
+      float spread = (float) tan(Blur_Reflection.Spread * PI / 180.0);
+      Sample_iterator si(no_samples);
+      foreach (si) {
+	// perturb the direction
+	double3 sample = si.sample3();
+	r.x = (float)(sample.x * 2.0 - 1.0);
+	r.y = (float)(sample.y * 2.0 - 1.0);
+	r.z = (float)(sample.z * 2.0 - 1.0);
+	// Make it point in same direction as dir
+	if (dot(r, dir) < 0.0) {
+	  r.x *= -1.0;
+	  r.y *= -1.0;
+	  r.z *= -1.0;
+	} // if (dot(r, dir) < 0.0)
+	new_dir.x = dir.x + spread * r.x;
+	new_dir.y = dir.y + spread * r.y;
+	new_dir.z = dir.z + spread * r.z;
+	new_dir = normalize(new_dir);
+	// shoot a ray
+	color.r = color.g = color.b = color.a = 0.0;
+	// use importance for multiray detection !!!
+	trace_options.set_importance(0.0);
+	ray = Ray(position, new_dir); // new direction !!!
+	hit = trace(ray, ray_dx, ray_dy, trace_options, gather_output_name, 
+		    color);
+	if (!hit) {
+	  trace_options.set_ray_type("environment");
+	  trace(ray, ray_dx, ray_dy, trace_options, gather_output_name, color);
+	}
+	if (hit) {
+	  mix.r += color.r;
+	  mix.g += color.g;
+	  mix.b += color.b;
+	  mix_count++;
+	}
+      } // foreach (si)
+      if (mix_count > 0) {
+	local_result.r = mix.r / mix_count;
+	local_result.g = mix.g / mix_count;
+	local_result.b = mix.b / mix_count;
+	return true;
+      } // if (mix_count)
+      else {
+	return false;
+      } // else [ if (mix_count) ]
+    } // if (Blur_Reflection.On)
+    // should never reach here
+    error("should never reach here");
+    return false;
+  } // lume_glass_trace_reflection
+
+  // see Glass.c
+  bool lume_glass_trace_refraction(inout Color local_result,
+				   // paras
+				   in int paras_tblur_samples,
+				   // others
+				   in float3 dir) {
+    Ray ray;
+    Ray ray_dx; // ignore for the moment
+    Ray ray_dy; // ignore for the moment
+    String gather_output_name;
+    ray = Ray(position, dir);
+    Trace_options trace_options;
+    gather_output_name = "result"; // has to be "result" !!!
+    trace_options.set_ray_type("refract");
+    // smooth surface case (use importance instead of lume_did_multiray(...)
+    if (!(Blur_Transparency.On) || importance == 0.0) {
+      return trace(ray, ray_dx, ray_dy, trace_options, 
+		   gather_output_name, local_result);
+    }
+    // blurred surface case
+    if (Blur_Transparency.On) {
+      Color mix = Color(0.0, 0.0, 0.0, 0.0);
+      Color color = Color(0.0, 0.0, 0.0, 0.0);
+      int mix_count = 0;
+      float3 r = float3(0.0, 0.0, 0.0);
+      float3 new_dir = float3(0.0, 0.0, 0.0);
+      bool hit = false;
+
+      int no_samples = paras_tblur_samples;
+      float spread = (float) tan(Blur_Transparency.Spread * PI / 180.0);
+      Sample_iterator si(no_samples);
+      foreach (si) {
+	// perturb the direction
+	double3 sample = si.sample3();
+	r.x = (float)(sample.x * 2.0 - 1.0);
+	r.y = (float)(sample.y * 2.0 - 1.0);
+	r.z = (float)(sample.z * 2.0 - 1.0);
+	// Make it point in same direction as dir
+	if (dot(r, dir) < 0.0) {
+	  r.x *= -1.0;
+	  r.y *= -1.0;
+	  r.z *= -1.0;
+	} // if (dot(r, dir) < 0.0)
+	new_dir.x = dir.x + spread * r.x;
+	new_dir.y = dir.y + spread * r.y;
+	new_dir.z = dir.z + spread * r.z;
+	new_dir = normalize(new_dir);
+	// shoot a ray
+	color.r = color.g = color.b = color.a = 0.0;
+	// use importance for multiray detection !!!
+	trace_options.set_importance(0.0);
+	ray = Ray(position, new_dir); // new direction !!!
+	hit = trace(ray, ray_dx, ray_dy, trace_options, 
+		    gather_output_name, color);
+	if (hit) {
+	  mix.r += color.r;
+	  mix.g += color.g;
+	  mix.b += color.b;
+	  mix.a += color.a;
+	  mix_count++;
+	}
+      } // foreach (si)
+      if (mix_count > 0) {
+	local_result.r = mix.r / mix_count;
+	local_result.g = mix.g / mix_count;
+	local_result.b = mix.b / mix_count;
+	local_result.a = mix.a / mix_count;
+	return true;
+      } // if (mix_count)
+      else {
+	return false;
+      } // else [ if (mix_count) ]
+    } // if (Blur_Transparency.On)
+    // should never reach here
+    error("should never reach here");
+    return false;
+  } // lume_glass_trace_refraction
+
+  // see Glass.c
+  void lume_glass_reflection(inout Color local_result,
+			     // paras
+			     in float paras_reflectivity,
+			     in int paras_rblur_samples) {
+    Color color = Color(0.0, 0.0, 0.0, 0.0);
+    if (paras_reflectivity > 0.0) {
+      float f;
+      f = 1.0 - paras_reflectivity;
+      local_result.r *= f;
+      local_result.g *= f;
+      local_result.b *= f;
+      float3 dir = reflect(direction, normal);
+      // if the ray hit something
+      if (lume_glass_trace_reflection(color, 
+				      // paras
+				      paras_rblur_samples,
+				      // others
+				      dir)) {
+      	local_result.r += paras_reflectivity * color.r;
+      	local_result.g += paras_reflectivity * color.g;
+      	local_result.b += paras_reflectivity * color.b;
+      } // if (lume_glass_trace_reflection(...))
+    } // if (paras_reflectivity > 0.0)
+  } // lume_glass_reflection
+
+  // see calc.c
+  double bias(double x, double b) {
+    return pow(x, log(b)/-0.69314718);
+  }
+
+  // see gamma.c
+  double autogamma_scalar(double x) {
+    if ((x == 0.0) || (x == 1.0)) return x;
+    // TODO: call GAMMA() instead of using DEFAULT_GAMMA
+    return pow(x, DEFAULT_GAMMA);
+  } // autogamma_scalar
+
+  // see Glass.c
+  void lume_glass_refraction_edge(// inout paras
+				  inout float inout_transparency,
+				  inout float inout_reflectivity,
+				  // others
+				  in float ior_in,
+				  in float ior_out) {
+    if (Edge_Transparency.Custom_Effect) {
+      float tr = (float) bias(sin(acos(dot_nd)), 
+			      Edge_Transparency.Shift);
+      inout_transparency *= (tr * Edge_Transparency.Edge + 
+			     (1.0 - tr) * Edge_Transparency.Middle);
+    } // if (Edge_Transparency.Custom_Effect)
+    if (Edge_Transparency.Fresnel_Effect) {
+      float tr = (float) (1.0 - 
+      			  autogamma_scalar(mi_fresnel_reflection(// others
+      								 ior_in,
+								 ior_out)));
+
+      float t = inout_transparency;
+      float r = inout_reflectivity;
+      // modify the user input so that transparency and reflectivity make sense
+      inout_transparency  = t * tr;
+      if (t * tr != 1.0) {
+      	inout_reflectivity = r * (1.0 - tr) / (1.0 - t * tr);
+      }
+      else {
+      	inout_reflectivity = r;
+      }
+    } // if (Edge_Transparency.Fresnel_Effect)
+  } // lume_glass_refraction_edge
+
+  // see Glass.c
+  void lume_refraction_index(// inout
+			     out float ior_in,
+			     out float ior_out) {
+    if (ray_type == "eye") {
+      if (!backside) {
+      	// Entering object
+      	ior_in = 1.0;
+      	ior_out = Index_Of_Refraction;
+      } // if (!backside)
+      else {
+      	// Exiting object
+      	ior_in = Index_Of_Refraction;
+      	ior_out = 1.0;
+      } // else [ if (!backside) ]
+    } // if (ray_type == "eye")
+    else {
+      // TODO: inside/outside calculations?
+      // we can't go through the parent states, so let's do the same as above
+      if (!backside) {
+      	// Entering object
+      	ior_in = 1.0;
+      	ior_out = Index_Of_Refraction;
+      } // if (!backside)
+      else {
+      	// Exiting object
+      	ior_in = Index_Of_Refraction;
+      	ior_out = 1.0;
+      } // else [ if (!backside) ]
+    } // else [ if (ray_type == "eye") ]
+    // TODO: my_Glass.cpp(585) : error C2664: 
+    // 'MI::SHADER::Msl_my_Glass::lume_refraction_index' : 
+    // cannot convert parameter 6 from 'MI::Scalar' to 'float &'
+    //state_ior    = ior_out;
+    //state_ior_in = ior_in;
+  } // lume_refraction_index
+
+  // see Glass.c
+  bool lume_glass_tint_refraction(inout Color local_result,
+				  // paras
+				  in float paras_transparency) {
+    if (Transparency_Tint.On) {
+      if (Transparency_Tint.Use_Diffuse) {
+	local_result.r *= Diffuse.r;
+	local_result.g *= Diffuse.g;
+	local_result.b *= Diffuse.b;
+      }
+      if (Transparency_Tint.Use_Color) {
+	local_result.r *= Transparency_Tint.Color.r;
+	local_result.g *= Transparency_Tint.Color.g;
+	local_result.b *= Transparency_Tint.Color.b;
+      }
+    }
+    local_result.r *= paras_transparency;
+    local_result.g *= paras_transparency;
+    local_result.b *= paras_transparency;
+    local_result.a *= paras_transparency;
+    if ((local_result.r != 0.0) ||
+	(local_result.g != 0.0) ||
+	(local_result.b != 0.0)) {
+      return true;
+    } // if ((local_result.r != 0.0) || ...)
+    else {
+      return false;
+    } // else [ if ((local_result.r != 0.0) || ...) ]
+  } // lume_glass_tint_refraction
+
+  // see Glass.c
+  void lume_glass_refraction(inout Color local_result,
+			     // paras
+			     in float paras_transparency,
+			     in int paras_rblur_samples,
+			     in int paras_tblur_samples,
+			     // others
+			     in float ior_in,
+			     in float ior_out) {
+    Color color = Color(0.0, 0.0, 0.0, 0.0);
+    if (paras_transparency > 0.0) {
+      float f = 1.0 - paras_transparency;
+      local_result.r *= f;
+      local_result.g *= f;
+      local_result.b *= f;
+      local_result.a *= f;
+      bool hit = false;
+      float3 dir = float3(0.0, 0.0, 0.0);
+      bool tir = !mi_refraction_dir (// inout
+				     dir,
+				     // in
+				     ior_in, ior_out);
+      if (tir) {
+	dir = reflect(direction, normal);
+	hit = lume_glass_trace_reflection(color,
+					  // paras
+					  paras_rblur_samples,
+					  // others
+					  dir);
+      } // if (tir)
+      else {
+	hit = lume_glass_trace_refraction(color,
+					  // paras
+					  paras_tblur_samples,
+					  // others
+					  dir);
+      } // else [ if (tir) ]
+      // if the ray hit something
+      if (hit) {
+	lume_glass_tint_refraction(color, paras_transparency);
+	local_result.r += color.r;
+	local_result.g += color.g;
+	local_result.b += color.b;
+	local_result.a += color.a;
+      } // if (hit)
+    } // if (paras_transparency > 0.0)
+  } // lume_glass_refraction
+
+  // see Glass.c
+  void lume_glass_translucency(inout Color local_result,
+			       // paras
+			       in float paras_transparency) {
+    float t = 0.0;
+    if (Translucency.None) {
+      t = 0.0;
+    } // if (Translucency.None)
+    if (Translucency.Fixed) {
+      t = Translucency.Value;
+    } // if (Translucency.Fixed)
+    if (Translucency.Scale) {
+      t = paras_transparency * Translucency.Scale_Amount;
+    } // if (Translucency.Scale)
+    if (t > 0.0) {
+      float f = 0.0;
+      f = 1 - t;
+      local_result.r *= f;
+      local_result.g *= f;
+      local_result.b *= f;
+      local_result.a *= f;
+      Color color = Color(0.0, 0.0, 0.0, 0.0);
+      int i = 0;
+      // light loop
+      Light_iterator light;
+      foreach (light) {
+	Color tmp = Color(0.0, 0.0, 0.0, 0.0);
+	if (light.dot_nl > 0.0) {
+	  tmp += light.contribution * light.dot_nl * Diffuse;
+	} // if (light.dot_nl > 0.0)
+	color.r += tmp.r;
+	color.g += tmp.g;
+	color.b += tmp.b;
+      } // foreach (light)
+      local_result.r += t * color.r;
+      local_result.g += t * color.g;
+      local_result.b += t * color.b;
+    } // if (t > 0.0)
+  } // lume_glass_translucency
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // the following lines are NOT in the original source code but
+    // should help to reduce render times
+    int total_depth = get_trace_depth("total");
+    int refl_samples = Blur_Reflection.Samples;
+    int trans_samples = Blur_Transparency.Samples;
+    if (total_depth > 1) {
+      refl_samples = 1;
+      trans_samples = 1;
+    }
+    // TODO: if (state->type == miRAY_DISPLACE)
+    // TODO: if (miRAY_PHOTON (state->type) || miRAY_LIGHT == state->type)
+    // TODO: if (state->type == miRAY_SHADOW)
+    // TODO: if (state->type == miRAY_ENVIRONMENT)
+    result = Surface_Material;
+    float ior_in = 0.0;
+    float ior_out = 0.0;
+    lume_refraction_index(// out
+			  ior_in, ior_out);
+    float inout_Transparency = Transparency;
+    float inout_Reflectivity = Reflectivity;
+    lume_glass_refraction_edge(// inout paras
+			       inout_Transparency,
+			       inout_Reflectivity,
+			       // others
+			       ior_in, ior_out);
+    lume_glass_reflection(result, inout_Reflectivity, refl_samples);
+    // flip normal (this is originally done in lume_glass_translucency)
+    normal = -normal;
+    lume_glass_translucency(result, inout_Transparency);
+    // flip normal back (this is originally done in lume_glass_translucency)
+    normal = -normal;
+    lume_glass_refraction(result, 
+			  // paras
+			  inout_Transparency,
+			  refl_samples,
+			  trans_samples,
+			  // others
+			  ior_in, ior_out);
+  } // main
+};

@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Geometry Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="chapter4.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node180.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION177"></a>
+<h1>Geometry Shaders</h1>
+<p><a id="INDEX857"></a> Geometry shaders do not
+really shade anything, they create scene elements, primarily
+geometric objects. For this purpose, they use a special geometry
+shader API that is analogous to the statements of the .mi scene
+definition language. This chapter describes this API, and how
+geometry shaders use it.</p>
+<p>Geometry shaders can be used in two places: in
+<a href="node90.html#INDEX339">instance</a> definitions that reference a
+shader instead of an object, light, camera, or instance group:</p>
+<pre>
+    instance "<i>name</i>"  
+        geometry <i>function</i>  
+        ...  
+    end instance  
+</pre>
+<p><a id="INDEX858"></a><a id="INDEX859"></a> or in phenomena,
+where they can be attached to the geometry root:</p>
+<pre>
+    declare phenomenon  
+        ...  
+        geometry <i>function</i>  
+        ...  
+    end declare  
+</pre>
+<p>In either case, the geometry shader is evaluated during scene
+preprocessing before any other operation such as rendering starts.
+The geometry shader is expected to create an object, light, camera,
+or instance group and add the tag of the created element to the
+result. The <i>result</i> pointer passed as its first argument
+always has the type <tt>miTag *</tt>, and the shader must be
+declared as</p>
+<pre>
+    declare shader  
+        geometry "<i>shader_name</i>" ("<i>parameter_decl</i>")  
+        ...  
+    end declare  
+</pre>
+<p>If <i>result</i> is a null tag, the created element can be
+returned directly using this pointer, otherwise the geometry shader
+must check whether the type of the item to which <i>result</i>
+refers is <tt>miSCENE_GROUP</tt>. If it refers to an instance
+group, the created entities can be put into this group, otherwise
+the shader must create the group and put the element to which
+<i>result</i> refers together with the entities created by the
+geometry shader into the instance group. The newly created instance
+group must be returned in <i>result</i> in this case. This ensures
+that geometry shaders always return either an object or an instance
+group, and that they can be chained such that the end result is a
+group. There is a <a href="node138.html#INDEX510">shader interface
+function</a> available for adding scene entities to <i>result</i>
+which takes all the above rules into account; refer to
+<b><a id="INDEX860"></a>mi_geoshader_add_result</b>.</p>
+<p>Creation of geometry requires an altogether different set of
+shader interface functions. The shader is basically doing the same
+thing that an object or other definition expressed in the .mi
+language is doing, and must have the same functionality available
+to it. In fact, the <a href="node138.html#INDEX510">shader
+interface function</a>s for geometry shaders closely model the .mi
+language features: there are <i>begin</i>/ <i>end</i> functions for
+most top-level entities and complex sub-entities, and various
+helper functions to create and attach complex information. Many of
+these return pointers to the created data structures that let the
+geometry shader store primitive data directly without the use of a
+<a href="node138.html#INDEX510">shader interface function</a>.</p>
+<p>Geometry shaders must include <tt>geoshader.h</tt> after
+<tt>shader.h</tt>.</p>
+<p>This chapter provides an example and lists all shader interface
+API functions and data structure declarations available to geometry
+shaders. It does not explain the structure and order of specific
+API calls needed to create a scene. Refer to chapter
+<a href="node60.html#scenechapter">scenechapter</a> for the sequence of
+operations necessary to create a scene element, and to appendix A
+for the correspondence between API calls and the entities in the
+scene description language they create.</p>
+<p>In any case, writing geometry shaders is far more complex than
+writing another type of shader. Although a geometry shader has free
+run of the entire scene database, and is free to copy-and-alter or
+create any part of it, it is generally a good idea to avoid doing
+too much with them. Instead, it is usually preferable to pass
+objects, materials, and shaders as input parameters instead of
+creating entire graphs in geometry shaders, although this is
+possible and sometimes needed in geometry shaders used in
+phenomena. Geometry shaders must never modify existing parts of the
+scene because this will confuse future incremental changes and
+scene traversal during preprocessing, which geometry shaders are
+part of. Instead, the element to be modified should be passed to
+the geometry shader as a parameter of type <tt>geometry</tt>, and
+be used as a template to create a new, modified element.</p>
+<p>All geometry shader API calls and data structures may
+<i>only</i> be used in geometry shaders, not any other type of
+shader. Conversely, no regular <a href="node138.html#INDEX510">shader interface function</a> related to
+rendering may be used in a geometry shader because it is called
+before rendering begins. Geometry shaders are called during the
+same stage as displacement shaders, but before the displacement
+shaders of objects created by this geometry shader.</p>
+<p>mental ray 3.0 allows a geometry shader to create a placeholder
+object that contains no geometry, but a bounding box (and
+optionally a motion bounding box and a maximum displacement), and a
+callback installed with <i><a href="node189.html#INDEX948">mi_api_object_callback</a></i>. When mental
+ray hits the bounding box of this placeholder, it will call the
+callback, which must then build the same object again, only this
+time with the real geometry instead of just installing the
+callback. Placeholder objects may contain only a single
+<a href="node83.html#mi:group">object group</a>. This has the advantage
+that objects are not created unless, and when, they are actually
+needed. When memory runs out, mental ray 3.0 can free up a lot of
+memory by deleting the object - if necessary it can always call the
+callback again to restore it. Finally, If there are several such
+placeholder objects, and multiple CPUs, mental ray can process
+callbacks in parallel. Placeholder objects are highly recommended
+for complex geometry that would otherwise block a large chunk of
+memory.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="chapter4.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node180.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

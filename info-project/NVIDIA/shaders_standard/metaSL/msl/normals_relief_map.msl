@@ -1,0 +1,171 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+float2 phong_illum(
+	float n_dot_l,
+	float n_dot_h,
+	float e)
+{
+	float2 res;	
+	res.x = saturate(n_dot_l);
+	res.y = (n_dot_l<0 || n_dot_h<0) ? 0 : pow(n_dot_h, e);
+	return res;
+}	
+
+shader Normals_relief_map
+{
+	input:
+		Texture2d color_tex  = "CliffRock.dds"
+		{
+			display_name("Color Texture");
+			description( "The texture used to specify the diffuse color of "
+						 "the surface." );
+		};
+		Texture2d height_tex = "relief_map_1_height.dds"
+		{
+			display_name("Height Texture");
+			description( "The texture used to specify the height of the "
+						 "surface, relative to the base surface." );
+		};
+		Texture2d norm_tex   = "relief_map_1_normal.dds"
+		{
+			display_name("Normal Texture");
+			description( "The texture used to specify the surface normals." );
+		};
+		float amount        = 0.1
+		{				
+			display_name("Amount");
+			soft_range(float(-1),float(1));
+			description( "The degree to which the normals and texture "
+						 "coordinates will be perturbed." );
+		};
+		Color  specular_color = Color(1,1,1,1)
+		{
+			display_name("Specular Color");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The color of the specular reflections off of the "
+						 "surface." );
+		};
+		float specular_shininess = 100.0
+		{		
+				display_name("Specular Shininess");
+				soft_range(float(0),float(100));
+				description( "The width of specular highlights across the "
+							 "surface." );
+		};
+		const int steps = 10
+		{		
+				display_name("Steps");
+				soft_range(1, 100);
+				description( "The number of iteration used to solve for the"
+							 "best possible height approximation." );
+		};
+		int texture_space    = 0 
+		{
+			display_name("Normal Texture");
+			literal(); 
+			description( "The texture coordinates set to use when sampling "
+						 "the input texture." );
+			hard_range(0,3);
+		};
+     
+	output:
+		Color result;
+    
+	void main()
+	{
+		// The view direction in tangent space. 
+		float3 vtan = tangent_space[0] * direction;
+		        
+		float step_size = 1.0 / steps;
+		float2 dt = -vtan.xy * amount / (steps * vtan.z);
+
+		float height = 1.0;
+		float2 t = texture_coordinate[texture_space].xy;
+
+		// find the intersection point	
+		float h = tex2D(height_tex, t).x;
+                for(int i = 0; i < steps; i++) {
+                        if (height <= h)
+                            break;
+			height -= step_size;
+			t += dt;
+			h = tex2D(height_tex, t).x;
+		}
+
+		// binary search to refine the intersection point
+		for (int i=0; i<8; i++) {
+			if (h < height) {
+				t += dt;
+				height -= step_size;
+			} else {
+				t -= dt;
+				height += step_size;
+			}
+			step_size *= 0.5;
+			dt *= 0.5;
+			h = tex2D(height_tex, t).x;
+		}
+
+		// get the normal from the normal map
+		float3 n = (tex2D(norm_tex, t).xyz - 0.5) * 2.0;
+		normal = normalize(n);
+		                        
+		// sample the color texture
+		Color color = tex2D(color_tex, t);
+
+		// diffuse and specular results from lighting
+		Color diffuse  = Color(0,0,0,0);
+		Color specular = Color(0,0,0,0);
+
+		step_size = 1.0 / steps;
+
+		// compute the illumination from each light
+		Light_iterator light;
+		foreach (light) {
+
+			// transform the light direction into tangent space
+			float3 ld = tangent_space[0] * light.direction;	    
+
+			// store the original intersection point
+			float2 ti = t;
+
+			float dot_nl = dot(ld, normal);
+			if (dot_nl>0.0) {		    		
+
+				dt = ld.xy * amount / (steps * ld.z);
+				h = tex2D(height_tex, ti).x;
+				height = h + step_size;
+				ti += dt;
+
+				// trace another ray for self shadowing
+                                for(int i = 0; i < steps; i++) {
+				        if (height <= h)
+                                            break;
+					height += step_size;
+					ti += dt;
+					h = tex2D(height_tex, ti).x;
+				}
+				    
+				if (h < height) {
+					float3 vhalf = normalize(ld - direction);
+					float2 illum = phong_illum(
+						dot_nl, dot(normal, vhalf), specular_shininess);
+					diffuse  += illum.x * dot_nl * light.contribution/PI;
+					specular += illum.y * dot_nl * 
+					specular_color * light.contribution/PI;
+				}
+			}		
+		}
+			        
+		result = color * diffuse + specular;
+	}
+}
+{
+	description( "Uses viewing direction and a height map to effectively "
+	             "modify shading point sampling position." );
+}
+;
+

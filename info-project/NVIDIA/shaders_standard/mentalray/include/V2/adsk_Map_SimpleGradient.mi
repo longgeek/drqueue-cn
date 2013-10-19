@@ -1,0 +1,221 @@
+#*****************************************************************************
+# Copyright 2008 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	Maximilian Tarpini
+# Purpose:	Gradient Map class for protein V2
+#
+# History:
+#
+# 2009 July, 28 - t_tarpm, initial implementation
+# 
+#****************************************************************************/
+
+min version "3.7.1"
+
+#------------------------------------------------------------------------
+# Phenomenon
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Map_Simple_Gradient_V2"
+	(
+		#-------------------------------------
+		# Main parameters
+		#-------------------------------------
+		struct "m" 
+		{
+			integer "gradient_type",
+			integer "gradient_interpolation",
+			
+			integer "noise_type",
+			scalar "noise_amount",
+			scalar "noise_phase",
+			scalar "noise_size",
+			scalar "noise_levels",
+			
+			scalar "noise_low",
+			scalar "noise_high",
+			scalar "noise_smooth"
+		},
+		struct "f"
+		{
+			array scalar    "position",
+			array integer   "interpolation",
+			array color     "color"			
+		},
+		struct "u" 
+		{
+			scalar "UScale",
+			scalar "VScale",
+			scalar "UOffset",
+			scalar "VOffset",
+			scalar "WAngle",
+			boolean "UWrap",
+			boolean "VWrap",
+			integer "MapChannel",
+		     	integer "UVWSource"  #ExplicitMapChannel|VertexCOlorChannel|PlanarFromObjectXYZ|PlanarFromWorldXYZ The uv source is type integer.
+		}  	
+	)
+
+	#-------------------------------------
+	# Get the right ratio for V
+	# (for non squared bitmap)
+	#-------------------------------------
+
+	shader "MetersToInternalInverseU|shader" "adsk_scale_meters_to_internal_inverse"
+		(
+			"meterValue" = interface "u.UScale"
+		)
+
+	shader "MetersToInternalInverseV|shader" "adsk_scale_meters_to_internal_inverse"
+		(
+			"meterValue" = interface "u.VScale"
+		)
+
+    shader "MetersToInternalInverseUOffset|shader" "adsk_scale_meters_to_internal"
+        (
+            "meterValue" = interface "u.UOffset"
+        )
+
+    shader "MetersToInternalInverseVOffset|shader" "adsk_scale_meters_to_internal"
+        (
+            "meterValue" = interface "u.VOffset"
+        )
+	
+	#---------------------------
+	
+		
+	#-------------------------------------
+	# UV Generator 
+	#-------------------------------------
+	shader "base_UVgen" "adsk_base_UVGenerator" 
+	(
+		"MapSlotType"	0, 															
+		"EnvType"		0, 																			
+		"UVWSource" = interface "u.UVWSource", 						                  #ExplicitMapChannel|VertexCOlorChannel|PlanarFromObjectXYZ|PlanarFromWorldXYZ														
+		"MapChannel"	= interface "u.MapChannel", 
+		#------------------------
+		"ShowMapOnBack"		on, 
+		"RealWorldMapSize"	off,  												
+		#-------------------------
+		"UOffset"		= "MetersToInternalInverseUOffset|shader",  
+		"UScale"        = "MetersToInternalInverseU|shader", 
+		"UWrap"		= interface "u.UWrap",     					
+		"UMirror"		off,
+		#-------------------------
+		"VOffset"		= "MetersToInternalInverseVOffset|shader",  
+		"VScale"        = "MetersToInternalInverseV|shader", 
+		"VWrap"		= interface "u.VWrap",							
+		"VMirror"		off,
+		#---------------------
+		"UAngle"		0, 															
+		"VAngle"		0, 																						
+		"WAngle"		= interface "u.WAngle", 						
+		"UVAxis"		0, 
+		#---------------------
+		"Blur"			1.0, 
+		"BlurOffset"	0, 
+		#-----------------------
+		"Clip"			off, 
+		"Noise"			off, 
+		"Animate"		off, 
+		"Amount"		1, 
+		"Size"			1, 
+		"Level"			1, 
+		"Phase"			0, 
+		#-----------------------
+		"XCanvasSize"	0, 
+		"YCanvasSize"	0
+	)
+
+	shader "adsk_gradient_map" "adsk_Tex_Gradient"
+	(
+			"grad_type"						= interface "m.gradient_type",
+			
+			"noise_amount"					= interface "m.noise_amount",
+			"noise_size"						= interface "m.noise_size", 
+			"noise_phase"						= interface "m.noise_phase", 
+			"noise_type"					= interface "m.noise_type", 
+			"noise_levels"				= interface "m.noise_levels",
+			
+			"noise_th_low"			= interface "m.noise_low",
+			"noise_th_high"		= interface "m.noise_high",
+			"noise_th_smooth"		= interface "m.noise_smooth",
+			
+			"uv_coords"					"base_UVgen", 
+			"grad_interp"				= interface "m.gradient_interpolation",
+    		"flag_position"             = interface "f.position",
+    		"flag_interpolation"        = interface "f.interpolation",
+    		"flag_color"                = interface "f.color"
+    )
+		
+		
+	#------------------------------------------------------------------------
+	#  Connections
+	#------------------------------------------------------------------------
+	root = "adsk_gradient_map"
+	apply texture
+
+
+
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Map_Simple_Gradient_V2"
+	{
+		#----------------------------------
+		control "Global" "Global" 
+		(
+			"uiName" "Simple Gradient Map (adsk)", "category" "Texture", "hidden" 
+		)
+	
+		#-------------------------------------
+		#  Map Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Simple Gradient Map Parameters")
+		{
+			#----------------------------------
+			control "gradient_type" "integer"	("nonConnectable", "uiName" "Gradient Type",		"value" 4, "range" 0 11)
+			control "gradient_interpolation" "integer" ("nonConnectable", "uiName" "Interpolation", "value" 0, "range" 0 5)
+			
+			control "noise_type"	"integer"	("nonConnectable", "uiName" "Noise Type",			"value" 0, "range" 0 2)
+			control "noise_amount"	"scalar"	("nonConnectable", "uiName" "Noise Amount",			"value" 0.0)
+			control "noise_phase"	"scalar"	("nonConnectable", "uiName" "Noise Phase",			"value" 0.0)
+			control "noise_size"	"scalar"	("nonConnectable", "uiName" "Noise Size",			"value" 1.0)
+			control "noise_levels"	"scalar"	("nonConnectable", "uiName" "Noise Levels",			"value" 4.0)
+			
+			control "noise_low"		"scalar"	("nonConnectable", "uiName" "Noise Low Theshold",	"value" 0.0,	"range" 0 1)
+			control "noise_high"	"scalar"	("nonConnectable", "uiName" "Noise High Theshold",	"value" 1.0,	"range" 0 1)
+			control "noise_smooth"	"scalar"	("nonConnectable", "uiName" "Noise Smooth Theshold","value" 0.0,	"range" 0 1)
+		}
+		
+		control "f" "struct" ("uiName" "Gradient Flags")
+		{
+			control "flag0_pos"		"scalar"	("nonConnectable", "uiName" "Flag 0 Position",		"value" 0.0,	"range" 0 1)
+			control "flag0_number"	"integer"	("nonConnectable", "uiName" "Flag 0 Number",		"value" 0,		"range" 0 2)
+			control "flag0_interp"	"integer"	("nonConnectable", "uiName" "Flag 0 Interpolation", "value" 4,		"range" 0 4)
+			control "flag0_color"	"color"		("nonConnectable", "uiName" "Flag 0 Color",			"value" 0.0 0.0 0.0 1.0)
+
+			control "flag1_pos"		"scalar"	("nonConnectable", "uiName" "Flag 1 Position",		"value" 0.5,	"range" 0 1)
+			control "flag1_number"	"integer"	("nonConnectable", "uiName" "Flag 1 Number",		"value" 1,		"range" 0 2)
+			control "flag1_interp"	"integer"	("nonConnectable", "uiName" "Flag 1 Interpolation", "value" 4,		"range" 0 4)
+			control "flag1_color"	"color"		("nonConnectable", "uiName" "Flag 1 Color",			"value" 0.5 0.5 0.5 1.0)
+
+			control "flag2_pos"		"scalar"	("nonConnectable", "uiName" "Flag 2 Position",		"value" 1.0,	"range" 0 1)
+			control "flag2_number"	"integer"	("nonConnectable", "uiName" "Flag 2 Number",		"value" 2,		"range" 0 2)
+			control "flag2_interp"	"integer"	("nonConnectable", "uiName" "Flag 2 Interpolation", "value" 4,		"range" 0 4)
+			control "flag2_color"	"color"		("nonConnectable", "uiName" "Flag 2 Color",			"value" 1.0 1.0 1.0 1.0)
+		}
+			
+		control "u" "struct" ("uiName" "Texture Coordinates Parameters")
+		{  
+			control "UScale"		"float"		("nonConnectable", "uiName" "U Tiling Scale",		"value" 1.0,	"range" 0 1000000000000000000)
+			control "VScale"		"float"		("nonConnectable", "uiName" "V Tiling Scale",		"value" 1.0,	"range" 0 1000000000000000000)
+			control "UOffset"		"float"		("nonConnectable", "uiName" "U Offset",				"value" 0)
+			control "VOffset"		"float"		("nonConnectable", "uiName" "V Offset",				"value" 0)
+			control "WAngle"		"float"		("nonConnectable", "uiName" "Angle",				"value" 0,		"range" 0 6.283185253783088)
+			control "UWrap"  		"boolean" 	("nonConnectable", "uiName"  "U Tile", "value" 1)
+			control "VWrap"  		"boolean" 	("nonConnectable", "uiName"  "V Tile", "value" 1) 
+			control "MapChannel"	"integer"	("nonConnectable", "uiName" "Map Channel",			"value" 1,		"range" 1 99)
+		}
+	}
+end declare

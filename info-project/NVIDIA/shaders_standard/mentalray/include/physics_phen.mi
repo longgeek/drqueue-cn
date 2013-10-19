@@ -1,0 +1,251 @@
+
+
+#*****************************************************************************
+# Copyright 2008 by discreet, a division of autodesk
+# All rights reserved.
+#*****************************************************************************
+# Author:	Claude Robillard
+# Created:	9-24-02
+# Module:	physics_phen
+# Purpose:	Declarations for physics phenenomon
+#
+# Exports:
+#	dgs_material_phen
+#	dielectric_material_phen
+#	transmat_phen
+#
+# History:
+#	19 aout 2003 - pfbreton, defaults settings work
+#
+#****************************************************************************/
+
+min version "3.1"
+max version "3.11.99"
+
+
+
+declare phenomenon										
+    material "dgs_material_phen" (
+		color		"diffuse",
+		color           "glossy",
+		color		"specular",
+		scalar		"shiny",
+		scalar		"shiny_u",
+		scalar		"shiny_v",
+		scalar		"transp",
+		scalar		"ior",
+		array light	"lights"
+    )
+
+
+	shader "dgs_mtl" "max2_dgs_material" (
+		"diffuse" 	= interface "diffuse",
+		"glossy" 	= interface "glossy",
+		"specular"	= interface "specular",
+		"shiny"		= interface "shiny",
+		"shiny_u"	= interface "shiny_u",
+		"shiny_v"	= interface "shiny_v",
+		"transp"	= interface "transp",
+		"ior"		= interface "ior",
+		"lights"	= interface "lights"
+		)
+
+	shader "dgs_mtl_pho" "max2_dgs_material_photon" (
+		"diffuse" 	= interface "diffuse",
+		"glossy" 	= interface "glossy",
+		"specular"	= interface "specular",
+		"shiny"		= interface "shiny",
+		"shiny_u"	= interface "shiny_u",
+		"shiny_v"	= interface "shiny_v",
+		"transp"	= interface "transp",
+		"ior"		= interface "ior",
+		"lights"	= interface "lights"
+		)
+
+
+    material "myMtl"
+        opaque
+        = "dgs_mtl"
+		photon = "dgs_mtl_pho"
+    end material
+
+    root material "myMtl"
+
+	gui "gui_dgs_material_phen" {												#	19 aout 2003 - pfbreton, defaults settings
+		control "Global" "Global" (
+			"helpLink" "MI_Shaders/shd-2_3Materials.html#dgsmaterial",
+			"uiName" "DGS Material (physics_phen)",
+			"category" "Material", 
+			"hidden"
+		)
+		control "diffuse" "color" (
+			"uiName" "Diffuse",
+			"value" 0.3 0.3 0.3
+		)
+		control "glossy" "color" (
+			"uiName" "Glossy Highlights",
+			"value" 0.3 0.3 0.3
+		)
+		control "specular" "color" (
+			"uiName" "Specular",
+			"value" 0 0 0
+		)
+		control "shiny" "scalar" (
+			"uiName" "Shiny",
+			"value" 30,
+			"range" 0.0 100.0
+		)
+		control "shiny_u" "scalar" (
+			"uiName" "Shiny U",
+			"hidden"
+		)
+		control "shiny_v" "scalar" (
+			"uiName" "Shiny V",
+			"hidden"
+		)
+		control "transp" "scalar" (
+			"uiName" "Transparency",
+			"value" 0.0,
+			"range" 0.0 1.0
+		)
+		control "ior" "scalar" (
+			"uiName" "Index Of Refraction",
+			"value" 1.5,
+			"range" 1.0 2.5
+		)
+		control "lights" "array light" (
+			"uiName" "Lights",
+			"hidden"
+		)
+	}
+
+end declare
+
+
+declare phenomenon
+	material "dielectric_material_phen" (
+		color "col",        # Inside (light absorption per "distance")
+		scalar "ior",       # Inside (index of refract = 1.5 for glass)
+		color "col_out",    # Outside (light absorption per "distance")
+		scalar "ior_out",   # Outside (index of refraction)
+		scalar "distance",  # Distance (light absorption per "this distance")
+		boolean "ignore_normals", # Ignore normals
+		boolean "opaque_alpha",		# Return opaque alpha (alpha = 1.0)
+		scalar "phong_coef", # Phong fake high light
+		array light "lights" # Lights giving rise to Phong highlights
+				     # if none then *all* lights are used!
+	)
+
+	shader "diel" "max2_dielectric_material"(
+		"col"		= interface "col",
+		"col_out"	= interface "col_out",
+		"ior_out"	= interface "ior_out",
+		"distance"	= interface "distance",
+		"ignore_normals"= interface "ignore_normals",
+		"phong_coef"	= interface "phong_coef",
+		"ior"		= interface "ior",
+		"lights"	= interface "lights",
+		"opaque_alpha" = interface "opaque_alpha"
+	)
+
+	shader "diel_pho"	"max2_dielectric_material_photon" (
+		"col"		= interface "col",
+		"col_out"	= interface "col_out",
+		"ior_out"	= interface "ior_out",
+		"ignore_normals"= interface "ignore_normals",
+		"ior"		= interface "ior",
+		"distance"	= interface "distance",
+		"opaque_alpha" = interface "opaque_alpha"
+		)
+
+
+	material "myMtl" 
+		opaque
+        = "diel"
+		photon = "diel_pho"
+
+	end material
+
+	root material "myMtl"
+
+
+	gui "gui_dielectric_material_phen" {										#	19 aout 2003 - pfbreton, defaults settings
+		control "Global" "Global" (
+			"helpLink" "MI_Shaders/shd-2_3Materials.html#dielectricmaterial",
+			"uiName" "Glass (physics_phen)",
+			"category" "Material", 
+			"hidden"
+		)
+		control "col" "color" (
+			"uiName" "Light Persistence",
+			"value" 0.995 1 1,
+            "nonConnectable"
+		)
+		control "ior" "scalar" (
+			"uiName" "Index Of Refraction",
+			"value" 1.5,
+            "nonConnectable"
+		)
+		control "col_out" "color" (
+			"uiName" "Outside Light Persistence",
+            "nonConnectable"
+		)
+		control "ior_out" "scalar" (
+			"uiName" "Index Of Refraction(out)",
+            "nonConnectable"
+		)
+		control "distance" "scalar" (
+			"uiName" "Persistence Distance",
+			"units" "world",
+            "nonConnectable",
+            "value" 1.0
+		)			
+		control "ignore_normals" "boolean" (
+			"uiName" "Ignore Normals",
+            "nonConnectable"
+		)
+		control "opaque_alpha" "boolean" (
+			"uiName" "Opaque Alpha",
+			"nonConnectable"
+		)	
+		control "phong_coef" "scalar" (
+			"uiName" "Phong Coefficient",
+            "nonConnectable"
+		)
+		control "lights" "array light" (
+			"uiName" "Lights",
+			"hidden",
+            "nonConnectable"
+		)	
+	}
+end declare
+
+
+# ----- Material shader for 'dummy' surface of participating media -----
+
+
+declare phenomenon
+	material "transmat_phen" ()
+
+
+	shader "trns" "transmat" ()
+	shader "trns_pho" "transmat_photon" ()
+
+
+	material "myMtl"
+	    ="trns"
+		photon = "trns_pho"
+	end material
+
+	root material "myMtl"
+
+	gui "gui_transmat_phen" {
+		control "Global" "Global" (
+			"helpLink" "MI_Shaders/shd-2_5Participating_Media.html#transmat",
+			"uiName" "Invisible (physics_phen)",
+			"category" "Material",
+			"hidden"
+		)
+	}
+end declare
+

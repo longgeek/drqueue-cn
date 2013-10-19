@@ -1,0 +1,285 @@
+#*****************************************************************************
+# Copyright 2007 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	Pierre-Felix Breton
+# Purpose:	Simplified Bitmap Map based on the 3ds max Bitmap Map
+#
+# History:
+#
+# 2007 feb 15th - pfbreton, initial implementation
+# 
+#****************************************************************************/
+
+min version "3.4"
+
+#------------------------------------------------------------------------
+# Phenomenon
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Map_Simple_Colormap" 
+  (
+      #-------------------------------------
+			# Main parameters
+			#-------------------------------------
+      struct "m" 
+      {
+       color texture "Bitmap",
+       scalar "RGBAmount"
+      },
+ 
+ 			#-------------------------------------
+	    # Advanced Parameters
+	    # 		may be hidden and driven as globals in applications like revit 
+	    #     but exposed in 3ds max or maya directly in the shader
+	    #-------------------------------------
+      struct "a" 
+      {
+       integer "Filtering", #Pyramidal:0 | Summed Area:1 | None:2
+       scalar "Blur",
+       boolean "Invert"
+      },
+      
+		#-------------------------------------
+    # UV Generator Parameters
+    # 		hidden in applications like revit 
+    #     provided as added value and exposed in 3ds max or maya directly 
+    #			Current issues:
+    #							- The Real World Scale option has no use inside a shader since the code in the MAX UI compensates for the UV Scale and the phenom has no control over that
+    #							- The WAngle is expressed in RAD while its expressed in DEG in the MAX UI
+    #             - Tiling and Mirror Flags don't seem to "connect" when inside a phenomenon
+    #
+    #			Note:  	Currently, minimal set of UI controls are exposed to allow basic placement.  
+    #							Futher work is needed and bug fiex needed to make it fully functionnal
+    #-------------------------------------
+      struct "u" 
+      {
+      	scalar "UScale",
+      	scalar "VScale",
+      	scalar "UOffset",
+      	scalar "VOffset",
+      	scalar "WAngle",
+      	#boolean "UWrap",
+      	#boolean "VWrap",
+      	#boolean "UMirror",
+      	#boolean "VMirror"
+      	# boolean "RealWorldMapSize"  #The Real World Map Size Option has no use inside a phenom, since a lot of locig is burried in the max UI.
+      	integer "MapChannel"
+      },
+      integer "mode",
+      array light "lights"
+      	
+   )#end phenomenon
+
+#-------------------------------------
+# Get the right ratio for V
+# (for non squared bitmap)
+#-------------------------------------
+
+shader "MetersToInternalInverseU|shader" "adsk_scale_meters_to_internal_inverse"
+	(
+		"meterValue" = interface "u.UScale"
+	)
+
+shader "GetAspectRatioV|shader" "adsk_aspect_ratio_width_per_height"
+	(
+		"image_color" = interface "m.Bitmap",
+		"scaling_value" = "MetersToInternalInverseU|shader"
+	)
+
+#-------------------------------------
+# UV Generator 
+#-------------------------------------
+shader "UVGen|Shader" "max_base_UVGenerator" 
+	(
+		"MapSlotType" 0, 																				#Texture|Environment
+		"EnvType" 0, 																						#Screen|Spherical|Cylindrical|ShrinkWrap|Screen
+		"UVWSource" 0, 																					#ExplicitMapChannel|VertexCOlorChannel|PlanarFromObjectXYZ|PlanarFromWorldXYZ
+		"MapChannel" = interface "u.MapChannel", 
+		#------------------------
+		"ShowMapOnBack" on, 
+		"RealWorldMapSize" on,  																	#The Real World Map Size Option has no use inside a phenom, since a lot of logic is burried in the max UI.
+		#-------------------------
+		"UOffset" = interface "u.UOffset", 
+		"UScale" = "MetersToInternalInverseU|shader", 
+		"UWrap" on, #= interface "u.UWrap",      										#Tile Flag in 3ds max UI
+		"UMirror" off, #= interface "u.UMirror", 
+		#-------------------------
+		"VOffset" = interface "u.VOffset",
+		"VScale" = "GetAspectRatioV|shader", 
+		"VWrap" on, #= interface "u.VWrap",													#Tile Flag in 3ds max UI	
+		"VMirror" off, #= interface "u.VMirror", 
+		#---------------------
+		"UAngle" 0, 																						#Rotation Expressed in Rads	
+		"VAngle" 0, 																						#Rotation Expressed in Rads
+		"WAngle" = interface "u.WAngle", 												#Rotation Expressed in Rads
+		"UVAxis" 0, 
+		#---------------------
+		"Blur" = interface "a.Blur", 																						#IMPORTANT:  to maintain crispy images, this must be reduced!!!
+		"BlurOffset" 0, 
+		#-----------------------
+		"Clip" off, 
+		"Noise" off, 
+		"Animate" off, 
+		"Amount" 1, 
+		"Size" 1, 
+		"Level" 1, 
+		"Phase" 0, 
+		#-----------------------
+		"XCanvasSize" 0, 
+		"YCanvasSize" 0
+	)#end shader
+
+
+
+#------------------------------------------------------------------------
+# TextureOutput Shader
+#------------------------------------------------------------------------
+shader "TextureOutput|Shader" "max_base_Output" 
+(
+	"RGBAmount" = interface "m.RGBAmount", 
+	"RGBOffset" 0, 
+	"OutputAmount" 1, 
+	"BumpAmount" 1, 
+	"Invert" = interface "a.Invert", 
+	"Clamp" off, 
+	"AlphaFromRGB" off, 
+	"UseColorMap" off, 
+	"UseRGBCurve" off
+)#end shader
+
+
+
+#------------------------------------------------------------------------
+# Bitmap Shader
+#------------------------------------------------------------------------
+shader "Map_Colormap|Texmap|Shader" "max_Bitmap" 	
+(	
+	"Parameters"
+	{
+		"ClipU" 0, 
+		"ClipV" 0, 
+		"ClipW" 1, 
+		"ClipH" 1, 
+		"Jitter" 1, 
+		"UseJitter" off, 
+		"Apply" off, 
+		"CropPlace" 0, 
+		"Filtering" = interface "a.Filtering", #Pyramidal:0 | Summed Area:1 | None:2
+		"MonoOutput" 0, 
+		"RGBOutput" 0, 
+		"AlphaSource" 2, 
+		"PreMultAlpha" on, 
+		"Bitmap" = interface "m.Bitmap", 
+		"Coords" "UVGen|Shader", 
+		"Output" "TextureOutput|Shader"	
+	}, #end Parameters
+
+	#------------------------------- 
+	"time parameters" 
+	{
+		"startTime" 0, 
+		"playBackRate" 1, 
+		"endCondition" 0, 
+		"tieTimeToMatIDs" off	
+	},#end time parameters
+
+	#-------------------------------	 
+	"ExtraParameters" 
+	{
+		"GBufferID" 0, 
+		"currentTime" 0, 
+		"firstFrame" 0, 
+		"lastFrame" 0, 
+		"ticksPerFrame" 0, 
+		"bitmapFrames_Padding" 0, 
+		"useBitmapEvalCallback" off, 
+		"bitmapEvalCallback" 0, 
+		"bitmapEvalArg" 0, 
+		"bitmapType" 2, 
+		"bitmapEvalArgFrames_Padding" 0, 
+		"bitmapWidth" 0, 
+		"bitmapHeight" 0, 
+		"filterEvalCallback" 0, 
+		"bitmapEvalCallbackHi64" 0, 
+		"bitmapEvalArgHi64" 0, 
+		"filterEvalCallbackHi64" 0, 
+		"bitmapEvalArgsFramesHi64_Padding" 0	
+	}#end ExtraParameters
+)#end shader
+	
+	
+#------------------------------------------------------------------------
+#  Connections
+#------------------------------------------------------------------------
+root = "Map_Colormap|Texmap|Shader"
+apply texture
+
+#------------------------------------------------------------------------
+# UI
+#------------------------------------------------------------------------
+
+	gui "gui_adsk_Map_Simple_Colormap"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "Simple Colormap Map (adsk)", "category" "Texture", "hidden" )
+	
+		#-------------------------------------
+		#  Map Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Simple Colormap Map Parameters")
+		{
+			#----------------------------------
+			control "Bitmap"  "Bitmap" ("nonConnectable", "uiName" "Image File")
+			control "RGBAmount" "float" ("nonConnectable", "uiName"  "Relative Brightness", "value" 1.0, "range" 0 100000000000000000000000000000)
+ 
+		}#end control
+		
+		
+		#-------------------------------------
+    # Advanced Tuning Parameters
+    # 		may be hidden and driven as globals in applications like revit 
+    #     but exposed in 3ds max or maya directly in the shader
+    #-------------------------------------
+		control "a" "struct" ("uiName" "Advanced Parameters")
+    {
+    	control "Filtering" "integer" ("nonConnectable", "uiName" "Filtering (Good:0 Better:1 None:2)","value" 0,"range" 0 2) #Pyramidal:0 | Summed Area:1 | None:2
+    	control "Blur" "float" ("nonConnectable", "uiName"  "Blur", "value" 0.01, "range" 0 100)
+    	control "Invert" "boolean" ("nonConnectable", "uiName" "Invert Image", "value" 0)
+    }#end control 	
+		
+		#-------------------------------------
+    # UV Generator Parameters
+    # 		hidden in applications like revit 
+    #     provided as added value and exposed in 3ds max or maya directly 
+    #			Current issues:
+    #							- The Real World Scale option has no use inside a shader since the code in the MAX UI compensates for the UV Scale and the phenom has no control over that
+    #							- The WAngle is expressed in RAD while its expressed in DEG in the MAX UI
+    #             - Tiling and Mirror Flags don't seem to "connect" when inside a phenomenon
+    #
+    #			Note:  	Currently, minimal set of UI controls are exposed to allow basic placement.  
+    #							Futher work is needed and bug fiex needed to make it fully functionnal
+    #-------------------------------------
+		control "u" "struct" ("uiName" "Texture Coordinates Parameters")
+    {  
+			control "UScale" "float" ("nonConnectable", "uiName" "U Tiling Scale", "value" 1.0, "range" 0 1000000000000000000)
+			control "VScale" "float" ("nonConnectable", "uiName" "V Tiling Scale", "value" 1.0, "range" 0 1000000000000000000)
+			control "UOffset" "float" ("nonConnectable", "uiName" "U Offset", "value" 0)
+			control "VOffset" "float" ("nonConnectable", "uiName" "V Offset", "value" 0)
+			control "WAngle" "float" ("nonConnectable", "uiName" "Angle", "value" 0, "range" 0 6.283185253783088)
+			control "MapChannel" "integer" ("nonConnectable", "uiName" "Map Channel", "value" 1, "range" 1 99)
+		  #control "UWrap"  "boolean" ("nonConnectable", "uiName"  "U Tile", "value" 1) 
+		  #control "VWrap"  "boolean" ("nonConnectable", "uiName"  "V Tile", "value" 1) 
+		  #control "UMirror"  "boolean" ("nonConnectable", "uiName"  "U Mirror", "value" 0) 
+		  #control "VMirror"  "boolean" ("nonConnectable", "uiName"  "V Mirror", "value" 0) 
+		  # control "RealWorldMapSize"  "boolean" ("nonConnectable", "uiName"  "Use Real-World Scale", "value" on)  #The Real World Map Size Option has no use inside a phenom, since a lot of locig is burried in the max UI.
+		}	#end control
+		
+		
+	  #----------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+
+	}#end gui
+
+end declare #end declare phenomenon

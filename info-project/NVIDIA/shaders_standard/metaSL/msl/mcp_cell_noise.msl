@@ -1,0 +1,77 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product shader summed perlin style noise
+ *****************************************************************************/
+#include <mcp_lib.msl>
+shader Mcp_cell_noise{
+  input:
+    Spectrum  noise_color1 = Spectrum( 0.0)
+    {
+        description( "First color mixed according to the noise function." );
+    };
+    Spectrum  noise_color2 = Spectrum( 1.0)
+    {
+        description( "Second color mixed according to the noise function." );
+    };
+    Color  noise_distortion = Color( 0.0, 0.0, 0.0, 1.0 )
+    {
+    };
+    float  noise_threshold_high = 1.0
+    {
+        description( "Noise values higher than this value are mapped to noise_color2." );
+    };
+    float  noise_threshold_low = 0.0
+    {
+        description( "Noise values lower than this value are mapped to noise_color1." );
+    };
+    const float  noise_bands = 1.0
+    {
+        description( "The noise function is split into this number of bands, "
+                     "useful for effects like wood rings. ");
+        soft_range( 1.0, 10.0 );
+    };
+
+    //todo: take this out,
+    Texture2d permtex = "mcp_noise_permutation_rgba.png"
+    {
+        disable_filtering();
+    //		hidden();
+        description("Input for MetaSL preview purposes only. Iray does not use this texture but has the data defined in the code. Constant register limitations for traditional GPU languages make it necessary to bake this into a texture");
+    };
+
+      //the coordinates, normaly come from Mcp_coordinate_source or Mcp_coordinate_transform 	
+    Mcp_coordinate uvw = Mcp_coordinate(
+                texture_coordinate[0].xyz,
+                ddx(texture_coordinate[0]).xyz,
+                ddy(texture_coordinate[0]).xyz,
+                float3(1.,0.,0.),
+                float3(0.,1.,0.)
+                )
+    {
+    };
+
+  output:
+    Spectrum result;
+    float greyscale_result;
+
+    void main(){
+    //float3 texcoord = uvw.position;
+    //float sn = mcp_summed_perlin_noise( uvw.position, 0., 3, float4(noise_distortion.rgb,0.0f), true, permtex);
+        float sn = mcp_worley_noise_simple( uvw.position, noise_distortion.rgb, permtex);
+
+        // Create banding/stripes by using the fraction component only
+        sn *= noise_bands;
+        sn -= floor(sn);
+
+        float noiseValue = (noise_threshold_high > noise_threshold_low) ?
+            saturate((sn - noise_threshold_low) / (noise_threshold_high - noise_threshold_low)) :
+            sn;
+        result = (noise_color1 * (1.0f - noiseValue)) + (noise_color2 * noiseValue);
+        greyscale_result=max_value(result);
+    }
+};
+

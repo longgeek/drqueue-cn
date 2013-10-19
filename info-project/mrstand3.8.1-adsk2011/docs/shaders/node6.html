@@ -1,0 +1,303 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Textures</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node5.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node8.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION4"></a>
+
+  <h2>Textures</h2>
+
+  <p>These shaders rely on one of the texture space mapping
+  functions above to produce the <var>coord</var> texture vertex, and
+  produce a color for that vertex. Shaders that produce 2D mappings
+  only use the <i>x</i> and <i>y</i> components of the texture
+  vertex.</p>
+
+  <p>Most of these return colors. Since colors can be assigned to
+  scalar parameters of other shaders, the shaders can be used in
+  conjunction with blending shaders that select colors from a color
+  spread based on a map scalar. This interacts with the fading and
+  smoothing parameters of the texture shaders.</p>
+
+  <h3>Image Lookup</h3>
+
+  <p>Look up a texture image in the half-open interval <var class="num">[0, 1)</var>.
+  Points outside this interval are mapped to <i>R=G=B=A=0</i>.</p>
+
+<a id="INDEX12"></a>
+<h5 class="anchor" id="mi_shader__mib_texture_lookup">mib_texture_lookup</h5>
+  <pre>
+    color "mib_texture_lookup" (
+        color texture   "tex",
+        vector          "coord")
+</pre>
+
+<dl>
+  <dt>tex<dd> is the texture image to look up.
+  <dt>coord<dd> is the coordinate to look up.
+</dl>
+
+  <p>This is basically a front-end to the <i>mi_lookup_color_texture</i>
+  family of shader interface functions.</p>
+
+<h5 class="anchor" id="mi_shader__mib_texture_lookup2">mib_texture_lookup2</h5>
+  <pre>
+    color "mib_texture_lookup2" (
+        color texture   "tex",
+        scalar          "factor")
+  </pre>
+  <P>An alternative to <i>mib_texture_lookup</i>. This uses the first set
+  of texture coordinates in <i>state</i> instead of getting them as a
+  connected parameter.</P>
+
+<dl>
+  <dt>tex<dd> is the texture image to look up.
+  <dt>factor<dd> is the repetition factor of the texture.
+</dl>
+
+  <h3>Filtered Image Lookup</h3>
+
+  <p>Lookup of texture image using elliptical filtering.</p>
+
+<a id="INDEX13"></a>
+<h5 class="anchor" id="mi_shader__mib_texture_filter_lookup">mib_texture_filter_lookup</h5>
+  <pre>
+    color "mib_texture_filter_lookup" (
+        color texture   "tex",
+        vector          "coord",
+        scalar          "eccmax",
+        scalar          "maxminor",
+        scalar          "disc_r",
+        boolean         "bilinear",
+        integer         "space",
+        shader          "remap")
+</pre>
+
+<dl>
+  <dt>tex<dd> is the texture image to look up. It must be a
+  texture image, not a texture shader; otherwise the texture is
+  looked up unfiltered.
+
+  <dt>coord<dd> is the central texture sampling location.
+
+  <dt>eccmax<dd> is the maximum allowed eccentricity for the ellipse.
+
+  <dt>maxminor<dd> is the maximum number of texture pixels for
+  the minor radius of the ellipse.
+
+  <dt>disc_r<dd> is used in the calculation of screen-to-texture
+  space transformations. A default value of 0.3 is used if <var>disc_r</var>
+  is zero or unspecified. For scenes with highly curved surfaces it
+  may be useful to choose a value in the range <var class="num">(0.0...0.3]</var>
+  if aliasing artifacts appear.
+
+  <dt>bilinear<dd> enables bilinear interpolation of texture samples if set
+  to true. This blurs magnified areas and avoids blocky artifacts.
+
+  <dt>space<dd> is the texture space index in the range <var class="num">[0...63]</var>.
+
+  <dt>remap<dd> is a shader that is called for remapping additional texture
+  coordinates.
+</dl>
+
+<p>  The shader calls <i>mi_texture_filter_project</i> with the
+  given <i>space</i> parameter to obtain three corresponding points
+  in raster and texture space. These three texture coordinates are
+  remapped by calling the specified <i>remap</i> shader; the actual
+  texture coordinate for remapping is passed as the fourth argument
+  of <i>mi_call_shader_x</i> (which means that the called shader
+  must be designed to check its fourth argument). The remapping
+  shader must use it instead of the provided texture coordinate
+  vector in the shader parameters.</p>
+
+<p>  The projection transformation matrix required by the filtered
+  texture lookup is calculated by calling the
+  <i>mi_texture_filter_transform</i> shader interface function,
+  using the three raster space and remapped texture space
+  coordinates. The translation component in the matrix is set to
+  <var>coord</var>. Note that the projection transformation is always
+  calculated for the current raster position, but it is possible to
+  translate the ellipse in texture space using <i>coord</i>. This
+  is useful for bump mapping.</p>
+
+  <p>This is basically a front-end to the
+  <i>mi_lookup_filter_color_texture</i> family of shader interface
+  functions. The elliptical filter parameter <i>bilinear</i> is set
+  to false in <i>mib_texture_filter_lookup</i>, for
+  <i>circle_radius</i> the default value is used. If the projection
+  matrix cannot be calculated properly, or the texture is a shader
+  instead of an image, or the reflection level is not zero,
+  nonfiltered texture lookup is used.</p>
+
+  <h3>Checkerboard</h3>
+
+  <p>Divide the unit cube into eight subcubes, each with a separate
+  RGBA color. The width of the left, bottom, and front part is
+  programmable, allowing the use of this shader for generating
+  stripes and two- or three-dimensional checkerboards. This
+  function is also useful for preview shaderball scenes.</p>
+
+<a id="INDEX14"></a>
+<h5 class="anchor" id="mi_shader__mib_texture_checkerboard">mib_texture_checkerboard</h5>
+  <pre>
+    color "mib_texture_checkerboard" (
+        vector          "coord",
+        scalar          "xsize",
+        scalar          "ysize",
+        scalar          "zsize",
+        color           "color000",
+        color           "color001",
+        color           "color010",
+        color           "color011",
+        color           "color100",
+        color           "color101",
+        color           "color110",
+        color           "color111")
+</pre>
+
+<dl>
+  <dt>coord<dd> is the coordinate to texture.
+
+  <dt>*size<dd> specifies the fraction of the left (x), bottom
+  (y), and front (z) half of the cube in each direction, in the
+  range <var class="num">[0, 1)</var>.
+
+  <dt>color***<dd> specifies the colors of the subcubes. The
+  three digits stand for the XYZ coordinates: 000 is front lower
+  left, and 100 is front lower right, and 111 is back upper
+  right.
+</dl>
+
+  <h3>Polka Dot</h3>
+
+  <p>Draw a disc with programmable diameter into the unit square,
+  and draw a sphere with programmable diameter into the unit cube.
+  The foreground and background colors are programmable.</p>
+
+<a id="INDEX15"></a>
+<h5 class="anchor" id="mi_shader__mib_texture_polkadot">mib_texture_polkadot</h5>
+  <pre>
+    color "mib_texture_polkadot" (
+        vector          "coord",
+        scalar          "radius",
+        color           "fgcolor",
+        color           "bgcolor")
+  </pre>
+<a id="INDEX16"></a>
+<h5 class="anchor" id="mi_shader__mib_texture_polkasphere">mib_texture_polkasphere</h5>
+  <pre>
+    color "mib_texture_polkasphere" (
+        vector          "coord",
+        scalar          "radius",
+        color           "fgcolor",
+        color           "bgcolor")
+</pre>
+
+<dl>
+  <dt>coord<dd> is the coordinate to texture.
+
+  <dt>radius<dd> is the radius of the disc or sphere in the unit
+  square or cube, respectively.
+
+  <dt>fgcolor<dd> is the foreground color of the disc or sphere.
+
+  <dt>bgcolor<dd> is the background color around the disc or sphere.
+</dl>
+
+  <h3>Turbulence</h3>
+
+  <p>Create a turbulent scalar pattern in a unit cube. One, two, or
+  all three texture vector components may be computed in polar
+  coordinates, causing spherical mapping.</p>
+
+<a id="INDEX17"></a>
+<h5 class="anchor" id="mi_shader__mib_texture_turbulence">mib_texture_turbulence</h5>
+  <pre>
+    scalar "mib_texture_turbulence" (
+        vector          "coord",
+        scalar          "spacing",
+        scalar          "strength",
+        scalar          "power",
+        integer         "iteration",
+        integer         "polar_dim")
+</pre>
+
+<dl>
+  <dt>coord<dd> is the coordinate to texture.
+
+  <dt>spacing<dd> is the density of the noise in the unit cube.
+  If it is 0, a default of 1 is used.
+
+  <dt>strength<dd> is a weight describing the strength of the
+  distortion. If it is 0, a default of 1 is used.
+
+  <dt>power<dd> specifies the degree of the turbulence. If it is
+  0, a default of 1 is used.
+
+  <dt>iteration<dd> sets the number of composed turbulence
+  passes, each of which contributes a diminishing amount of
+  turbulence as specified by the power parameter. If it is 0, a
+  default of 2 is used. The maximum is 8.
+
+  <dt>polar_dim<dd> specifies the number of texture vector
+  components that should be converted to polar coordinates before
+  computing the compound noise value. 0 creates anisotropic noise,
+  1 creates lines, and 2 creates cylinders.
+</dl>
+
+  <h3>Waves</h3>
+
+  <p>Create cosine waves in U, V, and W directions, each with a
+  programmable amplitude. (Frequency and offset can be controlled
+  using a texture remapping base shader.) The result is a grayscale
+  color, R=G=B=A, that can be remapped using a color map base shader.
+  Its range is <var class="num">[o-s ... o+s]</var> if <i>s</i> is the sum
+  of the amplitudes and <i>o</i> is the offset.</p>
+
+<a id="INDEX18"></a>
+<h5 class="anchor" id="mi_shader__mib_texture_wave">mib_texture_wave</h5>
+  <pre>
+    color "mib_texture_wave" (
+        vector          "coord",
+        scalar          "amplitude_x",
+        scalar          "amplitude_y",
+        scalar          "amplitude_z",
+        scalar          "offset")
+</pre>
+
+<dl>
+  <dt>coord<dd> is the coordinate to texture.
+
+  <dt>amplitude_*<dd> is a factor to multiply the generated wave
+  with before adding it to the result. The defaults are 0 (no
+  contribution).
+
+  <dt>offset<dd> adds a constant value to the sum of the weighted
+  cosines. This can be used to shift the result into the positive
+  numbers.
+</dl>
+
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node5.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node8.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

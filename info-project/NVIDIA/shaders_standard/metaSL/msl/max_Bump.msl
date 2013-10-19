@@ -1,0 +1,30 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+shader max_Bump {
+input:
+    float Multiplier = 1.0{
+    };
+    Shader Map = Shader(){
+    };
+output:
+    Color result;
+    float3 normal_result;
+
+    void main() {
+        result = Color(0.0, 0.0, 0.0, 0.0);
+        Map.call("input",  "evalNormal", true,
+                 "output", "result",     result);
+        result *= Multiplier;
+
+        normal_result.x = normal.x + result.r;
+        normal_result.y = normal.y + result.g;
+        normal_result.z = normal.z + result.b;
+
+        normal_result = normalize(normal_result);
+    } // main
+};

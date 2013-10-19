@@ -1,0 +1,101 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Hardware Shader Implementation</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node173.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node175.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION172"></a>
+<h2>Hardware Shader Implementation</h2>
+<p>
+<span class="depr">Deprecated</span>
+<p>
+Hardware shader names can be explicitly specified in materials,
+or automatically constructed from software shader names by adding a
+vendor prefix like <tt>migl_</tt>. Once the shader name is known,
+mental ray will perform two operations:
+<ul>
+<li>First, mental ray will attempt to call a software function
+whose name is constructed by adding the prefix to the shader name.
+For example, if the hardware shader name is <i>myphong</i> and the
+hardware shader is implemented in <a href="node173.html#INDEX853">Cg</a>,
+mental ray will try to call the
+software function <i>micg_myphong</i>. This is not a hardware or
+software shader but a C/C++ function that can be used to do special
+setup operations needed for the shader, such as copying data to the
+graphics board or calling special GL functions needed by the
+shader. This function is optional and rarely necessary.
+<p>This function is normally implemented in the shader support
+library. For example, the software shader library <tt>base.so</tt>
+might have a support library <tt>migl_base.so</tt> for
+<a href="node173.html#INDEX853">Cg</a> hardware shaders.</p>
+</li>
+<li>Second, the actual shader is loaded from files on disk into the
+graphics board. Files are searched for with the hardware search
+path configured with the <tt>_MI_REG_HARDWARE</tt> registry key in
+the <a href="node72.html#INDEX166">startup file</a>, or the
+<tt>-hardware_path</tt> command-line option. The file name must
+exactly match the shader name, plus a postfix:
+<div align="center">
+<table class="table">
+<tr>
+<td>postfix</td>
+<td>contents</td>
+</tr>
+<tr>
+<td><tt>_v.cg</tt></td>
+<td><a href="node178.html#INDEX854">NVIDIA</a>
+<a href="node173.html#INDEX853">Cg</a>
+<a href="node168.html#INDEX850">vertex shader</a>s</td>
+</tr>
+<tr>
+<td><tt>_f.cg</tt></td>
+<td><a href="node178.html#INDEX854">NVIDIA</a>
+<a href="node173.html#INDEX853">Cg</a>
+<a href="node168.html#INDEX851">fragment shader</a>s</td>
+</tr>
+</table>
+</div>
+<p>Either one may be missing if the shader does not require this
+type of shader. (Most shaders do not require a
+<a href="node168.html#INDEX850">vertex shader</a> and provide only a
+<a href="node168.html#INDEX851">fragment shader</a>.) For example,
+for <a href="node178.html#INDEX854">NVIDIA</a> hardware, if the
+hardware shader name is <i>myphong</i>, mental ray will load the
+<a href="node173.html#INDEX853">Cg</a> files <tt>myphong_v.cg</tt>
+and <tt>myphong_f.cg</tt>.</p>
+</li>
+<li>If no such <a href="node173.html#INDEX853">Cg</a> shader can be
+found, or <tt>-hardware native</tt> or <tt>-hardware fast</tt> is
+specified on the command line to turn off all programmable shaders,
+mental ray will use plain hardwired OpenGL shading. This requires a
+C/C++ function that performs the necessary OpenGL calls to load
+colors etc. This function follows the same conventions as the
+support functions in the first item: the shaders get the prefix
+<i>migl_</i>, for example <i>migl_myphong</i>, and they are loaded
+from the library <i>migl_base.so</i>. The only difference is that
+they are loaded instead of, rather than in addition to, any
+hardware shaders.</li>
+</ul>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node173.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node175.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

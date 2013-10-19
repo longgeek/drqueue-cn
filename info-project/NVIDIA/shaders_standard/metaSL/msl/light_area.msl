@@ -1,0 +1,74 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Light_area
+{
+    enum EmissionDirectionEnum {
+        EMIT_FRONT     = 1,
+        EMIT_BACK      = 2,
+        EMIT_BOTH      = 3
+    };
+
+  input:
+    Color color = Color(1)
+    {
+        display_name("Color");
+        description("The color that the light will shine on the scene.");
+    };
+    float intensity = 1
+    {
+        display_name("Intensity");
+        soft_range(float(0), float(100));
+        description("How bright the light will shine on the scene.");
+    };
+    bool input_is_power = false
+    {
+        display_name("Input is power");
+        description("If set to true, the input is interpreted as power, "
+            "consequently the surface shader output will be divided "
+            "by the area of the light source to yield radiance. "
+            "That means the scene brightness will stay about the "
+            "same if the light source surface area is enlarged.");
+    };
+    const EmissionDirectionEnum emission_direction = EMIT_FRONT
+    {
+        display_name("Direction of light emission");
+        description("Controls direction of light emission.");
+    };
+
+  output:
+    Color result;
+    Color light_shadow;
+
+    void main()
+    {
+        float cos_theta = dot(light_to_surface, light_normal);
+        if (emission_direction == EMIT_BACK) //flip light in case of  backward illumination
+            cos_theta=-cos_theta;
+        if (emission_direction == EMIT_BOTH) //light should emmit forward and backwards
+            cos_theta=abs(cos_theta);
+        if (cos_theta <= 0.0) // surface point on backside
+        {
+            result = light_shadow = Color(0);
+        }
+        else
+        {
+            // compute square fall-off
+            float r2 = light_distance * light_distance;
+            float attenuation = cos_theta / r2;
+            result = color * (intensity * attenuation);
+            if (input_is_power && light_area > 0.0)
+                result /= PI * light_area;
+            light_shadow = shadowing();
+        }
+
+        result.a = 1.0;
+    }
+}
+{
+    shader_type("light");
+    description("Light shader for a physically-based area light.");
+}
+;

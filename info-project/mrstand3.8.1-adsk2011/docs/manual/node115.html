@@ -1,0 +1,479 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Material Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node114.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node116.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION113"></a>
+<h2>Material Shaders</h2>
+<p>
+Material shaders are the primary type of shaders. All materials defined
+in the scene must at least define a <b><a id="INDEX440"></a>material
+shader</b> unless a <a href="brdf_sh.html">BRDF shader</a> is present.
+Materials may also define other types of shaders, such as shadow, volume,
+photon, and environment shaders, which are optional and of secondary
+importance.</p>
+<p><a id="INDEX441"></a><a id="INDEX442"></a>
+When mental ray casts a visible ray, such as those cast by the camera
+(called <i>primary rays</i>) or those that are cast for reflections and
+refractions (collectively called <i>secondary rays</i>), mental ray
+determines the next object in the scene that is hit by that ray. This
+process is called <a name="INDEX443" id="INDEX443"></a> <i>intersection
+testing</i>. For example, when a primary ray cast from the camera through
+the viewing plane's pixel <i>(100,100)</i> intersects with a yellow sphere,
+pixel <i>(100, 100)</i> in the output image will be painted yellow. (The
+actual process is slightly complicated by supersampling and filtering, which
+can cause more than one primary ray to contribute to a pixel.)</p>
+<p>The core of mental ray has no concept of "yellow." This color is
+computed by the material shader attached to the sphere that was hit
+by the ray. mental ray records general information about the sphere
+object, such as point of intersection, normal vector,
+transformation matrix etc. in a data structure called the
+<i>state</i>, and calls the material shader attached to the object.
+More precisely, the material shader, along with its parameters
+(called <i>shader parameters</i>), is part of the material, which
+is attached to or inherited by the polygon or surface that forms
+the part of the object that was hit by the ray. Objects are usually
+built from multiple polygons and/or surfaces, each of which may
+have a different material.</p>
+<p>The material shader uses the values provided by mental ray in
+the state and the variables provided by the .mi file in the shader
+parameters to calculate the color of the object, and returns that
+color. In the above example, the material shader would return the
+color yellow. mental ray stores this color in its internal sample
+list, which later gets filtered to compute frame buffer pixels, and
+then casts the next primary ray. Note that if the material shader
+has a bug that causes it to return infinity or <b><a name="INDEX444" id="INDEX444"></a>NaN (Not a Number)</b> in the
+<tt>result</tt> color, the infinity or NaN is stored as 1.0 in
+color frame buffers. This results in <b><a id="INDEX445"></a>white pixels</b> in the rendered image. This is true
+for subshaders such as texture shaders also.</p>
+<p>With an appropriate <tt>output</tt> statement (see page <a href="node77.html#output">output</a>), mental ray computes depth, label,
+normal-vector, and motion vector frame buffers in addition to the
+standard color frame buffer, and up to eight <a href="node76.html#INDEX216">user frame buffer</a>s defined with
+<tt>frame buffer</tt> statements in the <a href="node76.html#INDEX180">options block</a>. The color returned by the
+first-generation material shader is stored in the color <a href="node144.html#INDEX617">frame buffer</a> (unless a <a href="node124.html#INDEX487">lens shader</a> exists; lens shaders also
+have the option of modifying colors). The material shader can
+control what gets stored in the depth, label, normal-vector, and
+motion-vector frame buffers by storing appropriate values into
+<code>state&rarr;point.z</code>, <code>state&rarr;label</code>,
+<code>state&rarr;normal</code>, and <code>state&rarr;motion</code>,
+respectively. It can also store data in the <a href="node76.html#INDEX216">user frame buffer</a>s with an appropriate
+call to <i><a href="node150.html#INDEX755">mi_fb_put</a></i>. Depth
+is the negative Z coordinate in camera space.</p>
+<p>Material shaders normally do quite complicated computations to
+arrive at the final color of a point on the object:</p>
+<ul>
+<li>The <a href="node65.html#INDEX142">shader parameter</a>s
+usually include constant ambient, diffuse, and specular colors and
+other parameters such as transparency, and possibly optional
+textures that need to be evaluated to compute the actual values at
+the intersection point. If textures are present, texture shaders
+are called by using one of the lookup functions provided by mental
+ray. Alternatively, <a href="node67.html#INDEX147">shader
+assignment</a> may be used for texturing. Texture shaders are
+discussed in the next section.</li>
+<li>The illumination computation sums up the contribution from
+various light sources listed in the shader parameters. To obtain
+the amount of light arriving from a <a href="node80.html#INDEX250">light source</a>, a <a href="node120.html#INDEX471">light shader</a> is called by calling a
+light trace or sample function provided by mental ray. Light
+shaders are discussed in a separate section below. After the
+illumination computation is finished, the ambient, diffuse, and
+specular colors have been combined into a single material color
+(assuming a more conventional <a href="node115.html#INDEX440">material shader</a>).
+<p><a id="INDEX446"></a></p>
+</li>
+<li>If the material is reflective, transparent, or using
+refraction, as indicated by appropriate shader parameters, the
+shader must cast secondary rays and apply the result to the
+material color calculated in the previous step. (Transparency is a
+variation of refractive transparency where the ray continues in the
+same direction, while refraction rays may alter the direction based
+on an <a href="node76.html#INDEX201">index of refraction</a>.)
+Secondary rays, like primary rays, cause mental ray to do
+intersection testing and call another material shader if the
+intersection test hit an object. For this reason, material shaders
+must be reentrant. In particular, a secondary refraction or
+transparency ray will hit the back side of the same object if
+<tt>face both</tt> is set in the options and the object is a closed
+volume.</li>
+</ul>
+<p>Note that the <a href="node65.html#INDEX142">shader
+parameter</a>s of a <a href="node115.html#INDEX440">material
+shader</a> are under no obligation to define and use classical
+parameters like ambient, diffuse, and specular color and reflection
+and refraction parameters. Here is the <a href="node178.html#INDEX856">source code</a> of the <i><a href="node115.html#INDEX448">mib_illum_phong</a></i> shader in the
+standard base shader library:</p>
+<p><a id="INDEX447"></a><a id="INDEX448"></a></p>
+<pre>
+    #include &lt;stdio.h&gt;
+    #include &lt;stdlib.h&gt;         /* for abs */
+    #include &lt;float.h&gt;          /* for FLT_MAX */
+    #include &lt;math.h&gt;
+    #include &lt;string.h&gt;
+    #include &lt;assert.h&gt;
+    #include "shader.h"
+
+    struct mib_illum_phong {
+        miColor         ambience;       /* ambient color multiplier */
+        miColor         ambient;        /* ambient color */
+        miColor         diffuse;        /* diffuse color */
+        miColor         specular;       /* specular color */
+        miScalar        exponent;       /* shinyness */
+        int             mode;           /* light mode: 0..4 */
+        int             i_light;        /* index of first light */
+        int             n_light;        /* number of lights */
+        miTag           light[1];       /* list of lights */
+    };
+
+    DLLEXPORT int mib_illum_phong_version(void) {return(2);}
+
+    DLLEXPORT miBoolean mib_illum_phong(
+        miColor         *result,
+        miState         *state,
+        struct mib_illum_phong *paras)
+    {
+        miColor         *ambi, *diff, *spec;
+        miTag           *light;         /* tag of light instance */
+        int             n_l;            /* number of light sources */
+        int             i_l;            /* offset of light sources */
+        int             m;              /* light mode: 0=all, 1=incl, 2=excl */
+        int             n;              /* light counter */
+        int             samples;        /* # of samples taken */
+        miColor         color;          /* color from light source */
+        miColor         sum;            /* summed sample colors */
+        miVector        dir;            /* direction towards light */
+        miScalar        dot_nl;         /* dot prod of normal and dir */
+        miScalar        expo;           /* Phong exponent (cosine power) */
+        miScalar        s;              /* amount of specular reflection */
+
+        ambi =  mi_eval_color(&amp;paras-&gt;ambient);
+        diff =  mi_eval_color(&amp;paras-&gt;diffuse);
+        spec =  mi_eval_color(&amp;paras-&gt;specular);
+        expo = *mi_eval_scalar(&amp;paras-&gt;exponent);
+        m    = *mi_eval_integer(&amp;paras-&gt;mode);
+
+        *result    = *mi_eval_color(&amp;paras-&gt;ambience);  /* ambient term */
+        result-&gt;r *= ambi-&gt;r;
+        result-&gt;g *= ambi-&gt;g;
+        result-&gt;b *= ambi-&gt;b;
+
+        n_l   = *mi_eval_integer(&amp;paras-&gt;n_light);
+        i_l   = *mi_eval_integer(&amp;paras-&gt;i_light);
+        light =  mi_eval_tag(paras-&gt;light) + i_l;
+
+        if (m == 1)             /* modify light list (inclusive mode) */
+                mi_inclusive_lightlist(&amp;n_l, &amp;light, state);
+        else if (m == 2)        /* modify light list (exclusive mode) */
+                mi_exclusive_lightlist(&amp;n_l, &amp;light, state);
+        else if (m == 4)        /* modify light list (instance mode) */
+                mi_instance_lightlist(&amp;n_l, &amp;light, state);
+
+        /* Loop over all light sources */
+        for (n=0; n &lt; n_l; n++, light++) {
+                sum.r = sum.g = sum.b = 0;
+                samples = 0;
+                while (mi_sample_light(&amp;color, &amp;dir, &amp;dot_nl, state,
+                                                *light, &amp;samples)) {
+                        /* Lambert's cosine law */
+                        sum.r += dot_nl * diff-&gt;r * color.r;
+                        sum.g += dot_nl * diff-&gt;g * color.g;
+                        sum.b += dot_nl * diff-&gt;b * color.b;
+
+                        /* Phong's cosine power */
+                        s = mi_phong_specular(expo, state, &amp;dir);
+                        if (s &gt; 0.0) {
+                                sum.r += s * spec-&gt;r * color.r;
+                                sum.g += s * spec-&gt;g * color.g;
+                                sum.b += s * spec-&gt;b * color.b;
+                        }
+                }
+                if (samples) {
+                        result-&gt;r += sum.r / samples;
+                        result-&gt;g += sum.g / samples;
+                        result-&gt;b += sum.b / samples;
+                }
+        }
+
+        /* add contribution from indirect illumination (caustics) */
+        mi_compute_irradiance(&amp;color, state);
+        result-&gt;r += color.r * diff-&gt;r;
+        result-&gt;g += color.g * diff-&gt;g;
+        result-&gt;b += color.b * diff-&gt;b;
+        result-&gt;a  = 1;
+        return(miTRUE);
+    }
+</pre>
+<p>(From now on, code examples will omit <tt>#include</tt>
+statements and version functions. For information on writing and
+using a corresponding .mi language declaration, see the shader
+declaration chapter on page <a href="node112.html#declaration">declaration</a>, or simply look at the
+<tt>base.mi</tt> file that comes with mental ray.)</p>
+<p>This shader first evaluates all its parameters because there are
+no paths through the code that do not require some parameters. This
+shader is concerned exclusively with computing a <b><a name="INDEX449" id="INDEX449"></a>BRDF</b> (bidirectional reflectance
+distribution function, here Phong) but not with reflections,
+refractions, transparency, textures, etc. The BRDF is implemented
+as a loop over all lights. Each light is sampled with an inner
+sample loop implemented with <i><a href="node140.html#INDEX555">mi_sample_light</a></i>, which takes care
+of <a href="node80.html#INDEX255">area light source</a>s that
+require multiple samples. The contributions of each sample are
+summed, which produces the direct illumination component. Indirect
+illumination, computed by <i><a href="node140.html#INDEX571">mi_compute_irradiance</a></i>, is added at
+the end.</p>
+<p>Reflection and <a href="node115.html#INDEX446">refraction</a>
+can be added by another <a href="node115.html#INDEX440">material
+shader</a> that handles only refraction, and works with a BRDF
+material like the one above by assigning that shader to one of its
+inputs (here, the <i>input</i> parameter). The following shader
+handles <a href="node76.html#INDEX200">transparency</a> (defined as
+transmission with an <a href="node76.html#INDEX201">index of
+refraction</a> of 1.0, refraction (an index other than 1.0), and
+<b><a id="INDEX450"></a>total internal
+reflection</b>. Total internal reflection happens for rays that hit
+the surface at a grazing angle; it is the reason why one sees the
+near part of the bottom of a pool, but at greater distances the
+water surface reflects the sky.</p>
+<p><a id="INDEX451"></a></p>
+<pre>
+    struct mr {
+        miColor         input;
+        miColor         refract;
+        miScalar        ior;
+    };
+
+    DLLEXPORT miBoolean mib_refract(
+        miColor         *result,
+        miState         *state,
+        struct mr       *paras)
+    {
+        miColor         *refract = mi_eval_color(&amp;paras-&gt;refract);
+        miColor         inp;
+        miVector        dir;
+        miScalar        ior;
+
+        if (refract-&gt;r == 0.0 &amp;&amp; refract-&gt;g == 0.0 &amp;&amp;
+            refract-&gt;b == 0.0 &amp;&amp; refract-&gt;a == 0.0)
+                *result = *mi_eval_color(&amp;paras-&gt;input);
+        else {
+                ior = *mi_eval_scalar(&amp;paras-&gt;ior);
+                if (ior == 0.0 || ior == 1.0)
+                        mi_trace_transparent(result, state);
+                else {
+                        if (mi_refraction_dir(&amp;dir, state, 1.0, ior))
+                                mi_trace_refraction(result, state, &amp;dir);
+                        else {  /* total internal reflection */
+                                mi_reflection_dir(&amp;dir, state);
+                                mi_trace_reflection(result, state, &amp;dir);
+                        }
+                }
+                if (refract-&gt;r != 1.0 || refract-&gt;g != 1.0 ||
+                    refract-&gt;b != 1.0 || refract-&gt;a != 1.0) {
+                        inp = *mi_eval_color(&amp;paras-&gt;input);
+                        result-&gt;r = result-&gt;r * refract-&gt;r +
+                                        inp.r * (1.0 - refract-&gt;r);
+                        result-&gt;g = result-&gt;g * refract-&gt;g +
+                                        inp.g * (1.0 - refract-&gt;g);
+                        result-&gt;b = result-&gt;b * refract-&gt;b +
+                                        inp.b * (1.0 - refract-&gt;b);
+                        result-&gt;a = result-&gt;a * refract-&gt;a +
+                                        inp.a * (1.0 - refract-&gt;a);
+                }
+        }
+        return(miTRUE);
+    }
+</pre>
+<p>Note that this shader evaluates its <i>input</i> parameter only
+if the value is actually needed, to avoid wasting time computing a
+BRDF whose result is discarded. The ability to ask for parameter
+values explicitly is the reason for the <i><a href="node138.html#INDEX522">mi_eval</a></i> facility in mental ray.
+This shader makes this even more obvious:</p>
+<p><a id="INDEX452"></a></p>
+<pre>
+    struct mt {
+        miColor front;
+        miColor back;
+    };
+
+    DLLEXPORT miBoolean mib_twosided(
+        miColor         *result,
+        miState         *state,
+        struct mt       *paras)
+    {
+        if (state-&gt;inv_normal)
+                *result = *mi_eval_color(&amp;paras-&gt;back);
+        else
+                *result = *mi_eval_color(&amp;paras-&gt;front);
+        return(miTRUE);
+    }
+</pre>
+<p>This shader can be used as a material shader that applies
+different materials to the front and back side of an object. Front
+and back are determined by the direction of the normal vector. The
+two materials are simply assigned to the <i>front</i> and
+<i>back</i> parameters. Clearly, it would be very inefficient if
+this shader evaluated both its inputs.</p>
+<p>Bump mapping<a id="INDEX453"></a> is another
+common function of material shaders. It involves altering the
+normal vector before computing the BRDF, because the normal
+determines the surface orientation and is essential to BRDF
+computation. Here is a bump map shader that computes and returns a
+new normal vector:</p>
+<pre>
+    struct mib_bump_map_simple {
+        miVector        u;
+        miVector        v;
+        miVector        coord;
+        miVector        step;
+        miScalar        factor;
+        miTag           tex;
+    };
+
+    DLLEXPORT miBoolean mib_bump_map_simple(
+        miVector        *result,
+        miState         *state,
+        struct mib_bump_map_simple *paras)
+    {
+        miTag           tex     = *mi_eval_tag    (&amp;paras-&gt;tex);
+        miVector        coord   = *mi_eval_vector (&amp;paras-&gt;coord);
+        miVector        step    = *mi_eval_vector (&amp;paras-&gt;step);
+        miVector        u       = *mi_eval_vector (&amp;paras-&gt;u);
+        miVector        v       = *mi_eval_vector (&amp;paras-&gt;v);
+        miScalar        factor  = *mi_eval_scalar (&amp;paras-&gt;factor);
+        miVector        coord_u, coord_v;
+        miScalar        val, val_u, val_v;
+        miColor         color;
+
+        coord_u.x = coord.x + (step.x ? step.x : 0.001);
+        coord_u.y = coord.y;
+        coord_u.z = coord.z;
+        coord_v.x = coord.x;
+        coord_v.y = coord.y + (step.y ? step.y : 0.001);
+        coord_v.z = coord.z;
+        if (!tex || !mi_lookup_color_texture(&amp;color, state, tex, &amp;coord)) {
+                *result = state-&gt;normal;
+                return(miFALSE);
+        }
+        val = (color.r + color.g + color.b) / 3;
+        mi_flush_cache(state);
+        val_u = mi_lookup_color_texture(&amp;color, state, tex, &amp;coord_u)
+                        ? (color.r + color.g + color.b) / 3 : val;
+
+        mi_flush_cache(state);
+        val_v = mi_lookup_color_texture(&amp;color, state, tex, &amp;coord_v)
+                        ? (color.r + color.g + color.b) / 3 : val;
+        val_u -= val;
+        val_v -= val;
+        state-&gt;normal.x += factor * (u.x * val_u + v.x * val_v);
+        state-&gt;normal.y += factor * (u.y * val_u + v.y * val_v);
+        state-&gt;normal.z += factor * (u.z * val_u + v.z * val_v);
+        mi_vector_normalize(&amp;state-&gt;normal);
+        *result = state-&gt;normal;
+        return(miTRUE);
+    }
+</pre>
+<p>This is a simplified version of the <i>mib_bump_map</i> shader
+in the base library that lacks some nonessential projection
+features. It looks up a texture map at the current point and one
+point above and to the side each, and perturbs the normal vector
+depending on the differences between these sampling points. Here a
+shader assignment of the texture would not work because that would
+generate the same result three times.</p>
+<p>Moreover, it is necessary to call <i><a href="node138.html#INDEX532">mi_flush_cache</a></i> to turn off mental
+ray's result caching, which normally prevents a shader to be called
+multiple times if it is evaluated multiple times. This happens
+frequently, for example when a texture shader is assigned to both
+the ambient and diffuse parameters of a BRDF material shader -
+obviously it would be inefficient to compute the same texture twice
+when the BRDF shader evaluates both parameters, so the second
+evaluation simply causes mental ray to return the cached result
+from the first evaluation. Here this would defeat the purpose, so
+the cache must be cleared explicitly.</p>
+<p>The following shader is a variation on the first. Instead of
+returning a vector, it leaves the return value unchanged, but still
+modifies the <code>state&rarr;normal</code> state variable that
+BRDF functions use for illumination calculations:</p>
+<pre>
+    DLLEXPORT miBoolean mib_passthrough_bump_map_simple(
+        miColor         *result,
+        miState         *state,
+        struct mib_bump_map_simple *paras)
+    {
+        miVector        dummy;
+
+        return(mib_bump_map_simple(&amp;dummy, state, paras));
+    }
+</pre>
+<p>This way, the shader can simply be inserted in a shader list, as
+in</p>
+<pre>
+    material "mtl"
+        "mib_passthrough_bump_map_simple" ()
+        "mib_illum_phong" (...)
+    end material
+</pre>
+<p>mental ray will first call the bump passthrough shader, which
+perturbs <code>state&rarr;normal</code>, and then the Phong shader,
+which uses the normal. Since the passthrough bump shader does not
+alter its <i>result</i>, the end result is the BRDF.</p>
+<p>Texturing can be handled by calling shader API functions such as
+<i><a href="node150.html#INDEX741">mi_lookup_color_texture</a></i>
+in the material (or other) shaders, but it is easier to simply
+assign a texture shader to one of the BRDF color inputs, especially
+<i>ambient</i> and <i>diffuse</i> in the Phong example above.</p>
+<p>Hair <a href="node115.html#INDEX440">material shader</a>s work
+like normal material shaders, with a few changes in the state:</p>
+<dl>
+<dt><dfn>bary[0]</dfn></dt>
+<dd>contains the parameter value along the width of the hair, with
+0 at the left edge and 1 at the right edge, with respect to the
+direction going from the root of the hair to the tip, and in a
+plane perpendicular to the incoming ray.</dd>
+<dt><dfn>bary[1]</dfn></dt>
+<dd>contains the parameter value along the length of the hair, with
+0 at the first vertex defined, and 1 at the last.</dd>
+<dt><dfn>normal_geom</dfn></dt>
+<dd>is the tangent of the first segment of the hair. This is an
+approximation to the normal at the "scalp", and can be useful for
+certain shading models.</dd>
+<dt><dfn>normal</dfn></dt>
+<dd>is the interpolated normal facing the ray direction.</dd>
+<dt><dfn>derivs[0]</dfn></dt>
+<dd>is the interpolated tangent at the point of intersection.</dd>
+<dt><dfn>tex_list</dfn></dt>
+<dd>contains texture scalars in the order <dfn>[0].x, [0].y, [0].z,
+[1].x</dfn>, and so on. This is equivalent to the way other
+geometry stores texture data, except that hair uses scalars, not
+vectors, and their number does not have to be a multiple of three.
+It is often useful to recast <dfn>tex_list</dfn> to a
+<tt>miScalar</tt> pointer.</dd>
+</dl>
+<p>Hair material shaders should not normally assume that hair
+consists of geometrical cylinders that can be shaded normally,
+complete with a terminator and all. Hair is too fine for shading
+around the circumference; any attempt to place highlights on just
+one side of the hair may cause aliasing. The base shader library
+shipped with mental ray contains a special hair material shader
+<i>mib_illum_hair</i> for this purpose.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node114.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node116.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

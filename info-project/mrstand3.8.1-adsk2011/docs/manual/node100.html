@@ -1,0 +1,305 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Dynamic Linking of Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node99.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node101.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION98"></a>
+<h2>Dynamic Linking of Shaders</h2>
+<p><a id="dynlink"></a>
+Shaders are written as C or C++ subroutines,
+stored in files with extensions like <tt>.c</tt> or <tt>.cpp</tt>.
+To execute these shaders during rendering of a scene they must be
+dynamically linked into mental ray at run time. mental ray accepts
+shaders in three forms:</p>
+<ul>
+<li>As dynamically loadable shared library, further referred to as
+<b><a id="INDEX361"></a>DSO</b>, or <em>Dynamic Shared Object</em>.
+DSOs are supported on all major platforms. They have the special file
+extension <tt>.so</tt> on Unix/Linux/MacOSX systems and <tt>.dll</tt>
+on Windows systems. mental ray automatically substitutes <tt>.dll</tt>
+for <tt>.so</tt> on Windows platforms and vice versa, so the same
+library filename is accepted on any platform regardless of the actual
+file extension.</li>
+<li>Directly as <a href="node178.html#INDEX856">source code</a>.
+The .mi file offers the <a href="node71.html#INDEX158">code</a>
+statement, and the standalone application has a <tt>&minus;code</tt>
+<a href="node245.html">command line</a> option.
+Both accept a source file with a <tt>.c</tt> extension.</li>
+<li><span class="depr">Deprecated</span>
+In object format. Source files can be compiled<a id="INDEX359"></a> to
+<a href="node166.html#INDEX843">object code</a>. This is the most common
+form on systems that do not support DSOs; it is faster than source because
+mental ray does not have to compile the shader. A compiler will create an
+object file like <tt>myshader.o</tt> with the extension <tt>.o</tt> (or
+<tt>.obj</tt> on Windows) in the current directory.
+</li>
+</ul>
+<p>
+<a id="dso"></a>
+Using DSOs is the fastest way to load shaders, there is very little overhead.
+DSOs and object files are loaded using <tt>link</tt> statements in the scene
+file or <tt>-link</tt> <a href="node245.html">command line</a> option.</p>
+<p>
+To create a DSO two steps are typically required:
+</p>
+<ul>
+<li>compile the shader source to native object format,
+<li>link the object file as a dynamically loadable library.
+</ul>
+<p>The commands to create a DSO depend on the operating system type.
+To build a DSO named <i>example.so</i> or <i>example.dll</i>from a source file
+<i>example.c</i>, the commands in the following section can be used in a shell
+(outside an <dfn>IDE</dfn> or <em>Integrated Development Environment</em>, like
+<em>Microsoft Visual Studio</em> or <em>Apple XCode</em>). The commands create
+a performance optimized version of the shader for final rendering. Further
+compiler options may be used to tune for specific requirements, like dedicated
+target CPUs.</p>
+<p>
+During development phase of shaders it is useful to generate debug information
+with the <tt>-g</tt> (<tt>/Zi</tt> on Windows) compiler option, and disable
+compiler optimizations at the same time by omitting any <tt>-O</tt> or
+<tt>/O</tt> options. On some platforms like Linux, <tt>-g</tt> and <tt>-O</tt>
+can be combined, to find problems which may be introduced only during the
+optimization process of the compiler. Refer to the compiler documentation of
+the target platform for details.</p>
+
+<a id="linkcommands"></a>
+
+<p>Windows x86, cl (Microsoft Visual Studio Compiler)</p>
+<pre>
+cl /c /O2 /MD /W3 -DWIN_NT example.c
+link /nodefaultlib:LIBC.LIB /OPT:NOREF /DLL /OUT:example.dll example.obj shader.lib
+</pre>
+<p>This applies to all Visual C++ 6, 7, 8, or 9, and Microsoft Platform SDK
+compilers. The <tt>shader.lib</tt> <a href="#FOOTNOTE13">[13]</a> is a stub
+library that is delivered together with mental ray. It is required to resolve
+mental ray shader interface references at link time.</p>
+<p>Additional options like <tt>/G6</tt> or <tt>/G7</tt> apply processor-specific
+optimizations and may run certain code faster on that target CPU (only).</p>
+
+<p>Windows x86, icl (Intel Compiler Suite)</p>
+<pre>
+icl /c /Ox /G7 /MD /W3 -DWIN_NT example.c
+xilink /nodefaultlib:LIBC.LIB /OPT:NOREF /DLL /OUT:example.dll example.obj shader.lib
+</pre>
+<p>The <tt>/G7</tt> compiler option applies to special target CPU only,
+and may need to be adjusted to benefit from capabilities of newer CPUs.</p>
+
+<p>Windows x64, cl (Microsoft Visual Studio Compiler)</p>
+<pre>
+cl /c /O2 /MD /W3 -DWIN_NT -DBIT64 example.c
+link /nodefaultlib:LIBC.LIB /OPT:NOREF /DLL /OUT:example.dll example.obj shader.lib
+</pre>
+<p>Almost identical to 32bit compilation, with the <code>BIT64</code> conditional
+defined for mental ray public headers.
+
+<p>Linux x86, gcc (GNU Compiler)</p>
+<pre>
+gcc -c -O3 -fPIC -Bsymbolic <a href="#FOOTNOTE14">[14]</a> example.c
+ld -export-dynamic -shared -o example.so example.o
+</pre>
+<p>Linux x86, icc (Intel Compiler Suite)</p>
+<pre>
+icc -c -O2 -KPIC -Bsymbolic -tpp7 example.c
+ld -export-dynamic -shared -o example.so example.o
+</pre>
+<p>Linux x64, gcc (GNU Compiler)</p>
+<pre>
+gcc -c -O3 -fPIC -Bsymbolic -DBIT64 example.c
+ld -export-dynamic -shared -o example.so example.o
+</pre>
+
+<p>Mac OS X</p>
+<pre>
+cc -c -O3 -fPIC -dynamic -fno-common example.c
+libtool -flat_namespace -undefined suppress -dynamic -o example.so example.o
+</pre>
+
+<br />
+<p>
+The following section proposes build rules for other, less frequently used platforms.
+</p>
+
+<p>Windows IA&nbsp;64, ecl (Intel Compiler)</p>
+<pre>
+ecl -c /O2 /MD /W3 /GR /Zp8 /W3 /GX /GR /GF -DWIN_NT -DBIT64 example.c
+xilink /nodefaultlib:LIBC.LIB /OPT:NOREF /DLL /OUT:example.dll example.obj shader.lib
+</pre>
+
+<p>Linux IA&nbsp;64, gcc (GNU Compiler)</p>
+<pre>
+gcc -c -O3 -KPIC -Bsymbolic -DBIT64 example.c
+ld -export-dynamic -shared -o example.so example.o
+</pre>
+
+<p>IRIX, 32 bits</p>
+<a id="INDEX363"></a>
+<pre>
+cc -n32 -O3 -shared -o example.so example.c
+</pre>
+<p>IRIX, 64 bits</p>
+<pre>
+cc -64 -O3 -DBIT64 -shared -o example.so example.c
+</pre>
+<p>HP/UX HPPA</p>
+<pre>
+cc -c -Aa +z example.c
+ld -b -o example.so example.o
+</pre>
+<p>HP/UX IA&nbsp;64</p>
+<pre>
+cc -c +O3 +Onolimit +DD64 -Ae -Bprotected_def -Bdefault:keepsym.exp example.c
+cc +DD64 -b -o example.so example.o
+</pre>
+<p>IBM AIX</p>
+<pre>
+cc -c -O3 example.c
+ld -o example.so example.o -bE:example.exp extra.so -bI:keep.exp -bM:SRE -T512 -H512 -lc
+</pre>
+<p>The file <tt>example.exp</tt> is a user supplied export file for the
+shader and must contain the names of the exported symbols to be seen by
+mental ray, one entry per line. The file <tt>keep.exp</tt> is the list of
+symbols exported by mental ray, either for use by shaders or for internal
+linking purposes. It is supplied with mental ray and can be referenced using
+an absolute path name. The optional file option <tt>extra.so</tt> needs to be
+supplied only when functions from other shader libraries that are pre-loaded
+during run time (such as <tt>physics.so</tt>) are used directly in the shader.
+</p>
+
+<p>Sun Solaris (Sun CC)</p>
+<pre>
+cc -c -xO3 -KPIC -D_REENTRANT example.c
+ld -lm -G -o example.so example.o -ldl
+</pre>
+<p>The GNU compiler <tt>gcc</tt> can also be used, see Linux above.</p>
+
+<p>Tru64 Unix</p>
+<pre>
+cc -c -newc -O2 -ieee_with_no_inexact -DBIT64 -D_REENTRANT example.c
+ld -expect_unresolved '*' -shared -o example.so example.o
+</pre>
+
+<br />
+<p>To be able to compile and create DSOs requires that a C or C++
+<a id="INDEX364"></a><b>development environment</b> is installed on the system.
+If the <tt>cc</tt>, <tt>ld</tt>, <tt>cl</tt>, <tt>link</tt>, etc. commands are
+not found, then the development environment may not exist or is not set up for
+the user. On most platforms, such development tools are separate products that
+must be purchased separately. Additionally, certain setup commands may need to
+be executed prior to compilation, to establish environment variables and pathes
+to the correct compiler, tools and system libraries. On the other hand, the
+capability of dynamic loading a DSO does not require any compilers or
+development options.</p>
+<p>If a host machine supports multiple programming models, like running both
+32bit and 64bit versions of software, the build options <em>must</em> agree
+with the version of mental ray. The use of system commands like the Unix
+<tt>file</tt> command applied to the mental ray executable and the shader
+library will inform if they can work together. If there is a mismatch, the
+system may emit error messages like:</p>
+<pre>
+/my/example.so: rld: Fatal Error: cannot successfully map soname '/my/example.so'
+</pre>
+<p>The runtime linker always tries to match executables and libraries, which
+allows multiple target binaries to reside on the same system without conflicts.
+If the filename of the DSO given as an absolute path name mental ray only tries
+to load that particular file. If it is given as a relative path, mental ray
+searches for the DSO in a list of paths, by default in
+<tt>/usr/local/mi/lib;.</tt>. This list can be adjusted on the command line
+of the standalone renderer (<tt>-ld_path</tt>) or an environment variable
+(<tt>MI_LIBRARY_PATH</tt>). A search list is a semicolon-separated, or
+colon-separated (Unix-like platforms) list of paths (Windows uses colons
+for drive letters).</p>
+<p>Note, that shader <a href="node178.html#INDEX856">source code</a> is
+normally portable, unless non-portable system features (such as <i>fsqrt</i>
+function on SGIs) are used. This means that the shader will run on all other
+vendors' systems unchanged. If the compilation fails and therefore the shaders
+are undefined, mental ray will return <tt>miFALSE</tt> for any calls of the
+undefined shaders, which will generally leave the pixel sample black.</p>
+<p>The binary DSOs (<tt>.so</tt> extension) or object files (<tt>.o</tt>
+extension) are not portable. They must be compiled separately for each platform
+and, usually, for each major operating system release. For example, a Linux
+object file will not run on a Windows system even if they run on same type
+of processor. Also note, that pointers are 32bit values on some systems and
+64bit values on others, and that certain processors require that 64bit values
+such as <tt>double</tt>s are stored at memory addresses evenly divisible by 8
+(which is typically enforced by compiler defaults).</p>
+
+<p>On SGI systems, a shader can be debugged after it has been called for the
+first time, which attaches it to the program and makes its symbols available
+to the debugger. For this to work, the <tt>-g</tt> option must be given to the
+<tt>cc</tt> and <tt>ld</tt> commands in all stages - compilation, linking, and
+shared-library building. Also, only DSO shaders are debuggable, not shaders
+loaded in object ( <tt>.o</tt>) or source ( <tt>.c</tt>) form.</p>
+
+<p>On older systems where debugging shaders in dynamically loaded objects is
+difficult, or even to watch progress in regular shaders, it is helpful to use
+<dfn><a href="node157.html#INDEX828">mi_info</a></dfn> or <dfn>
+<a href="node157.html#INDEX830">mi_debug</a></dfn> calls in the shader code.
+Direct calls to system functions like <i>printf</i> should be avoided because
+the output is lost when running on a slave host, and because it can cause
+problems when running on multi-threaded systems.</p>
+
+<p>Windows shader libraries must use at least one shader interface call (any
+C shader interface function beginning with <i>mi_</i>). Otherwise an error
+message like "<code>DLL_SetModuleHandle not found</code>" may occur.</p>
+
+<p>When a shared library is loaded that provides an externally visible function
+<a id="INDEX365"></a><code>module_init()</code>, this function will be called
+right after the library has been loaded, and before the first shader in it is
+called. Conversely, if it contains a function <a id="INDEX366"></a><code>
+module_exit()</code>, that function will be called just before the library gets
+unloaded, and after the last call to a shader in this library. Note, that in
+the case of non-recoverable errors at any time after the library was loaded the
+<code>module_exit</code> is not guaranteed to be called. Neither
+<code><a href="node100.html#INDEX365">module_init</a></code> nor
+<code><a href="node100.html#INDEX366">module_exit</a></code> should rely on any
+shader interface services that assume that a rendering operation is in progress.
+Message functions such as <dfn><a href="node157.html#INDEX828">mi_info</a></dfn>
+are available. Note, that this feature is not supported on IBM systems.</p>
+
+<p>Note, that if a C++ compiler is used to compile a shader, all function names
+intended to be visible to mental ray (shader, init, exit, version) need to be
+declared with <tt>extern "C"</tt>. This is necessary because C++ compilers
+"mangle" symbols by encoding type information into the exported name,
+so mental ray cannot find the shader in the library. This will result in a
+"<code>declaring nonexisting function</code>" warning, and the shader will not
+be called.</p>
+
+<p><a id="FOOTNOTE13">[13]</a> Windows is not able to resolve external symbol
+references dynamically at load time only as supported by Unix-like platforms.
+Therefore, the <code>shader.lib</code> library provides all the symbol names
+of the mental ray shader interface functions to please the linker. At load time,
+mental ray (Standalone, or Library in a DCC application) will resolve the stub
+function references with the actual functions provided by the mental ray process,
+thus performing a similar dynamic symbol searching as on Unix-based platforms.
+</p>
+<p><a id="FOOTNOTE14">[14]</a> The <code>-Bsymbolic</code> option is supported
+by RedHat and SuSE Linux 8.0 and later. It makes it possible to use a different
+standard C++ library in the shaders than in mental ray, even though both are
+part of the same executable. This is important because mental ray uses a
+lowest-common-denominator library that is likely to differ from the default
+version used when compiling shaders.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node99.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node101.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

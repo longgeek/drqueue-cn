@@ -1,0 +1,241 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+
+shader mi_bump_flakes {
+ input:
+    //the c shader alters the passed in result
+    Color flake_color = Color(0.0, 0.0, 0.0, 0.0) { // col1
+    };
+    float flake_density = 0.5{
+    };
+    float flake_strength = 0.8{
+    };
+    float flake_scale = 0.2{
+    };
+
+    bool evalNormal = false{
+    };
+    
+#define MI_NOISE
+
+#ifdef MI_NOISE
+    Texture2d mi_noise_table = "mi_noise.dds"
+    {
+        description( "The texture containing the noise table." );
+        disable_filtering();
+        // hidden();
+        texture_coord_u("clamp");
+        texture_coord_v("clamp");
+    };
+#endif
+   
+ output:
+  Color result;
+  float3 normal_result;
+
+
+
+//TODO should be moved to common file
+//member:
+#ifdef MI_NOISE
+    // #include <../../../mi_noise.msl>
+
+    #define TABLE_SIZE      0x4000		/* must be power of 2 */
+
+    // Lookup function into noise table texture
+    float noise_table(int i)
+    {
+        int x = i % 256;
+        int y = i / 256;
+        float fx = (2.0 * float(x) + 1.0) / (2.0 * 256.0);
+        float fy = (2.0 * float(y) + 1.0) / (2.0 * 128.0);
+        Color c = tex2D(mi_noise_table, float2(fx,fy));
+        return c.r;
+    }
+
+    /* "hashed" lookup into table based on 3 integer coordinates */
+    //#define INOISE3(ix,iy,iz) (rtable[(((ix)*1341 + (iy) * 719 + (iz) * 2031) % (TABLE_SIZE))])
+    #define INOISE3(ix,iy,iz) noise_table(((ix)*1341 + (iy) * 719 + (iz) * 2031) % (TABLE_SIZE))  
+    #define INOISE2(ix,iy)    INOISE3(ix, iy, 0)
+    #define INOISE1(ix)       INOISE3(ix, 0, 0)
+
+    #define TRI_LIN     1
+    #define TRI_QUAD    2
+
+  
+
+    /*
+    * this function does the actual computation and is called from all the
+    * user-visible functions below.
+    */
+
+    // Used to index into a linear array as if it was a [3][3] array
+    #define IDX2(a,b) (a+b*3)
+    // Used to index into a linear array as if it was a [3][3][3] array
+    #define IDX3(a,b,c) (a + b*3 + c*9)
+
+    float noise(
+                in int	dimn,		/* dimension, 1,2,3 for 1d, 2d, 3d */
+                in bool	dograd,		/* compute gradients gx,gy,gz too */
+                in bool b_uniform,	/* return uniform distribution? */
+                in float  x,		/* location to compute for */
+                in float  y,
+                in float  z,
+                out float gx,		/* returned gradient if dograd */
+                out float gy,
+                out float gz)
+    {
+        int             i, j, k, ix, iy, iz; //, loopc, loopcx, loopcy, loopcz;
+        float           xx, yy, zz, val;
+        float           u[9];     // Was: [3][3];
+        float           du[9];    // Was [3][3];
+        float           fr[3];
+        //float           dxyz[27]; // Was: [3][3][3], 
+        float                dyz[9],   // Was: [3][3], 
+                        dz[3];
+        float           fxdyz[9], // Was: [3][3], 
+                        fxdz[3], 
+                        fydz[3], 
+                        fx, fy, fz;
+
+        gx = gy = gz = 0;
+        val = 0;
+
+       
+        // make them positive to avoid funny behavior around 0.0 
+        if (x < -39999) x = -39998 - x; else x += 40000;
+        if (y < -39999) y = -39998 - y; else y += 40000;
+        if (z < -39999) z = -39998 - z; else z += 40000;
+
+        ix = (int)(xx = x - .5);
+        iy = (int)(yy = y - .5);
+        iz = (int)(zz = z - .5);
+      
+        // fractional parts of the coordinates 
+        fr[0] = xx - ix;
+        fr[1] = yy - iy;
+        fr[2] = zz - iz;
+
+             
+
+        //
+       // compute b-spline blending fns u[][] as functions of input point
+        // coords du[][] = d/dx (u[][]  Everything is a tensor product so we
+        // have only one "derivative" per dimension
+        //
+        // TODO: Clean: (void)memset(u,  0, sizeof(u));
+        // TODO: Clean: (void)memset(du, 0, sizeof(du));
+            for (i=0; i < 3; ++i) {
+                xx = 1.0 - fr[i];
+                u[IDX2(0,i)] = xx * xx * .5;
+                du[IDX2(0,i)] = -xx;// remember: partial wrt fr[i], not xx
+                xx = fr[i] - .5;
+                u[IDX2(1,i)] = -xx * xx + .75;
+                du[IDX2(1,i)] = -2 * xx;
+                u[IDX2(2,i)] = fr[i] * fr[i] * .5;
+                du[IDX2(2,i)] = fr[i];
+        }
+
+        //
+        // compute the value of the spline function at the input point
+        // innermost loop computes the x, next outer the y, outermost the z
+        //
+
+        float noise_factor = 1;;
+        for (fx=fy=fz=xx=0, i=0; i < 3; ++i) {	                          // z 
+            for (fxdz[i]=fydz[i]=dz[i]=0, j=0; j < 3; ++j) {	          // y 
+                    for (fxdyz[IDX2(i,j)]=dyz[IDX2(i,j)]=0,k=0; k < 3; ++k){ // x 
+                      noise_factor = INOISE3(ix+k, iy+j, iz+i);
+                      dyz[IDX2(i,j)]   +=  u[IDX2(k,0)] * noise_factor;// f(x) 
+                      fxdyz[IDX2(i,j)] += du[IDX2(k,0)] * noise_factor;//x-partial
+                    
+                  
+                }
+                    dz[i]   +=  u[IDX2(j,1)] *   dyz[IDX2(i,j)];   	  // f(x,y) 
+                    fxdz[i] +=  u[IDX2(j,1)] * fxdyz[IDX2(i,j)];	// x-partial 
+                    fydz[i] += du[IDX2(j,1)] *   dyz[IDX2(i,j)];	// y-partial 
+            }
+                xx +=  u[IDX2(i,2)] *   dz[i];			//f(x,y,z)  
+                fx +=  u[IDX2(i,2)] * fxdz[i];			// x-partial 
+                fy +=  u[IDX2(i,2)] * fydz[i];			// y-partial 
+                fz += du[IDX2(i,2)] *   dz[i];			// z-partial 
+        }
+
+        //the "answer" lies in different variables depending on the dimension
+       
+        gx = fx;
+        gy = fy;
+        gz = fz;
+       
+        val = xx;
+
+        return(val);
+    }
+
+
+
+    /*
+    * these functions is all the user sees. They are listed in the manual.
+    */
+
+    float mi_noise_3d_grad(in float3 p, out float3 g)
+    {
+        return(noise(3, true, false, p.x,p.y,p.z, g.x,g.y,g.z));
+    }
+
+   
+#else
+    // TEMPORARY HACK IMPLEMENTATION AWAITING ACTUALLY IMPLEMENTING mi_noise_*()
+    float mi_noise_3d(in float3 point)
+    {
+       return abs(sin(point.x) * sin(point.y) * sin(point.z));
+    }
+#endif
+
+  void main() {
+
+    result = flake_color;
+
+    float3 grad = float3(0,0,0);
+    float3 grad2 = float3(0,0,0);
+    float scal = 0;
+
+    float paras_flake_density = flake_density;
+    float paras_flake_scale = flake_scale;
+    float paras_flake_strength = flake_strength;
+
+    //moved this here to avoid division by zero
+    if(paras_flake_density <= 0)paras_flake_density = 0.5;
+    if(paras_flake_scale <= 0)paras_flake_scale = 1.0;
+
+    float3 tex;
+    // mi_point_to_object
+    tex = transform_point("internal", "object", position);
+    tex.xyz /= paras_flake_scale;
+
+    mi_noise_3d_grad(tex, grad);
+
+    // Displace the coordinate according to noise value
+    tex += (grad*2.0);
+
+    //Intentionally use only integer coordinates, to make 
+    //   flake transients "harder" and not "wobbly" 
+    tex = floor(tex);
+
+     scal = mi_noise_3d_grad(tex, grad);
+     grad2 = transform_normal("object", "internal", grad);
+    
+    scal = pow(scal, 1.0/paras_flake_density);
+
+    normal += grad2*paras_flake_strength;
+    normal = normalize(normal);
+    normal_result = normal;
+    result.rgb *= scal;
+
+  } // main
+};

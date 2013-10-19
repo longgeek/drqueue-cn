@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Free-Form Surfaces</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="meshes.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node10.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION7"></a>
+<h2 id="fo:ffs">Free-Form Surfaces</h2>
+
+<p>mental ray supports <b><a id="INDEX12"></a>free-form curve</b>s
+and surfaces<a id="INDEX13"></a> in non-uniform rational
+<a href="node85.html#INDEX302">B-spline</a> (NURBS),
+<a href="node85.html#INDEX303">B&eacute;zier</a>,
+<a href="node85.html#INDEX304">Taylor</a> (monomial),
+<a href="node85.html#INDEX305">cardinal</a> or
+<a href="node85.html#INDEX307">basis matrix</a> form. Any of these forms
+may be rational and may be of degree up to twenty-one.
+<a href="#FOOTNOTE2">[2]</a> Surfaces may be trimmed.</p>
+<p>Internally, <a href="node9.html#INDEX13">free-form surface</a>s
+are triangulated (approximated) before rendering. A variety of
+<a href="node89.html#INDEX334">approximation</a> techniques is
+available, including uniform and regular parametric, edge length,
+distance, angle, and combined methods. All versions of mental ray
+support a large range of methods:</p>
+<ul>
+<li>The uniform parametric technique (referred to in the input file
+as <tt>parametric</tt>) subdivides the surface at equal intervals
+in parameter space. The input file specifies a factor which is
+multiplied by the surface degree to obtain the number of
+subdivisions in each parametric direction per patch.</li>
+<li>The regular parametric technique ( <tt>regular parametric</tt>
+in the input file) is a simpler variant of the previous technique.
+It subdivides the surface at equal intervals in parameter space.
+The number of subdivisions per surface is directly specified in the
+input file.</li>
+<li>The edge length technique (using the <tt>length</tt> keyword)
+subdivides the surface at equal intervals in
+<a href="node101.html#INDEX370">camera space</a> (in the <tt>mi1</tt>
+format) or in <a href="node101.html#INDEX369">object space</a> (in
+the <tt>mi2</tt> format) - or, rather, the intervals will never
+exceed the given upper bound. Optionally, this bound may be
+specified in <a href="node101.html#INDEX371">raster space</a> (in
+units of pixel diagonals) rather than camera or
+<a href="node101.html#INDEX369">object space</a>. If, for example, one
+wanted to approximate a surface with sub-pixel size triangles, one
+could use the edge length <a href="node89.html#INDEX334">approximation</a>
+technique with a raster space accuracy of 0.5 pixel diagonals.</li>
+<li>The distance-dependent technique (using the <tt>distance</tt>
+keyword) subdivides a surface until an upper bound on the maximum
+distance in the space the object is defined in between the actual
+surface and its triangle <a href="node89.html#INDEX334">approximation</a>
+(known as the <i>distance
+tolerance</i>). Length and distance criteria are scale dependent:
+the size of the object determines the number of triangles, larger
+objects require more triangles to meet the same length or distance
+criterion because the length and distance scales with the object.
+Note that the distance criterion will not resolve features whose
+scale is below the given tolerance. The distance criterion may be
+optionally given in <a href="node101.html#INDEX371">raster
+space</a>, again in units of pixel diagonals.</li>
+<li>The angle-dependent technique (using the <tt>angle</tt>
+keyword) subdivides a surface until an upper bound on the maximum
+angle (in degrees) between any two normals on a subdivided portion
+of the surface (known as the <i>angle tolerance</i>) is met. In
+spite of the apparent advantage of the size-independent angle
+criterion over the distance criterion, the angle criterion has the
+undesirable property of resolving small discontinuities ad
+infinitum, whereas the distance criterion will not resolve features
+whose scale is below the given tolerance. Either criterion can be
+disabled by setting the corresponding tolerance to zero.</li>
+</ul>
+<p>In addition, mental ray supports a specialized method called
+<i>fine approximation</i> that is much easier to control and works
+very well with high-detail displacement maps. The view-dependent
+fine length method is now recommended for all high-detail
+tessellations; regular parametric can be used for low-detail
+objects or the base surface of finely displaced objects. This
+greatly simplifies the choice of methods and parameters.</p>
+<ul>
+<li>Fine approximation can be combined with the length and partly
+with parametric techniques to create a very fine microtriangle
+approximation that works especially well for very detailed
+displacement maps, resolving every little detail instead of
+introducing tessellation artifacts such as broken edges at contrast
+boundaries in the displacement map. Due to mental ray's cache
+manager, fine approximation does not result in excessive memory
+usage (as non-fine approximation with the same approximation
+parameters would). See page <a href="node89.html#fineapprox">fineapprox</a>
+for details. Fine approximation cannot be used together with merging
+and <a href="node85.html#INDEX322">connection</a>s.</li>
+</ul>
+<p>The length, distance, and angle criteria can be combined; in
+this case refinement continues until all criteria are met. The
+<tt>any</tt> keyword changes this so that refinement stops when
+<i>any</i> criterion is met; this is useful to stop the angle
+criterion from adding more triangles when the triangle edges become
+smaller than the limit specified by the length criterion, for
+example.</p>
+<p>View-dependent subdivision, enabled by the <tt>view</tt>
+keyword, changes the length and distance criteria to work in
+<a href="node101.html#INDEX371">raster space</a>, interpreting the
+parameters in pixels instead of 3D units. Effectively, closer
+objects are tessellated more finely. This means that objects that
+are instanced more than once must be triangulated in multiple ways.
+A tradeoff between the additional memory required to store multiple
+objects and the reduced total number of instanced triangles must be
+evaluated to achieve optimal speed.</p>
+<p>The length, distance, and angle
+<a href="node89.html#INDEX334">approximation</a> techniques use a recursive
+subdivision process that can also be controlled by two additional
+parameters, specifying the minimum and maximum number of recursion
+levels. The subdivision can be forced to proceed at least as far as
+the given minimum level, and refinement can be halted at the
+maximum level.</p>
+<p>All subdivisions of a <a href="node9.html#INDEX13">free-form
+surface</a> apart from the regular parametric technique and the
+Delaunay technique begin at the patch level. (A patch is the
+smallest unit of a surface.) If, for example, a plane is modeled
+with ten by ten patches it will be approximated by at least two
+hundred triangles, although two triangles might be adequate. If
+mental ray seems to be producing a large number of triangles in
+spite of a low <a href="node89.html#INDEX334">approximation</a>
+accuracy, this is often due to the selected patch subdivision
+algorithm.</p>
+<p>Free-form curves (<a href="node85.html#INDEX317">trimming
+curve</a>s) may also be approximated by any of the above described
+methods using a technique and tolerances which are distinct from
+those of the surface which the curve trims. The definitions are
+essentially the same if one considers a curve segment to correspond
+to a surface patch.</p>
+<p>
+<a id="FOOTNOTE2">[2]</a> Although the
+user-settable degree is currently limited to 21, mental ray has no
+inherent limit.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="meshes.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node10.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

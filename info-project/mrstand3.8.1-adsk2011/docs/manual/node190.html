@@ -1,0 +1,155 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Function Declarations</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="assembly_api.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node191.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION188"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_api_parameter_decl">mi_api_parameter_decl</a></li>
+<li><a href="#api:mi_api_parameter_append">mi_api_parameter_append</a></li>
+<li><a href="#api:mi_api_parameter_child">mi_api_parameter_child</a></li>
+<li><a href="#api:mi_api_funcdecl_begin">mi_api_funcdecl_begin</a></li>
+<li><a href="#api:mi_api_funcdecl_end">mi_api_funcdecl_end</a></li>
+</ul>
+
+<h3>Function Declarations</h3>
+
+<p>
+Functions are user-written C routines with parameters that are
+used as shaders during preprocessing, rendering, and
+post-processing. Before a function can be defined (by giving its
+name and listing its parameter values), it must be declared so
+mental ray knows the complete parameter list the C function
+accepts, and the data type for each parameter. For a complete list
+of available shaders, refer to the mental ray manual.</p>
+
+<a id="INDEX1027"></a>
+<h5 class="anchor" id="api:mi_api_parameter_decl">mi_api_parameter_decl</h5>
+<pre>
+    miParameter *mi_api_parameter_decl(
+        miParam_type    type,      /* one of miTYPE_* */
+        char            *name,     /* parameter name */
+        int             strlength) /* not used */
+</pre>
+<p>
+Declare a parameter or return type of the given type and name.
+<p>
+Before a function itself is declared, a complete description of the
+parameters and their types must be built. This function builds a
+<tt>miParameter</tt> structure for a single parameter to be appended
+to the list. The parameter <i>type</i>, the parameter <i>name</i>, and
+the maximum length of the string if the type is <tt>miTYPE_STRING</tt>,
+must be specified. The string length includes the trailing null byte.
+Note, that result parameters of simple types have no name, thus
+<code>0</code> should be passed instead for such parameters. Result
+structures, on the other hand, do have members with names.
+</p>
+
+<a id="INDEX1028"></a>
+<h5 class="anchor" id="api:mi_api_parameter_append">mi_api_parameter_append</h5>
+<pre>
+    miParameter *mi_api_parameter_append(
+        miParameter     *list,     /* list of parameters to append to */
+        miParameter     *parm)     /* new parameter */
+</pre>
+<p>
+Append a declared parameter to a list of declared parameters, and return
+the new list.
+<p>
+Parameter structures created with the previous function must be concatenated
+to a list with this function. It appends a new parameter <i>parm</i> to an
+existing list <i>list</i>. The parameter pointer created with the definition
+of the first parameter, which is also the anchor of the parameter list that
+will be passed to <i>mi_api_funcdecl_end</i>, can be used as <i>list</i>
+argument. But it is more efficient to pass the parameter pointer returned by
+the previously appended parameter.</p>
+
+<a id="INDEX1029"></a>
+<h5 class="anchor" id="api:mi_api_parameter_child">mi_api_parameter_child</h5>
+<pre>
+    miBoolean mi_api_parameter_child(
+        miParameter     *parm,     /* struct or array to attach to */
+        miParameter     *child)    /* new child parameter */
+</pre>
+<p>
+Attach a declared parameter as a child to a struct or array parameter.
+<p>
+Function parameter lists are not necessarily linear lists. Parameters of type
+<tt>miTYPE_STRUCT</tt> and <tt>miTYPE_ARRAY</tt> require a sublist of
+parameters. Arrays always require a single parameter as subtree, which
+becomes the type of the array, while structures require a list as subtree
+that contains one parameter for every member of the structure. The
+sub-parameter or sub-parameter list <i>child</i> is attached to the array
+or structure parameter <i>parm</i> with this function.</p>
+
+<a id="INDEX1030"></a>
+<h5 class="anchor" id="api:mi_api_funcdecl_begin">mi_api_funcdecl_begin</h5>
+<pre>
+    miFunction_decl *mi_api_funcdecl_begin(
+        miParameter     *outparms,  /* result parameters: simple, or struct */
+        char            *name,      /* function name */
+        miParameter     *inparms)   /* input parameters: none, list, or tree */
+</pre>
+<p>
+Create a new function declaration of the given name with the given input
+and output parameters.
+<p>
+After the input an output parameter lists have been built the function
+itself can be declared using this call. It requires to pass the anchors
+to the parameter lists, as well as the function name which must agree
+with the name of the C function to be executed. This call completes the
+declaration of a function. The input parameter list <var>inparms</var>
+may contain arrays and structures. If the function does not have any input
+parameters then <var>inparms</var> should be <code>0</code>. The result
+parameter list <var>outparms</var> is similar to the input parameter list,
+but may only be either a simple type or a structure, not an array or a
+structure containing structures or arrays. The result parameter of a simple
+type does not have a name, i.e. the <i>name</i> argument in the call to
+<i><a href="#api:mi_api_parameter_decl">mi_api_parameter_decl</a></i> to
+create <i>outparms</i> was a null pointer. If the result is a structure, the
+structure members must be named as usual.<br />
+Note, this function is also used to declare structured user data blocks. In
+this case, the <i>outparms</i> pointer should be a <code>0</code> (see
+<i><a href="node185.html#INDEX916">mi_api_data_begin</a></i>). Because this
+function always stores the declaration type <tt>miFUNCTION_C</tt>, if a
+phenomenon or user data block is being declared, the caller must modify the
+<i>type</i> field of the returned declaration.</p>
+<p>Earlier versions of the API passed a <tt>miParam_type</tt> instead of a
+<tt>miParameter</tt>. This was changed to allow structured return types. For
+backward compatibility, <i>mi_api_funcdecl_end</i> still accepts
+<tt>miParam_type</tt> codes, but since the function prototype changed the
+compiler will generate an error unless a cast is applied.</p>
+
+<a id="INDEX1031"></a>
+<h5 class="anchor" id="api:mi_api_funcdecl_end">mi_api_funcdecl_end</h5>
+<pre>
+    miTag mi_api_funcdecl_end(void)
+</pre>
+<p>Finish the declaration of the function and return the tag of the new
+database element.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="assembly_api.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node191.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

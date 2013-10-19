@@ -1,0 +1,38 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Comp_matte_mult
+{
+  input:
+    Color foreground = Color(0,0,0,1)
+	{		
+		display_name("Foreground");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The Foreground Color." );
+	};
+    bool  ignore_zero = false
+	{	
+		display_name("Ignore Zero");	
+		description( "Whether or not this operation will be skipped for "
+					 "Alpha values of 0." );
+	};
+    
+  output:
+    Color result;
+    
+    void main()
+    {
+	if( ignore_zero && foreground.a == 0 )
+		result = foreground;
+	else
+		result = foreground * foreground.a;
+    }
+}
+{
+	description( "A color operation that multiplies the Foreground color "
+				 "by its Alpha Channel." );
+}
+;
+

@@ -1,0 +1,68 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+#include <constants.msl>
+#import <mi_msl_shared.msl>
+
+shader Component_oren_nayar
+{
+  input:    
+    float diffuse_deviation = 0.1
+    {	
+	display_name("Diffuse Deviation");
+	soft_range(0,PI);
+	hard_range(0,TWO_PI);
+	description( "The standard deviation of the diffuse micofacets." );
+    };
+    float specular_shininess = 50.0
+    {			
+	display_name("Specular Shininess");
+	soft_range(0,100);
+	description( "The width of specular highlights across the "
+	"surface." );
+    };
+
+  output:
+    Color diffuse;
+    Color specular;
+
+    void main() 
+    {        
+	diffuse  = Color(0,0,0,0);
+	specular = Color(0,0,0,0);
+
+	float3 vdir = direction;
+	float3 tangent = texture_tangent_u[0];
+
+	// enumerate lights
+	Light_iterator light;
+	foreach (light)
+	{
+	    float cos = saturate(light.dot_nl);
+	    if (cos > 0.0) {
+		float d = mi_orennayar_diffuse(light.direction, 
+			vdir, normal, tangent, diffuse_deviation);
+		diffuse += (d * cos) * light.contribution;
+
+		float s = mi_phong_specular(light.direction, 
+			vdir, normal, specular_shininess);
+
+		specular += (s * cos) * light.contribution;
+	    }
+	}
+
+	// irradiance term
+	Irradiance_options irradiance_options;
+	irradiance_options.set_importance(1.0);
+	diffuse += (1.0/PI) * irradiance(irradiance_options);
+
+	diffuse.a = 1.0;
+	specular.a = 1.0;
+    }
+}
+{
+    description( "An illumination model for matte difuse surfaces "
+    "and provides specular control." );
+}
+;

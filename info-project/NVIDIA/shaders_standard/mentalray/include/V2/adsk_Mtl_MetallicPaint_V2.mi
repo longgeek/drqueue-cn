@@ -1,0 +1,1064 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :    mtarpini
+# Purpose:    MetallicPaint Material
+#
+# ---------------------------------------------
+# Exports:
+#
+# - adsk_Shd_MetallicPaint        (hidden)
+# - adsk_Mtl_MetallicPaint_V2
+#
+#
+# Imports:
+#
+# - 3dsmax9
+# - paint
+# - adsk_Mtl_Spider
+# - adsk_Utility_shaders
+#
+# ---------------------------------------------
+# Description:
+#
+# Basically the workflow for the phen class implementation looks like this:
+#
+#   - a first low level phen, the apparance shader.
+#
+#   - a controller shader that takes the UI specs and outputs values to drive
+#     the exposed parameters in the appearance shader.
+#
+#   - the actual material class phen which encapsulates the above shaders.
+#
+#
+# ---------------------------------------------
+# History:
+#
+# June 3, 2007 - mtarpini, Created
+#
+#
+#****************************************************************************
+
+min version "3.7.1"
+
+
+
+
+
+
+##################################################################################
+#---------------------------------------------------------------------------------
+# adsk_Shd_MetallicPaint
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+declare phenomenon
+    struct
+    {
+        color   "result",
+
+		color	"ambient_result",
+		color	"ambient_raw",
+		color	"ambient_level",
+
+		color	"diffuse_result",
+		color	"diffuse_raw",
+		color	"diffuse_level",
+
+		color	"indirect_result",
+		color	"indirect_raw",
+		color	"indirect_level",
+
+		color	"spec1_result",
+		color	"spec1_raw",
+		color	"spec1_level",
+
+		color	"spec2_result",
+		color	"spec2_raw",
+		color	"spec2_level",
+
+		color	"flake_result",
+		color	"flake_raw",
+		color	"flake_level"
+    }
+    "adsk_Shd_MetallicPaint_V2"
+    (
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        struct "m"
+        {
+            #---------------------------------
+            color   "base_color",
+			scalar	"base_luminance",
+			scalar	"base_weight",
+			scalar	"base_bias",
+            
+            #---------------------------------
+			integer	"pearl_enable",
+			color	"pearl_color",
+			scalar	"pearl_ior",
+			scalar	"pearl_blend",
+
+            #---------------------------------
+            color   "spec",
+            color   "spec_sec",
+            scalar  "spec_exp",
+			scalar	"spec_weight",
+			scalar	"spec_sec_exp",
+			scalar	"spec_sec_weight",
+            boolean "spec_glazing",
+
+            #---------------------------------
+			integer	"bump_enable",
+			scalar	"bump_amount",
+			shader	"bump_map"
+        },
+        
+        #-------------------------------------
+        # Flakes
+        #-------------------------------------        
+        struct "f" 
+        {
+            #---------------------------------
+            color   "flake_color",
+            scalar  "flake_weight",
+            scalar  "flake_scale",
+            scalar  "flake_reflect",
+            scalar  "flake_exp",
+			scalar  "flake_decay"
+        },
+
+        #----------------------------------
+        # Lights and Mode Parameters
+        #----------------------------------
+        integer		"mode",
+		array light "lights"
+    )
+    
+    apply material
+    version 1
+    
+
+
+
+    #------------------------------------------------------------------------
+    # Darkener for Base Color
+    #------------------------------------------------------------------------
+	shader "luma_darker_factor" "adsk_Utility_Change_Range"
+	(
+		"the_value" = interface "m.base_luminance",
+		"o_min"		0,
+		"o_max"		1,
+		"mode"		1
+	)
+    shader "base_darkener__instance" "adsk_Utility_Mix2Color" 
+    (
+        "color1"		= interface "m.base_color",
+        "color2"		0 0 0 1,
+        "mixing_mode"	0,
+        "mixing_factor" = "luma_darker_factor"
+    )
+
+    #------------------------------------------------------------------------
+    # Tweak luma factor
+    #------------------------------------------------------------------------
+	shader "luma_bias_factor" "adsk_Utility_Change_Range"
+	(
+		"the_value" = interface "m.base_luminance",
+		"i_min"		0,
+		"i_max"		1,
+		"o_min"		0,
+		"o_max"		8
+	)
+	
+    #------------------------------------------------------------------------
+    # Pearl amount/blend
+    #------------------------------------------------------------------------
+    shader "pearl_effect__instance" "adsk_Utility_Mix2Color" 
+    (
+        "color1"		= "base_darkener__instance",
+        "color2"		= interface "m.pearl_color",
+        "mixing_mode"	0,
+        "mixing_factor" = interface "m.pearl_blend"
+    )   
+
+    #------------------------------------------------------------------------
+    # Pearl falloff
+    #------------------------------------------------------------------------
+	shader "pearl_bias_factor" "adsk_Utility_Change_Range"
+	(
+		"the_value" = interface "m.pearl_ior",
+		"i_min"		0,
+		"i_max"		1,
+		"o_min"		0,
+		"o_max"		4
+	)    
+    
+    #-------------------------------------
+    # Flakes
+    #-------------------------------------
+    shader "flakes"  "mi_bump_flakes" 
+    (
+		"flake_scale"    = interface "f.flake_scale",
+        "flake_strength" 0.8,
+        "flake_density"  0.5
+    )
+
+    #-------------------------------------
+    # MetallicPaint shader
+    #-------------------------------------
+    shader "paint_flakes__instance" "mi_metallic_paint_x"
+    (
+        "ambient"			0 0 0 0,
+        "base_color"		= "base_darkener__instance",
+        "edge_color"		= "pearl_effect__instance",
+        "edge_color_bias"	= "pearl_bias_factor",
+        "lit_color"			= interface "m.base_color",
+		"lit_color_bias"	= "luma_bias_factor",
+
+        "diffuse_weight"	= interface "m.base_weight",
+        "diffuse_bias"		= interface "m.base_bias",
+        "irradiance_weight"	1.0,
+       
+        "spec"				= interface "m.spec",
+        "spec_weight"		= interface "m.spec_weight",
+        "spec_exp"			= interface "m.spec_exp",
+        "spec_sec"			= interface "m.spec_sec",
+        "spec_sec_weight"	= interface "m.spec_sec_weight",
+        "spec_sec_exp"		= interface "m.spec_sec_exp",
+        "spec_glazing"		= interface "m.spec_glazing",
+
+        "flake_color"		= interface "f.flake_color",
+		"flake_weight"		= interface "f.flake_weight",
+        "flake_exp"			= interface "f.flake_exp",
+        "flake_reflect"		= interface "f.flake_reflect",
+        "flake_decay"		= interface "f.flake_decay",
+        "flake_bump"		"flakes",
+
+        "global_weight"     1.0,
+
+		"mode"				= interface "mode",
+		"lights"			= interface "lights"
+    )
+    
+    
+    #------------------------------------------------------------------------
+    # Phenomenon Root
+    #------------------------------------------------------------------------
+    root = "paint_flakes__instance"
+
+
+
+    #------------------------------------------------------------------------
+    # UI
+    #------------------------------------------------------------------------
+    gui "gui_adsk_Shd_MetallicPaint_V2" 
+    {
+        #----------------------------------
+        control "Global" "Global" ("uiName" "adsk_Shd_MetallicPaint_V2(adsk)", "category" "Material"
+		, hidden
+        )
+        
+        control "mode" "integer" ("nonConnectable", "uiName" "Mode", "hidden")        
+        control "lights" "array light" ("uiName" "Lights", "hidden")        
+    }
+end declare
+
+
+
+
+
+##################################################################################
+#---------------------------------------------------------------------------------
+# adsk_Shd_MetallicPaint_mia (mia_mat for diffuse, irrad+ao, reflections)
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+declare phenomenon
+    struct
+    {
+		color "result",         # main output
+
+		color "diffuse_result",
+		color "diffuse_raw",
+		color "diffuse_level",
+
+		color "spec_result",
+		color "spec_raw",
+		color "spec_level",
+
+		color "refl_result",
+		color "refl_raw",
+		color "refl_level"
+    }
+    "adsk_Shd_MetallicPaint_mia_V2"
+    (
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        struct "m"
+        {
+            #---------------------------------
+			color	"base_diffuse",
+
+			scalar	"reflectivity",
+			scalar	"refl_gloss",
+			scalar	"hl_vs_refl_balance",
+
+			scalar	"brdf_0_degree_refl",
+			scalar	"brdf_90_degree_refl",
+			scalar	"brdf_curve",
+
+			integer	"bump_enable",
+			scalar	"bump_amount",
+			shader	"bump_map"
+        },
+        
+		#-------------------------------------
+		# Ambient Occlusion 
+		#-------------------------------------
+		struct "o"
+		{
+			#---------------------------------
+			boolean  "ao_on",
+			integer  "ao_samples",
+			scalar   "ao_distance",
+			integer  "ao_do_details"
+		},
+         
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------
+        struct "p"
+        {
+            #---------------------------------
+			integer "reflection_glossy_samples",
+			integer "refl_depth",
+			scalar	"node_visibility"
+        },
+        
+        #-------------------------------------
+        # Lights and Mode Parameters
+        #-------------------------------------
+        integer		"mode",
+		array light	"lights"
+    )
+    
+    apply material
+    version 1
+    
+
+
+    #------------------------------------------------------------------------
+    # Peeling bump
+    #------------------------------------------------------------------------
+	shader "peeling_xyzgen" "adsk_Utility_XYZGenerator" (
+		"CoordinateSystem" 0, 
+		"MapChannel" 1, 
+		"Offset" 0 0 0, 
+		"Tiling" 1 1 1, 
+		"Angle" 0 0 0, 
+		"Blur" 1, 
+		"BlurOffset" 0
+	)
+		
+	shader "peeling_baseout" "adsk_Utility_Output" (
+		"RGBAmount" 1, 
+		"RGBOffset" 0, 
+		"OutputAmount" 1, 
+		"BumpAmount" 1, 
+		"Invert" off, 
+		"Clamp" off, 
+		"AlphaFromRGB" off, 
+		"UseColorMap" off, 
+		"UseRGBCurve" off
+	)
+
+	shader "peeling_noise" "adsk_Utility_Noise" (
+		"Parameters" {
+			"Color1" 0 0 0 1, 
+			"Color2" 1 1 1 1, 
+			"Map1Enabled" on, 
+			"Map2Enabled" on, 
+			"Size" 1.0, 
+			"Phase" 0, 
+			"Levels" 3, 
+			"ThresholdLow" 0, 
+			"ThresholdHigh" 1,
+			"Type" 0, 
+			"Coords" "peeling_xyzgen", 
+			"Output" "peeling_baseout"	}, 
+		"ExtraParameters" {
+			"GBufferID" 0	}
+	)
+
+	shader "peeling_bump" "adsk_Utility_Bump" 
+	(
+		"Multiplier" = interface "m.bump_amount",
+		"Map" "peeling_noise"
+	)
+	shader "nobump" "adsk_Utility_ColorState" ("the_color" 0 0 0 0)
+	shader "bump_switcher" "adsk_Utility_Switch8Shader" 
+	(
+		"switcher" = interface "m.bump_enable",
+		"type" 2,
+		"shader_1" "nobump",
+		"shader_2" "peeling_bump"
+	)
+
+	
+
+    #------------------------------------------------------------------------
+    # -> Diffuse, Irradiance, AO, Reflections (mia material) ################
+    #------------------------------------------------------------------------
+    shader "mia_material__instance" "mia_material_x"
+    (
+        #----------------------------------
+		"diffuse_weight"		1,
+		"diffuse"				0 0 0 0,
+		"diffuse_roughness"		0.0,
+
+        #----------------------------------
+        "reflectivity"			= interface "m.reflectivity",
+        "refl_color"			1 1 1 1,
+        "refl_gloss"			= interface "m.refl_gloss",
+		"refl_gloss_samples"	= interface "p.reflection_glossy_samples",
+        "refl_interpolate"		off,
+        "refl_hl_only"			off,
+        "refl_is_metal"			off,
+
+        #----------------------------------
+        "transparency"			0.0,
+
+        #----------------------------------
+        "brdf_fresnel"			off,
+        "brdf_0_degree_refl"	= interface "m.brdf_0_degree_refl",
+        "brdf_90_degree_refl"	= interface "m.brdf_90_degree_refl",
+        "brdf_curve"			= interface "m.brdf_curve",
+        "brdf_conserve_energy"	off,
+
+        #----------------------------------
+        "intr_grid_density"		2,
+        "intr_refl_samples"		2,
+        "intr_refl_ddist_on"	off,
+        "intr_refl_ddist"		0.0,
+        "intr_refr_samples"		2,
+        "single_env_sample"		off,
+
+        #----------------------------------
+        "refl_falloff_on"		off,
+        "refl_falloff_dist"		0.0,
+        "refl_falloff_color_on" off,
+        "refl_falloff_color"	0.0 0.0 0.0,
+        "refl_depth"			= interface "p.refl_depth",
+        "refl_cutoff"			0.00,
+
+        "refr_falloff_on"		off,
+        "refr_falloff_dist"		0.0,
+        "refr_falloff_color_on" off,
+        "refr_falloff_color"	0.0 0.0 0.0,
+        "refr_depth"			5,
+        "refr_cutoff"			0.00,
+
+        #----------------------------------
+		"ao_on"					= interface "o.ao_on",
+		"ao_samples"			= interface "o.ao_samples",
+		"ao_distance"			= interface "o.ao_distance",
+		"ao_dark"				0.2 0.2 0.2,
+		"ao_ambient"			0.0 0.0 0.0,
+		"ao_do_details"			= interface "o.ao_do_details",
+
+        #----------------------------------
+		"propagate_alpha"		on,
+
+        "hl_vs_refl_balance"	= interface "m.hl_vs_refl_balance",		# enable/disable speculars
+        "cutout_opacity"		= interface "p.node_visibility",			# nodevisibility hook
+
+		"additional_color"      = interface "m.base_diffuse",			# ** -> metallicpaint diffuse <- **
+
+        #----------------------------------
+		"bump"					"bump_switcher",
+        "no_diffuse_bump"        on,
+
+        #----------------------------------
+        "mode"					= interface "mode",
+		"lights"				= interface "lights"
+    )
+    
+    
+    #------------------------------------------------------------------------
+    # Phenomenon Root
+    #------------------------------------------------------------------------    
+    root = "mia_material__instance"
+
+
+
+    #------------------------------------------------------------------------
+    # UI
+    #------------------------------------------------------------------------
+    gui "gui_adsk_Shd_MetallicPaint_mia_V2" 
+    {
+        #----------------------------------
+        control "Global" "Global" ("uiName" "adsk_Shd_MetallicPaint_Mia_V2(adsk)", "category" "Material"
+        , hidden
+        )
+        
+        control "mode" "integer" ("nonConnectable", "uiName" "Mode", "hidden")        
+        control "lights" "array light" ("uiName" "Lights", "hidden")        
+    }
+end declare
+
+
+
+
+
+##################################################################################
+#---------------------------------------------------------------------------------
+# adsk_Shd_MetallicPaint_mia (mia_mat for diffuse, irrad+ao, reflections)
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+declare phenomenon
+ 	material "adsk_Mtl_MetallicPaint_V2"
+ 	(
+		struct "m" 
+		{
+			boolean "coat_base_color_by_object",
+			color	"coat_base_color",
+			scalar	"coat_base_highlight_spread",
+			
+			integer	"flecks_enable",
+			boolean "flecks_color_by_object",
+			color	"flecks_color", 
+			scalar	"flecks_size",
+			
+			integer "pearl_enable",
+			scalar	"pearl_amount",
+			boolean "pearl_color_by_object",
+			color	"pearl_color",
+			scalar	"pearl_ior",
+			
+			integer "top_coat_types",
+			scalar	"top_coat_custom_glossy",
+			scalar	"top_coat_custom_falloff",
+			
+			integer "finish",
+			scalar	"finish_peel_amount",
+
+			#----------------------------------
+			boolean		"tint_enable" default off,
+			color		"tint_color" default 1.0 1.0 1.0
+		},
+		struct "o" 
+		{
+			boolean "ao_on",
+			integer "ao_samples",
+			scalar	"ao_distance",
+			boolean "ao_do_details",
+			boolean "roundcorners_on",
+			scalar	"roundcorners_radius",
+			boolean "roundcorners_allow_different_materials"
+		},
+		struct "p"
+		{
+			integer "reflection_glossy_samples",
+			integer "refl_depth"		
+		},
+		struct "x" 
+		{
+			integer "gbuffer_id"		
+		},
+								    	
+		#----------------------------------
+		# Lights Parameters
+		#----------------------------------
+		integer		"mode",
+		array light "lights"		
+	)
+	version 4
+	apply material
+	
+    #------------------------------------------------------------------------
+    # Switches between "by object color" or "coat_base_color", depending on the "color_by_object" property
+    #------------------------------------------------------------------------
+    shader "simplemixer_basecolorbyobjectswitcher_instance" "adsk_Utility_ColorByObject_Switch"
+    (
+        "color_by_object" = interface "m.coat_base_color_by_object",
+        "material_color" = interface "m.coat_base_color"
+    )
+    
+    #------------------------------------------------------------------------
+    # Switches between "by object color" or "pearl_color", depending on the "color_by_object" property
+    #------------------------------------------------------------------------
+    shader "simplemixer_pearlcolorbyobjectswitcher_instance" "adsk_Utility_ColorByObject_Switch"
+    (
+        "color_by_object" = interface "m.pearl_color_by_object",
+        "material_color" = interface "m.pearl_color"
+    )
+
+    #------------------------------------------------------------------------
+    # Spider ################################################################
+    #------------------------------------------------------------------------
+    shader "spider_instance" "adsk_Shd_MetallicPaint_V2_spider"
+    (        
+        "type"						= interface "m.top_coat_types",
+
+		"base_color"				= "simplemixer_basecolorbyobjectswitcher_instance",
+		"base_luma"					= interface "m.coat_base_highlight_spread",
+
+		"refl_gloss_i"				= interface "m.top_coat_custom_glossy",
+		"refl_falloff"				= interface "m.top_coat_custom_falloff",
+
+        "flake_enable"				= interface "m.flecks_enable",
+
+		"pearl_enable"				= interface "m.pearl_enable",
+		"pearl_color_i"				= "simplemixer_pearlcolorbyobjectswitcher_instance",
+		"pearl_ior_i"				= interface "m.pearl_ior",
+
+		
+		"roundcorners_on"			= interface "o.roundcorners_on",
+		"roundcorners_radius_i"		= interface "o.roundcorners_radius",
+		
+		"ao_do_details_i"			= interface "o.ao_do_details"
+    )
+    
+    #------------------------------------------------------------------------
+    # Reflection Blur Multiplication
+    #------------------------------------------------------------------------
+    shader "reflection_gloss_sample_global" "adsk_blurred_reflection_multiplier"
+    (
+        "blurred_reflection_value"	= interface "p.reflection_glossy_samples"
+    )
+
+    #------------------------------------------------------------------------
+    # Switches between "by object color" or "flecks_color", depending on the "color_by_object" property
+    #------------------------------------------------------------------------
+    shader "simplemixer_fleckscolorbyobjectswitcher_instance" "adsk_Utility_ColorByObject_Switch"
+    (
+        "color_by_object" = interface "m.flecks_color_by_object",
+        "material_color" = interface "m.flecks_color"
+    )
+
+    #------------------------------------------------------------------------
+    # Metallic Flakes #######################################################
+    #------------------------------------------------------------------------
+     shader "metalpaint__instance" "adsk_Shd_MetallicPaint_V2"
+    (
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        "m"
+        {
+            #---------------------------------
+            "base_color"			= "simplemixer_basecolorbyobjectswitcher_instance",
+ 			"base_luminance"		= interface "m.coat_base_highlight_spread",
+			"base_weight"			= "spider_instance.base_weight",
+			"base_bias"				= "spider_instance.base_bias",
+           
+            #---------------------------------
+			"pearl_enable"			= interface "m.pearl_enable",
+			"pearl_color"			= "spider_instance.pearl_color",
+			"pearl_ior"				= "spider_instance.pearl_ior",
+			"pearl_blend"			= interface "m.pearl_amount",
+            
+            #---------------------------------
+            "spec"					= "spider_instance.spec",
+            "spec_sec"				= "spider_instance.spec_sec",
+            "spec_exp"				= "spider_instance.spec_exp",
+            "spec_weight"			= "spider_instance.spec_weight",
+            "spec_sec_exp"			= "spider_instance.spec_sec_exp",
+            "spec_sec_weight"		= "spider_instance.spec_sec_weight",
+            "spec_glazing"			= "spider_instance.glazing_enable"
+        },    
+                
+        #-------------------------------------
+        # Flakes
+        #-------------------------------------
+        "f"
+        {
+            #---------------------------------
+            "flake_color"			= "simplemixer_fleckscolorbyobjectswitcher_instance",
+            "flake_weight"			= "spider_instance.flake_switcher",
+			"flake_scale"			= interface "m.flecks_size",
+			"flake_reflect"			0.0,	#= "spider_instance.flake_reflect",
+			"flake_exp"				= "spider_instance.flake_exp",
+            "flake_decay"			0.0
+        },
+
+        #----------------------------------
+        # Lights Parameters
+        #----------------------------------
+        "mode"						= interface "mode",
+		"lights"					= interface "lights"
+	)  
+
+
+
+    #------------------------------------------------------------------------
+    # Mia material components definition ####################################
+    #------------------------------------------------------------------------ 
+
+	shader "node_visibility__instance" "adsk_Utility_NodeVisibility" 
+	(
+		"input"		1 1 1 1,
+		"mode"		0
+	)
+
+    #------------------------------------------------------------------------
+    # adsk_Shd_MetallicPaint
+    #------------------------------------------------------------------------
+    shader "mia__instance" "adsk_Shd_MetallicPaint_mia_V2"
+    (
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        "m"
+        {
+            #---------------------------------
+			"base_diffuse"			= "metalpaint__instance.result",				#metallic paint
+
+			"reflectivity"			= "spider_instance.reflectivity",
+			"refl_gloss"			= "spider_instance.refl_gloss",
+			"hl_vs_refl_balance"	= "spider_instance.hl_vs_refl_balance",
+
+			"brdf_0_degree_refl"	= "spider_instance.brdf_0_degree_refl",
+			"brdf_90_degree_refl"	= "spider_instance.brdf_90_degree_refl",
+			"brdf_curve"			= "spider_instance.brdf_curve",
+
+			"bump_enable"			= interface "m.finish",
+			"bump_amount"			= interface "m.finish_peel_amount",
+			"bump_map" ""
+        },
+        
+        #-------------------------------------
+		# Ambient Occlusion 
+        #-------------------------------------
+		"o"
+        {
+			#----------------------------------
+			"ao_on"					= interface "o.ao_on",
+			"ao_samples"			= interface "o.ao_samples",
+			"ao_distance"			= interface "o.ao_distance",
+			"ao_do_details"			= "spider_instance.ao_do_details"
+        },
+        
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------        
+        "p"
+        {
+            #----------------------------------
+			"reflection_glossy_samples" = "reflection_gloss_sample_global",
+            "refl_depth"				= interface "p.refl_depth",
+			"node_visibility"			= "node_visibility__instance"
+        },
+        
+        #----------------------------------            
+        # Lights Parameters
+        #----------------------------------
+        "mode"						= interface "mode",
+        "lights"					= interface "lights"
+    )
+
+
+	#------------------------------------------------------------------------
+	# mia/paint - hardwired RenderElements support  #########################
+    #------------------------------------------------------------------------
+	shader "miapaint_store_relements" "adsk_mrStoreElements"
+	(
+		"main_input" = "mia__instance.result",
+		"main_label" "",
+		
+		"apply_render_elements" on,
+
+		"gbufferID"  = interface "x.gbuffer_id",
+
+		"inputs"[
+			{	# Beauty (mia)
+				"input" = "mia__instance.result",
+				"mr_element"	24		#mrA&D		Output: Beauty
+			},			
+			{	# Diffuse (paint)
+				"input" = "metalpaint__instance.diffuse_result",
+				"mr_element"	1,		#mrA&D		Output: Diffuse Result
+				"max_element"	2		#standard	Output: Diffuse
+			},
+			{
+				"input" = "metalpaint__instance.diffuse_raw",
+				"label" "",
+				"mr_element"	2		#mrA&D		Output: Specular Raw
+			},
+			{	
+				"input" = "metalpaint__instance.diffuse_level",
+				"mr_element"	3		#mrA&D		Output: Specular Level
+			},
+			{	# Speculars (mia)
+				"input" = "mia__instance.spec_result",
+				"mr_element"	4,		#mrA&D		Output: Specular Result
+				"max_element"	8		#standard	Output: Specular
+			},
+			{
+				"input" = "mia__instance.spec_raw",
+				"mr_element"	5		#mrA&D		Output: Specular Raw
+			},
+			{	
+				"input" = "mia__instance.spec_level",
+				"mr_element"	6		#mrA&D		Output: Specular Level
+			},
+			{	# Reflections (mia)
+				"input" = "mia__instance.refl_result",
+				"mr_element"	7,		#mrA&D		Output: Reflect Result
+				"max_element"	6		#standard	Output: Reflect
+			},
+			{
+				"input" = "mia__instance.refl_raw",
+				"mr_element"	8		#mrA&D		Output: Reflect Raw
+			},
+			{
+				"input" = "mia__instance.refl_level",
+				"mr_element"	9		#mrA&D		Output: Reflect Level
+			},
+			{	# Opacity (mia)
+				"input" = "node_visibility__instance",
+				"mr_element"	23		#mrA&D		Output: Opacity
+			},
+			{	# Indirect (paint)
+				"input" = "metalpaint__instance.indirect_result",
+				"mr_element"	16		#mrA&D		Output: Indirect Result
+			},
+			{
+				"input" = "metalpaint__instance.indirect_raw",
+				"mr_element"	17		#mrA&D		Output: Indirect Result
+			},
+			{
+				"input" = "metalpaint__instance.indirect_level",
+				"mr_element"	18		# mrA&D		Output: Indirect Result
+				},						# actually this is the indirect cooked channel ...........
+										# as it seems there's not a 'level' indirect A&D channel ?
+										# another option might be to use a labeled element.. 'indirect_level'
+
+				# -> Additional labeled RE
+
+			{
+				# Metalness (paint)
+				"input" = "metalpaint__instance.spec1_result",
+				"label"	"metal_result"	#label ..
+			},
+			{
+				"input" = "metalpaint__instance.spec1_raw",
+				"label"	"metal_raw"
+			},
+			{
+				"input" = "metalpaint__instance.spec1_level",
+				"label"	"metal_level"
+			},
+			{
+				# Flakes (paint)
+				"input" = "metalpaint__instance.flake_result",
+				"label"	"flake_result"
+			},
+			{
+				"input" = "metalpaint__instance.flake_raw",
+				"label"	"flake_raw"
+			},
+			{
+				"input" = "metalpaint__instance.flake_level",
+				"label"	"flake_level"
+			}
+		]
+	)
+
+
+    #------------------------------------------------------------------------
+    # Round Corners Bump Shader
+    #------------------------------------------------------------------------
+    shader "roundcorners__instance" "mia_roundcorners"
+    (
+	     "radius"						= "spider_instance.roundcorners_radius",
+	     "allow_different_materials"	= interface "o.roundcorners_allow_different_materials"
+	)
+
+
+    #------------------------------------------------------------------------
+    # adsk_Utility_Combine2Bump (utility)
+    #------------------------------------------------------------------------
+    shader "roundcorners_bump__instance" "adsk_Utility_Combine3Bump"
+    (
+        "the_shader"			"miapaint_store_relements",
+        "factor_global"			1.0,
+        "bump_1"				"roundcorners__instance",
+        "factor_1"				1.0
+    )
+    #------------------------------------------------------------------------
+    # <- end Round Corners ##################################################
+    #------------------------------------------------------------------------
+
+    #------------------------------------------------------------------------
+    # Zelda, photon support
+    #------------------------------------------------------------------------
+	shader "mia_material__photon" "mia_material"
+    (
+        #----------------------------------
+		"diffuse_weight"		1,
+		"diffuse"				= "simplemixer_basecolorbyobjectswitcher_instance",
+
+		"reflectivity"			= "spider_instance.reflectivity",
+		"refl_gloss"			= "spider_instance.refl_gloss",
+
+		"brdf_0_degree_refl"	= "spider_instance.brdf_0_degree_refl",
+		"brdf_90_degree_refl"	= "spider_instance.brdf_90_degree_refl",
+		"brdf_curve"			= "spider_instance.brdf_curve",
+
+		"indirect_multiplier"	1,
+		"hl_vs_refl_balance"	= "spider_instance.hl_vs_refl_balance"
+	)
+
+
+    shader "Tint Enable|Shader" "adsk_Utility_Bool_to_Int"
+    (
+        "bool_in" = interface "m.tint_enable"   
+    )
+
+    shader "Tint Multiply|Shader" "mib_color_mix" 
+    (
+        "num" = "Tint Enable|Shader",
+        "mode_0" 4, 
+        "mode_1" 0, 
+        "mode_2" 0, 
+        "mode_3" 0, 
+        "mode_4" 0, 
+        "mode_5" 0, 
+        "mode_6" 0, 
+        "mode_7" 0, 
+        "weight_0" 1, 
+        "weight_1" 0, 
+        "weight_2" 0, 
+        "weight_3" 0, 
+        "weight_4" 0, 
+        "weight_5" 0, 
+        "weight_6" 0, 
+        "weight_7" 0, 
+        "color_0" = interface "m.tint_color", 
+        "color_1" 0 0 0 1, 
+        "color_2" 0 0 0 1, 
+        "color_3" 0 0 0 1, 
+        "color_4" 0 0 0 1, 
+        "color_5" 0 0 0 1, 
+        "color_6" 0 0 0 1, 
+        "color_7" 0 0 0 1, 
+        "color_base"  = "roundcorners_bump__instance"
+    )
+
+    #------------------------------------------------------------------------
+    # Material Connections #########################################
+    #------------------------------------------------------------------------
+    #------------------------------------------------------------------------    
+    material "mat"
+                     = "Tint Multiply|Shader"
+        photon       = "mia_material__photon"
+        shadow       = "mia__instance"
+    end material
+    root material "mat"
+
+
+
+
+    #------------------------------------------------------------------------
+    # UI
+    #------------------------------------------------------------------------
+    gui "gui_adsk_Mtl_MetallicPaint_V2" 
+    {
+        #----------------------------------
+		control "Global" "Global" 
+		(
+			"uiName" "ProMaterials: Metallic Paint V2", "category" "Material",
+
+			"viewport_diffuse" "m.coat_base_color",
+			"viewport_specular" 1.0 1.0 1.0,
+			"viewport_shininess" 1
+
+			, "hidden"
+        )
+        
+        #-------------------------------------
+        #  Material Parameters
+        #-------------------------------------
+        control "m" "struct" ("uiName" "Metallic Paint Material Parameters", "openstate" "true")
+        {
+			control "coat_base_color_by_object" "boolean" ("hidden")
+            control "coat_base_color" "color" ("uiName" "Base Coat Color", "value" 0.2 1.0 0.0)
+
+            control "coat_base_highlight_spread" "scalar" ("nonConnectable", "uiName" " -> Highlights Spread", "range" 0 1, "value" 0.5)
+            
+            control "flecks_enable" "integer" ("nonConnectable", "uiName"  "Flecks", "enum", "value" "0 None, 1 Enabled", "range" 0 1)
+				
+			control "flecks_color_by_object" "boolean" ("hidden")
+            control "flecks_color" "color" ("nonConnectable", "uiName" " -> Color", "value" 1.0 1.0 1.0)
+            control "flecks_size" "scalar" ("nonConnectable", "uiName" " -> Size", "range" 0.001 10, "value" 0.12)
+            
+            control "pearl_enable" "integer" ("nonConnectable", "uiName" "Pearl", "enum", "value" "0 None, 1 Chromatic, 2 Custom Color", "range" 0 2)
+            control "pearl_amount" "scalar" ("nonConnectable", "uiName" " -> Amount", "range" 0.0 1, "value" 0.5)
+				
+			control "pearl_color_by_object" "boolean" ("hidden")
+            control "pearl_color" "color" ("nonConnectable", "uiName" " -> Custom Color", "value" 0.8 0.12 0.0)
+            control "pearl_ior" "scalar" ("nonConnectable", "uiName" " -> Custom Falloff", "range" 0.0 1, "value" 0.2)
+            
+            control "top_coat_types" "integer" ("nonConnectable", "uiName" "Top Coat", "enum", "value" "0 Car Paint, 1 Chrome, 2 Matte, 3 Custom", "range" 0 3)
+            control "top_coat_custom_glossy" "scalar" ("nonConnectable", "uiName" " -> Glossiness", "range" 0.0 1, "value" 0.8)          
+            control "top_coat_custom_falloff" "scalar" ("nonConnectable", "uiName" " -> Falloff", "range" 0.0 1, "value" 0.2)
+            
+            control "finish" "integer" ("nonConnectable", "nonConnectable", "uiName" "Finish", "enum", "value" "0 Smooth, 1 Orange Peel", "range" 0 1)
+            control "finish_peel_amount" "scalar" ("nonConnectable", "uiName" " -> Peel amount", "range" 0.001 10, "value" 0.05)
+        }
+        
+        #-------------------------------------
+		#  Special Effects
+        #-------------------------------------
+		control "o" "struct" ("uiName" "Special Effects", "openstate" "false")
+        {
+            #----------------------------------
+			control "ao_on" "boolean" ("uiName" "Ambient Occlusion", "value" 0, "nonConnectable", "enables" "ao_samples, ao_distance, ao_do_details",
+												"helpText" "Enables Ambient Occlusion. Emulates the look of true global illumination by using shaders to calculate the extent that an area is occluded or prevented from receiving incoming light. Use this effect with indirect light.")	
+			control "ao_samples"  "integer" ("uiName"  "-> Samples", "value" 16, "range" 2 256, "nonConnectable",	
+												"helpText" "Ambient occlusion quality (High= Smoother/Slower; Low= Grainier/Faster)")
+			control "ao_distance"  "scalar" ("uiName"  "-> Max Distance", "value" 4, "units" "world", "nonConnectable",
+												"helpText" "Defines the ambient occlusion radius (High= Large coverage area/Slower; Low= Small coverage area/Faster)")
+			control "ao_do_details" "integer" (enum, "uiName" "-> Use Color From Other Mats (Exact AO)", "value" off, "nonConnectable",
+												"helpText" "Enables a more complex mode of Ambient Occlusion that takes object color into account. Note: This improves excessive 'corner darkening' and solves the creation of 'dark rims' by AO around self-illuminating objects.")
+
+			#----------------------------------
+			control "roundcorners_on" "boolean" ("uiName"  "Round Corners", "value" 0, "nonConnectable", "enables" "roundcorners_radius, roundcorners_allow_different_materials",
+												"helpText" "Enables simulated round corners. Note: This is only a shading effect, similar to a bump map, whereby no actual geometric changes occur. This effect only works properly on straight edges.")	
+			control "roundcorners_radius"  "scalar" ("uiName"  "-> Fillet Radius", "value" 0.25, "units" "world",
+												"helpText" "Adjusts the radius of the round corner effect")
+			control "roundcorners_allow_different_materials"  "boolean" ("uiName"  "-> Blend with Other Materials", "nonConnectable",
+												"helpText" "Activate to apply corner rounding effects to any material. Disable to apply corner rounding effects to the surface of the current material only.")
+        }
+        
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------
+        control "p" "struct" ("uiName" "Performance Tuning Parameters", "openstate" "false")
+        {
+            #----------------------------------
+            control "reflection_glossy_samples"  "integer" ("nonConnectable", "uiName"  "Reflection Glossy Samples", "value" 8, "range" 0 128,
+												"helpText" "Defines the maximum number of samples (rays) that mental ray computes to create glossy reflections")
+            control "refl_depth"  "integer" ("nonConnectable", "uiName"  "Reflection Max Trace Depth", "value" 0, "range" 0 20,
+												"helpText" "Number of times each ray is reflected. When set to zero, global render settings take precedence.")
+        }        
+
+        #-------------------------------------
+		# Internal
+        #-------------------------------------
+		control "x" "struct" ("uiName" "Internals", "openstate" "false")
+        {
+            #----------------------------------
+			control "gbuffer_id"  "integer" (hidden, "nonConnectable", "uiName"  "Translator must link here to pass a different ID", "value" 8)
+        }       
+                
+		#-------------------------------------
+		# Lights and Mode Parameters
+		#-------------------------------------		                
+        control "mode" "integer" ("nonConnectable", "uiName" "Mode", "hidden", "value" 0)        
+        control "lights" "array light" ("uiName" "Lights", "hidden")        
+    }
+end declare

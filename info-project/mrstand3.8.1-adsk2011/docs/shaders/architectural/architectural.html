@@ -1,0 +1,313 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<html><head>
+<meta name="Author" content="mental images GmbH">
+<meta name="Company" content="mental images">
+<meta name="Creator" content="hyperdoc">
+<meta name="CreatorVersion" content="1.1">
+<meta name="CreationDate" content="31 May 2006">
+<meta name="version" content="3.8.0.1" />
+<meta name="date" content="August 17 2009" />
+<link rel="stylesheet" type="text/css" href="mental.css">
+<title>
+mental ray Architectural and Design Visualisation Shader Library</title>
+</head>
+<body>
+<h1 class="title">
+mental ray Architectural and Design Visualization Shader Library</h1>
+<p><b>Version 3.8</b></p>
+<div class="detail">
+<p><b>Version 3.8.0.1<br>
+August 17 2009</b></p>
+</div>
+
+<ul class="nav">
+<li><a href="architectural.html">home</a></li>
+<li><a href="architectural.html">&laquo;&nbsp;prev</a></li>
+<li><a href="arch_mtl.html">next&nbsp;&raquo;</a></li>
+</ul>
+
+<h1>Table of Contents</h1>
+
+<ul class="toc"><li class="toc">
+<a href="arch_intro.html">
+<li>Introduction
+</a><ul>
+<a href="arch_intro.html#About_the_Library">
+<li>About the Library
+</a></ul>
+</li>
+<li class="toc">
+<a href="arch_mtl.html">
+<li>Architectural Material
+</a><ul>
+<a href="arch_mtl.html#Introduction">
+<li>Introduction
+</a><ul>
+<a href="arch_mtl.html#What_is_the_<dfn>mia_material</dfn>_?">
+<li>What is the <dfn>mia_material</dfn> ?
+</a><a href="arch_mtl.html#Enhancements_in_<dfn>mia_material_x</dfn>">
+<li>Enhancements in <dfn>mia_material_x</dfn>
+</a><a href="arch_mtl.html#Structure_of_this_Document">
+<li>Structure of this Document
+</a></ul>
+<a href="arch_mtl.html#Fundamentals">
+<li>Fundamentals
+</a><ul>
+<a href="arch_mtl.html#Physics_and_the_Display">
+<li>Physics and the Display
+</a><ul>
+<a href="arch_mtl.html#A_Note_on_Gamma">
+<li>A Note on Gamma
+</a><a href="arch_mtl.html#Tone_Mapping">
+<li>Tone Mapping
+</a></ul>
+<a href="arch_mtl.html#Use_Final_Gathering_and_Global_Illumination">
+<li>Use Final Gathering and Global Illumination
+</a><a href="arch_mtl.html#Use_Physically_Correct_Lights">
+<li>Use Physically Correct Lights
+</a></ul>
+<a href="arch_mtl.html#Features">
+<li>Features
+</a><ul>
+<a href="arch_mtl.html#The_Shading_Model">
+<li>The Shading Model
+</a><a href="arch_mtl.html#Conservation_of_Energy">
+<li>Conservation of Energy
+</a><a href="arch_mtl.html#BRDF___how_Reflectivity_Depends_on_Angle">
+<li>BRDF - how Reflectivity Depends on Angle
+</a><a href="arch_mtl.html#Reflectivity_Features">
+<li>Reflectivity Features
+</a><a href="arch_mtl.html#Transparency_Features">
+<li>Transparency Features
+</a><ul>
+<a href="arch_mtl.html#Solid_vs__Thin_Walled">
+<li>Solid vs. Thin-Walled
+</a><a href="arch_mtl.html#Cutout_Opacity">
+<li>Cutout Opacity
+</a></ul>
+<a href="arch_mtl.html#Special_Effects">
+<li>Special Effects
+</a><ul>
+<a href="arch_mtl.html#Built_in_Ambient_Occlusion">
+<li>Built-in Ambient Occlusion
+</a></ul>
+<a href="arch_mtl.html#Performance_Features">
+<li>Performance Features
+</a></ul>
+<a href="arch_mtl.html#Quick_Guide_to_the_Material_Parameters">
+<li>Quick Guide to the Material Parameters
+</a><a href="arch_mtl.html#Detailed_Description_of_Material_Parameters">
+<li>Detailed Description of Material Parameters
+</a><ul>
+<a href="arch_mtl.html#Diffuse">
+<li>Diffuse
+</a><a href="arch_mtl.html#Reflections">
+<li>Reflections
+</a><ul>
+<a href="arch_mtl.html#Basic_Features">
+<li>Basic Features
+</a><a href="arch_mtl.html#Performance_Features">
+<li>Performance Features
+</a></ul>
+<a href="arch_mtl.html#Refractions">
+<li>Refractions
+</a><a href="arch_mtl.html#Translucency">
+<li>Translucency
+</a><a href="arch_mtl.html#Anisotropy">
+<li>Anisotropy
+</a><a href="arch_mtl.html#BRDF">
+<li>BRDF
+</a><a href="arch_mtl.html#Special_Effects">
+<li>Special Effects
+</a><ul>
+<a href="arch_mtl.html#Built_in_Ambient_Occlusion">
+<li>Built-in Ambient Occlusion
+</a></ul>
+<a href="arch_mtl.html#Advanced_Rendering_Options">
+<li>Advanced Rendering Options
+</a><ul>
+<a href="arch_mtl.html#Reflection_Optimization_Settings">
+<li>Reflection Optimization Settings
+</a><a href="arch_mtl.html#Refraction_Optimization_Settings">
+<li>Refraction Optimization Settings
+</a><a href="arch_mtl.html#Options">
+<li>Options
+</a></ul>
+<a href="arch_mtl.html#Interpolation">
+<li>Interpolation
+</a><a href="arch_mtl.html#Special_Maps">
+<li>Special Maps
+</a><ul>
+<a href="arch_mtl.html#Bump_Mapping">
+<li>Bump Mapping
+</a><a href="arch_mtl.html#Cutout_Opacity_and_Additional_Color">
+<li>Cutout Opacity and Additional Color
+</a></ul>
+<a href="arch_mtl.html#Multiple_Outputs_of_<dfn>mia_material_x</dfn>">
+<li>Multiple Outputs of <dfn>mia_material_x</dfn>
+</a><ul>
+<a href="arch_mtl.html#Introduction">
+<li>Introduction
+</a><a href="arch_mtl.html#List_of_All_Outputs">
+<li>List of All Outputs
+</a><a href="arch_mtl.html#Proper_Compositing">
+<li>Proper Compositing
+</a></ul>
+</ul>
+<a href="arch_mtl.html#Tips_and_Tricks">
+<li>Tips and Tricks
+</a><ul>
+<a href="arch_mtl.html#Final_Gathering_Performance">
+<li>Final Gathering Performance
+</a><a href="arch_mtl.html#Quick_Guide_to_some_Common_Materials">
+<li>Quick Guide to some Common Materials
+</a><ul>
+<a href="arch_mtl.html#General_Rules_of_Thumb_for_Glossy_Wood__Flooring__etc_">
+<li>General Rules of Thumb for Glossy Wood, Flooring, etc.
+</a><a href="arch_mtl.html#Ceramics">
+<li>Ceramics
+</a><a href="arch_mtl.html#Stone_Materials">
+<li>Stone Materials
+</a><a href="arch_mtl.html#Glass">
+<li>Glass
+</a><a href="arch_mtl.html#Colored_Glass">
+<li>Colored Glass
+</a><a href="arch_mtl.html#Water_and_Liquids">
+<li>Water and Liquids
+</a><a href="arch_mtl.html#The_Ocean_and_Water_Surfaces">
+<li>The Ocean and Water Surfaces
+</a><a href="arch_mtl.html#Metals">
+<li>Metals
+</a><a href="arch_mtl.html#Brushed_Metals">
+<li>Brushed Metals
+</a></ul>
+</ul>
+</ul>
+</li>
+<li class="toc">
+<a href="arch_sunsky.html">
+<li>Sun and Sky
+</a><ul>
+<a href="arch_sunsky.html#Introduction">
+<li>Introduction
+</a><ul>
+<a href="arch_sunsky.html#Analysis_use">
+<li>Analysis use
+</a><a href="arch_sunsky.html#General_overview">
+<li>General overview
+</a></ul>
+<a href="arch_sunsky.html#Units">
+<li>Units
+</a><a href="arch_sunsky.html#Important_Note_on_Fast_SSS_and_Sun&amp;Sky">
+<li>Important Note on Fast SSS and Sun&amp;Sky 
+</a><a href="arch_sunsky.html#Common_Parameters">
+<li>Common Parameters
+</a><a href="arch_sunsky.html#Sun_Parameters">
+<li>Sun Parameters
+</a><a href="arch_sunsky.html#Sky_Parameters">
+<li>Sky Parameters
+</a><a href="arch_sunsky.html#CIE_Sky_model">
+<li>CIE Sky model
+</a><a href="arch_sunsky.html#Sky__and_Environment_Portals">
+<li>Sky- and Environment Portals
+</a><ul>
+<a href="arch_sunsky.html#The_Problem">
+<li>The Problem
+</a><a href="arch_sunsky.html#The_Solution">
+<li>The Solution
+</a><ul>
+<a href="arch_sunsky.html#mia_portal_light">
+<li>mia_portal_light
+</a></ul>
+<a href="arch_sunsky.html#Examples">
+<li>Examples
+</a><ul>
+<a href="arch_sunsky.html#Without_Portal_Lights">
+<li>Without Portal Lights
+</a><a href="arch_sunsky.html#With_Portal_Lights">
+<li>With Portal Lights
+</a></ul>
+</ul>
+<a href="arch_sunsky.html#Photometric_Lights">
+<li>Photometric Lights
+</a><ul>
+<a href="arch_sunsky.html#The_Problem">
+<li>The Problem
+</a><a href="arch_sunsky.html#The_Solution">
+<li>The Solution
+</a></ul>
+</ul>
+</li>
+<li class="toc">
+<a href="arch_camera.html">
+<li>Camera- and Exposure Effects
+</a><ul>
+<a href="arch_camera.html#Tone_Mapping">
+<li>Tone Mapping
+</a><ul>
+<a href="arch_camera.html#The_&quot;Simple&quot;_Tone_Mapper">
+<li>The &quot;Simple&quot; Tone Mapper
+</a><ul>
+<a href="arch_camera.html#mia_exposure_simple">
+<li>mia_exposure_simple
+</a></ul>
+<a href="arch_camera.html#The_&quot;Photographic&quot;_Tone_Mapper">
+<li>The &quot;Photographic&quot; Tone Mapper
+</a><ul>
+<a href="arch_camera.html#mia_exposure_photographic">
+<li>mia_exposure_photographic
+</a><a href="arch_camera.html#Examples">
+<li>Examples
+</a></ul>
+</ul>
+<a href="arch_camera.html#Depth_of_Field_/_Bokeh">
+<li>Depth of Field / Bokeh
+</a></ul>
+</li>
+<li class="toc">
+<a href="arch_util.html">
+<li>General Utility Shaders
+</a><ul>
+<a href="arch_util.html#Round_Corners">
+<li>Round Corners
+</a><a href="arch_util.html#Environment_Blur">
+<li>Environment Blur
+</a><ul>
+<a href="arch_util.html#Shader_Functionality_and_Parameters">
+<li>Shader Functionality and Parameters
+</a><a href="arch_util.html#Use_Cases">
+<li>Use Cases
+</a></ul>
+<a href="arch_util.html#Light_Surface">
+<li>Light Surface
+</a><ul>
+<a href="arch_util.html#Shader_Functionality_and_Parameters">
+<li>Shader Functionality and Parameters
+</a><a href="arch_util.html#Use_Cases">
+<li>Use Cases
+</a><ul>
+<a href="arch_util.html#Illumination_in_General">
+<li>Illumination in General
+</a><a href="arch_util.html#Highlights_vs__Reflections">
+<li>Highlights vs. Reflections
+</a><a href="arch_util.html#Complex_Light_Distribution">
+<li>Complex Light Distribution
+</a></ul>
+</ul>
+</ul>
+</li>
+</ul>
+<p>
+<ul class="nav">
+<li><a href="architectural.html">home</a></li>
+<li><a href="architectural.html">&laquo;&nbsp;prev</a></li>
+<li><a href="arch_mtl.html">next&nbsp;&raquo;</a></li>
+</ul>
+<p>
+<hr>
+<a href="copyright.html">Copyright</a> &copy; 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+
+</body></html>

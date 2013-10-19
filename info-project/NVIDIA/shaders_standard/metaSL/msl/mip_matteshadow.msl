@@ -1,0 +1,522 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// declaration for shader mip_matteshadow, created Thu May 07 10:52:28 2009
+
+shader adsk_Mtl_MatteShadowReflections {
+        // Version 6
+
+input:
+        Color      background;
+        const bool catch_shadows   = true;
+        Color      shadows;
+        Color      ambient         = Color(0.2,0.2,0.2,0);
+        const bool no_self_shadow;
+        bool       use_dot_nl      = true;
+        float      colored_shadows = 1.0;
+        const bool ao_on           = true;
+        Color      ao_dark;
+        int        ao_samples;
+        float      ao_distance;
+        const bool catch_reflections = false;
+        Color      refl_color;
+        Color      refl_subtractive;
+        int        refl_samples;
+        float      refl_glossiness;
+        float      refl_max_dist;
+        float      refl_falloff;
+        const bool catch_indirect     = false;
+        Color      indirect;
+        const bool multiple_outputs;
+        const bool catch_illuminators = false;
+        // TODO: Light        illuminators[];
+        Color      additional_color;
+        int        mode;
+        // TODO: Light        lights[];
+
+output:
+        Color      result;
+        Color      shadows_raw;
+        Color      ao_raw;
+        Color      refl_raw;
+        Color      indirect_raw;
+        Color      illumination_raw;
+
+        float mi_luminance(Color input)
+        {
+            Color luminance_weight = Color(0.212671, 0.715160, 0.072169, 0.0);
+
+            return input.r * luminance_weight.r + 
+                   input.g * luminance_weight.g + 
+                   input.b * luminance_weight.b;
+        }
+
+        void mi_lib_square_to_disk(inout float r,
+            inout float phi,
+            in float x,
+            in float y) {
+                // map to [-1, 1] x [-1, 1]
+                float local_x = 2 * x - 1;
+                float local_y = 2 * y - 1;
+                // pathological: avoid 0.0/0.0
+                if (local_x == 0.0 && local_y == 0.0) {
+                    phi = 0.0;
+                    r = 0.0;
+                } // if (local_x == 0.0 && local_y == 0.0)
+                else {
+                    if (local_x > - local_y) {
+                        if (local_x > local_y) {
+                            r = local_x;
+                            phi = (PI / 4.0) * (1.0 + local_y / local_x);  
+                        } // if (local_x > local_y)
+                        else {
+                            r = local_y;
+                            phi = (PI / 4.0) * (3.0 - local_x / local_y);
+                        } // else [ if (local_x > local_y) ]
+                    } // if (local_x > - local_y)
+                    else {
+                        if (local_x < local_y) {
+                            r = -local_x;
+                            phi = (PI / 4.0) * (5.0 + local_y / local_x);
+                        } // if (local_x < local_y)
+                        else {
+                            r = -local_y;
+                            phi = (PI / 4.0) * (7.0 - local_x / local_y);
+                        } // else [ if (local_x < local_y) ]
+                    } // else [ if (local_x > - local_y) ]
+                } // else [ if (local_x == 0.0 && local_y == 0.0) ]
+#ifdef VERBOSE
+                // miASSERT(0 <= *r && *r <= 1.0);
+                if (0.0 > r || r > 1.0) {
+                    error("miASSERT(0 <= *r && *r <= 1.0)");
+                } // if (0.0 > r || r > 1.0) {
+                // miASSERT(0 <= *phi && *phi <= 2 * M_PI);
+                if (0.0 > phi || phi > 2 * PI) {
+                    error("miASSERT(0 <= *phi && *phi <= 2 * M_PI)");
+                } // if (0.0 > phi || phi > 2 * PI)
+#endif
+        } // mi_lib_square_to_disk
+
+        void xyz2dir(inout float3 dir,
+            in float3 main,
+            in float x,
+            in float y,
+            in float z) {
+                float3 u;
+                float3 v;
+
+#ifdef VERBOSE
+                check_almost_equal(length(main), 1.0);
+                check_almost_equal(x * x + y * y + z * z, 1.0);
+#endif
+                float3 omain = transform_normal("internal", "object", main);
+                if (abs(omain.x) < abs(omain.y)) {
+                    // u = n x x_axis
+                    u.x =  0.0;
+                    u.y = -omain.z;
+                    u.z =  omain.y;
+                } // if (abs(omain.x) < abs(omain.y))
+                else {
+                    // u = n x y_axis
+                    u.x =  omain.z;
+                    u.y =  0.0;
+                    u.z = -omain.x;
+                } // else [ if (abs(omain.x) < abs(omain.y)) ]
+                u = transform_vector("object", "internal", u);
+                // degenerate transform
+                if (length(u) == 0.0) {
+                    if (abs(main.x) < abs(main.y)) {
+                        u.x =  0.0;
+                        u.y = -main.z;
+                        u.z =  main.y;        
+                    } // if (abs(main.x) < abs(main.y))
+                    else {
+                        u.x =  main.z;
+                        u.y =  0.0;
+                        u.z = -main.x;         
+                    } // else [ if (abs(main.x) < abs(main.y)) ]
+                } // if (length(u) == 0.0)
+                u = normalize(u);
+                v = cross(main, u);
+#ifdef VERBOSE
+                check_almost_equal(length(u), 1.0);
+                check_almost_equal(length(v), 1.0);
+                check_almost_zero(dot(u, v));
+                check_almost_zero(dot(u, main));
+                check_almost_zero(dot(v, main));
+#endif
+                dir = x * u + y * v + z * main;
+#ifdef VERBOSE
+                check_almost_equal(length(dir), 1.0);
+#endif
+        } // xyz2dir
+
+        void mi_reflection_dir_diffuse_x(inout float3 refl_dir,
+            // state
+            in float3 my_normal,
+            // others
+            in float2 my_sample) {
+                // miEPS
+#ifdef VERBOSE
+                float mi_eps = 0.0001;
+#endif
+                float r = 0.0;
+                float phi = 0.0;
+
+                mi_lib_square_to_disk(r, phi, my_sample.x, my_sample.y);
+                float x = r * cos(phi);
+                float y = r * sin(phi);
+                // compute the z component by "lifting" the point onto the unit
+                // hemisphere
+                float z2 = 1.0 - x * x - y * y;
+#ifdef VERBOSE
+                // miASSERT(-miEPS <= z2 && z2 <= 1.0);
+                if (-mi_eps > z2 || z2 > 1.0) {
+                    error("miASSERT(-miEPS <= z2 && z2 <= 1.0)");
+                }
+#endif
+                float z;
+                if (z2 > 0.0) {
+                    z = sqrt(z2);
+                } // if (z2 > 0.0)
+                else {
+                    z = 0.0;
+                } // else [ if (z2 > 0.0) ]
+#ifdef VERBOSE
+                // miASSERT(0.0 <= z && z <= 1.0);
+                if (0.0 > z || z > 1.0) {
+                    error("miASSERT(0.0 <= z && z <= 1.0)");
+                } // if (0.0 > z || z > 1.0)
+#endif
+                // xyz2dir(state, dir, &state->normal, x, y, z);
+                xyz2dir(refl_dir, my_normal, x, y, z);
+#ifdef VERBOSE
+                check_almost_equal(length(refl_dir), 1.0);
+#endif
+        } // mi_reflection_dir_diffuse_x
+
+        void mi_reflection_dir_glossy_x(inout float3 refl_dir,
+            // state
+            in float3 dir,
+            in float3 my_normal,
+            // others
+            in float shiny,
+            in float2 my_sample) {
+                // constant: miHUGE_SCALAR (see shader.h)
+                float mi_huge_scalar = 1000000000000000000000000000000000000.0; // 1e36
+                float alpha = 0.0;
+
+                // mi_reflection_dir(&main_dir, state);
+                float3 main_dir = reflect(dir, my_normal);
+                if (shiny > 0) {
+                    alpha = 1.0 / shiny;
+                } // if (shiny > 0)
+                else {
+                    alpha = mi_huge_scalar;
+                } // else [ if (shiny > 0) ]
+                // Compute spherical coordinates (phi, theta)
+                float phi = 2.0 * PI * my_sample.x;
+                float theta = atan(alpha * sqrt(-log(1.0 - my_sample.y)));
+                // Compute a direction from the main direction and (phi, theta)
+                float x = cos(phi) * sin(theta);
+                float y = sin(phi) * sin(theta);
+                float z = cos(theta);
+                // xyz2dir(state, dir, &main_dir, x, y, z);
+                xyz2dir(refl_dir, main_dir, x, y, z);
+        } // mi_reflection_dir_glossy_x
+
+        float calculate_samples(inout int samples, in float weight) {
+            // FG rays get 1 sample
+            if (is_ray_history_group("final_gather")) {
+                samples = 1;
+            } // if (is_ray_history_group("final_gather"))
+            if (samples > 1) {
+                samples = int(samples * (sqrt(weight) * importance));
+            } // if (samples > 1)
+            if (samples < 1) {
+                samples = 1;
+            } // if (samples < 1)
+            // the ray bundle weight
+            return weight * importance;
+        } // calculate_samples
+
+        float gloss_to_shine(in float gloss) {
+            return pow(2.0, gloss * 8.0);
+        } // gloss_to_shine
+
+        void main() {
+            Color shadowed_light;
+            Color unshadowed_light;
+
+            result           = Color(0);
+            shadows_raw      = Color(1);
+            ao_raw           = Color(1);
+            refl_raw         = Color(0);
+            indirect_raw     = Color(0);
+            illumination_raw = Color(0);
+
+
+            if (ray_type == "shadow")
+            {
+                // TODO: Non-self-shadowing
+            }
+
+#if 0
+            if (ray_type == "reflection")
+            {
+                int reflectlevel = 0;
+                if (get_ray_data("miNSLF", reflectlevel))
+                {
+                    // Self-reflection!
+                    if (get_trace_depth("reflection") == reflectlevel+1)
+                        return;
+                }
+            }
+#endif
+
+            // Base level of light is the ambient level
+
+            shadowed_light   = ambient;
+            unshadowed_light = ambient;
+
+            if (ao_on)
+            {
+                Occlusion_options occop;
+                if (ao_distance > 0.0) occop.set_far(ao_distance);
+                                
+                float occ = occlusion(occop);
+                float omo = 1.0f - occ;
+
+                shadowed_light.r *= omo + (ao_dark.r * occ);
+                shadowed_light.g *= omo + (ao_dark.g * occ);
+                shadowed_light.b *= omo + (ao_dark.b * occ);
+
+                // Set AO-raw output to result
+                ao_raw = omo;
+            }
+
+            shadowed_light.a = mi_luminance(shadowed_light);
+            if (shadowed_light.a <= 0.0) /* Black, won't work */
+            {
+                /* Needs to be tiny and nonzero */
+                shadowed_light.r = 0.0001f;
+                shadowed_light.g = 0.0001f;
+                shadowed_light.b = 0.0001f;
+                shadowed_light.a = 0.0001f;
+            }
+
+            /* Get total intensity */
+            unshadowed_light.a = mi_luminance(unshadowed_light);
+            if (unshadowed_light.a <= 0.0) /* Black, won't work */
+            {
+                /* Needs to be tiny and nonzero */
+                unshadowed_light.r = 0.0001f;
+                unshadowed_light.g = 0.0001f;
+                unshadowed_light.b = 0.0001f;
+                unshadowed_light.a = 0.0001f;
+            }
+
+
+            // Do the light loop
+            if (catch_shadows)
+            {
+                Light_iterator_options lopts;
+                lopts.set_categories("-matteilluminators");
+                Light_iterator light(lopts);
+                foreach (light) {          
+                    float mult = use_dot_nl?light.dot_nl:1.0;
+
+                    if (light.dot_nl > 0.0)
+                    {
+                        Color cont = light.contribution/PI,
+                              rawc = light.raw_contribution/PI;
+
+                        unshadowed_light.rgb += rawc.rgb * mult;
+                        shadowed_light.rgb   += cont.rgb * mult;
+                    }
+                }
+
+                unshadowed_light.a = mi_luminance(unshadowed_light);
+                shadowed_light.a   = mi_luminance(shadowed_light);
+            }
+
+
+            // Do the light loop
+            if (catch_illuminators)
+            {
+                Light_iterator_options lopts;
+                lopts.set_categories("matteilluminators");
+                Light_iterator light(lopts);
+
+                foreach (light) {                          
+                    Color cont = light.contribution/PI;
+                    illumination_raw.rgb += cont.rgb * light.dot_nl;
+                }                
+            }
+
+            shadows_raw = shadowed_light / unshadowed_light;
+
+
+            if (colored_shadows != 1.0f)
+            {
+                float lum = mi_luminance(shadows_raw);
+                float omf = 1.0f - colored_shadows;
+
+                /* Lerp between color and luminance of color => grayscale */
+                shadows_raw.rgb = shadows_raw.rgb * colored_shadows + lum * omf;
+            }
+
+
+            result.rgb = background.rgb * (shadows_raw.rgb  + illumination_raw.rgb) + 
+                                           shadows.rgb * (float3(1.0f) - shadows_raw.rgb);
+
+            result.a = background.a * shadows_raw.a + shadows.a * (1.0f - shadows_raw.a);
+
+            if (catch_reflections && 
+                (refl_color.r != 0.0 || refl_color.g != 0.0 || refl_color.b != 1.0))
+            {
+
+                Color refcol  = refl_color;
+                int samples   = refl_samples;
+                float gloss   = refl_glossiness;
+                float max_dep = refl_max_dist;
+                float falloff = refl_falloff;               
+                Color sub     = refl_subtractive;
+
+                float total_samp = 0.0;
+                float2 sample;
+
+                if (gloss > 0.0f && gloss <= 1.0f)
+                {
+                    if (gloss == 1.0f) 
+                    {
+                        samples = 0;
+                        gloss   = 0.0;
+                    }
+                    else
+                        gloss = gloss_to_shine(gloss);
+                }
+
+                // mirror special case
+                if (samples <= 0) {
+                    samples = 1;
+                    gloss   = 0.0;
+                } // if (samples <= 0 || gloss >= 1.0)
+
+                Color gather(0);
+
+                float refl_weight = mi_luminance(refl_color);
+                float level = calculate_samples(samples, refl_weight);
+                // one sample rejection iterator
+                Sample_iterator si(samples);
+                foreach (si) {
+                    float ri_sample = (float) si.sample();
+                    total_samp += 1.0;
+                    sample = (float2) si.sample2();
+                    float3 refl_dir = float3(0.0, 0.0, 0.0);
+
+                    if (gloss > 0)
+                        mi_reflection_dir_glossy_x(refl_dir,
+                                  // state
+                                  direction,
+                                  normal,
+                                  // others
+                                  gloss,
+                                  sample);
+                    else
+                        refl_dir = reflect(direction, normal);
+
+
+                    Ray ray(float3(0), float3(0));
+                    Ray ray_dx(float3(0), float3(0));
+                    Ray ray_dy(float3(0), float3(0));
+                    ray = Ray(position, refl_dir);
+                    Trace_options trace_options;
+                    trace_options.set_ray_type("reflect");
+                    if (gloss > 0.0) {
+                        trace_options.set_ray_dispersal_group("glossy");
+                    } // if (gloss < 1.0)
+                    else {
+                        trace_options.set_ray_dispersal_group("specular");
+                    } // else [ if (gloss < 1.0) ]
+                    
+                    if (max_dep > 0.0) {
+                        trace_options.set_far(max_dep);
+                    } // if (distlimit > 0.0)
+
+                    trace_options.set_importance(refl_weight / samples);
+                    float dist = 0.0;
+                    Color col;
+                    if (trace(ray, ray_dx, ray_dy, trace_options,
+                        "result", col,
+                        "State::ray_length", dist)) {
+                            // color from environment or from shader parameters?
+                            Color ecol = Color(0.0, 0.0, 0.0, 0.0);
+
+                            float fac = 1.0;
+
+                            if (max_dep > 0.0) {
+                                fac = (float) (1.0 - (dist / max_dep));
+                                /* Tweak fallof by power funcion */
+                                fac = (float) pow(fac, falloff);
+                            }
+
+                            col.a = refl_weight; // Alpha is weight
+                            // Add weighted color to gather
+                            gather += col * fac; 
+                    } // if (trace(...))                    
+                } // foreach (si)
+
+                gather /= samples;
+
+                // Set output
+                refl_raw = gather;
+
+                /* Tune subtractiveness to reflection weight */
+                sub.rgb *= gather.a;
+                sub.a    = mi_luminance(sub);
+
+                /* Avoid negative output values! */
+                if (sub.r > 1.0) sub.r = 1.0f;
+                if (sub.g > 1.0) sub.g = 1.0f;
+                if (sub.b > 1.0) sub.b = 1.0f;
+                if (sub.a > 1.0) sub.a = 1.0f;
+
+                /* Composite final result */
+                result = result * (1.0f - sub) + gather * refcol;
+
+            }
+
+
+            if (catch_indirect)
+            {
+                // TODO: Non-self stuff
+
+                Irradiance_options irrops;
+                Color radiance = irradiance(irrops) / PI;
+
+                radiance.rgb *= indirect.rgb;
+
+                /* Figure out strength of indirect */
+                radiance.a =  mi_luminance(radiance);
+
+                /* Limit to 1.0 */
+                if (radiance.a > 1.0) 
+                    radiance.a = 1.0;
+
+                result.rgb += radiance.rgb;
+
+                /* If the "indirect" parameter has an alpha channel, 
+                   create an "unmult" alpha value for the indirect light.
+                   If the background already is alpha=1.0, this will be
+                   a big phat no-op... but if background has an alpha,
+                   gently increase it to allow the indirect light to
+                   "show". */
+                result.a =  result.a * 
+                            (1.0f - (radiance.a * indirect.a)) 
+                            + radiance.a * indirect.a;
+            }                        
+        } // main
+}; // end shader mip_matteshadow

@@ -1,0 +1,248 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Photon Emitter Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node122.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node124.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION121"></a>
+<h2>Photon Emitter Shaders</h2>
+<p>Photon emitter shaders are used in the photon tracing phase to
+control the emission of photons from the <a href="node80.html#INDEX249">light</a>
+sources. There exists a number of
+built-in photon emitters that handle the following types of light
+sources:</p>
+<ul>
+<li>Point lights: emit photons with equal flux in all directions
+around the point light.</li>
+<li>Spot lights: emit photons with equal flux within the cone
+specified by the spotlight parameters.</li>
+<li>Directional lights: emit photons with equal <i>radiance</i>
+(based on the energy). Since a directional light source is strictly
+non-physical, the energy concepts are different from the other
+light sources.</li>
+<li>Disc area lights: emit photons from different points on the
+disc in directions based on a cosine distribution.</li>
+<li>Rectangle area lights: emit photons from different points on
+the rectangle in directions based on a cosine distribution.</li>
+<li>Sphere area lights: emit photons with equal flux from the
+surface of the sphere based on an equal distribution at each
+surface point.</li>
+<li>Cylinder area lights: emit photons with equal flux from the
+surface of the cylinder based on an equal distribution. No photons
+are emitted from the two disc-shaped "ends" of the cylinder.</li>
+</ul>
+<p>Unless there are good reasons, these light sources should be
+used since they are well optimized. This is particularly true for
+the point light and sphere light which use a <b><a name="INDEX485"
+id="INDEX485"></a>projection map</b> to limit the emission of
+photons to the directions in which <a href="node41.html#INDEX86">caustics</a> generating objects are found.
+The appropriate built-in photon emitters are automatically applied
+if no photon emitter is specified in the <a href="node80.html#INDEX249">light</a> source definition.</p>
+<p>If more complex light sources are needed, it can be necessary to
+write a specialized shader. For example, this could be necessary
+for a spot light that should support intensity fading near the
+edges of the cone. Note that the light emitter shader is not called
+if the light has zero energy; such lights are ignored by mental ray
+during photon tracing.</p>
+<p>An example of a simple point light that emits photons uniformly
+in all directions around the current point is given in the
+following shader <a href="#FOOTNOTE16">[16]</a>. The shader
+receives information about the light source from
+<tt>state-&gt;light_instance</tt>.</p>
+<pre>
+    void point_emitter_init(
+        miState         *state,
+        void            *p,
+        miBoolean       *inst_init_req)
+    {
+        miTag           light_tag;
+        miMatrix        *T;
+
+        if (!p)
+                *inst_init_req = miTRUE;
+        else {
+                miVector org, *torg, **user;
+                torg = mi_mem_allocate(sizeof(miVector));
+
+                mi_query(miQ_INST_ITEM, state,
+                         state-&gt;light_instance, &amp;light_tag);
+                mi_query(miQ_INST_LOCAL_TO_GLOBAL, state,
+                         state-&gt;light_instance, &amp;T);
+                mi_query(miQ_LIGHT_ORIGIN, state,
+                         light_tag, &amp;org);
+
+                mi_point_transform(torg, &amp;org, *T);
+                mi_query(miQ_FUNC_USERPTR, state, 0, &amp;user);
+                *user = torg;
+        }
+    }
+
+    void point_emitter_exit(
+        miState         *state,
+        void            *p)
+    {
+        miVector        **user;
+
+        mi_query(miQ_FUNC_USERPTR, state, 0, &amp;user);
+        if (*user &amp;&amp; p) {
+                mi_mem_release(*user);
+                *user = NULL;
+        }
+    }
+
+    miBoolean point_emitter(
+        miColor         *energy,
+        miState         *state,
+        void            *p)
+    {
+        miVector        **user;
+
+        mi_query(miQ_FUNC_USERPTR, state, 0, &amp;user);
+        state-&gt;org = *(miVector *)*user;
+        mi_scattering_dir_diffuse(&amp;state-&gt;dir, state);
+        mi_photon_light(energy, state);
+        return(miTRUE);
+    }
+</pre>
+<p>This shader does not have any parameters. Instead it extracts
+all information about the light source with <i>mi_query</i>. This
+shader can be attached to a light definition using the
+<tt>photon</tt> statement. Note the choice of direction using
+<i><a href="node143.html#INDEX613">mi_scattering_dir_diffuse</a></i>, which is
+called to set the (normalized) photon direction. The <i>org</i> and
+<i>dir</i> or any other ray state variables are undefined when the
+shader is called, the shader must come up with its own
+directions.</p>
+<p>If a photon emitter shader returns <tt>miFALSE</tt>, photon
+emission from the current light source is aborted at that point and
+no more photons are cast from this light source. It is recommended
+that photon emitter shaders return <tt>miTRUE</tt> only if they
+called <i><a href="node142.html#INDEX591">mi_photon_light</a></i>
+because otherwise mental ray will keep calling the shader for a
+long time without ever storing a photon.</p>
+<p>Here is a more elaborate example that implements a spherical
+light emitter. It should be attached to a spherical area light
+source. The shader uses the radius of the area light source as the
+radius of the sphere that emits the photons. Similarly, it uses the
+light origin as the center of the emission sphere, so the shader
+needs no parameters. It uses an init shader to compute constant
+data only once per frame instead of once per photon.</p>
+<pre>
+    struct ball_emitter_data {
+         miVector       org;
+         miScalar       radius;
+    };
+
+    DLLEXPORT void ball_emitter_init(
+        miState         *state,
+        void            *p,
+        miBoolean       *inst_init_req)
+    {
+        miTag           light_tag;
+        miMatrix        *T;
+        miVector        org;
+        struct ball_emitter_data **user, *data;
+
+        if (!p) {
+                *inst_init_req = miTRUE;
+                return;
+        }
+        mi_query(miQ_FUNC_USERPTR, state, 0, &amp;user);
+        data = *user = mi_mem_allocate(sizeof(struct ball_emitter_data));
+
+        mi_query(miQ_INST_ITEM, state, state-&gt;light_instance, &amp;light_tag);
+        mi_query(miQ_INST_LOCAL_TO_GLOBAL, state, state-&gt;light_instance, &amp;T);
+        mi_query(miQ_LIGHT_ORIGIN, state, light_tag, &amp;org);
+        mi_query(miQ_LIGHT_AREA_S_RADIUS, state, light_tag, &amp;data-&gt;radius);
+
+        mi_point_transform(&amp;data-&gt;org, &amp;org, *T);
+    }
+
+    DLLEXPORT void ball_emitter_exit(
+        miState         *state,
+        void            *p)
+    {
+        if (p) {
+                struct ball_emitter_data **user;
+
+                mi_query(miQ_FUNC_USERPTR, state, 0, &amp;user);
+                mi_mem_release(*user);
+                *user = NULL;
+        }
+    }
+
+    DLLEXPORT miBoolean ball_emitter(
+        miColor         *energy,
+        miState         *state,
+        void            *paras)            /* not used, no parameters */
+    {
+        struct ball_emitter_data **user;
+        double          samples[3];
+        miVector        shift;
+        miColor         comp_energy;
+
+        mi_query(miQ_FUNC_USERPTR, state, 0, &amp;user);
+
+        state-&gt;org = (*user)-&gt;org;
+
+        /* get single 3-dimensional sample */
+        mi_sample(samples, NULL, state, 3, NULL);
+        shift.x = 2 * samples[0] - 1;
+        shift.y = 2 * samples[1] - 1;
+        shift.z = 2 * samples[2] - 1;
+
+        /* rejected sample */
+        if (mi_vector_norm(&amp;shift) &gt; 1.0)
+                return(miTRUE);
+
+        mi_vector_mul(&amp;shift, (*user)-&gt;radius);
+        mi_vector_add(&amp;state-&gt;org, &amp;state-&gt;org, &amp;shift);
+
+        /* compensate photon energy by the proportion of rejected samples */
+        /* volume of cube / volume of ball = 8 / (4/3 PI) = 6 / PI */
+        comp_energy.r = energy-&gt;r * 6 / M_PI;
+        comp_energy.g = energy-&gt;g * 6 / M_PI;
+        comp_energy.b = energy-&gt;b * 6 / M_PI;
+
+        mi_scattering_dir_diffuse(&amp;state-&gt;dir, state);
+
+        mi_photon_light(&amp;comp_energy, state);
+        return(miTRUE);
+    }
+</pre>
+<p>Like light shaders, emitter shaders also support
+<b><a name="INDEX486" id="INDEX486"></a>geometric area light source</b>s.
+No special changes need to be made if all points on the light object
+emit light uniformly, but the emitter shader also has access to the
+chosen emission point on the light object in
+<tt>state-&gt;child</tt>. The state is the normal emission shader
+state, and the child state is similar to the state a material
+shader would find when a visible ray intersects the object. In
+particular, the point and tex_list state variables are set
+correctly in <tt>state-&gt;child</tt>. See page
+<a href="node120.html#shdgeolight">shdgeolight</a> for more detail.</p>
+<p><a id="FOOTNOTE16">[16]</a> This is just a
+simple example shader - the built-in point light emitter is much
+more efficient.<br /></p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node122.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node124.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Variables and the Registry</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node71.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node73.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION70"></a><a id="mi:variables"></a>
+<h3>Variables</h3>
+<p>
+Variables provide a general syntax for passing custom parameters
+using .mi files. Such variables are not used by mental ray. They
+may be used by other programs that read scene files without
+actually parsing any geometric data. For example, translators can
+store the translator version and name, source scene name, frame
+range, and other useful information in variables. Such variables
+can be used to control .mi parsing using
+<a href="node74.html">conditionals</a>.
+<pre>
+    set "<i>name</i>" <dfn>[</dfn>"<i>value</i>"<dfn>]</dfn>
+</pre>
+<p>Assign the value <i>value</i> to the <b><a id="INDEX163"></a>variable</b> <i>name</i>. 
+
+<a id="INDEX164"></a><a id="mi:registry"></a>
+<h3>Registry</h3>
+<p>
+The registry is a storage for named entries, each of which contains an
+ordered list of key/value pairs. The names and values are strings.
+The registry is actively maintained and evaluated by mental ray. It is
+not related to native registry facilities found on operating systems.
+<p>Typically, registry commands are used in the
+<tt>rayrc</tt> <b><a id="INDEX166"></a>startup
+file</b> to customize mental ray. This file is typically stored in the
+mental ray program directory, or in a directory where the <tt>MI_ROOT</tt>
+<a href="configuration.html#SECTION245">environment variable</a> points to.
+<p>All file path searches and accesses in mental ray go through registry
+substitution. Note, that <a href="node74.html#INDEX172">conditionals</a>
+can use registry keys as well.
+<pre>
+    registry "<i>name</i>"
+        <dfn>[</dfn>value "<i>value</i>"<dfn>]</dfn>
+        <dfn>[</dfn>link "<i>library.so/dll</i>"<dfn>]</dfn>
+        <dfn>[</dfn>code "<i>sourcefile.c</i>"<dfn>]</dfn>
+        <dfn>[</dfn>mi "<i>scenefile.mi</i>"<dfn>]</dfn>
+        <dfn>[</dfn>spdl "<i>scenefile.spdl</i>"<dfn>]</dfn>
+        <dfn>[</dfn>echo "<i>string</i>"<dfn>]</dfn>
+        <dfn>[</dfn>system "<i>shell command</i>"<dfn>]</dfn>
+        <dfn>[</dfn>"<i>key</i>" "<i>value</i>"<dfn>]</dfn>
+    end registry
+</pre>
+<p>Create a mental ray <b><a id="INDEX165"></a>registry</b> entry.
+<p>In general, any string can be used as <i>name</i>. However,
+it is common in mental ray to enclose the string in curly braces
+<code>{</code><i>name</i><code>}</code>. The braces allow mental ray
+to detect registry keys in any string and will enable automatic and
+recursive registry substitutions without explicit
+<a href="#mi:lookup">lookup</a> commands.
+<p>The value of a registry entry is specified with the <tt>value</tt>
+statement, which defines the value returned from
+<a href="#reg:substitution">registry substitution</a>.
+There can only be a single value, any secondary value
+command issued for on an already existing registry key will overwrite.
+The other optional fields of a registry entry can be used to execute side
+effects upon <a href="#mi:lookup">lookup</a>, or to define custom fields.
+
+<a id="INDEX167"></a>
+<a id="mi:lookup"></a>
+<pre>
+    $lookup "<i>name</i>"
+</pre>
+<p>This command looks up a <a href="node72.html#INDEX165">registry</a>
+name previously defined with a
+<tt>registry</tt> command, and executes the statements found there:
+<tt>link</tt> loads a library; <tt>code</tt> compiles and links
+<a href="node178.html#INDEX856">source code</a>; <tt>mi</tt> reads
+a scene file like <tt>$include</tt>; <tt>spdl</tt> reads a scene
+file in Softimage SPDL syntax; <tt>echo</tt> prints a string to the
+console; and <tt>system</tt> executes a shell command. Lookup
+statements are useful as facility macros. For example, to make a
+set of features available to mental ray, a single lookup statement
+can load the library, load .mi declarations for it, and print a message
+to the screen.</p>
+
+<a id="mi:_mi_reg"></a>
+<p>mental ray recognizes registry variables with the prefix <tt>_MI_REG_</tt>
+and uses them for internal configuration purposes, and it provides and sets
+registry variables with <tt>_MI_RAY</tt> prefix for customization, see
+<a href="configuration.html#apx:regvars">Registry Variables</a>.
+</p>
+
+<a id="reg:substitution"></a>
+<h4>Registry Substitution</h4>
+<p>mental ray performs auto-expansion of registry keys when resolving
+file pathes. A registry key is identified by a non-empty string in curly
+braces, like in <code>{mykey}</code>. The expansion procedure is
+supporting recursions, when a registry value is using other registry
+keys itself as in the example below.
+<pre>
+    registry "{root}" value "/home" end registry
+    registry "{path}" value "{root}/users" end registry
+</pre>
+</p>
+<p>If the registry key name is prefixed with an underline character
+as in <code>{_mykey}</code> then this will suppress the usual error condition
+and error message in mental ray when the registry entry does not exist. No
+expansion is performed in this case.
+<p>Registry expansion can also lookup environment variables. The form
+<code>{$<var>var</var>}</code> expands to the string value of the environment
+variable <var>var</var>if existing, otherwise it returns the empty string.
+With the help of <a href="node74.html">conditionals</a>, this can be used to
+customize mental ray by writing a common <code>rayrc</code> with default
+settings but is reacting to temporary overrides using environment variables,
+like this:
+<pre>
+    $ifdef "${?USER_PATH}"
+            registry "{USRPATH}" value "{$USER_PATH}" end registry
+    $else
+            registry "{USRPATH}" value "/home/shaders" end registry
+    $endif
+
+    registry "{_MI_REG_LIBRARY}"
+        value "{USRPATH};/usr/local/mi/shaders"
+    end registry
+</pre>
+</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node71.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node73.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

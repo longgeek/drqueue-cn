@@ -1,0 +1,62 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Texture Filtering</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node21.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node23.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION20"></a>
+<h2>Texture Filtering</h2>
+<p>mental ray provides two methods for <b><a id="INDEX45"></a>texture
+filtering</b>: a fast filtered texture lookup
+using image pyramids (which are similar to <b><a id="INDEX46"></a>mip-map
+texture</b>s but have no restrictions on
+texture size), and a high-quality filtering method using elliptical
+projections<a id="INDEX47"></a>. Both methods
+operate on image pyramids. There is a <tt>.map</tt> image format
+defined by mental ray that supports filters.</p>
+<p>When standard image files (such as <tt>.rgb</tt>) are used for
+filtered texture lookups (both methods), the pyramid must be
+created by mental ray when the image is accessed. For
+high-resolution images this can take a long time (sometimes up to a
+minute), so it is highly recommended to create this image pyramid
+"offline" by mental images' <a href="node249.html#INDEX1088">imf_copy</a> 
+utility. When called with the
+<tt>-p</tt> option on the command line, it down-filters the source
+texture image file and writes out the filtered images in
+memory-mapped image format. If such a file is read with a <tt>local
+filter color texture</tt> statement in .mi scene file, the pyramid
+is read almost instantaneously.</p>
+<p>Also, it is recommended to make local copies of the texture
+files on the machines in order to speed up access. When machines
+with different byte order are used in the network, there is a
+performance penalty when using only one version of the pyramid .map
+file (it has to be byte swapped), so it is necessary to generate
+the <tt>.map</tt> file in the native byte order on the respective
+machines.</p>
+<p>The pre-filtered <tt>.map</tt> file containing the pyramid can
+also be used for standard non-filtered texture lookups (using a
+simple <tt>local color texture</tt> statement), in this case only
+the first (finest) level of the image pyramid is used.</p>
+<p>The next sections will discuss the two methods in detail.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node21.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node23.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

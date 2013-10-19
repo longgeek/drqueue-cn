@@ -1,0 +1,170 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Map Data</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node80.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node81.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h3 id="mi:map">Map Data <span class="new">3.8</span></h3>
+<pre>
+    map "<var>name</var>"
+        <var>declaration_name</var> ( <var>data</var> )
+    end map
+
+    map "<var>name</var>"
+        <var>declaration_name</var> ( <var>mapfiles</var> )
+    end map
+</pre>
+<p>
+Map data is arbitrary data of known type coupled with positional information
+stored in the scene file, or separate binary files. In other words, it carries
+data which is attached to a point in space but not necessarily related to a
+surface shape or other existing geometric representations in mental ray,
+therefore often referred to as a <em>point cloud</em>. Such a map can be
+generated and used by custom shaders to implement special effects. More
+importantly, it allows external applications to pass such information
+efficiently to mental ray, like global illumination information, particle
+systems, or fluid density grids.
+<p>
+The <dfn id="mi:map_dimension">dimension</dfn> of a map is the dimension of
+the position information of its elements: the dimension 3 means that the
+elements are points in 3D space. mental ray supports dimensions between 1
+and 6, for instance to define a 2-dimensional map, or 4-dimensional one.
+<p>
+The <dfn id="mi:map_decl">map declaration</dfn> determines the layout of the
+data attached to the points. The syntax is similar to regular
+<a href="node61.html#mi:shader_decl">shader declarations</a> and the way it
+defines a set of parameters. It lists a number of parameters as a pair of
+a name and associated type, called <dfn>fields</dfn> of a map. The
+<a href="#mi:map_dimension">dimension</a> of the map is given by an optional
+first field in the list. If this field is omitted it defaults to 3 for 3D
+positional data.</p>
+<pre>
+    declare map "<var>name</var>" (
+        <dfn>[</dfn>dim <i>count</i><sub>int</sub> ,<dfn>]</dfn>
+    <i>type</i> "<i>field_name</i>",
+    <i>type</i> "<i>field_name</i>",
+        <dfn>...</dfn>
+    <i>type</i> "<i>field_name</i>"
+        )
+    end declare
+</pre>
+<p>where <var>type</var> can be one of</p>
+<pre>
+<dfn>[</dfn> global <dfn>]</dfn> integer
+<dfn>[</dfn> global <dfn>]</dfn> scalar
+<dfn>[</dfn> global <dfn>]</dfn> vector
+<dfn>[</dfn> global <dfn>]</dfn> color
+<dfn>[</dfn> global <dfn>]</dfn> transform
+<dfn>[</dfn> global <dfn>]</dfn> array integer <var>n</var><sub>int</sub>
+<dfn>[</dfn> global <dfn>]</dfn> array scalar <var>n</var><sub>int</sub>
+
+ global string <var>n</var><sub>int</sub>
+</pre>
+<p>
+to specify 32-bit integers, single-precision floats, 3-component float vectors,
+4-component float colors and 4x4 float matrices, as well as fixed size arrays
+of integers and floats. If the type declaration is prefaced with the
+<code>global</code> keyword then the field value is stored once per map only,
+otherwise the field values are stored per point. A string may be attached to a
+map as a global value, for example to store informal text for identification.</p>
+<p>
+Here is an example of a 3D map declaration:</p>
+<pre>
+    declare map
+        "particle_map"	(
+            dim		3,
+        global integer     "version",
+        global string 512  "comment"
+            vector      "direction",
+        color              "color",
+	)
+    end declare
+</pre>
+<p>
+Note, that a <var>position</var> field does not need to be declared since it
+is implicitly existing and in this case has a dimension of 3.
+<p>
+Once a map is declared, the declaration name can be used to create an actual
+map and set its values. This <dfn>map definition</dfn>, also known as a
+<var>map instance</var>, can be passed to a shader like any other shader
+parameter using the type <var>map</var> available for
+<a href="node61.html#mi:shader_decl">shader declarations</a>.
+This allows to declare a shader parameter as a single map,
+or as an array of maps similar to light lists, for instance.
+<p>
+There are two ways to define map data:</p>
+<ul>
+<li>
+as <var>data</var> list of items for each point. This is a sequence of ASCII
+values of a supported type and layout that matches the
+<a href="#mi:map_decl">declaration</a>, as follows:
+<pre>
+{ <var>field<sub>1</sub></var>, <dfn>...</dfn><var>field<sub>m</sub></var> }<dfn><sub>1</sub> [</dfn> ,<dfn>...</dfn> { <var>field<sub>1</sub></var>, <dfn>...</dfn><var>field<sub>m</sub></var> }<dfn><sub>n</sub> ]</dfn>
+</pre>
+The supported data types include integer and float numerical values
+given in arbitrary combinations or as pre-defined mental ray data types
+like vector or color, see <a href="#mi:map_decl">declaration</a> for details.
+<li>
+as <var>mapfiles</var> to specify a file name or a list of file names.
+<pre>
+[ "<var>mapfile<sub>1</sub></var>" <dfn>[</dfn>, <dfn>...</dfn>"<var>mapfile<sub>n</sub></var>"<dfn>]</dfn> ]
+</pre>
+The files contain binary map data in a data layout according to the
+<a href="#mi:map_decl">declaration</a>. The file(s) will be opened and its binary
+contents are read into memory upon access during rendering.
+</ul>
+
+<p>
+An actual instance of map data according to the declaration example above
+might look like this:</p>
+<pre>
+    map "candle_smoke"
+        "particle_map" (
+        { global 1, "A map example" },
+            { 1.23 2.1 3.4 , 0.0 1.0 0.0 , 0.1 0.1 0.1 1.0 },
+            { 2.56 1.87 2 , 0.707 0.707 0.0 , 1.0 0.5 0.3 1.0 },
+            <dfn>...</dfn>
+        )
+</pre>
+<p>
+And in case the data would be provided by external files:</p>
+<pre>
+    map "candle_smoke"
+        "particle_map" ( [ "my_data.pm" ] )
+</pre>
+<p>Shaders can access a map if they evaluate a parameter of type <tt>map</tt>.
+Shaders may create a map and store it into a file on disk for subsequent uses
+in different frames or renderings. A typical application is the implementation
+of a point cache for performance optimizations of a custom rendering effect.
+<!--
+See the section about <a href="map_sh.html">map shaders</a> for details.
+-->
+<p>
+The current implementation of map data has some
+<a href="limitations.html#map">known limitations</a>.
+</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node80.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node81.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,529 @@
+<root>
+  <version major="2" minor="0"/>
+  <metasl_code file_name="adsk_Utility_MSL_Spiders\adsk_Hardwood_spider.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Alpha.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_BRDF_Compact.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_BRDF_Components.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Environment.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Mixers.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Normal.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_ShaderCallers.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Switchers.msl"/>
+  <metasl_code file_name="light_point.msl"/>
+
+  <phenomenon name="adsk_Mtl_Hardwood_MSL">
+    <input name="diffuse_color" type="Shader" value="">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Base Hardwood Image"/>
+      </annotation>
+    </input>
+    <input name="tint" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Stain Application"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="1"/>
+      </annotation>
+    </input>
+    <input name="tint_color" type="Color" value="0.5 0.5 0.5 1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Color"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value=""/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="Color" value="0 0 0 0"/>
+        <annotation_member name="param1" type="Color" value="1 1 1 1"/>
+      </annotation>
+    </input>
+    <input name="type" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Surface Finish"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="3"/>
+      </annotation>
+    </input>
+    <input name="application" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Application Type"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="1"/>
+      </annotation>
+    </input>
+    <input name="bump_enable" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Surface Imperfections"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="2"/>
+      </annotation>
+    </input>
+    <input name="bump_map" type="Shader" value="">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Custom Map"/>
+      </annotation>
+    </input>
+    <input name="bump_amount" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Amount"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="tometerscale" type="float" value="0.0254">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="INTERNAL: Meter Scale Factor"/>
+      </annotation>
+    </input>
+    <input name="wirecoloralpha" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="INTERNAL: Wire Color Alpha"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="Internal parameter to be hooked by translator to pass wireColor.a property thats actually holding object visibility"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <output name="result" type="Color" display_name="result">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="result"/>
+      </annotation>
+    </output>
+    <output name="transparency" type="float" display_name="transparency">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="transparency"/>
+      </annotation>
+    </output>
+
+    <node name="difuse_map" class="adsk_Utility_MSL_CallShader">
+      <input name="the_shader" value="">
+        <attachment target_name="diffuse_color"/>
+      </input>
+      <input name="bump_amount" value="0">
+        <attachment target_name="bump_amount"/>
+      </input>
+      <output name="result"/>
+      <output name="result_bump"/>
+      <gui_data width="1.4" height="2.4" open_width="1.4" open_height="2.4" position="-3.54647 3.52938" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\the_shader" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Spider" class="adsk_Shd_MSL_Hardwood_spider">
+      <input name="tint" value="0">
+        <attachment target_name="tint"/>
+      </input>
+      <input name="finish" value="0">
+        <attachment target_name="type"/>
+      </input>
+      <input name="application" value="0">
+        <attachment target_name="application"/>
+      </input>
+      <input name="iSceneToMeterScale" value="0">
+        <attachment target_name="tometerscale"/>
+      </input>
+      <output name="tint_enable"/>
+      <output name="application_type"/>
+      <output name="roughness"/>
+      <output name="reflectivity"/>
+      <output name="refl_hl_only"/>
+      <output name="glossiness"/>
+      <output name="brdf_0_degree_refl"/>
+      <output name="brdf_90_degree_refl"/>
+      <output name="brdf_curve"/>
+      <output name="no_diffuse_bump"/>
+      <output name="oceanbump_largest"/>
+      <output name="oceanbump_smallest"/>
+      <output name="oceanbump_size"/>
+      <gui_data width="2.7" height="3.7" open_width="2.7" open_height="3.7" position="-5.40847 -0.943716" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\no_diffuse_bump" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\oceanbump_smallest" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\glossiness" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\tint" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\oceanbump_largest" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\brdf_90_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\brdf_0_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\reflectivity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\refl_hl_only" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\brdf_curve" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\finish" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\application_type" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iSceneToMeterScale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\roughness" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\application" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\tint_enable" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\oceanbump_size" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="diff_overlay" class="adsk_Utility_MSL_Mix2Color">
+      <input name="color1" value="0 0 0 0">
+        <attachment target_name="result" target_node="difuse_map"/>
+      </input>
+      <input name="color2" value="0 0 0 0">
+        <attachment target_name="tint_color"/>
+      </input>
+      <input name="mixing_mode" value="11"/>
+      <input name="mixing_factor" value="0">
+        <attachment target_name="tint_enable" target_node="Spider"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="1.5" height="2.5" open_width="1.5" open_height="2.5" position="-1.03169 3.63998" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.775398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="diff_mix" class="adsk_Utility_MSL_Mix2Color">
+      <input name="color1" value="0 0 0 0">
+        <attachment target_name="result" target_node="diff_overlay"/>
+      </input>
+      <input name="color2" value="0 0 0 0">
+        <attachment target_name="tint_color"/>
+      </input>
+      <input name="mixing_mode" value="2"/>
+      <input name="mixing_factor" value="0">
+        <attachment target_name="tint_enable" target_node="Spider"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="1.5" height="2.5" open_width="1.5" open_height="2.5" position="1.0222 3.24212" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="NodeVisibility" class="adsk_Utility_MSL_NodeVisibility">
+      <input name="input" value="1 1 1 1"/>
+      <input name="reverse" value="false"/>
+      <input name="wireColorAlpha" value="1">
+        <attachment target_name="wirecoloralpha"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="1.78829" height="1.21" open_width="1.78829" open_height="1.21" position="0.684911 7.2846" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\wireColorAlpha" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\reverse" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\input" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Normal_State" class="adsk_Utility_MSL_Normal_State">
+      <output name="result"/>
+      <output name="result_bump"/>
+      <gui_data width="1.2" height="2.2" open_width="1.2" open_height="2.2" position="-2.75144 -1.71913" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="bump_map" class="adsk_Utility_MSL_CallShader">
+      <input name="the_shader" value="">
+        <attachment target_name="bump_map"/>
+      </input>
+      <input name="bump_amount" value="0">
+        <attachment target_name="bump_amount"/>
+      </input>
+      <output name="result"/>
+      <output name="result_bump"/>
+      <gui_data width="1.55163" height="2.20786" open_width="1.55163" open_height="2.20786" position="-0.882828 -1.72608" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result" type_name="Color" show_preview="false" orbit="0.795398" tilt="0.775398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\the_shader" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Bump_Switcher" class="adsk_Utility_MSL_Switch3Vector_SL">
+      <input name="switcher" value="0">
+        <attachment target_name="bump_enable"/>
+      </input>
+      <input name="vector_1" value="0 0 0">
+        <attachment target_name="result_bump" target_node="Normal_State"/>
+      </input>
+      <input name="vector_2" value="0 0 0">
+        <attachment target_name="result_bump" target_node="difuse_map"/>
+      </input>
+      <input name="vector_3" value="0 0 0">
+        <attachment target_name="result_bump" target_node="bump_map"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="1.5" height="2.5" open_width="1.5" open_height="2.5" position="1.47974 -1.6399" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\vector_1" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\vector_2" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\vector_3" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\switcher" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="OrenNayarSimplex" class="adsk_Component_MSL_OrenNayarSimplex">
+      <input name="iDiffuseColor"/>
+      <input name="iRoughness"/>
+      <input name="iLightDotNL"/>
+      <input name="iLightDir"/>
+      <input name="iEyeDir"/>
+      <input name="iNormal"/>
+      <output name="result"/>
+      <gui_data width="3.07639" height="1.81" open_width="3.07639" open_height="1.81" position="0.672526 0.674608" view_translation="0 20.3" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iLightDotNL" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iRoughness" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iLightDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iDiffuseColor" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iHWshading" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Anisotropy" class="adsk_Component_MSL_Anisotropy">
+      <input name="iAnisotropy" value="0.5"/>
+      <input name="iAnisoRot" value="0.25"/>
+      <input name="iAnisoChannel" value="-1"/>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="oAnisoU"/>
+      <output name="oAnisoV"/>
+      <gui_data width="3.81397" height="1.51" open_width="3.81397" open_height="1.51" position="-1.47466 0.567139" view_translation="0 43.7" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iAnisoChannel" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iAnisoRot" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\oAnisoU" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\oAnisoV" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iAnisotropy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="BRDF_material" class="adsk_Utility_BRDF_Compact">
+      <input name="diffuse_weight" value="1"/>
+      <input name="diffuse" value="0.5 0.5 0.5 1">
+        <attachment target_name="result" target_node="diff_mix"/>
+      </input>
+      <input name="diffuse_roughness" value="0">
+        <attachment target_name="roughness" target_node="Spider"/>
+      </input>
+      <input name="reflectivity" value="0.6">
+        <attachment target_name="reflectivity" target_node="Spider"/>
+      </input>
+      <input name="refl_color" value="1 1 1 1"/>
+      <input name="refl_gloss" value="1">
+        <attachment target_name="glossiness" target_node="Spider"/>
+      </input>
+      <input name="hl_vs_refl_balance" value="1"/>
+      <input name="refl_hl_only" value="false">
+        <attachment target_name="refl_hl_only" target_node="Spider"/>
+      </input>
+      <input name="refl_is_metal" value="false"/>
+      <input name="brdf_conserve_energy" value="true"/>
+      <input name="brdf_0_degree_refl" value="0.2">
+        <attachment target_name="brdf_0_degree_refl" target_node="Spider"/>
+      </input>
+      <input name="brdf_90_degree_refl" value="1">
+        <attachment target_name="brdf_90_degree_refl" target_node="Spider"/>
+      </input>
+      <input name="brdf_curve" value="5">
+        <attachment target_name="brdf_curve" target_node="Spider"/>
+      </input>
+      <input name="brdf_fresnel" value="false"/>
+      <input name="anisotropy" value="0.5"/>
+      <input name="transparency" value="0"/>
+      <input name="refr_ior" value="1.4"/>
+      <input name="cutout_opacity" value="1">
+        <attachment target_name="result" target_node="NodeVisibility"/>
+      </input>
+      <input name="additional_color" value="0 0 0 0"/>
+      <input name="standard_bump" value="0 0 0"/>
+      <input name="overall_bump" value="0 0 0">
+        <attachment target_name="result" target_node="Bump_Switcher"/>
+      </input>
+      <input name="no_diffuse_bump" value="false">
+        <attachment target_name="no_diffuse_bump" target_node="Spider"/>
+      </input>
+      <input name="iOrenNayarTerm">
+        <attachment target_name="result" target_node="OrenNayarSimplex" is_reference="true"/>
+      </input>
+      <input name="iAnisotropicTerm">
+        <attachment target_name="oAnisoU" target_node="Anisotropy" is_reference="true"/>
+      </input>
+      <input name="iFresnelTerm"/>
+      <input name="iTranspTerm"/>
+      <output name="result">
+        <attachment target_name="result"/>
+      </output>
+      <output name="diffuse_result"/>
+      <output name="spec_result"/>
+      <output name="refl_result"/>
+      <output name="refr_result"/>
+      <gui_data width="2.73812" height="9.56094" open_width="2.73812" open_height="9.56094" position="4.20159 1.87312" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\no_diffuse_bump" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\anisotropy_channel" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\cutout_opacity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\refr_trans_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\standard_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\anisotropy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iOrenNayarTerm" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iTranspTerm" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\shade_for_hw" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\refl_gloss" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iFresnelTerm" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\diffuse_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\refr_ior" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\brdf_90_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\refr_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\brdf_conserve_energy" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\refr_trans_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\brdf_0_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\reflectivity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\refl_hl_only" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\brdf_curve" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\overall_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\diffuse_roughness" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result" type_name="Color" show_preview="true" orbit="0.745398" tilt="0.285398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\refr_result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\hl_vs_refl_balance" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\refl_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\transparency" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\anisotropy_rotation" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\diffuse_result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\diffuse" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\brdf_fresnel" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\refl_is_metal" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\iAnisotropicTerm" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\additional_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\refl_result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\spec_result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Alpha_Extract" class="adsk_Utility_MSL_Alpha_Extract">
+      <input name="the_color" value="1 1 0 1">
+        <attachment target_name="result" target_node="BRDF_material"/>
+      </input>
+      <input name="is_opacity" value="true"/>
+      <output name="result">
+        <attachment target_name="transparency"/>
+      </output>
+      <gui_data width="3.70241" height="1.06" open_width="3.70241" open_height="1.06" position="4.64732 7.3863" view_translation="0 0.74" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\is_opacity" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\the_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_Hardwood_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+  </phenomenon>
+
+  <node name="dim_light" class="Light_point">
+    <input name="color" value="1 1 1 1"/>
+    <input name="intensity" value="1"/>
+    <input name="distance_falloff_exponent" value="0"/>
+    <input name="distance_scale" value="1"/>
+    <output name="result"/>
+    <output name="light_shadow"/>
+    <gui_data width="1.6" height="2.6" open_width="1.6" open_height="2.6" position="-0.874992 2.04758" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+      <preview_data>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\intensity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\distance_scale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\distance_falloff_exponent" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\light_shadow" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <node name="adsk_Utility_MSL_EnvBall_1" class="adsk_Utility_MSL_EnvBall">
+    <input name="env_tex" value="default_reflection_spherical.dds"/>
+    <input name="intensity" value="1"/>
+    <input name="blur" value="1"/>
+    <output name="result"/>
+    <gui_data width="3.11035" height="3.54828" open_width="3.11035" open_height="3.54828" position="-1.61159 -1.06817" view_translation="0 2.54" view_scale="1" open_state="closed" selected_state="false">
+      <preview_data>
+        <preview_data_element name="\blur" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\intensity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\env_tex" type_name="texture2D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <node name="adsk_Mtl_Hardwood_MSL" class="adsk_Mtl_Hardwood_MSL">
+    <input name="diffuse_color" value=""/>
+    <input name="tint" value="0"/>
+    <input name="tint_color" value="0.344262 0.15867 0.0112873 1"/>
+    <input name="type" value="0"/>
+    <input name="application" value="1"/>
+    <input name="bump_enable" value="1"/>
+    <input name="bump_map" value=""/>
+    <input name="bump_amount" value="0.15"/>
+    <input name="tometerscale" value="0.0254"/>
+    <input name="wirecoloralpha" value="1"/>
+    <output name="result"/>
+    <output name="transparency"/>
+    <gui_data width="2.77865" height="6.48114" open_width="2.77865" open_height="6.48114" position="1.9229 0.386845" view_translation="0.694297 -2.82732" view_scale="0.0705849" open_state="closed" selected_state="true">
+      <preview_data>
+        <preview_data_element name="\diffuse_color" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\tint" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="-0.594602" tilt="0.275397" zoom="1.95" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\type" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\tometerscale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\tint_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\transparency" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\application" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\bump_enable" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\wirecoloralpha" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\bump_map" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <render_data>
+    <light_list/>
+    <scene_ambient color="0 0 0 0"/>
+  </render_data>
+</root>

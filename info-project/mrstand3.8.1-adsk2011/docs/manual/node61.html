@@ -1,0 +1,103 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shader Declarations</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node60.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node62.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION59"></a>
+<h2 id="mi:shader_decl">Shader Declarations</h2>
+
+<p><a id="declaration"></a> <a id="INDEX113"></a>
+<a id="INDEX114"></a><a id="INDEX115"></a>
+Shaders<a id="INDEX116"></a> are procedural elements that are implemented
+in C or C++. They are typically, but not necessarily, precompiled and
+stored in shared libraries. They are linked by mental ray at
+runtime and perform a variety of functions, such as determining the
+surface characteristics of an object. The term "shader" originally
+referred to "surface shading" (color and illumination computation)
+but has expanded and now refers to any custom function, regardless
+of its use.</p>
+<p>All shading functions linked with a code or link statement, and
+all shading functions built into mental ray, must be declared. When
+called, shaders accept a pointer to an arbitrary parameter
+structure as their third argument, and mental ray must know the
+structure declaration in order to put together the parameter block
+according to C/C++ structure layout conventions. Usually,
+declarations are included from a separate file using the
+<tt>$include</tt> statement. For a detailed description of shader
+declarations, see the chapter on writing shaders.</p>
+<p>A declaration is a top-level statement that informs mental ray
+about the shader name (which is identical to the C/C++ function
+name), the return type, and the types and names of all the
+parameters. Certain options can also be specified.</p>
+<pre>
+      declare shader
+          <dfn>[</dfn><i>type</i><dfn>]</dfn> "<i>shader_name</i>" (
+              <i>type</i> "<i>parameter_name</i>" <dfn>[</dfn><i>default</i><dfn>]</dfn>,
+              <i>type</i> "<i>parameter_name</i>" <dfn>[</dfn><i>default</i><dfn>]</dfn>,
+              <dfn>...</dfn>
+              <i>type</i> "<i>parameter_name</i>" <dfn>[</dfn><i>default</i><dfn>]</dfn>
+          )
+          <dfn>[</dfn>version <i>version</i><sub>int</sub><dfn>]</dfn>
+          <dfn>[</dfn>apply <i>shader_type_list</i><dfn>]</dfn>
+          <dfn>[</dfn><i>options</i><dfn>]</dfn>
+      end declare
+  
+</pre>
+<p>It is recommended that <i>shader_name</i> and
+<i>parameter_name</i> are enclosed in double quotes to disambiguate
+them from reserved keywords and to allow special characters such as
+punctuation marks. Note that old-style declarations of the form</p>
+<pre>
+    declare <dfn>[</dfn><i>type</i><dfn>]</dfn> "<i>shader_name</i>" (<dfn>...</dfn>)  
+</pre>
+<p>are also still supported for backwards compatibility, but they
+should not be used because they do not support versioning, apply
+masks, and options. The optional (but highly recommended)
+<i>version</i> is an arbitrary integer that identifies the
+<a href="node114.html#INDEX439">shader version</a>. The default is 0.
+See the discussion of shader versioning in section
+<a href="node114.html#versioning">versioning</a>. If the shader has no
+parameters, the parameter list between the parentheses is left
+empty.</p>
+<p><a id="INDEX117"></a><a id="INDEX118"></a>
+mental ray allows to specify default values for
+numerical parameters. They are given with the keyword <tt>default</tt>
+followed by one (boolean, integer, scalar), three (vector, color),
+four (color), or sixteen (transform) values. This example:</p>
+<pre>
+    color "ambience" default 1 0 0,
+</pre>
+<p>declares a color parameter named "ambience" with a red default
+RGB color. Whenever a shader is derived from this declaration, the
+ambience parameter will be red unless changed in the definition.
+The example specifies only RGB, so the alpha component defaults to
+0. To make it default to 1.0, a value of 1 needs to be inserted
+before the comma. Parameters that have no explicit default clause
+are initialized with null values. It is not possible to specify
+defaults for non-numerical parameters and array members.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node60.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node62.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

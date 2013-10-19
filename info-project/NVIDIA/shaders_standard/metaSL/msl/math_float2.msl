@@ -1,0 +1,228 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+shader Math_float2_invert
+{
+	input:
+		float2 vector2 = float2(1,1)
+		{			
+			display_name("Float2");
+			soft_range(float2(0,0),float2(1,1));
+			description( "Vector to invert." );
+		};
+
+	output:
+		float2 result;
+
+	void main()
+	{
+		result   = float2(1,1) - vector2;
+	}
+}
+{
+	description( "Subtracts each component of the input vector from 1." );
+}
+;
+
+shader Math_float2_expand
+{
+  input:
+    float2 vector2 = float2(0,0)
+	{		
+		display_name("Float2");
+		soft_range(float2(0,0),float2(1,1));
+		description( "Vector to scale." );
+	};
+    float2 low   = float2(0,0)
+	{	
+		display_name("Low");
+		soft_range(float2(0,0),float2(1,1));
+		description( "Low value of target range." );
+	};
+    float2 high  = float2(1,1)
+	{	
+		display_name("High");
+		soft_range(float2(0,0),float2(1,1));
+		description( "High value of the target range." );
+	};
+   
+   
+  output:
+    float2 result;
+    
+    void main()
+    {
+	result = (vector2 - low)/(high - low);
+    }
+}
+{
+	description( "Scales each component of the input from the domain "
+                 "[Low, High] to the range [0, 1]." );
+}
+;
+
+shader Math_float2_compress
+{
+  input:
+    float2 vector2 = float2(0,0)
+	{	
+		display_name("Float2");
+		soft_range(float2(0,0),float2(1,1));
+		description( "Vector to scale." );
+	};
+    float2 low   = float2(0,0)
+	{	
+		display_name("Low");
+		soft_range(float2(0,0),float2(1,1));
+		description( "Low value of the domain." );
+	};
+    float2 high  = float2(1,1)
+	{	
+		display_name("High");
+		soft_range(float2(0,0),float2(1,1));
+		description( "High value of the domain." );
+	};
+   
+  output:
+    float2 result;
+    
+    void main()
+    {
+	result = vector2*(high - low) + low;
+    }
+}
+{
+	description( "Scales each component of the input from the domain [0,1] "
+                 "to the range [Low, High]." );
+}
+;
+
+shader Math_float2_threshold
+{
+  input:
+    float2 vector2     = float2(0,0)
+   	{	
+		display_name("Float2");
+		soft_range(float2(0,0),float2(1,1));
+		description( "Vector to threshold." );
+	};
+    float2 threshold = float2(0,0)
+	{	
+		display_name("Threshold");
+		soft_range(float2(0,0),float2(1,1));
+		description( "Threshold value." );
+	};
+   
+   
+  output:
+    float2 result;
+    
+    void main()
+    {
+	result = vector2 > threshold ? vector2 : float2(0,0);
+    }
+}
+{
+	description( "For each component, returns the input if it exceeds the "
+	             "threshold and zero otherwise." );
+}
+;
+
+shader Math_float2_mix
+{
+	input:
+		float2 vector21 = float2(0,0)
+		{	
+			display_name("Float2 1");
+			soft_range(float2(0,0),float2(1,1));
+			description( "First vector to mix." );
+		};
+		float2 vector22 = float2(1,1)
+		{		
+			display_name("Float2 2");
+			soft_range(float2(0,0),float2(1,1));
+			description( "Second vector to mix." );
+		};
+		float2 mix = float2(0.5, 0.5)
+		{		
+			display_name("Mix");
+			soft_range(float2(0,0),float2(1,1));
+			description( "Interpolation weight to apply.");
+		};
+
+	output:
+		float2 result;
+
+	void main()
+	{
+		result = lerp(vector21, vector22, mix);
+	}
+}
+{
+	description( "For each component, performs linear interpolation between "
+	             "the two inputs.");
+}
+;
+
+shader Math_float2_modf
+{
+	input:
+		float2 input = float2(0.0,0.0)
+		{			
+			display_name("Float2");
+			soft_range(float2(0.0,0.0),float2(1.0,1.0));
+			description("Vector to split.");
+		};
+
+	output:
+		float2 integral_output
+		{
+			description("Integral part of the input.");
+		};		
+		float2 fractional_output
+		{
+			description("Fractional part of the input.");
+		};		
+
+	void main()
+	{
+		fractional_output = modf(input, integral_output);
+	}
+}
+{
+	description( "Splits each component of the input vector into its "
+				 "integral and fractional parts." );
+}
+;
+
+shader Math_float2_sincos
+{
+	input:
+		float2 input = float2(0.0,0.0)
+		{			
+			display_name("Float2");
+			soft_range(float2(0.0,0.0),float2(1.0,1.0));
+			description("Vector on which to calculate sine and cosine.");
+		};
+
+	output:
+		float2 sine
+		{
+			description("Sine of the input.");
+		};
+		float2 cosine
+		{
+			description("Cosine of the input.");
+		};
+
+	void main()
+	{
+		sincos(input, sine, cosine);
+	}
+}
+{
+	description( "Calculates the sine and cosine of each component of "
+				 "the input vector." );
+}
+;

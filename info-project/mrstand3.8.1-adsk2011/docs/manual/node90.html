@@ -1,0 +1,389 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Instances</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node89.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node91.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION88"></a><a id="mi:instance"></a>
+<h3>Instances</h3>
+<p><a id="instance"></a></p>
+<pre>
+    instance "<i>name</i>" "<i>element</i>" <dfn>|</dfn> geometry <i>function</i>
+        <dfn>[</dfn> hide on<dfn>|</dfn>off <dfn>]</dfn>
+        <dfn>[</dfn> visible on<dfn>|</dfn>off <dfn>]</dfn>
+        <dfn>[</dfn> shadow on<dfn>|</dfn>off <dfn>]</dfn>
+        <dfn>[</dfn> shadow <i>mode</i> <dfn>]</dfn>
+        <dfn>[</dfn> shadowmap on<dfn>|</dfn>off <dfn>]</dfn>
+        <dfn>[</dfn> trace on<dfn>|</dfn>off <dfn>]</dfn>
+        <dfn>[</dfn> reflection <i>mode</i> <dfn>]</dfn>
+        <dfn>[</dfn> refraction <i>mode</i> <dfn>]</dfn>
+        <dfn>[</dfn> transparency <i>mode</i> <dfn>]</dfn>
+        <dfn>[</dfn> caustic on<dfn>|</dfn>off <dfn>]</dfn>
+        <dfn>[</dfn> caustic <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> globillum on<dfn>|</dfn>off <dfn>]</dfn>
+        <dfn>[</dfn> globillum <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> finalgather <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> transform <dfn>[</dfn><i>matrix</i><dfn>]</dfn><dfn>]</dfn>
+        <dfn>[</dfn> motion transform <dfn>[</dfn><i>matrix</i><dfn>]</dfn><dfn>]</dfn>
+        <dfn>[</dfn> face <dfn>[</dfn>front<dfn>|</dfn>back<dfn>|</dfn>both<dfn>]</dfn><dfn>]</dfn>
+        <dfn>[</dfn> motion off <dfn>]</dfn>
+        <dfn>[</dfn> override <dfn>]</dfn>
+        <dfn>[</dfn> material "<i>material_name</i>" <dfn>]</dfn>
+        <dfn>[</dfn> material [ "<i>material_name</i>" <dfn>[</dfn>, "<i>material_name</i>" <dfn>...]</dfn>] <dfn>]</dfn>
+        <dfn>[</dfn> light <dfn>[</dfn>"exclusive"<dfn>]</dfn> [ <dfn>[</dfn>"<i>light_name</i>" <dfn>[</dfn>, "<i>light_name</i>" <dfn>...]]</dfn>] <dfn>]</dfn>
+        <dfn>[</dfn> light shadow <dfn>[</dfn>"exclusive"<dfn>]</dfn> [ <dfn>[</dfn>"<i>light_name</i>" <dfn>[</dfn>, "<i>light_name</i>" <dfn>...]]</dfn>] <dfn>]</dfn>
+        <dfn>[</dfn> approximate <dfn>[</dfn><i>approximation</i> <dfn>[</dfn>, <i>approximation</i> <dfn>...]] ]</dfn>
+        <dfn>[</dfn> shading samples <i>samples</i><sub>scalar</sub> <dfn>]</dfn>
+        <dfn>[</dfn> tag <i>label</i><sub>int</sub> <dfn>]</dfn>
+        <dfn>[</dfn> data <dfn>[</dfn>"<i>data_name</i>"<dfn>] ]</dfn>
+        <dfn>[</dfn> ( <i>parameters</i> ) <dfn>]</dfn>
+    end instance  
+</pre>
+<p><a id="INDEX339"></a>Instances place cameras,
+lights, objects, and instance groups into the scene. Without
+instances, these entities have no effect; they are not tessellated
+and are not scheduled for processing. An instance has a <i>name</i>
+that identifies the instance when it is placed into an instance
+group (see below). Every instance references exactly one element
+<i>element</i>, which must be the name of a camera, a light, an
+object, or an instance group. If the instanced item is a geometry
+shader <i>function</i>, the scene element created by this special
+shader is actually used as the instanced item.</p>
+<p><a id="INDEX340"></a>The <tt>hide</tt> flag can
+be set to <tt>on</tt> to disable the instance and the element it
+references. This is useful to temporarily suspend an instance to
+evaluate a subset of the scene, without deleting and later
+recreating suspended parts. <tt>hide</tt> is <tt>off</tt> by
+default.</p>
+
+<p>The
+<tt id="mi:visisible">visible</tt>, <tt id="mi:shadow">shadow</tt>,
+<tt id="mi:shadowmap">shadowmap</tt>, <tt id="mi:trace">trace</tt>,
+<tt id="mi:face">face</tt> flags, and <tt id="mi:reflection">reflection</tt>,
+<tt id="mi:refraction">refraction</tt>, <tt id="mi:transparency">transparency</tt>,
+<tt id="mi:caustic">caustic</tt>, <tt id="mi:globillum">globillum</tt>,
+<tt id="mi:finalgather">finalgather</tt> modes (further referred
+to as flags) are used to control the rendering properties of the
+final object instance. They are inherited down the
+<a href="node83.html#INDEX286">scene DAG</a>, so that flags in instances
+lower (or closer) to the objects override those in instances higher up.
+The ones from the instance closest to the object are merged with the
+corresponding object flags. The resulting values become the effective
+flags for rendering. If no flags are specified in the relevant instances,
+only the object flags are used. For the exact definition of these flags
+refer to the <a href="node83.html#SECTION81">object</a> description.</p>
+
+<p>The <tt>shadow</tt>, <tt>reflection</tt>, <tt>refraction</tt>,
+and <tt>transparency</tt> mode bitmaps contain four relevant bits, which
+are represented by the following <dfn>mode</dfn> values:
+<ul>
+<li>[<code>1</code>] to enable casting the effect,</li>
+<li>[<code>2</code>] to enable receiving the effect,</li>
+<li>[<code>4</code>] to disable casting the effect,</li>
+<li>[<code>8</code>] to disable receiving the effect.</li>
+</ul>
+<p>If no bit is set then this instance does not enforce any changes of flags
+on the object, potential flags from instances higher up in the DAG hierarchy
+will be taken. Multiple bits in the bitmap may be set; the final <dfn>mode</dfn>
+value of this bitmap is the sum of the individual values listed above.
+Obviously, some combinations don't make sense, like both enable+disable either
+cast [<code>5</code>] or receive [<code>10</code>]. Typical values are:
+<ul>
+<li>[<code>1</code>] force cast,
+<li>[<code>2</code>] force receive,
+<li>[<code>3</code>] force all (cast and receive),
+<li>[<code>4</code>] force no cast,
+<li>[<code>6</code>] force receive-only (no cast but receive),
+<li>[<code>8</code>] force no receive,
+<li>[<code>9</code>] force cast-only (no receive but cast),
+<li>[<code>12</code>] force no effect (no cast nor receive).
+</ul>
+<p>Note, that <em>"cast the effect"</em> here means <em>"cast shadows"</em>
+or <em>"cast reflections"</em> onto other objects (or, become visible in
+reflections on other objects). This is the opposite sense of
+<em>"cast a ray"</em>. For example, a material shader attached to an object
+will <em>"cast reflection rays"</em> only if the object has the <i>receive</i>
+reflection flag enabled.
+<p>For backwards compatibility, the reflection and refraction casting
+and receiving bits can be overwritten simultaneously with the
+<b>trace on|off</b> flag.
+
+<p>The <code>caustic</code> and <code>globillum</code> <i>mode</i>
+bitmaps contains four bits in the mode mask, as well as 2 more bits
+to store <tt>on</tt> and <tt>off</tt> switches, which can be used to hide
+the object completely from the photon tracing effects. The switch bits can
+only be controlled using the <tt>on</tt> and <tt>off</tt> syntax in .mi scene
+files. However, shaders can access these bits in a single bit field.
+The desired behavior is a combination of:</p>
+<ul>
+<li>[<code>1</code>] to enable caustic casting,</li>
+<li>[<code>2</code>] to enable caustic receiving,</li>
+<li>[<code>4</code>] to disable caustic casting,</li>
+<li>[<code>8</code>] to disable caustic receiving,</li>
+<li>[<code>off</code>(16)] to hide from caustic photons, and
+<li>[<code>on</code>(32)]  to enable interaction with caustic photons.</li>
+</ul>
+<p>Note, that the enable bits are contained in the two lowest and the highest
+bits. Obviously, the values <code>1</code> and <code>4</code>, <code>2</code>
+and <code>8</code>, and <code>16</code> and <code>32</code> cannot be mixed,
+respectively. If the <i>mode</i> value is omitted, the default is <code>3</code>
+(enable casting and receiving). The fifth and sixth bits control "visibility to
+photons"; if disabled then photons do not intersect this object and fly right
+through. This also affects the portion of the scene where photons have an
+effect and will be traced by mental ray. For example, if caustics occur only
+in a small part of the scene then objects outside that area should be marked
+as invisible to caustic photons to tell mental ray it should not waste time
+tracing photons there.
+<p>The <code>finalgather</code> bitmap and switches work in the same way as
+<code>caustic</code> and <code>globillum</code> ones, they just control the
+behavior for final gathering rays. Note that the deprecated <b>trace</b> flag,
+which is supported for backwards compatibility reasons, will also control
+some of the final gathering properties.</p>
+
+<p><a id="INDEX342"></a>The <tt>transform</tt>
+statement is followed by 16 numbers that define a 4&times;4 matrix
+in row-major order. The matrix establishes the transformation from
+the parent coordinate space to the <a href="node101.html#INDEX369">object
+space</a> of the instanced
+<i>element</i> (<b>not</b> from object to parent space, which is more
+common). If the instance is directly attached to the
+<a href="node91.html#INDEX351">root instance group</a> the parent
+coordinate space is <a href="node101.html#INDEX368">world space</a>.
+For example, the following matrix translates the instanced element to
+the coordinate <i>(x, y, z)</i>:</p>
+<pre>
+    transform
+        1 0 0 0
+        0 1 0 0
+        0 0 1 0
+        <i>x</i>&thinsp;<i>y</i>&thinsp;<i>z</i> 1
+</pre>
+<p>The parent-to-local space transformation direction has the effect that
+in order to move an instanced object one (local) unit in the (local) +X
+direction, <i>x</i> must be decremented by 1.
+<p>Instance transformations are ignored if
+<a href="node101.html#INDEX370">camera space</a> is in effect in a scene.
+This is deprecated and not recommended.
+
+<p><a id="INDEX343"></a>The <tt>motion
+transform</tt> matrix specifies a transformation from parent space
+to local space for motion blurred geometry. If not specified, the
+instance transformation is used for the motion blur transformation.
+In this case the parent instance determines whether motion blur is
+active or not. Motion blur is activated by specifying a motion
+transformation in the <a href="node83.html#INDEX286">scene DAG</a>.
+This transformation is propagated through the
+<a href="node83.html#INDEX286">scene DAG</a> in the same way as the
+instance transformations. The <tt>motion off</tt> statement turns
+off all motion information inherited up to this point, as if the
+camera and all instances above did not have motion transforms. This
+can be used to disable motion transformations for a scene subtree.
+The <tt>motion steps</tt> option in the options block
+controls the number of segments of the curved
+<a href="node83.html#INDEX290">motion path</a> resulting from evaluating
+the transformation at different times in the interval 0..1.</p>
+<p>If a motion transformation is specified in an object instance,
+the triangle vertex points of the tessellated geometry are
+transformed by the matrix product of the accumulated instance
+matrix and the inverse accumulated motion transformation matrix.
+The difference vector between the transformed and the untransformed
+triangle vertex point is used as a motion vector in local
+<a href="node101.html#INDEX369">object space</a>. If an object has motion
+vectors attached to the vertices, the motion vector calculated as
+described above is combined with the object motion vector. A motion
+transformation can be given for both object and camera instances.
+If a motion transformation is specified in a camera instance, the
+effective motion transformation for the triangle vertices is the
+matrix product of the relative instance and relative camera motion
+transformation.</p>
+<p>The <tt>override</tt> keyword is a prefix for <tt>material</tt>
+and <tt>approximate</tt> statements. It causes the material,
+material list, or approximation list to override the materials and
+approximations in instances and objects lower in the tree. Without
+overriding, lower instances and objects take precedence.</p>
+<p><a id="INDEX344"></a> The <i>material_name</i>
+is the name of a previously defined material. It is stored along
+with the instance. Instance materials are inherited down the
+<a href="node83.html#INDEX286">scene DAG</a>. Materials in
+instances lower in the <a href="node83.html#INDEX286">scene DAG</a>
+(closer to the leaves) override materials in instances higher up.
+The material defined lowest becomes the default material for any
+polygon or surface in a geometrical object that has no material of
+its own.</p>
+<p><a id="INDEX345"></a> If a bracketed,
+comma-separated list of <i>material_name</i>s is given, mental ray
+will use the <i>n</i>-th material in the list if the polygon or
+surface label is <i>n</i>. If the label exceeds the length of the
+list, the first material in the list is used. Polygon and surface
+labels can be specified in the object definition that have the
+<tt>tagged</tt> flag set. If this flag is not set, the first
+material in the list is used. The list may not be empty.</p>
+<p>The <tt>light</tt> and <tt>light shadow</tt> constructs can be
+used to specify light lists for illumination and shadow casting,
+see <a href="#light_lists">below</a>.</p>
+<p><a id="INDEX346"></a> The approximation list
+provides default approximations for objects. It is a
+comma-separated list of approximation statements, including
+displacement approximations, and all flags if applicable (visible,
+trace, shadow, caustic, globillum). See page
+<a href="node89.html#approx">approx</a> for syntax details. Like
+approximations in <a href="node76.html#INDEX180">options
+block</a>s, the surface name must be <tt>all</tt>. For example,
+this approximation list overrides all approximations in the subtree
+below the instance, such that visible objects are tessellated
+moderately fine, traced and shadow objects are very coarse, and
+visible displacements are very detailed:</p>
+<p><a id="INDEX347"></a></p>
+<pre>
+    override approximate [
+        visible approximate fine view length 0.5 all,
+        trace shadow approximate regular parametric 3 3 all,
+        visible approximate displace fine view length 0.25 all
+    ]
+</pre>
+<p>When rendering with the <i><a href="node34.html">rasterizer</a></i> mode, it is possible to specify
+the number of shading samples to be used on a per-instance basis.
+This will locally override the setting in the render options. It is
+also possible to specify this setting per-object if needed, but the
+instance setting will override the object setting when both are
+present. Overriding the option setting would normally be done to
+keep the scene settings low, to keep rendering times down, but
+boost the quality of the rendering of one or more objects or
+instances, to achieve the required quality in the final image.</p>
+<p>A label integer can be attached to an instance using the
+<tt>tag</tt> statement. Labels are not used by mental ray in any
+way, but a shader can use the
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> function to obtain the
+label and perform instance-specific operations.</p>
+<p>Also, <a href="node83.html#INDEX285">user data</a> can be
+attached with a <tt>data</tt> statement. The argument must be the
+name of a previously defined data element in the scene file. If the
+argument is missing, a previously existing data reference is
+removed.</p>
+<p><a id="INDEX348"></a>An instance may define
+parameters. Instance parameters are evaluated during scene
+preprocessing during preprocessing. Whenever the initial scene
+traversal finds an instance, it calls the
+<a href="node76.html#INDEX224">inheritance function</a> defined in the
+options element with the parent instance parameters and the
+parameters of the new instance. The inheritance function must then
+compute a new parameter set, which becomes the parent parameters
+for any future instances found in the <i>element</i> subtree below
+the new instance, if <i>element</i> is an instance group (if not,
+no sub-instances can exist and recursion ends). The inheritance
+function is also called if there is no parent instance yet or if
+the new instance contains no parameters. The final parameter set
+created by the inheritance function called for the bottom-level
+instance (which instances a camera, light, or object) is made
+available to shaders, in addition to the regular shader
+parameters.</p>
+<p>mental ray supprts <a href="node76.html#INDEX225">traversal function</a>s
+in the options block, which are called like
+<a href="node76.html#INDEX224">inheritance function</a>s but have more
+control over the inheritance process. For example, they can control
+not only instance parameters but also flags, materials, and
+transformation matrices.</p>
+<p>The instance parameters must be declared just like shader
+parameters. The <tt>declare</tt> command must name the inheritance
+function, as specified in the <tt>options</tt> element. All
+instances share the same declaration. Note that this limits the
+portability of the scene - it is difficult to merge it with another
+scene that uses a different parameter inheritance function.</p>
+<p>If <tt>transform</tt>, <tt>motion transform</tt>, and
+<tt>material</tt> are given without arguments, the respective
+feature is turned off. This is useful for incremental changes. It
+is not relevant for the initial definition because these features
+are off by default when an instance is created.</p>
+<p>The <i>element</i> may be named in more than one instance. This
+is called "<a href="node75.html#INDEX174">multiple instancing</a>."
+If two instances name the same object, the object appears twice in
+the scene, even though it is stored only once in the scene
+database. This greatly reduces memory consumption. For example, it
+is sufficient to create one wheel object for a car, and then
+instance it four times. Each of the four instances will contain a
+different transformation matrix to place the wheels in four
+different locations. (This implies that multiple instancing is not
+useful in camera space mode because in this mode the
+transformations are ignored.) It is also possible to apply multiple
+instancing to <b><a id="INDEX349"></a>object
+group</b>s to replicate entire sub-scenes.</p>
+<p>If the instanced item is a "<a href="node179.html#INDEX857">geometry
+shader</a>", the <i>function</i>
+is called with shader parameters and the scene element created by
+the shader is defined in the local coordinate space of the
+instance. The geometry shader is called just before tessellation
+takes place. The following example uses a geometry shader
+<i>mib_geo_sphere</i>:</p>
+<pre>
+    instance "sphere"
+        geometry "mib_geo_sphere" ()
+    end instance
+</pre>
+<p>This example creates a spherical object procedurally. It uses
+the syntax for <a href="node65.html#INDEX144">anonymous shader</a>;
+as usual the named shader syntax using the <tt>shader</tt> keyword
+and named shader assignments using the " <tt>=</tt>" sign can also
+be used. As usual, shader lists may be used; if the shader is
+correctly written all created objects are put in a group and
+instanced together. Named shaders created inside or outside
+procedural object definitions are in global scope and can be shared
+with other objects.</p>
+<p>For a complete example for building scene graphs with instances
+and instance groups, see below.</p>
+
+<h4>Light Lists <sup>3.5</sup></h4>
+<p><a id="light_lists"></a>
+<b>Light lists</b> allow to store relations between instances of lights
+and objects in the mental ray scene database, instead of passing this
+information through shaders. Separate light lists for shadow casting
+are supported. This offers the flexibility to share a single material on
+multiple objects with different lights. However, cooperation by shaders
+is required to utilize these light lists.</p>
+<p>Light lists are bracketed, comma separateds list of light instances.
+The lists may optionally be flagged as <tt>"exclusive"</tt>, in which
+case all lights except the named ones are used. An empty exclusive list
+results in all lights being used; if no light list is specified then all
+lights are usually used as well. The lists may also contain the names of
+instance groups besides the names of light instances. In this case, all
+lights in the instance groups are used. This offers a convenient way to
+attach sets of lights to instances.</p>
+<p>The regular <code>light</code> list (without <code>shadow</code> keyword)
+is intended to specify the lights to be used for illumination in shaders.
+Shaders access the instance light lists with the
+<a href="classmi_1_1shader_1_1LightIterator.html">light iterators</a> which
+have been added to the shader API. The light iterators may also be used to
+read the light lists in the shader for other purposes.</p>
+<p>The standard mental ray shader packages make use of light lists: if lights
+are specified as parameters to the shaders directly then these lights are used;
+otherwise, if a light list is present in the geometry instance, the light list
+will be used; otherwise, all lights in the scene are used.</p>
+<p>The <code>light shadow</code> list specifies the lights for which the
+geometry instance casts shadows, which is independent of the regular light
+list. This affects both ray traced shadows as well as shadow maps. If no shadow
+light list is specified then the regular light relations will control shadow
+relations as well. Note, that a slight performance impact is expected when
+shadow light lists are used together with ray traced shadows.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node89.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node91.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

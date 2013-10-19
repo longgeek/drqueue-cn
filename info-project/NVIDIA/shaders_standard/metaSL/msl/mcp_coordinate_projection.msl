@@ -1,0 +1,123 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product shader for generating coordinates.
+ *****************************************************************************/
+#include <mcp_lib.msl>
+
+shader Mcp_coordinate_projection{
+  input:
+    Projection_type projection_type = PLANAR_PROJECTION
+    {
+        description( "What projection methode should be used to generate the coordinates" );
+    };
+    float4x4 projection_transform = float4x4(20,0,0,0,0,20,0,0,0,0,20,0,0,0,0,20)
+    {
+        description( "transformation of the projector. in world space" );
+    };
+
+  output:
+    Mcp_coordinate result;
+    
+    float4x4 compute_cylindric_transform() {
+        //float4 t_normal = float4(transform_normal("internal","world",normal),1.);//projection_transform*float4(transform_vector("internal","world",normal),1);
+        float4x4 t_projection_transform = projection_transform;
+
+        return t_projection_transform;
+    }
+
+    float4x4 compute_spheric_transform() {
+        float4 t_pos = projection_transform*float4(transform_point("internal","world",position),1.);//projection_transform*float4(transform_vector("internal","world",normal),1);
+        float4x4 t_projection_transform = projection_transform;
+
+        if (abs(t_pos.x) > 0. || abs(t_pos.y) > 0.){
+            float xy = t_pos.x * t_pos.x + t_pos.y * t_pos.y;
+            //float OrgDist = float(sqrt(xy + t_pos.z * t_pos.z));
+            float4x4 trans = float4x4(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1);
+            t_projection_transform *= trans; 
+            //uv_coord.x = OrgDist * atan2(t_pos.y, t_pos.x);
+            //uv_coord.y = OrgDist * atan2(t_pos.z, sqrt(xy));
+        } 
+        else if (abs(t_pos.z) > 0.) {
+            t_projection_transform = float4x4(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0);
+            //float xy = t_pos.x * t_pos.x + t_pos.y * t_pos.y;
+            //float OrgDist  = sqrt(xy + t_pos.z * t_pos.z);
+            //uv_coord.y = OrgDist * atan2(t_pos.z, sqrt(xy));
+        }
+        return t_projection_transform;
+    }
+
+    float4x4 compute_cubic_transform() {
+        float4 t_normal = projection_transform*float4(transform_normal("internal","world",normal),0.);
+        float4x4 t_projection_transform = projection_transform;
+        
+         // Find out on which cube face is the intersection point
+        if (abs(t_normal.x) >= abs(t_normal.y) && abs(t_normal.x) >= abs(t_normal.z)){
+                if (t_normal.x > 0){
+                    float4 t = t_projection_transform[2];
+                    t_projection_transform[2] = t_projection_transform[0];
+                    t_projection_transform[0] = t_projection_transform[1];
+                    t_projection_transform[1] = t;
+                }else{
+                    float4 t = t_projection_transform[2];
+                    t_projection_transform[2] = t_projection_transform[0];
+                    t_projection_transform[0] = -t_projection_transform[1];
+                    t_projection_transform[1] = t;
+                }
+        }else if (abs(t_normal.y) >= abs(t_normal.x) && abs(t_normal.y) >= abs(t_normal.z)){
+                if (t_normal.y > 0){
+                    float4 t = t_projection_transform[1];
+                    t_projection_transform[1] = t_projection_transform[2];
+                    t_projection_transform[2] = t;
+                    t_projection_transform[0] = -t_projection_transform[0];
+                }else{
+                    float4 t = t_projection_transform[1];
+                    t_projection_transform[1] = t_projection_transform[2];
+                    t_projection_transform[2] = t;
+                }
+        }else if (abs(t_normal.z) >= abs(t_normal.x) && abs(t_normal.z) >= abs(t_normal.y)){
+                if (t_normal.z > 0){
+                        //no change to ;
+                }else{
+                    t_projection_transform[0] = -t_projection_transform[0];
+                }
+        } 
+        return t_projection_transform;
+    }
+
+    void main() {
+        float4x4 finaltransform;
+        switch (projection_type) {
+            case CYLINDRICAL_PROJECTION:
+                finaltransform = compute_cylindric_transform();
+            break;
+            case SPHERICAL_PROJECTION:
+                finaltransform = compute_spheric_transform();
+            break;
+            case CUBIC_PROJECTION:
+                finaltransform = compute_cubic_transform();
+            break;
+            case INFINITCYLINDRICAL_PROJECTION:
+                finaltransform = compute_cylindric_transform();
+            break;
+            case PLANAR_PROJECTION:
+            default:
+                finaltransform = projection_transform;
+            break;
+        }
+        result.position =  (finaltransform*float4(transform_point("internal","world",position),1.) ).xyz;
+        //no translation for those!!
+        float3x3 finaltransform2= float3x3(finaltransform[0].xyz,finaltransform[1].xyz,finaltransform[2].xyz);
+        result.du=finaltransform2*transform_vector("internal","world",texture_du[0]);
+        result.dv=finaltransform2*transform_vector("internal","world",texture_dv[0]);
+        result.ddx=finaltransform2*transform_vector("internal","world",ddx(position));
+        result.ddy=finaltransform2*transform_vector("internal","world",ddy(position));
+    }
+}
+{
+    display_name( "Projected coordinates (cross product shader library)" );
+};
+

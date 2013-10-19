@@ -1,0 +1,669 @@
+<root>
+  <version major="2" minor="0"/>
+  <metasl_code file_name="adsk_Utility_MSL_Spiders\adsk_SolidGlass_spider.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_BRDF_Accumulator.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_BRDF_Components.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Converters.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Environment.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Mixers.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Noise.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Normal.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_ShaderCallers.msl"/>
+  <metasl_code file_name="light_point.msl"/>
+
+  <phenomenon name="adsk_Mtl_SolidGlass_MSL">
+    <input name="transmittance_color" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Color (Transmittance)"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="6"/>
+      </annotation>
+    </input>
+    <input name="transmittance_map" type="Color" value="0.5 0.5 0.5 1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Custom Color"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="Color" value="0 0 0 0"/>
+        <annotation_member name="param1" type="Color" value="1 1 1 1"/>
+      </annotation>
+    </input>
+    <input name="reflectance" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Reflectance"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="refr_ior" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Index Of Refraction"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="1"/>
+        <annotation_member name="param1" type="float" value="3"/>
+      </annotation>
+    </input>
+    <input name="refr_falloff_dist" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Reference Thickness"/>
+      </annotation>
+    </input>
+    <input name="glossiness" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Surface Roughness"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="bump_enable" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Surface Imperfections"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="3"/>
+      </annotation>
+    </input>
+    <input name="bump_map" type="Shader" value="">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Custom Map"/>
+      </annotation>
+    </input>
+    <input name="bump_amount" type="float" value="0.5">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Amount"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="tometerscale" type="float" value="0.0254">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="INTERNAL: Meter Scale Factor"/>
+      </annotation>
+    </input>
+    <input name="wirecoloralpha" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="INTERNAL: Wire Color Alpha"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value=""/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <output name="result" type="Color" display_name="result">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="result"/>
+      </annotation>
+    </output>
+    <output name="transparency" type="float" display_name="transparency">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="transparency"/>
+      </annotation>
+    </output>
+
+    <node name="solidGlass_spider" class="adsk_Shd_MSL_SolidGlass_spider">
+      <input name="transmittance_color" value="0">
+        <attachment target_name="transmittance_color"/>
+      </input>
+      <input name="transmittance_map" value="0 0 0 0">
+        <attachment target_name="transmittance_map"/>
+      </input>
+      <input name="reflectance" value="0">
+        <attachment target_name="reflectance"/>
+      </input>
+      <input name="refr_falloff_dist_i" value="0">
+        <attachment target_name="refr_falloff_dist"/>
+      </input>
+      <input name="glossiness_i" value="0">
+        <attachment target_name="glossiness"/>
+      </input>
+      <input name="bump_switch" value="0">
+        <attachment target_name="bump_enable"/>
+      </input>
+      <input name="bump_amount_i" value="0">
+        <attachment target_name="bump_amount"/>
+      </input>
+      <input name="iSceneToMeterScale" value="0">
+        <attachment target_name="tometerscale"/>
+      </input>
+      <output name="refl_color"/>
+      <output name="brdf_0_degree_refl"/>
+      <output name="refr_color"/>
+      <output name="refr_falloff_dist"/>
+      <output name="refr_falloff_color"/>
+      <output name="glossiness"/>
+      <output name="bump_tiling"/>
+      <output name="bump_amount"/>
+      <output name="bump_map_amount"/>
+      <gui_data width="3.05063" height="3.16" open_width="3.05063" open_height="3.16" position="9.85309 9.23118" view_translation="0.32 25.81" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\refr_falloff_dist_i" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\reflectance" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\glossiness" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\brdf_0_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\bump_map_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\bump_tiling" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\refr_falloff_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\refr_falloff_dist" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\glossiness_i" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\refr_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\transmittance_map" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\bump_switch" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\bump_amount_i" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\refl_color" type_name="Color" show_preview="false" orbit="0.615398" tilt="1.4954" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\transmittance_color" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iSceneToMeterScale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Specular_Glossy" class="adsk_Component_MSL_GlossySpecular">
+      <input name="iGlossy" value="1">
+        <attachment target_name="glossiness" target_node="solidGlass_spider"/>
+      </input>
+      <input name="iAnisotropy" value="1"/>
+      <input name="iAnisoU" value="0 0 0"/>
+      <input name="iAnisoV" value="0 0 0"/>
+      <input name="iAuxFactor" value="1"/>
+      <input name="iAnotherSpec"/>
+      <input name="iLightDir" value="0 0 0"/>
+      <input name="iEyeDir" value="0 0 0"/>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="result"/>
+      <gui_data width="2.11924" height="2.11" open_width="2.11924" open_height="2.11" position="18.1467 10.1332" view_translation="0 34.22" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iLightDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iAuxFactor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iLightDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iGlossy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iAnisotropy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iAnisoU" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iAnisoV" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iAnisotropy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iGlossy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iAnotherSpec" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iAnotherSpec" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iAnisoU" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iAnisoV" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iAuxFactor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="ReflFactor" class="adsk_Utility_MSL_Color_to_Float">
+      <input name="the_color" value="1 1 0 1">
+        <attachment target_name="refl_color" target_node="solidGlass_spider"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="2.18057" height="0.91" open_width="2.18057" open_height="0.91" position="15.1002 6.76654" view_translation="0 13.46" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\the_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="BRDF_ReflectFactor" class="adsk_Component_MSL_BRDFfactor">
+      <input name="brdf_0_degree_refl" value="0.2">
+        <attachment target_name="brdf_0_degree_refl" target_node="solidGlass_spider"/>
+      </input>
+      <input name="brdf_90_degree_refl" value="1"/>
+      <input name="brdf_curve" value="5"/>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="result"/>
+      <gui_data width="3.43563" height="1.36" open_width="3.43563" open_height="1.36" position="10.3462 6.46035" view_translation="0 4.82" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\brdf_0_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\brdf_90_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\brdf_curve" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="ReflSpecFactor" class="adsk_Utility_MSL_Mix2Float">
+      <input name="iFloat1" value="0">
+        <attachment target_name="result" target_node="ReflFactor"/>
+      </input>
+      <input name="iFloat2" value="1">
+        <attachment target_name="result" target_node="BRDF_ReflectFactor"/>
+      </input>
+      <input name="mixing_mode" value="1"/>
+      <input name="mixing_factor" value="1"/>
+      <output name="result"/>
+      <gui_data width="2.08155" height="1.36" open_width="2.08155" open_height="1.36" position="15.0645 5.41726" view_translation="0 36.74" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iFloat1" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iFloat2" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="float" show_preview="false" orbit="2.1654" tilt="1.1954" zoom="2.1" pan="0 0" preview_object="0" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Accumulator" class="adsk_Utility_BRDF_Accumulator">
+      <input name="iDiffuse"/>
+      <input name="iSpecular">
+        <attachment target_name="result" target_node="Specular_Glossy" is_reference="true"/>
+      </input>
+      <input name="iBump"/>
+      <input name="iSpecFx" value="1">
+        <attachment target_name="result" target_node="ReflSpecFactor"/>
+      </input>
+      <input name="iNormal" value="0 0 0"/>
+      <input name="paint_model"/>
+      <output name="result"/>
+      <output name="oDiffuse"/>
+      <output name="oSpecular"/>
+      <gui_data width="1.83276" height="1.81" open_width="1.83276" open_height="1.81" position="17.9994 12.2212" view_translation="0 3.02" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\oSpecular" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iDiffuse" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iSpecFx" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iSpecular" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iBump" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\paint_model" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\oDiffuse" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="Color" show_preview="false" orbit="0.765398" tilt="0.445398" zoom="1.5" pan="0.01 -0.03" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Reflections" class="adsk_Component_MSL_Reflection">
+      <input name="iRefl_color" value="1 1 1 1">
+        <attachment target_name="refl_color" target_node="solidGlass_spider"/>
+      </input>
+      <input name="iRefl_factor" value="1">
+        <attachment target_name="result" target_node="BRDF_ReflectFactor"/>
+      </input>
+      <input name="iPosition" value="0 0 0"/>
+      <input name="iDirection" value="0 0 0"/>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="result"/>
+      <gui_data width="1.902" height="1.51" open_width="1.902" open_height="1.51" position="18.0686 8.18585" view_translation="0 67.82" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iPosition" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iDirection" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iRefl_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iRefl_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="-0.075 0.00999976" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="transparencx" class="adsk_Utility_MSL_ScalarState">
+      <input name="the_float" value="0.92"/>
+      <output name="result"/>
+      <gui_data width="3.49125" height="0.91" open_width="3.49125" open_height="0.91" position="10.4149 5.20807" view_translation="0 7.22" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\the_float" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Refractions" class="adsk_Component_MSL_Refraction">
+      <input name="iTransparency" value="0.675127">
+        <attachment target_name="result" target_node="transparencx"/>
+      </input>
+      <input name="iEnConsFactor" value="0"/>
+      <input name="iRefr_color" value="1 1 1 1">
+        <attachment target_name="refr_falloff_color" target_node="solidGlass_spider"/>
+      </input>
+      <input name="iRefr_ior" value="1.44162">
+        <attachment target_name="refr_ior"/>
+      </input>
+      <input name="iTrans_weight" value="0"/>
+      <input name="iTrans_color" value="0.7 0.6 0.5 1"/>
+      <input name="iIsAlphaTransp"/>
+      <input name="iPosition" value="0 0 0"/>
+      <input name="iDirection" value="0 0 0"/>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="result"/>
+      <output name="transparency"/>
+      <output name="translucency"/>
+      <output name="refraction"/>
+      <gui_data width="2.09753" height="2.56" open_width="2.09753" open_height="2.56" position="18.1864 6.01032" view_translation="3.42041 58.7995" view_scale="1.1957" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iTrans_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iIsAlphaTransp" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iPosition" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iTrans_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iRefr_ior" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\transparency" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iTransparency" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iDirection" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\refraction" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iRefr_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\translucency" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iEnConsFactor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="ripple_wave_gen" class="adsk_Utility_MSL_NoiseGenerator">
+      <input name="noise_perm_texture" value="adsk_Data_Noise_Perm.dds"/>
+      <input name="noise_grad_texture" value="adsk_Data_Noise_Grad.dds"/>
+      <input name="noise_position" value="0 0 0"/>
+      <input name="noise_scale" value="5 5 5">
+        <attachment target_name="bump_tiling" target_node="solidGlass_spider"/>
+      </input>
+      <input name="noise_amount" value="0">
+        <attachment target_name="bump_amount" target_node="solidGlass_spider"/>
+      </input>
+      <input name="angle" value="0"/>
+      <input name="uvgen" value="1"/>
+      <output name="result"/>
+      <output name="result_bump"/>
+      <gui_data width="2.20556" height="2.39904" open_width="2.20556" open_height="2.39904" position="13.26 11.8417" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\noise_scale" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\angle" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\noise_scale" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\noise_grad_texture" type_name="texture1D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\uvgen" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result_bump" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\angle" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\noise_position" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\noise_grad_texture" type_name="texture1D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\noise_perm_texture" type_name="texture1D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\noise_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\noise_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\noise_position" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\uvgen" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\noise_perm_texture" type_name="texture1D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="Color" show_preview="false" orbit="1.3054" tilt="1.6554" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="bump_map" class="adsk_Utility_MSL_CallShader">
+      <input name="the_shader" value="">
+        <attachment target_name="bump_map"/>
+      </input>
+      <input name="bump_amount" value="0">
+        <attachment target_name="bump_map_amount" target_node="solidGlass_spider"/>
+      </input>
+      <output name="result"/>
+      <output name="result_bump"/>
+      <gui_data width="1.73755" height="1.28349" open_width="1.73755" open_height="1.28349" position="15.4616 11.2862" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\the_shader" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="Color" show_preview="false" orbit="-0.234602" tilt="2.6654" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="vector_to_col" class="adsk_Utility_MSL_Float3_to_Color">
+      <input name="the_vector">
+        <attachment target_name="result_bump" target_node="bump_map"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="3.89289" height="0.91" open_width="3.89289" open_height="0.91" position="14.4266 9.84263" view_translation="0 23.3" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\the_vector" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Normal_Add" class="adsk_Utility_MSL_Normal_Add">
+      <input name="add_normal_0" value="0 0 0 0">
+        <attachment target_name="result_bump" target_node="ripple_wave_gen"/>
+      </input>
+      <input name="add_normal_1" value="0 0 0 0">
+        <attachment target_name="result" target_node="vector_to_col"/>
+      </input>
+      <input name="enable" value="2"/>
+      <output name="result"/>
+      <gui_data width="3.49926" height="1.21" open_width="3.49926" open_height="1.21" position="14.6513 8.67593" view_translation="0 3.26" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\add_normal_0" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\add_normal_1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\enable" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="BumpCombiner_X" class="adsk_Component_MSL_BumpCombiner_X">
+      <input name="iDiffuse"/>
+      <input name="iSpecular">
+        <attachment target_name="result" target_node="Accumulator" is_reference="true"/>
+      </input>
+      <input name="iReflection">
+        <attachment target_name="result" target_node="Reflections" is_reference="true"/>
+      </input>
+      <input name="iTransparent">
+        <attachment target_name="result" target_node="Refractions" is_reference="true"/>
+      </input>
+      <input name="iNormal" value="0 0 0">
+        <attachment target_name="result" target_node="Normal_Add"/>
+        <annotation name="default_to_state">
+          <annotation_member name="param0" type="String" value="normal"/>
+          <annotation_member name="param1" type="int" value="0"/>
+        </annotation>
+      </input>
+      <output name="result"/>
+      <output name="oDiffuse"/>
+      <output name="oSpecular"/>
+      <output name="oReflection"/>
+      <output name="oTransparent"/>
+      <gui_data width="2.7113" height="2.11" open_width="2.7113" open_height="2.11" position="21.6772 12.1133" view_translation="0 88.94" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\oTransparent" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\oSpecular" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iTransparent" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iDiffuse" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iSpecular" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\oReflection" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iReflection" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\oDiffuse" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="Color" show_preview="false" orbit="2.8854" tilt="0.755398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Reflect_plus_Reflect" class="adsk_Utility_MSL_Mix2ColorCompact">
+      <input name="color1" value="0 0 0 1">
+        <attachment target_name="oReflection" target_node="BumpCombiner_X"/>
+      </input>
+      <input name="color2" value="1 1 1 1">
+        <attachment target_name="oTransparent" target_node="BumpCombiner_X"/>
+      </input>
+      <input name="mixing_mode" value="1"/>
+      <input name="mixing_factor" value="1"/>
+      <output name="result"/>
+      <gui_data width="2.68995" height="1.36" open_width="2.68995" open_height="1.36" position="21.7346 10.0334" view_translation="0 32.06" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="Color" show_preview="false" orbit="0.735398" tilt="1.5454" zoom="2.05" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Add_Specular" class="adsk_Utility_MSL_Mix2ColorCompact">
+      <input name="color1" value="0 0 0 1">
+        <attachment target_name="oSpecular" target_node="BumpCombiner_X"/>
+      </input>
+      <input name="color2" value="1 1 1 1">
+        <attachment target_name="result" target_node="Reflect_plus_Reflect"/>
+      </input>
+      <input name="mixing_mode" value="1"/>
+      <input name="mixing_factor" value="1"/>
+      <output name="result">
+        <attachment target_name="result"/>
+      </output>
+      <gui_data width="2.60908" height="1.36" open_width="2.60908" open_height="1.36" position="21.7535 8.45528" view_translation="0 32.06" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="Color" show_preview="false" orbit="0.495399" tilt="1.2154" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="col_to_vector" class="adsk_Utility_MSL_Color_to_Float3">
+      <input name="the_color" value="1 1 0 1">
+        <attachment target_name="result_bump" target_node="ripple_wave_gen"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="1.7413" height="0.91" open_width="1.7413" open_height="0.91" position="15.4249 12.529" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\the_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="OpacityAlpha" class="adsk_Component_MSL_Transparency">
+      <input name="iRefractResult">
+        <attachment target_name="oTransparent" target_node="BumpCombiner_X"/>
+      </input>
+      <input name="iRefractColor">
+        <attachment target_name="refr_falloff_color" target_node="solidGlass_spider"/>
+      </input>
+      <input name="isOpacity" value="true"/>
+      <output name="result"/>
+      <gui_data width="2.3892" height="1.21" open_width="2.3892" open_height="1.21" position="21.8132 6.85353" view_translation="0 48.62" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name="\iRefractResult" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\isOpacity" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iRefractColor" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\isOpacity" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iRefractColor" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iRefractResult" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="visibilityVStransparency" class="adsk_Utility_MSL_Mix2Float">
+      <input name="iFloat1" value="1"/>
+      <input name="iFloat2" value="1">
+        <attachment target_name="result" target_node="OpacityAlpha"/>
+      </input>
+      <input name="mixing_mode" value="2"/>
+      <input name="mixing_factor" value="1">
+        <attachment target_name="wirecoloralpha"/>
+      </input>
+      <output name="result">
+        <attachment target_name="transparency"/>
+      </output>
+      <gui_data width="3.30758" height="1.36" open_width="3.30758" open_height="1.36" position="21.3388 5.45827" view_translation="0 36.74" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iFloat1" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\iFloat2" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_SolidGlass_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+  </phenomenon>
+
+  <node name="adsk_Mtl_SolidGlass_MSL" class="adsk_Mtl_SolidGlass_MSL">
+    <input name="transmittance_color" value="0"/>
+    <input name="transmittance_map" value="0.81 0.89 0.81 1"/>
+    <input name="reflectance" value="0.05"/>
+    <input name="refr_ior" value="1.52"/>
+    <input name="refr_falloff_dist" value="0"/>
+    <input name="glossiness" value="0"/>
+    <input name="bump_enable" value="0"/>
+    <input name="bump_map" value=""/>
+    <input name="bump_amount" value="0.05"/>
+    <input name="tometerscale" value="0.01"/>
+    <input name="wirecoloralpha" value="1"/>
+    <output name="result"/>
+    <output name="transparency"/>
+    <gui_data width="3.10501" height="6.01717" open_width="3.10501" open_height="6.01717" position="1.65835 1.2718" view_translation="-15.6518 -9.36428" view_scale="0.0677645" open_state="closed" selected_state="true">
+      <preview_data>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="0.565391" tilt="-24.3347" zoom="1.6" pan="0.015 7.45058e-009" preview_object="3" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\refr_ior" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\reflectance" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\glossiness" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\tometerscale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\transparency" type_name="float" show_preview="true" orbit="0.965398" tilt="0.795398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\refr_falloff_dist" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\bump_enable" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\transmittance_color" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\transmittance_map" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\wirecoloralpha" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\bump_map" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <node name="Environment" class="adsk_Utility_MSL_EnvBall">
+    <input name="env_tex" value="adsk_Textures/adsk_Data_ReflectionDefault.png"/>
+    <input name="intensity" value="1"/>
+    <input name="blur" value="1"/>
+    <output name="result"/>
+    <gui_data width="3.11035" height="3.54828" open_width="3.11035" open_height="3.54828" position="-1.63443 0.0300272" view_translation="0 2.54" view_scale="1" open_state="closed" selected_state="true">
+      <preview_data>
+        <preview_data_element name="\blur" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\intensity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\env_tex" type_name="texture2D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <node name="dim_light" class="Light_point">
+    <input name="color" value="1 1 1 1"/>
+    <input name="intensity" value="1"/>
+    <input name="distance_falloff_exponent" value="0"/>
+    <input name="distance_scale" value="1"/>
+    <output name="result"/>
+    <output name="light_shadow"/>
+    <gui_data width="1.80103" height="1.51" open_width="1.80103" open_height="1.51" position="-1.04645 2.69006" view_translation="0 0" view_scale="1" open_state="closed" selected_state="true">
+      <preview_data>
+        <preview_data_element name="\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\intensity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\distance_scale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\distance_falloff_exponent" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\light_shadow" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <render_data>
+    <light_list/>
+    <scene_ambient color="0 0 0 0"/>
+  </render_data>
+</root>

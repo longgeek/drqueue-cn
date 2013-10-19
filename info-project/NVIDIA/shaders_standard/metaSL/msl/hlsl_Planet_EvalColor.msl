@@ -1,0 +1,288 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// see tex_planet.cpp
+#define NOISE_DIM_PLUS_1 21
+#define FNOISE_DIM       20.0
+
+shader hlsl_Planet_EvalColor {
+ input:
+  Color Color1 = Color(0.45, 0.35, 0.001, 1.0) {
+    display_name("Color1");
+  };
+  Color Color2 = Color(0.001, 0.5, 0.001, 1.0) {
+    display_name("Color2");
+  };
+  Color Color3 = Color(1.0, 1.0, 0.001, 1.0) {
+    display_name("Color3");
+  };
+  Color Color4 = Color(0.001, 1.0, 1.0, 1.0) {
+    display_name("Color4");
+  };
+  Color Color5 = Color(0.001, 0.001, 1.0, 1.0) {
+    display_name("Color5");
+  };
+  Color Color6 = Color(0.001, 0.001, 0.75, 1.0) {
+    display_name("Color6");
+  };
+  Color Color7 = Color(0.001, 0.001, 0.5, 1.0) {
+    display_name("Color7");
+  };
+  Color Color8 = Color(0.001, 0.001, 0.25, 1.0) {
+    display_name("Color8");
+  };
+  float ContinentSize = 3.0 {
+    display_name("ContinentSize");
+  };
+  float IslandFactor = 0.25 {
+    display_name("IslandFactor");
+  };
+  float OceanPercent = 50.0 {
+    display_name("OceanPercent");
+  };
+
+  // for now we use the seed from max_Dent !!!
+
+  // TODO: int RandomSeed
+
+  const bool BlendWaterLand = true {
+    display_name("BlendWaterLand");
+  };
+  Shader Coords;
+  // TODO: int GBufferID;
+
+  // textures
+  Texture2d noise_table = "dent_noise_out.dds" {
+    disable_filtering();
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+
+ output:
+  Color result;
+
+  // see tex_planet.cpp
+  float maxPlanet_Noise(in float x,
+			in float y,
+			in float z) {
+    // see maxDentNoise in max_Dent !!!
+    float mx = fmod(x, FNOISE_DIM);
+    if (mx < 0.0) mx += FNOISE_DIM;
+    float my = fmod(y, FNOISE_DIM);
+    if (my < 0.0) my += FNOISE_DIM;
+    float mz = fmod(z, FNOISE_DIM);
+    if (mz < 0.0) mz += FNOISE_DIM;
+    int ix = (int) mx;
+    int iy = (int) my;
+    int iz = (int) mz;
+    float fx = fmod(mx, 1.0);
+    float fy = fmod(my, 1.0);
+    float fz = fmod(mz, 1.0);
+    int index = 0;
+    float tx = 0.0;
+    float ty = 0.0;
+    float n = 0.0;
+    // n = noiseTable[ix][iy][iz];
+    index = iy * NOISE_DIM_PLUS_1 + ix;
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz) + 1.0) / (2.0 * 21.0);
+    Color c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    n = c.r;
+    // n00 = n + fx*(noiseTable[ix+1][iy][iz]-n);
+    index = iy * NOISE_DIM_PLUS_1 + (ix + 1);
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    float n00 = n + fx * (c.r - n);
+    // n = noiseTable[ix][iy][iz+1];
+    index = iy * NOISE_DIM_PLUS_1 + ix;
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz + 1) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    n = c.r;
+    // n01 = n + fx*(noiseTable[ix+1][iy][iz+1]-n);
+    index = iy * NOISE_DIM_PLUS_1 + (ix + 1);
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz + 1) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    float n01 = n + fx * (c.r - n);
+    // n = noiseTable[ix][iy+1][iz];
+    index = (iy + 1) * NOISE_DIM_PLUS_1 + ix;
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    n = c.r;
+    // n10 = n + fx*(noiseTable[ix+1][iy+1][iz]-n);
+    index = (iy + 1) * NOISE_DIM_PLUS_1 + (ix + 1);
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    float n10 = n + fx * (c.r - n);
+    // n = noiseTable[ix][iy+1][iz+1];
+    index = (iy + 1) * NOISE_DIM_PLUS_1 + ix;
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz+1) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    n = c.r;
+    // n11 = n + fx*(noiseTable[ix+1][iy+1][iz+1]-n);
+    index = (iy + 1) * NOISE_DIM_PLUS_1 + (ix + 1);
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz+1) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    float n11 = n + fx * (c.r - n);
+    float n0 = n00 + fy * (n10 - n00);
+    float n1 = n01 + fy * (n11 - n01);
+    return (n0 + fz * (n1 - n0)) / 32768.0;
+  } // maxPlanet_Noise
+
+  // see tex_planet.cpp
+  float maxPlanet_NoiseFunc(// others
+			    in float x,
+			    in float y,
+			    in float z) {
+    return (maxPlanet_Noise(x, y, z) +
+	    maxPlanet_Noise(x * IslandFactor,
+			    y * IslandFactor,
+			    z * IslandFactor) / 5.0);
+  } // maxPlanet_NoiseFunc
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // xyz-coords
+    float3 xyz_coords = transform_point("internal", "object", position);
+    // try to call hlsl_base_UVGenerator
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Coords.call("output", "result", shader_return)) {
+      xyz_coords.xyz = shader_return.rgb;
+    }
+    else {
+      xyz_coords *= 100.0;
+    }
+    // use xyz-coords
+
+    // begin of maxPlanet_EvalColor
+    float3 p = float3(0.0, 0.0, 0.0);
+    p.x = xyz_coords.x;
+    p.y = xyz_coords.y;
+    p.z = xyz_coords.z;
+    float size = (ContinentSize != 0.0) ? ContinentSize : 0.0001;
+    float3 q = float3(0.0, 0.0, 0.0);
+    q.x = p.x / size;
+    q.y = p.y / size;
+    q.z = p.z / size;
+    float d = maxPlanet_NoiseFunc(// inst
+				  q.x, q.y, q.z);
+    // originally done in max_Planet_init
+    float inst_land = OceanPercent / 100.0;
+    if (d < inst_land) {
+      d = d / inst_land * 3.0;
+      int index = (int) d;
+      float frac = d - (float) index;
+      float one_m_frac = 1.0 - frac;
+      if (index < 2) {
+	if (index == 0) {
+	  result.r = (one_m_frac * Color1.r +
+		      frac * Color2.r);
+	  result.g = (one_m_frac * Color1.g +
+		      frac * Color2.g);
+	  result.b = (one_m_frac * Color1.b +
+		      frac * Color2.b);
+	  result.a = (one_m_frac * Color1.a +
+		      frac * Color2.a);
+	} // if (index == 0)
+	else {
+	  result.r = (one_m_frac * Color2.r +
+		      frac * Color3.r);
+	  result.g = (one_m_frac * Color2.g +
+		      frac * Color3.g);
+	  result.b = (one_m_frac * Color2.b +
+		      frac * Color3.b);
+	  result.a = (one_m_frac * Color2.a +
+		      frac * Color3.a);
+	} // else [ if (index == 0) ]
+      } // if (index < 2)
+      else {
+	if (BlendWaterLand) {
+	  result.r = (one_m_frac * Color3.r +
+		      frac * Color4.r);
+	  result.g = (one_m_frac * Color3.g +
+		      frac * Color4.g);
+	  result.b = (one_m_frac * Color3.b +
+		      frac * Color4.b);
+	  result.a = (one_m_frac * Color3.a +
+		      frac * Color4.a);
+	} // if (BlendWaterLand)
+	else {
+	  result = Color3;
+	} // else [ if (BlendWaterLand) ]
+      } // else [ if (index < 2) ]
+    } // if (d < inst_land)
+    else {
+      float divfac = 1.0 - inst_land;
+      d = (d - inst_land) / divfac * 5.0;
+      int index = (int) d;
+      float frac = d - (float) index;
+      float one_m_frac = 1.0 - frac;
+      if (index < 4) {
+	if (index == 0) {
+	  result.r = (one_m_frac * Color4.r +
+		      frac * Color5.r);
+	  result.g = (one_m_frac * Color4.g +
+		      frac * Color5.g);
+	  result.b = (one_m_frac * Color4.b +
+		      frac * Color5.b);
+	  result.a = (one_m_frac * Color4.a +
+		      frac * Color5.a);
+	} // if (index == 0)
+	else {
+	  if (index == 1) {
+	    result.r = (one_m_frac * Color5.r +
+			frac * Color6.r);
+	    result.g = (one_m_frac * Color5.g +
+			frac * Color6.g);
+	    result.b = (one_m_frac * Color5.b +
+			frac * Color6.b);
+	    result.a = (one_m_frac * Color5.a +
+			frac * Color6.a);
+	  } // if (index == 1)
+	  else {
+	    if (index == 2) {
+	      result.r = (one_m_frac * Color6.r +
+			  frac * Color7.r);
+	      result.g = (one_m_frac * Color6.g +
+			  frac * Color7.g);
+	      result.b = (one_m_frac * Color6.b +
+			  frac * Color7.b);
+	      result.a = (one_m_frac * Color6.a +
+			  frac * Color7.a);
+	    } // if (index == 2)
+	    else { // index == 3
+	      result.r = (one_m_frac * Color7.r +
+			  frac * Color8.r);
+	      result.g = (one_m_frac * Color7.g +
+			  frac * Color8.g);
+	      result.b = (one_m_frac * Color7.b +
+			  frac * Color8.b);
+	      result.a = (one_m_frac * Color7.a +
+			  frac * Color8.a);
+	    } // else [ if (index == 2) ]
+	  } // else [ if (index == 1) ]
+	} // else [ if (index == 0) ]
+      } // if (index < 4)
+      else {
+	result = Color8;
+      } // else [ if (index < 4) ]
+    } // else [ if (d < inst_land) ]
+    // end of maxPlanet_EvalColor
+  } // main
+};

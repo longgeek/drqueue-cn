@@ -1,0 +1,65 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ ******************************************************************************
+ *
+ * Description:  Default shader required by the glsl if the scene is not set 
+ *               completely.
+ *
+ *****************************************************************************/
+
+shader default_volume
+{
+    output:
+        Color result;
+      
+    void main()
+    {
+        result = volume_input;  // i.e., do nothing
+    }
+};
+
+shader default_environment
+{
+    input:
+        Texture_cube env_tex = "default_reflection_cubic.dds";  
+    
+    output:
+        Color result;
+      
+    void main()
+    {
+        float3 v = transform_vector("internal", "world", direction);
+	result  = texCUBE(env_tex, v.xzy);
+    }
+};
+
+shader default_light
+{
+    input:
+	    float intensity = PI;
+		
+    output:
+        Color result;
+        Color light_shadow;
+      
+    void main()
+    {
+        result       = Color(1.0, 1.0, 1.0, 1.0);  // Light contribution
+        light_shadow = Color(1.0, 1.0, 1.0, 1.0);  // Shadow contribution 
+        
+        float distance_scale         = 1.f;
+        float distance_falloff_start = 0.f;
+        float distance_falloff_limit = 1000.f;
+
+        float d = saturate(
+	    (light_distance/(distance_scale - distance_falloff_start))/
+            (distance_falloff_limit - distance_falloff_start));
+                
+        float f = 1.0/(1.0 + pow(d, 1.f));
+        
+        result = result * intensity * f;
+
+	light_shadow = shadowing();        
+    }
+};

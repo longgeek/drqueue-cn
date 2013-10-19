@@ -1,0 +1,453 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// see tex_gradient.cpp
+#define NOISE_REGULAR 0
+#define NOISE_FRACTAL 1
+#define NOISE_TURB  2
+#define GRAD_LINEAR	0
+#define GRAD_RADIAL	1
+
+// see max_texutil.cpp
+#define B 512 // 0x200
+#define RN 10000.0
+#define maxS_curve(t) ( t * t * (3.0 - 2.0 * t) )
+#define maxLerp(t, a, b) ( a + t * (b - a) )
+
+shader hlsl_Gradient_EvalColor {
+ input:
+  Color Color1 = Color(0.0, 0.0, 0.0, 1.0) {
+    display_name("Color #1");
+  };
+  Color Color2 = Color(0.5, 0.5, 0.5, 1.0) {
+    display_name("Color #2");
+  };
+  Color Color3 = Color(1.0, 1.0, 1.0, 1.0) {
+    display_name("Color #3");
+  };
+  Shader Map1;
+  Shader Map2;
+  Shader Map3;
+  const bool Map1Enabled = false {
+    display_name("Map1 Enabled");
+  };
+  const bool Map2Enabled = false {
+    display_name("Map2 Enabled");
+  };
+  const bool Map3Enabled = false {
+    display_name("Map3 Enabled");
+  };
+  float Color2Pos = 0.5 {
+    display_name("Color 2 Position");
+  };
+  int GradientType = 0 {
+    display_name("Linear");
+    hard_range(0, 1);
+  };
+  const float NoiseAmount = 0.0 {
+    display_name("Noise Amount");
+  };
+  int NoiseType = 0 {
+    display_name("Noise Type");
+    hard_range(0, 2);
+  };
+  float NoiseSize = 1.0 {
+    display_name("Noise Size");
+  };
+  float NoisePhase = 0.0 {
+    display_name("Noise Phase");
+  };
+  float NoiseLevels = 4.0 {
+    display_name("Noise Levels");
+    hard_range(1.0, 8.0);
+  };
+  float NoiseThresholdLow = 0.0 {
+    display_name("Noise Threshold Low");
+  };
+  float NoiseThresholdHigh = 1.0 {
+    display_name("Noise Threshold High");
+
+  };
+  float NoiseThresholdSmooth = 0.0 {
+    display_name("Noise Threshold Smooth");
+  };
+  Shader Coords;
+  Shader Output;
+  // TODO: int GBufferID
+  // textures
+  Texture2d noise_tables = "noise_out.dds" {
+    disable_filtering();
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+
+ output:
+  Color result;
+
+  // additional functions for texture lookup
+  int p(in int i1) {
+    // int x_pix = i1 % 114;
+    int y_pix = i1 / 114; // 0 <= y < 9
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    // return int((511.0 * tex2d(noise_tables, float2(x, y)).r + 0.5));
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    return int((c.r + 0.5));
+  } // p
+
+  float g3(in int i1, in int i2) {
+    // int x_pix = i1 % 114;
+    int y_pix = 27 + i1 / 114; // 27 <= y < 36
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    if (i2 == 0)
+      return c.r;
+    else if (i2 == 1)
+      return c.g;
+    else if (i2 == 2)
+      return c.b;
+    else {
+      error("g3(%d, %d)", i1, i2);
+      return 0.0;
+    }
+  } // g3
+
+  // see max_texutil.cpp
+  void maxSetup(in float v,
+		out int b0, out int b1,
+		out float r0, out float r1) {
+    float t = v + RN;
+    int it = (int) t;
+    b0 = it - (it / B) * B; // ((int)t) & BM;
+    // (b0+1) & BM;
+    b1 = b0 + 1;
+    if (b1 >= B) b1 = 0;
+    r0 = (float)(t - (int) t);
+    r1 = r0 - 1.0; // what if r0 < 1.0?
+  } // maxSetup
+
+  // see max_texutil.cpp
+  float maxNoise3(float vecx, float vecy, float vecz) {
+    int bx0 = 0;
+    int bx1 = 0;
+    float rx0 = 0.0;
+    float rx1 = 0.0;
+    maxSetup(vecx, bx0, bx1, rx0, rx1);
+    int by0 = 0;
+    int by1 = 0;
+    float ry0 = 0.0;
+    float ry1 = 0.0;
+    maxSetup(vecy, by0, by1, ry0, ry1);
+    int bz0 = 0;
+    int bz1 = 0;
+    float rz0 = 0.0;
+    float rz1 = 0.0;
+    maxSetup(vecz, bz0, bz1, rz0, rz1);
+    int i = p(bx0);
+    int j = p(bx1);
+    int b00 = p(i + by0);
+    int b10 = p(j + by0);
+    int b01 = p(i + by1);
+    int b11 = p(j + by1);
+    float sx = maxS_curve(rx0);
+    float sy = maxS_curve(ry0);
+    float sz = maxS_curve(rz0);
+    float u = 0.0;
+    float v = 0.0;
+    u = (rx0 * g3(b00 + bz0, 0) +
+	 ry0 * g3(b00 + bz0, 1) +
+	 rz0 * g3(b00 + bz0, 2));
+    v = (rx1 * g3(b10 + bz0, 0) +
+	 ry0 * g3(b10 + bz0, 1) +
+	 rz0 * g3(b10 + bz0, 2));
+    float a = maxLerp(sx, u, v);
+    u = (rx0 * g3(b01 + bz0, 0) +
+	 ry1 * g3(b01 + bz0, 1) +
+	 rz0 * g3(b01 + bz0, 2));
+    v = (rx1 * g3(b11 + bz0, 0) +
+	 ry1 * g3(b11 + bz0, 1) +
+	 rz0 * g3(b11 + bz0, 2));
+    float b = maxLerp(sx, u, v);
+    float c = maxLerp(sy, a, b);
+    u = (rx0 * g3(b00 + bz1, 0) +
+	 ry0 * g3(b00 + bz1, 1) +
+	 rz1 * g3(b00 + bz1, 2));
+    v = (rx1 * g3(b10 + bz1, 0) +
+	 ry0 * g3(b10 + bz1, 1) +
+	 rz1 * g3(b10 + bz1, 2));
+    a = maxLerp(sx, u, v);
+    u = (rx0 * g3(b01 + bz1, 0) +
+	 ry1 * g3(b01 + bz1, 1) +
+	 rz1 * g3(b01 + bz1, 2));
+    v = (rx1 * g3(b11 + bz1, 0) +
+	 ry1 * g3(b11 + bz1, 1) +
+	 rz1 * g3(b11 + bz1, 2));
+    b = maxLerp(sx, u, v);
+    float d = maxLerp(sy, a, b);
+    return maxLerp(sz, c, d);
+  } // maxNoise3
+
+  // see max_texutil.cpp
+  float maxSramp(in float x, in float a, in float b, in float d)
+  {
+    float p0 = a - d;
+    float p1 = a + d;
+    float p2 = b - d;
+    float p3 = b + d;
+    if (x <= p0) return a;
+    if (x >= p3) return b;
+    if (x >= p1 && x <= p2) return x;
+    if (x > p0 && x < p1) {
+      x = (x - p0)/(2.0 * d);
+      return a + x * x * d;
+    } else {
+      x = (p3 - x) / (2.0 * d);
+      return b - x * x * d;
+    }
+  } // maxSramp
+
+  // see tex_gradient.cpp
+  float maxGradientNoiseFunc(in float px,
+			     in float py) {
+    float pz = NoisePhase;
+    float res = 0.0;
+    float rx = 0.0;
+    float ry = 0.0;
+    float rz = 0.0;
+    switch (NoiseType) {
+    case NOISE_TURB:
+      {
+	float sum = 0.0;
+	float l,f = 1.0;
+	int count = 0;
+	for (l = NoiseLevels, count = 0; 
+	     l >= 1.0, count < 8; 
+	     l -= 1.0, count++) {
+	  rx = px * f;
+	  ry = py * f;
+	  rz = pz * f;
+	  sum += abs(maxNoise3(rx, ry, rz)) / f;
+	  f *= 2.0;
+	}
+	if (l>0.0) {
+	  rx = px * f;
+	  ry = py * f;
+	  rz = pz * f;
+	  sum += l * abs(maxNoise3(rx, ry, rz)) / f;
+	}
+	res = sum;
+	break;
+      }
+
+    case NOISE_REGULAR:
+      res = maxNoise3(px, py, pz);
+      break;
+
+    case NOISE_FRACTAL:
+      if (NoiseLevels == 1.0) {
+	res = maxNoise3(px, py, pz);
+      }
+      else {
+	float sum = 0.0;
+	float l = 1.0;
+	float f = 1.0;
+	int count = 0;
+	for (l = NoiseLevels, count = 0; 
+	     l >= 1.0, count < 8; 
+	     l -= 1.0, count++) {
+	  rx = px * f;
+	  ry = py * f;
+	  rz = pz * f;
+	  sum += maxNoise3(rx, ry, rz) / f;
+	  f *= 2.0;
+	}
+	if (l > 0.0) {
+	  rx = px * f;
+	  ry = py * f;
+	  rz = pz * f;
+	  sum += l * maxNoise3(rx, ry, rz) / f;
+	}
+	res = sum;
+      }
+      break;
+    default:
+      res = 0.0;
+      break;
+    }
+
+    if (NoiseThresholdLow < NoiseThresholdHigh) {
+      float	sd;
+
+      sd = (NoiseThresholdHigh - NoiseThresholdLow) * 0.5 * NoiseThresholdSmooth;
+      res = 2.0 * maxSramp((res + 1.0) / 2.0, NoiseThresholdLow, NoiseThresholdHigh, sd) - 1.0;
+    }
+    return res;
+  } // maxGradientNoiseFunc
+
+  // see tex_gradient.cpp
+  float maxGradFunc(// paras
+		    in int paras_type,
+		    // noise
+		    in float paras_amount,
+		    in float noise,
+		    // others
+		    in float u,
+		    in float v) {
+    float a = 0.0;
+    float local_u = u;
+    float local_v = v;
+    if (paras_type == GRAD_LINEAR) {
+      a = local_v;
+    } // if (paras_type == GRAD_LINEAR)
+    else {
+      local_u -= 0.5;
+      local_v -= 0.5;
+      a = sqrt(local_u * local_u + local_v * local_v) * 2.0;
+      if (a > 1.0) a = 1.0;
+    } // else [ if (paras_type == GRAD_LINEAR) ]
+    if (paras_amount != 0.0) {
+      a += paras_amount * noise;
+      if (a < 0.0) a = 0.0;
+      if (a > 1.0) a = 1.0;
+    } // if (paras_amount != 0.0)
+    return a;
+  } // maxGradFunc
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // uv-coords
+    float u = texture_coordinate[0].x;
+    float v = texture_coordinate[0].y;
+    // try to call hlsl_base_UVGenerator
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Coords.call("output", "result", shader_return)) {
+      u = shader_return.r;
+      v = shader_return.g;
+    }
+    // call other shader parameters
+    Color Map1Color = Color(0.0, 0.0, 0.0, 0.0);
+    bool Map1Enabled_local = false;
+    if (Map1Enabled && Map1.call("output", "result", Map1Color)) {
+      Map1Enabled_local = true;
+    }
+    Color Map2Color = Color(0.0, 0.0, 0.0, 0.0);
+    bool Map2Enabled_local = false;
+    if (Map2Enabled && Map2.call("output", "result", Map2Color)) {
+      Map2Enabled_local = true;
+    }
+    Color Map3Color = Color(0.0, 0.0, 0.0, 0.0);
+    bool Map3Enabled_local = false;
+    if (Map3Enabled && Map3.call("output", "result", Map3Color)) {
+      Map3Enabled_local = true;
+    }
+    // see if we use noise
+    float noise_return = 0.0;
+    float local_NoiseAmount = 0.0;
+    if (NoiseAmount > 0.0) {
+      local_NoiseAmount = NoiseAmount;
+      float size1 = 0.0;
+      size1 = (NoiseSize == 0.0) ? 0.0 : 20.0 / NoiseSize;
+      noise_return = maxGradientNoiseFunc(u * size1 + 1.0,
+					  v * size1 + 1.0);
+    }
+    else {
+      // just to make sure
+      noise_return = 0.0;
+    }
+    // use uv-coords
+
+    // end of maxGradient_evalFunction
+    Color colA = Color(0.0, 0.0, 0.0, 0.0);
+    Color colB = Color(0.0, 0.0, 0.0, 0.0);
+    Color texA = Color(0.0, 0.0, 0.0, 0.0);
+    Color texB = Color(0.0, 0.0, 0.0, 0.0);
+    Color cA = Color(0.0, 0.0, 0.0, 0.0);
+    Color cB = Color(0.0, 0.0, 0.0, 0.0);
+    float a = maxGradFunc(// paras
+			  GradientType,
+			  // noise
+			  local_NoiseAmount,
+			  noise_return,
+			  // others
+			  u, v);
+    if (a < Color2Pos) {
+      a = a / Color2Pos;
+      // texA, texB
+      if (Map3Enabled_local) {
+        texA = Map3Color;
+      }
+      else {
+        texA = Color(0.0, 0.0, 0.0, 0.0);
+      }
+      if (Map2Enabled_local) {
+        texB = Map2Color;
+      }
+      else {
+        texB = Color(0.0, 0.0, 0.0, 0.0);
+      }
+      colA = Color3;
+      colB = Color2;
+    } // if (a < Color2Pos)
+    else if (a > Color2Pos) {
+      a = (a - Color2Pos) / (1.0 - Color2Pos);
+      // texA, texB
+      if (Map2Enabled_local) {
+        texA = Map2Color;
+      }
+      else {
+        texA = Color(0.0, 0.0, 0.0, 0.0);
+      }
+      if (Map1Enabled_local) {
+        texB = Map1Color;
+      }
+      else {
+        texB = Color(0.0, 0.0, 0.0, 0.0);
+      }
+      colA = Color2;
+      colB = Color1;
+    } // else if (a > Color2Pos)
+    else {
+      if (Map2Enabled_local) {
+        result = Map2Color;
+        return;
+      }
+      else {
+        result = Color2;
+        return;
+      }
+    } // else
+    // texA holds either Map2 or Map3 (see above)
+    if (Map3Enabled_local || Map2Enabled_local) {
+      cA = texA;
+    }
+    else {
+      cA = colA;
+    }
+    // texB holds either Map1 or Map2 (see above)
+    if (Map2Enabled_local || Map1Enabled_local) {
+      cB = texB;
+    }
+    else {
+      cB = colB;
+    }
+    result.r = cA.r * (1.0 - a) + cB.r * a;
+    result.g = cA.g * (1.0 - a) + cB.g * a;
+    result.b = cA.b * (1.0 - a) + cB.b * a;
+    result.a = cA.a * (1.0 - a) + cB.a * a;
+    // end of maxGradient_evalFunction
+
+    // call "output" shader, if any
+    Color output_shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Output.call("input", "inputColor", result, 
+		    "output", "result", output_shader_return)) {
+      result = output_shader_return;
+    }
+  } // main
+};

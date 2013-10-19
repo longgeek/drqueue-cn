@@ -1,0 +1,300 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Intersection</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node106.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node108.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h3 id="SECTION105">Intersection</h3>
+
+<p id="INDEX404">
+The variables in the next table are closely related to the previous.
+They describe the intersection of the ray with an object, and give
+information about that object and how it was hit.</p>
+
+<div id="INDEX405" align="center">
+<table class="table">
+<tbody>
+<tr>
+<th><i>type</i></th>
+<th><i>name</i></th>
+<th><i>content</i></th>
+</tr>
+<tr>
+<td><tt>miTag</tt></td>
+<td><tt>refraction_volume</tt></td>
+<td>volume shader for refraction</td>
+</tr>
+<tr>
+<td><tt>miUint</tt></td>
+<td><tt>label</tt></td>
+<td>object label for label file</td>
+</tr>
+<tr>
+<td><tt>miTag</tt></td>
+<td><tt>instance</tt></td>
+<td>instance of object</td>
+</tr>
+<tr>
+<td><tt>miTag</tt></td>
+<td><tt>light_instance</tt></td>
+<td>instance of light</td>
+</tr>
+<tr>
+<td><tt>miScalar [4]</tt></td>
+<td><tt>bary</tt></td>
+<td>barycentric coordinates</td>
+</tr>
+<tr>
+<td><tt>miVector</tt></td>
+<td><tt>point</tt></td>
+<td>intersection (ray end) point</td>
+</tr>
+<tr>
+<td><tt>miVector</tt></td>
+<td><tt>normal</tt></td>
+<td>interpolated normal at <tt>point</tt></td>
+</tr>
+<tr>
+<td><tt>miVector</tt></td>
+<td><tt>normal_geom</tt></td>
+<td>geometry normal at <tt>point</tt></td>
+</tr>
+<tr>
+<td><tt>miCBoolean</tt></td>
+<td><tt>inv_normal</tt></td>
+<td>true if normals were inverted</td>
+</tr>
+<tr>
+<td><tt>miScalar</tt></td>
+<td><tt>dot_nd</tt></td>
+<td>dot prod of <tt>normal</tt> and <tt>dir</tt></td>
+</tr>
+<tr>
+<td><tt>double</tt></td>
+<td><tt>dist</tt></td>
+<td>length of the ray</td>
+</tr>
+<tr>
+<td><tt>miTag</tt></td>
+<td><tt>material</tt></td>
+<td>material of hit primitive</td>
+</tr>
+<tr>
+<td><tt>void *</tt></td>
+<td><tt>pri</tt></td>
+<td>completely identifies the hit primitive</td>
+</tr>
+<tr>
+<td><tt>double</tt></td>
+<td><tt>shadow_tol</tt></td>
+<td>safe zone to prevent self-shadows</td>
+</tr>
+<tr>
+<td><tt>miScalar</tt></td>
+<td><tt>ior</tt></td>
+<td><a href="node76.html#INDEX201">index of refraction</a> of
+medium</td>
+</tr>
+<tr>
+<td><tt>miScalar</tt></td>
+<td><tt>ior_in</tt></td>
+<td>index of refr. of previous medium</td>
+</tr>
+<tr>
+<td><tt>miScalar</tt></td>
+<td><tt>importance</tt></td>
+<td>importance of the current ray</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>
+
+<dl>
+<dt><code>refraction_volume</code><dd>
+The volume at the other side of the object. This is set to the
+volume shader of the material. It will be applied to refraction
+rays. This is implemented by copying <code>refraction_volume</code>
+to <code>volume</code> (which is the shader that gets called when the
+material shader returns) in the
+<i><a href="node140.html#api:mi_trace_refraction">mi_trace_refraction</a></i>
+and <i><a href="node140.html#api:mi_trace_transparent">mi_trace_transparent</a></i>
+functions. The material shader may decide that the ray is leaving and
+not entering the object, and look in the state's parents for an outside
+volume shader. This state variable is ignored in
+<a href="node118.html#INDEX466">autovolume</a> mode.
+
+<dt><code>label</code><dd>
+The label of the hit object. Every object may contain a label
+identifier, which is an arbitrary 32bit integer number. That value
+is made available by this variable. When the primary material shader
+returns, the <tt>label</tt> is copied from the state to the
+"tag" frame buffer, if one was created in the <tt>camera</tt>. The
+primary material shader is free to change this variable to any value
+to put different values into the tag frame buffer.
+
+<dt><code>instance</code><dd>
+The leaf instance of the object containing the primitive hit by the ray.
+
+<dt><code>light_instance</code><dd>
+If the ray is a <a href="node117.html#INDEX463">light ray</a> or
+the corresponding <a href="node120.html#INDEX472">shadow ray</a>:
+the light instance. If the ray hit a visible area light source,
+<tt>light_instance</tt> is set to that light instance. This
+is the <a href="node180.html#INDEX862">leaf instance</a>
+resulting from preprocessing and multiple instancing resolution
+(see <i><a href="node140.html#INDEX565">mi_inclusive_lightlist</a></i>).
+
+<dt><code>bary</code><dd>
+The three <b id="INDEX406">barycentric coordinates</b> of the
+intersection in the hit primitive. The fourth value is reserved
+for implicit patches and is not currently used. Barycentric
+coordinates are weights that specify the contribution by each
+vertex or control point. The sum of all barycentric coordinates is 1.
+<dd class="note">
+For <em>hair</em>, which is not based on triangles, the barycentric
+coordinates have a different meaning:
+<dl>
+<dt><code>bary[0]</code><dd>
+contains the parameter value along the width of the hair,
+with 0 at the left edge and 1 at the right edge, with respect to
+the direction going from the root of the hair to the tip, and lying
+in the plane perpendicular to the ray direction.
+<dt><code>bary[1]</code><dd>
+contains the parameter value along the length of the hair,
+with 0 at the first vertex defined, and 1 at the last.
+</dl>
+
+<dt><code>normal</code><dd>
+The interpolated surface normal at the intersection point if
+vertex normals are present, or the non-interpolated geometric normal
+of the primitive otherwise, in <a href="node101.html#INDEX367">internal
+space</a>. It points to the side of the primitive from which it is hit
+by the ray, and is normalized to a single-precision <tt>float</tt> value.
+Care should be taken when calculating the length of the normal; the
+result of this calculation might be very slightly greater than 1 because
+a <tt>float</tt> value has only a little over six significant digits.
+This can cause math functions like <tt>acos</tt> (arc cosine) to return
+<tt>NaN</tt> (Not a Number, an illegal result), which usually results in
+<dfn id="def:white_pixels">white pixels</dfn> or
+<dfn id="def:black_pixels">black pixels</dfn> in the output image if
+the <tt>NaN</tt> finds its way into a result color.
+
+<dd class="note"></dd>For <em>hair</em>,
+this is the interpolated normal <em>facing in the ray direction</em>.
+
+<dt><code>normal_geom</code><dd>
+The non-interpolated normal of the hit primitive in
+<a href="node101.html#INDEX367">internal space</a>. It points to that side
+of the primitive from which it is hit by the ray. It is normalized.
+
+<dd class="note">For <em>hair</em>,
+this is the tangent of the first segment of the hair. This is an
+approximation to the normal at the <q>scalp</q>, and can be useful
+for certain shading models.
+
+<dt><code>inv_normal</code><dd>
+If a ray hits geometry from behind (that is, if the dot product
+of the ray direction and the normal is positive), mental ray
+inverts both <code>normal</code> and <code>normal_geom</code> and
+sets <code>inv_normal</code> to <tt>miTRUE</tt>. This does not happen
+in shadow shaders, where <code>dot_nd</code> is undefined.
+
+<dt><code>dot_nd</code><dd>
+The dot product of the normal and the direction (after the normals
+have been inverted in the case of backfacing geometry). In the case
+of <a href="node117.html#INDEX463">light ray</a>s, it is the negative
+dot product of the <a href="node117.html#INDEX463">light ray</a>
+direction and the normal at the point which is to be illuminated.
+In a volume shader, <code>dot_nd</code> is undefined because there is no
+surface normal; however, mental ray constructs an artificial surface
+point to return a useful <code>dot_nd</code> value.
+
+<dt><code>dist</code><dd>
+The length of the ray, which is the distance from <tt>org</tt> to
+<tt>point</tt> if there is an origin, in
+<a href="node101.html#INDEX367">internal space</a>. A value lower or
+equal to 0.0 indicates that no intersection was found, and that the
+length is infinite. In <a href="node126.html#INDEX492">output
+shader</a>s, it is 0 for sequential shaders or the number of scanlines
+to write, beginning at <i>raster_y</i>, for parallel
+<a href="node126.html#INDEX492">output shader</a>s.
+
+<dt><code>material</code><dd>
+The <a href="node79.html#INDEX242">material</a> of the primitive hit
+by the ray. (If a visible area light source has been hit,
+<tt>material</tt> is set to the inherited instance material, if
+available.) The data can be accessed using <i>mi_db_access</i>
+followed by <i>mi_db_unpin</i>. This is generally not necessary
+because all relevant information is also available in the state.
+
+<dt><code>pri</code><dd>
+This number uniquely identifies the current primitive hit. When
+casting <a href="node117.html#INDEX463">light ray</a>s, mental ray
+may check whether the primitive's normal is pointing away from the
+light and ignore the light in this case; for this reason some
+shaders, such as <a href="node140.html#INDEX556">ray marching</a>
+volume shaders, assign 0 to <code>pri</code> before sampling a light.
+Shaders other than volume shaders should restore <code>pri</code>
+before returning. When a visible area light source is hit,
+<code>pri</code> is set to NULL. Some
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> modes do not
+work if <code>pri</code> has been modified.
+<dd class="note">Note, that in mental ray 3.5 and earlier versions, the
+<code>pri</code> has only identified the object, and <code>pri_idx</code>
+was used to identify the primitive index. The <code>pri_idx</code>
+is not available any more. In order to identify the primitive index,
+the <i><a href="miquery.html#api:mi_query">mi_query</a></i>
+mode <code>miQ_PRI_INDEX</code> can be used.
+
+<dt><code>shadow_tol</code><dd>
+If a shadow ray is found to intersect the primitive in shadow,
+at a distance of less than this tolerance, the intersection is
+ignored. This prevents self-shadowing in the case of numerical
+inaccuracies.
+
+<dt><code>ior</code><dd>
+This field is intended for use by material shaders that need to
+keep track of the <a href="node76.html#INDEX201">index of refraction</a>
+for inside/outside determination. It is not used by mental ray.
+
+<dt><code>ior_in</code><dd>
+Like <code>ior</code>, this field helps the shader with inside/outside
+calculations. It contains the "previous" <a href="node76.html#INDEX201">
+index of refraction</a>, in the medium the ray was traveling through
+before the intersection. Like <code>ior</code>, the <code>ior_in</code>
+field is neither set nor used by mental ray. It exists to allow material
+shaders to inherit the previous index of refraction to subsequent shaders.
+
+<dt><code>importance</code><dd>
+This field contains a factor that controls how much the current ray is
+likely to contribute to the final image. The field is used by functions
+like
+<i><a href="node140.html#api:mi_compute_irradiance">mi_compute_irradiance</a></i>
+to distribute and track computational efforts properly.
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node106.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node108.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

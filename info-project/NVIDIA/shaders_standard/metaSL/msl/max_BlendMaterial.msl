@@ -1,0 +1,135 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+shader max_BlendMaterial {
+ input:
+  // parameters for max_BlendMaterial:
+  // ---------------------------------
+  // see mrMaterialBlend in max_material.h
+  struct Parameters_struct {
+    float MixAmount;  // u
+    float Lower;      // crva
+    float Upper;      // crvb
+    bool UseCurve;    // usecrv
+    int Interactive;  // interactive
+    Shader Map1;      // map1
+    Shader Map2;      // map2
+    Shader Mask;      // mask
+    bool Map1Enabled; // map1Enabled
+    bool Map2Enabled; // map2Enabled
+    bool MaskEnabled; // maskEnabled
+  }; // Parameters
+  Parameters_struct Parameters = 
+    Parameters_struct(0.0,
+		      0.25,
+		      0.75,
+		      false,
+		      0,
+		      Shader(),
+		      Shader(),
+		      Shader(),
+		      true,
+		      true,
+		      true);
+  struct ExtraParameters_struct {
+    int GBufferID;
+  }; // ExtraParameters
+  ExtraParameters_struct ExtraParameters;
+
+ output:
+  Color result;
+
+  // see max_material.cpp
+  void maxMixIn(inout Color local_result, in Color a, float f) {
+    if (f <= 0.0) {
+      local_result = a;
+    } // if (f <= 0.0)
+    else if (f < 1.0) {
+      float s = 1.0 - f;
+      local_result.r = s * a.r + f * local_result.r;
+      local_result.g = s * a.g + f * local_result.g;
+      local_result.b = s * a.b + f * local_result.b;
+      local_result.a = s * a.a + f * local_result.a;
+
+    }
+  } // maxMixIn
+
+  // see max_cpdmtl.cpp
+  float mix_curve(inout float x,
+		  // paras
+		  in float paras_crva,
+		  in float paras_crvb) {
+    if (x <  paras_crva) return 0.0;
+    if (x >= paras_crvb) return 1.0;
+    x = (x - paras_crva) / (paras_crvb - paras_crva);
+    return (x * x * (3 - 2 * x));
+  } // mix_curve
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // TODO: max_BlendMaterial_Photon
+    // max_BlendMaterial_Shade
+    float mix = 0.0;
+    Color col = Color(0.0, 0.0, 0.0, 0.0);
+    if (Parameters.MaskEnabled && 
+	Parameters.Mask.call("output", "result", col)) {
+      // TODO: contextInfo.texture_eval_type = mi_MAX_EVAL_MONO;
+      // TODO: contextInfo.evalContext = mi_MAX_MTL_CONTEXT;
+      // TODO: contextInfo.faceMapFlag = miFALSE;
+      mix = (col.r + col.g + col.b) * 0.33333;
+    } // if (Parameters.MaskEnabled)
+    else {
+      mix = Parameters.MixAmount;
+    } // else [ if (Parameters.MaskEnabled) ]
+    if (Parameters.MaskEnabled && Parameters.UseCurve) {
+      mix = mix_curve(mix, Parameters.Lower, Parameters.Upper);
+    } // if (Parameters.MaskEnabled && Parameters.UseCurve)
+    if (mix < 0.0001) {
+      if (Parameters.Map1Enabled && 
+	  Parameters.Map1.call("output", "result", result)) {
+      } // if (Parameters.Map1Enabled)
+      else {
+	result = Color(0.0, 0.0, 0.0, 0.0); // black
+      } // else [ if (Parameters.Map1Enabled) ]
+    } // if (mix < 0.0001)
+    else if (mix > 0.9999) {
+      if (Parameters.Map2Enabled &&
+	  Parameters.Map2.call("output", "result", result)) {
+      } // if (Parameters.Map2Enabled)
+      else {
+	result = Color(0.0, 0.0, 0.0, 0.0); // black
+      } // else [ if (Parameters.Map2Enabled) ]
+    } // else if (mix > 0.9999)
+    else { // 0.0001 <= mix <= 0.9999
+      Color result_1 = Color(0.0, 0.0, 0.0, 0.0);
+      Color result_2 = Color(0.0, 0.0, 0.0, 0.0);
+      if (Parameters.Map1Enabled &&
+	  Parameters.Map1.call("output", "result", result_1)) 
+	  {
+		if (Parameters.Map2Enabled &&
+			Parameters.Map2.call("output", "result", result_2)) 
+		{
+			maxMixIn(result_2, result_1, mix);
+			result = result_2;
+		} // if (Parameters.Map2Enabled)
+		else
+		  result = result_1;
+      } // if (Parameters.Map1Enabled)
+      else 
+	  {
+		if (Parameters.Map2Enabled &&
+	    Parameters.Map2.call("output", "result", result)) 
+		{
+		} // if (Parameters.Map2Enabled)
+		else 
+		{
+			result = Color(0.0, 0.0, 0.0, 0.0); // black
+		} // else [ if (Parameters.Map2Enabled) ]
+      } // else [ if (Parameters.Map1Enabled) ]
+    } // else [ 0.0001 <= mix <= 0.9999 ]
+  } // main
+};

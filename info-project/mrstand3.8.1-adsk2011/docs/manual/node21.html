@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Bump, Displacement, and Reflection Mapping</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="texcache.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node22.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION19"></a>
+
+<h2>Bump, Displacement, and Reflection Mapping</h2>
+<p>Just as a <a href="node19.html#INDEX27">texture map</a> can vary
+a parameter such as the diffuse color over every point on a
+surface, a <b><a id="INDEX39"></a>bump map</b> can
+be associated with a <a href="node79.html#INDEX242">material</a>,
+perturbing the normal at every point on a surface which uses the
+material, simply by applying an appropriate shader. This will
+affect the shading, though not the geometry, giving the illusion of
+a pattern being embossed on the surface.</p>
+<p>Bump maps, like <a href="node19.html#INDEX27">texture map</a>s,
+require a texture space. In addition, bump maps require a pair of
+<i>basis vectors</i> to define the coordinate system in which the
+normal is displaced. A <a href="node21.html#INDEX39">bump map</a>
+defines a scalar <i>x</i> and a scalar <i>y</i> displacement over
+the texture space. These components are used together with the
+respective basis vectors in order to calculate a perturbed surface
+normal. The basis vectors can be automatically defined for
+<a href="node9.html#INDEX13">free-form surface</a>s in a way which conforms
+to the texture space; for polygons and
+<a href="node189.html#INDEX993">subdivision surface</a>s, the basis vectors
+must be explicitly given along with the <a href="node108.html#INDEX409">texture
+coordinate</a>s for every polygon
+vertex. However, most commonly basis vectors are computed
+procedurally by shaders during rendering.</p>
+<p><a id="INDEX40"></a><a id="INDEX41"></a><b>displacement map</b> is a
+<b><a id="INDEX42"></a>scalar map</b> which is used to displace a
+<a href="node9.html#INDEX13">free-form surface</a>,
+<a href="node83.html#INDEX297">polygon</a>, or
+<a href="node189.html#INDEX993">subdivision surface</a> at each point in
+the direction of the local normal. Like texture, bump and
+<b><a id="INDEX43"></a>reflection map</b>s,
+<a href="node21.html#INDEX41">displacement map</a>s are controlled by
+shaders that are used by mental ray to determine the displacement
+of points on the surface, in order to decide how to deform the
+surface and introduce geometric detail.</p>
+<p>The surface must be triangulated finely enough to reveal the
+details of the displacement map. In general, the triangles must be
+smaller than the smallest feature of the displacement map which is
+to be resolved.</p>
+<p>Displacement mapped polygons are at first triangulated as
+ordinary polygons. The initial triangulation is then further
+subdivided according to the specified approximation criteria. The
+parametric technique subdivides each triangle a given number of
+times. All the other techniques take the displacement into account.
+The length criterion, for example, limits the size of the edges of
+the triangles of the displaced polygons and ensures that at least
+all features of this size are resolved. As the displaced surface is
+not known analytically, the distance criterion compares the
+displacements of the vertices of a triangle with each other. The
+criterion is fulfilled only if they differ by less than the given
+threshold. Subdivision is finest in areas where the displacement
+changes. The angle criterion limits the angle under which two
+triangles meet in an edge contained in the triangulation.
+Subdivision stops as soon as the given criterion or combination of
+them is satisfied or the maximum subdivision level is reached. This
+does not preclude the possibility that at an even finer scale new
+details may show up which would again violate the approximation
+criteria.</p>
+<p>mental ray supports rendering
+<a href="node189.html#INDEX993">subdivision surface</a>s natively, and
+handles displacement mapping on
+<a href="node189.html#INDEX993">subdivision surface</a> as part of the
+tessellation to the limit surface. If detailed displacement on a
+smooth polygon mesh is the primary goal then the
+<a href="catmullclark.html">ccmesh</a> primitive should be used for its
+superior performance.</p>
+<p>For displacement mapped free-form surfaces approximation
+techniques can be specified either on the underlying geometric
+surface or for the surface resulting from the displacement. If one
+wants to control the <a href="node89.html#INDEX334">approximation</a>
+from the geometric
+surface, the most suitable technique for use with displacement
+mapping on free-from surfaces is usually the view dependent uniform
+spatial subdivision technique, which allows specification of
+triangle size in <a href="node101.html#INDEX371">raster
+space</a>.</p>
+<p>In addition to or even instead of specifying the subdivision
+criteria for the base surface, they can be given for the displaced
+surface itself. This approximation statement works exactly the same
+way as for polygons, i.e. an initial tessellation is subdivided
+until the criteria on the displaced surface are met.</p>
+<p>The final type of map is an <b><a id="INDEX44"></a>environment map</b>.
+This is a color-mapped virtual
+sphere of usually infinite radius which surrounds any object
+referencing the given <a href="node79.html#INDEX242">material</a>.
+This sphere is also seen by refracted rays; the environment seen by
+first-generation (primary) rays can also be specified but is part
+of the <tt>camera</tt>, not of any particular material. In general,
+if a ray does not intersect any objects, or if casting such a ray
+would exceed the <a href="node76.html#INDEX196">trace depth</a>,
+the ray is considered to strike the sphere of the
+<a href="node21.html#INDEX44">environment map</a> of the last material
+visited, or the <tt>camera</tt> environment map in the case of
+first-generation rays that did not hit any material. An
+<a href="node119.html#INDEX468">environment shader</a> is used to determine
+the color of each point of the sphere.</p>
+<p>The <a href="node21.html#INDEX44">environment map</a> always
+covers the entire sphere exactly once. Rotations, translations, and
+repetitions are supported by special shader parameters or remapping
+shader nodes such as the ones found in the base shader library.
+There are also environment shaders that implement cubical instead
+of spherical environment maps, and cubical maps of finite instead
+of infinite size.</p>
+<p>As described before, textures can be used for any purpose
+whatever to control shader behavior, in addition to the examples in
+this section.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="texcache.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node22.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

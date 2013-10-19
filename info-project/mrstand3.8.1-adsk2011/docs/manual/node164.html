@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Automatic Source Generation with mkmishader</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node163.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node165.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION162"></a>
+<h2>Automatic Source Generation with mkmishader</h2>
+<p><a id="mkmishader"></a> In order to write a
+new shader, a number of prototypes and other mechanical work must
+be done, such as writing prototypes, evaluation of parameters,
+versioning, and so on. The <b><a id="INDEX841"></a>mkmishader</b>
+utility can do this automatically.
+For example, the <i>mib_illum_lambert</i> shader in the base shader
+library has the following .mi declaration:</p>
+<pre>
+     declare shader
+         color "mib_illum_lambert" (
+             color              "ambience",
+             color              "ambient",
+             color              "diffuse",
+             integer            "mode",
+             array light        "lights"
+         )
+         version 2
+     end declare
+</pre>
+<p>If this declaration is stored in a file, and the
+<a href="node164.html#INDEX841">mkmishader</a> utility is run with the
+<tt>-i</tt> option (which creates init and exit shaders), a new
+file <tt>mib_illum_lambert.c</tt> is created with the following
+content:</p>
+<pre>
+     #include &lt;stdio.h&gt;
+     #include &lt;math.h&gt;
+     #include &lt;shader.h&gt;
+
+     typedef struct {
+        miColor         ambience;
+        miColor         ambient;
+        miColor         diffuse;
+        miInteger       mode;
+        int             i_lights;
+        int             n_lights;
+        miTag           lights[1];
+     } mib_illum_lambert_t;
+
+     DLLEXPORT int mib_illum_lambert_version(void) {return(2);}
+
+     DLLEXPORT miBoolean mib_illum_lambert_init(
+        miState             *state,
+        mib_illum_lambert_t *param,
+        miBoolean           *init_req)
+     {
+        if (!param) {
+                /* shader init */
+                *init_req = miTRUE; /* do instance inits */
+        } else {
+                /* shader instance init */
+        }
+        return(miTRUE);
+     }
+
+     DLLEXPORT miBoolean mib_illum_lambert_exit(
+        miState             *state,
+        mib_illum_lambert_t *param)
+     {
+        if (param) {
+                /* shader instance exit */
+        } else {
+                /* shader exit */
+        }
+        return(miTRUE);
+     }
+
+     DLLEXPORT miBoolean mib_illum_lambert(
+        miColor             *result,
+        miState             *state,
+        mib_illum_lambert_t *param)
+     {
+        /*
+         * get parameter values. It is inefficient to do this all
+         * at the beginning of the code. Move the assignments here
+         * to where the values are first used. You may want to use
+         * pointers for colors and vectors.
+         */
+        miColor ambience = *mi_eval_color(&amp;param-&gt;ambience);
+        miColor ambient = *mi_eval_color(&amp;param-&gt;ambient);
+        miColor diffuse = *mi_eval_color(&amp;param-&gt;diffuse);
+        miInteger mode = *mi_eval_integer(&amp;param-&gt;mode);
+        int i_lights = *mi_eval_integer(&amp;param-&gt;i_lights);
+        int n_lights = *mi_eval_integer(&amp;param-&gt;n_lights);
+        struct lights_s *lights = (struct lights_s *)mi_eval(
+                                        state, param-&gt;lights);
+        /*
+         * sample array loops
+         */
+        int i;
+        for (i=0; i &lt; n_lights; i++) {
+                /* use lights[i_lights + i]; */
+        }
+
+        /*
+         * set shader results. "+=" etc. is useful for shaders
+         * in shader lists but other shaders may need to simply
+         * assign result variables.
+         */
+        result-&gt;r += 0.0;
+        result-&gt;g += 0.0;
+        result-&gt;b += 0.0;
+        result-&gt;a += 0.0;
+        return(miTRUE);
+     }
+</pre>
+<p>This skeleton <a href="node178.html#INDEX856">source code</a>
+can then be filled in with the implementation of the actual
+algorithm. It is important to move the
+<i><a href="node138.html#INDEX522">mi_eval</a></i> functions to the places
+where they are first used because if the shader does not need a
+variable it is faster to not access it. For example, if the light
+array <i>lights</i> is empty, so <i>n_lights</i> is zero, then
+there is no need to access <i>i_light</i>, <i>lights</i>, and
+<i>diffuse</i>. If those parameters are assigned to other shaders
+that would have to be called on access, not calling <i>mi_eval</i>
+is a significant performance improvement. The functions used in
+this skeleton will be described later.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node163.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node165.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,128 @@
+/*****************************************************************************
+ * Copyright 1986-2007 by mental images GmbH, Fasanenstr. 81, D-10623
+ * Berlin, Germany. All rights reserved.
+ *****************************************************************************/
+#import <mi_msl_shared.msl>
+
+shader max_oren_nayar
+{
+  input:    
+    Color  ambient_color = Color(0,0,0,0)
+	{		
+		display_name("Ambient Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color of the Ambient lighting in the scene. This "
+				     "value is set by the user independent of the actual "
+					 "color of the lighting in the scene." );
+	};
+	Scalar ambient_scalar = 1
+	{	
+		display_name("Ambient Scalar");
+		soft_range(Scalar(0),Scalar(1));
+		description( "The intensity of the Ambient lighting in the scene. "
+					 "This value is set by the user independent of the actual "
+					 "intensity of the lighting in the scene." );
+	};
+    Color  diffuse_color = Color(1,1,1,1)
+	{	
+		display_name("Diffuse Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color used to tint the Diffuse Reflectance Color." );
+	};
+    Scalar diffuse_scalar = 0.7
+	{	
+		display_name("Diffuse Scalar");
+		soft_range(Scalar(0),Scalar(1));
+		description( "The intensity of the light diffusely reflected from "
+					 "this surface." );
+	};
+    Color  specular_color = Color(1,1,1,1)
+	{	
+		display_name("Specular Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color used to tint the Specular Reflectance "
+					 "Color." );
+	};
+    Scalar specular_scalar = 0.5
+	{	
+		display_name("Specular Scalar");
+		soft_range(Scalar(0),Scalar(1));
+		description( "The intensity of the specular light reflections from "
+					 "this surface." );
+	};
+    
+	Scalar diffuse_deviation = 0.1
+	{	
+			display_name("Diffuse Deviation");
+			soft_range(Scalar(0),Scalar(PI));
+			hard_range(Scalar(0),Scalar(TWO_PI));
+			description( "The standard deviation of the diffuse micofacets." );
+	};
+    Scalar specular_shininess = 50.0
+    {	
+			display_name("Specular Shininess");
+			soft_range(Scalar(0),Scalar(100));
+			description( "The width of specular highlights across the "
+						 "surface." );
+    };
+    
+  output:
+    Color sum;
+	Color ambient;
+    Color diffuse;
+    Color specular;
+
+    void main() 
+    {        
+        diffuse  = Color(0,0,0,0);
+        specular = Color(0,0,0,0);
+    
+        Vector3 vdir = direction;
+
+        // enumerate lights
+        Light_iterator light;
+		foreach (light)
+		{
+//			Scalar d = saturate(light.dot_nl);
+			Scalar d = mi_orennayar_diffuse(light.direction, 
+				vdir, normal, diffuse_deviation);
+			diffuse += d * light.contribution;
+		    
+			Scalar s = mi_phong_specular(light.direction, 
+				vdir, normal, specular_shininess);
+			if (d > 0.0)
+				specular += s * light.contribution;
+		}
+
+		diffuse.a = 1.0;
+		specular.a = 1.0;
+
+		Color diffuse_reflectance_color = diffuse;
+		Color specular_reflectance_color = specular;
+
+		mi_component_illumination_base(
+			ambient_color,
+			ambient_scalar,
+			diffuse_reflectance_color,
+			diffuse_color,
+			diffuse_scalar,
+			specular_reflectance_color,
+			specular_color,
+			specular_scalar,
+			sum,
+			ambient,
+			diffuse,
+			specular);
+	}
+}
+{
+	description( "Implements the Oren/Nayar illumination model which models "
+				 "surfaces as distributions of microfacets with a "
+				 "user-specified standard deviation. The model is best used "
+				 "to model matte diffuse surfaces but has added Phong "
+				 "specular controls to allow it to handle more general "
+				 "classes of surfaces. Adds support for Ambient, Diffuse, "
+				 "and Specular tinting and scaling controls." );
+}
+;
+

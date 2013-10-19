@@ -1,0 +1,78 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Polygon Lists</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node206.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node208.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION205"></a>
+<h3>Polygon Lists</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_POLYGON</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miPolygon[ ]</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>int no_polys</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls</td>
+</tr>
+</table>
+<pre>
+typedef struct miPolygon {
+        miGeoIndex      no_loops;       /* 1 + (number of holes) */
+        miGeoIndex      no_vertices;    /* total number of vertices + headers*/
+        miGeoIndex      vertex_idx;     /* into indices list, for sharing */
+        miTag           material;       /* surface properties */
+        miCBoolean      convex;         /* is polygon convex ? */
+        miCBoolean      spare[3];       /* not used */
+} miPolygon;
+</pre>
+<p>A translator must provide: all fields except
+<tt>spare</tt>.<br />
+<br /></p>
+<p><b>no_loops</b> is the number of loops of the polygon. Every
+polygon has exactly one outer boundary loop, plus any number of
+optional hole loops. Every loop is stored as a pseudo-index called
+a "header" that doesn't actually refer to the vector list but gives
+the number of indices to follow, followed by that many indices.</p>
+<p><b>no_vertices</b> is the total number of headers (the number of
+holes plus 1) plus the total number of vertices for this
+polygon.</p>
+<p><b>vertex_idx</b> is an index to the first header of the polygon
+in the index list. <i>no_vertices</i> indices beginning at
+<i>vertex_idex</i> define the polygon.</p>
+<p><b>material</b> is the tag of the material of the polygon. It
+must refer to a database element of type
+<tt>miSCENE_MATERIAL</tt>.</p>
+<p><b>convex</b> is a flag telling the tessellator that the polygon
+has no holes and is guaranteed to be convex. This saves time
+because GAP can use a very simple tessellation algorithm.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node206.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node208.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

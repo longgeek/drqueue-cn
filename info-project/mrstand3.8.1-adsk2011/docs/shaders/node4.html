@@ -1,0 +1,419 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Texture Space Mapping</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node2.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node5.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION2"></a>
+
+<h2>Texture Space Mapping</h2>
+
+<p>These shaders take care of selecting, creating, and remapping
+texture spaces, computing basis vectors, and other tasks
+necessary before a color or displacement can be applied. Some of
+these functions have a <var>select</var> parameter that has one of
+the following values:</p>
+
+<table class="table">
+<tr>
+<td>0..63</td>
+<td>selects a texture vector. If this exceeds the number of
+defined texture spaces, default to -1 (the point in space).</td></tr>
+<tr>
+<td>&minus;1</td>
+<td>selects the 3D point in space directly, and may apply a
+space point transformation.</td></tr>
+<tr>
+<td>&minus;2</td>
+<td>selects the normal vector, and may apply a space vector
+transformation.</td></tr>
+<tr>
+<td>&minus;3</td>
+<td>selects the motion vector, and may apply a space vector
+transformation.</td></tr>
+<tr>
+<td>&minus;4</td>
+<td>selects the ray direction, and may apply a space vector
+transformation.</td></tr>
+<tr>
+<td>&minus;5..&minus;9</td>
+<td>select a surface derivative vector, and may apply a
+space vector transformation. The values are
+<span class="math">
+&part;<b>P</b>&frasl;&part;<b>U</b>,
+&part;<b>P</b>&frasl;&part;<b>V</b>,
+&part;&sup2;<b>P</b>&frasl;&part;<b>U</b>&sup2;,
+&part;&sup2;<b>P</b>&frasl;&part;<b>V</b>&sup2;, and
+&part;&sup2;<b>P</b>&frasl;(&part;<b>U</b>&part;<b>V</b>).
+</span> The object must be defined to contain derivatives.</td></tr>
+<tr>
+<td>&minus;10</td>
+<td>selects a 2D background plate coordinate with (0, 0, 0) in the lower
+left corner of the screen, and (1, 1, 0) just outside the upper right corner
+of the screen. <var>selspace</var> has no effect in this mode. The transformation
+is similar to the one in <i>mib_lookup_background</i>.</td></tr>
+<tr>
+<td>&minus;11</td>
+<td>selects the texture coordinate in the state, where it is typically put
+by a material shader when evaluating a parameter of type texture, for use
+by a texture shader.</td></tr>
+</table>
+
+<p>Space transformations allow transforming the vector that the
+projection is based on into object, world, or camera coordinates.
+<var>selspace</var> may have the following values:</p>
+
+<table class="table">
+<tr><td>0</td><td>does not apply a transformation, using internal space.</td></tr>
+<tr><td>1</td><td>converts the vector into object space.</td></tr>
+<tr><td>2</td><td>converts the vector into world space.</td></tr>
+<tr><td>3</td><td>converts the vector into camera space.</td></tr>
+<tr><td>4</td><td>returns the current screen space coordinates in the interval
+<i>[0,0 ... 1,1)</i>.</td></tr>
+</table>
+
+<p>An additional projection can be applied to the
+resulting vector by setting the <var>project</var> parameter:</p>
+
+<table class="table">
+<tr><td>0</td><td>disables projections.</td></tr>
+<tr><td>1</td><td>selects an UV projection if available.</td></tr>
+<tr><td>2</td><td>selects an orthographic XY projection.</td></tr>
+<tr><td>3</td><td>selects an orthographic XZ projection.</td></tr>
+<tr><td>4</td><td>selects an orthographic YZ projection.</td></tr>
+<tr><td>5</td><td>selects a spherical projection.</td></tr>
+<tr><td>6</td><td>selects a cylindrical projection. <i>U=0</i> is at +X,
+and <i>V=0</i> is at +Y. Y is also the cylinder axis.</td></tr>
+<tr><td>7</td><td>selects the lollipop projection, which puts the center
+of the texture (after texture vector normalization) at
+X=0.5 Z=1, and the corners at the parameter corners. On a
+sphere, the texture center is at the north pole and the
+texture corners are at the south pole, like a lollipop
+wrapper.</td></tr>
+</table>
+
+<h3>Texture Vertex Generator</h3>
+
+<p>Return a texture vector derived from orthographic projections
+of the 3D point in space (XY, XZ, YZ), non-orthographic
+projections (spherical or cylindrical); or return a numbered
+texture vector from the texture vector list. Optionally, this
+shader can base its calculations on object, camera, world, or
+screen space.</p>
+
+<a id="INDEX2"></a>
+<h5 id="mi_shader__mib_texture_vector">mib_texture_vector</h5>
+  <pre>
+    vector "mib_texture_vector" (
+        integer         "select",
+        integer         "selspace",
+        integer         "vertex",
+        integer         "project")
+</pre>
+
+<dl>
+  <dt>select<dd> specifies the value to look up, as described above.
+
+  <dt>selspace<dd> allows choosing the source space for
+  projections, as described above. Space conversion is done before
+  the projection specified by the select parameter. If selspace is
+  4 (screen space), select, vertex, and project are ignored.
+
+  <dt>vertex<dd> specifies the location of the vertex: 0 is the
+  intersection point, and 1, 2, and 3 are the vertices of the
+  intersected triangle. It has no effect if select is -10.
+
+  <dt>project<dd> specifies a projection that is performed after
+  selection and space conversion. It has no effect if select is
+  -10.
+</dl>
+
+  <h3>Texture Vertex Remapping</h3>
+
+  <p>Accepts a texture vertex and scales, rotates, translates,
+  crops, and joins textures. The order of operations is transform
+  first, then repeat, alternate, torus, and finally min/max crop.
+  The result is returned (and stored in <tt>state&rarr;tex</tt>
+  where it can be picked up by other shaders).</p>
+
+<a id="INDEX3"></a>
+<h5 id="mi_shader__mib_texture_remap">mib_texture_remap</h5>
+  <pre>
+    vector "mib_texture_remap" (
+        vector          "input",
+        transform       "transform",
+        vector          "repeat",
+        boolean         "alt_x",
+        boolean         "alt_y",
+        boolean         "alt_z",
+        boolean         "torus_x",
+        boolean         "torus_y",
+        boolean         "torus_z",
+        vector          "min",
+        vector          "max",
+        vector	        "offset")
+</pre>
+
+<dl>
+  <dt>input<dd> is a texture vector from a generator such as
+  <i>mib_texture_vector</i> that returns texture vectors.
+  <i>input</i> is overridden when this shader is called with a
+  nonzero <i>arg</i> parameter in <i>mi_call_shader_x</i>. This is
+  useful for remapping multiple texture coordinates when the
+  remapping parameters are identical for all of them.
+
+  <dt>transform<dd> is a general transformation applied to the
+  texture vector before the remaining parameters are applied. If
+  transform[3][3] is 0.0, the matrix is ignored (normally
+  transform[3][3] is 1.0).
+
+  <dt>repeat<dd> contains repetition factors in X, Y, and Z that
+  the texture vector is multiplied with. A value of 2, for example,
+  shrinks the texture such that it fits twice in the <i>[0, 1)</i>
+  interval. Repeating has no effect outside this interval. After
+  the multiplication by the repetition factor, the integer part is
+  removed. This algorithm allows finite repetition in an interval
+  determined by the transform parameter. A repetition value of 0
+  turns off repetition in the corresponding component, as if the
+  value were 1.
+
+  <dt>alt_*<dd> specifies whether every other copy of the
+  repetition would be reversed such that successive copies of the
+  texture are traversed in alternate, back-and-forth directions.
+  Alternate flags have an effect only if the corresponding
+  repetition component is greater than 1, and also work only in the
+  <i>[0, 1)</i> interval.
+
+  <dt>torus_*<dd> maps the texture space into the range <i>[0,
+  1)</i> such that values less than 0 and equal to or greater than
+  1 are put into this range by cutting off the integer part.
+
+  <dt>min<br>max<dd> implement image or volume cropping
+  by specifying the range of the texture to be considered. Portions
+  of the texture outside this range are trimmed off. If repetition
+  is used, the max point of one copy joins the min point of the
+  next copy (unless alternation is turned on). min is inclusive,
+  max is exclusive. If a min component is equal to the
+  corresponding max component, both are ignored.
+
+  <dt>offset<dd> is a vector added to the texture vector
+  before the texture lookup.
+</dl>
+
+  <h3>Rotation of Surface Orientation</h3>
+
+  <p>An angle is used to rotate the surface orientation around the
+  surface normal. An orthogonal vector pair is returned that,
+  together with the normal which both are orthogonal to, define the
+  rotated orientation. This is especially useful for anisotropic
+  reflection (see below).</p>
+
+<a id="INDEX4"></a>
+<h5 id="mi_shader__mib_texture_rotate">mib_texture_rotate</h5>
+  <pre>
+    struct {
+        vector          "u",
+        vector          "v"
+    } "mib_texture_rotate" (
+        vector          "input",
+        scalar          "angle",
+        scalar          "min",
+        scalar          "max")
+</pre>
+
+<dl>
+  <dt>u<br>v<dd> are the returned orthogonal vectors.
+
+  <dt>input<dd> is the texture vector to be rotated. It is
+  expected in internal space.
+
+  <dt>angle<dd> is a scalar that is interpreted as a rotation. A
+  value equal to min specifies no rotation, and a value equal to
+  max specifies a 360-degree rotation. The angle can for example be
+  the intensity from a texture lookup.
+
+  <dt>min<br>max<dd> specify the value limits
+  corresponding to no and full rotation. An angle value &alpha; is first
+  mapped to <span class="math">&alpha;&lowast;(max&minus;min)+min</span>.
+  If min and max are both 0, they default to 0 and 0.25,
+  corresponding to 0 and 90 degrees counter-clockwise.
+</dl>
+
+  <h3>Bump Basis
+  Generator</h3>
+
+  <p>Given the intersection point, compute a pair of bump basis
+  vectors, based on the projection method (as above: UV, XY, XZ,
+  YZ, spherical, or cylindrical).</p>
+
+<a id="INDEX5"></a>
+<h5 id="mi_shader__mib_bump_basis">mib_bump_basis</h5>
+  <pre>
+    struct {
+        vector          "u",
+        vector          "v"
+    } "mib_bump_basis" (
+        integer         "project",
+        integer         "ntex")
+</pre>
+
+<dl>
+  <dt>project<dd> specifies the projection to perform, as
+  described above. All projections are based on the 3D point in
+  space after conversion to object space. This parameter is used to
+  orient the bump basis.
+
+  <dt>ntex<dd> is the texture space to use, in the range <i>0 ...
+  63</i>. It is used only if project is UV (5) or disabled (0 or
+  negative). Otherwise ntex is ignored.</p>
+</dl>
+
+  <h3>Bump Mapping</h3>
+
+  <p>Apply a texture to the normal vector by evaluating the texture
+  at multiple points to compute U and V gradients that are
+  multiplied with the basis vectors, combined with the original
+  normal, normalized, and written back. Also return the normal.
+  <TT>state&rarr;tex</TT> is left undefined.</p>
+
+<a id="INDEX6"></a>
+<h5 id="mi_shader__mib_bump_map">mib_bump_map</h5>
+  <pre>
+    vector "mib_bump_map" (
+        vector          "u",
+        vector          "v",
+        vector          "coord",
+        vector          "step",
+        scalar          "factor",
+        boolean         "torus_u",
+        boolean         "torus_v",
+        boolean         "alpha",
+        color texture   "tex",
+        boolean         "clamp")
+</pre>
+
+<dl>
+  <dt>u<br>v<dd> are the bump basis vectors. They can be
+  generated from another base shader such as
+  <i>mib_bump_basis</i>.
+
+  <dt>coord<dd> is the texture coordinate for which the bump
+  should be calculated.
+
+  <dt>step<dd> are offsets to coord. The shader samples three
+  times: at <i>(coord_x, coord_v)</i>, at <i>(coord_x + step_x,
+  coord_v)</i>, and at <i>(coord_x, coord_v + step_v)</i>. The
+  resulting U and V gradients are multiplied by the u and v basis
+  vectors, respectively, then multiplied by the factor, and finally
+  added to the normal, which is then renormalized. If the step
+  components are 0, they default to 0.01.
+
+  <dt>factor<dd> controls the strength of the effect. If it is 0,
+  it defaults to 1.
+
+  <dt>torus_u<br>torus_v<dd> specify that, when step is
+  added to coord, the result (X, Y, and Z) should be wrapped back
+  into the interval <i>[0 ... 1)</i>.
+
+  <dt>alpha<dd>if true, specifies that the alpha component
+  instead of the intensity of the color texture should be used.
+
+  <dt>tex<dd> is a color texture or shader to look up three
+  times. (Only use shader assignment using the "=" notation if
+  the assigned shader returns a shader.)
+
+  <dt>clamp<dd>if true, restricts bump mapping area to the
+  [0, 1] texture coordinate range.
+</dl>
+
+<hr width="0">
+
+  <p>The following shader is identical to the previous, including
+  the parameters, except that it returns a color instead of a
+  vector. This color is not modified. This allows the shader to be
+  used in material shader lists by prepending it to the actual
+  material shader. In this configuration it is called first and
+  modifies the normal vector in the state before the material
+  shader uses it to compute illumination. At the same time, it does
+  not in any way affect the computed result color.</p>
+
+<a id="INDEX7"></a>
+<h5 class="anchor" id="mi_shader__mib_passthrough_bump_map">mib_passthrough_bump_map</h5>
+  <pre>
+    vector "mib_passthrough_bump_map" (
+        vector          "u",
+        vector          "v",
+        vector          "coord",
+        vector          "step",
+        scalar          "factor",
+        boolean         "torus_u",
+        boolean         "torus_v",
+        boolean         "alpha",
+        color texture   "tex",
+        boolean         "clamp")
+</pre>
+
+  <p>See above for a description of the parameters.</p>
+
+<hr width="0">
+
+<p>This is a another approach of a bump map shader, which differs from the
+previous ones by modifying the <TT>state&rarr;normal</TT> and then evaluating
+any shading graph connected to the <TT>color</TT> input. This way the perturbed
+normal will be visible to the connected shader or tree. Typically, illumination
+shaders such as Phong should be connected to the <TT>color</TT> parameter.
+</P>
+
+<P>The bump map will look at 3 texture samples from the texture, using the 
+texture space 0. The differences of the 3 returned values indicate the 
+bending of the normal. The normal will be bent in the direction of the 
+<i>bump_vectors</i> if they exist, or in the direction of the derivatives otherwise. The 
+modified normal is saved in the <TT>state</TT> before calling the evaluation 
+of <TT>color</TT>. All shaders attached to <tt>color</tt> will then used this modified normal. 
+The normal is set back to its original value at the end.</P>
+  
+<a></a>
+  
+  <PRE>    
+    color "mib_bump_map2" (
+	scalar          "factor",
+	scalar          "scale",
+	color texture   "tex",
+	color           "color"	)
+  </PRE>
+
+<dl>
+<dt>factor<dd> deternimes how strong the bumps are.
+<dt>scale<dd> determines how many times the bump map is repeated using the
+first texture coordinates.
+<dt>tex<dd> specifies the texture to look up for the perturbation of the normal.
+<dt>color<dd> is the color to attach illumination shaders to (e.g. Phong).
+</dl>
+<p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node2.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node5.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

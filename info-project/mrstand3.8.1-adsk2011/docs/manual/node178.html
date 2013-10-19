@@ -1,0 +1,482 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>NVIDIA Cg 1.2 Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node177.html">&laquo;&nbsp;prev</a></li>
+<li><a href="chapter4.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION176"></a>
+<h3>NVIDIA Cg 1.2 Shaders</h3>
+<p>
+<span class="depr">Deprecated</span>
+<p>
+<b><a id="INDEX854"></a>NVIDIA</b>'s
+<a href="node173.html#INDEX853">Cg</a> 1.2 release introduced interfaces to
+the <a href="node173.html#INDEX853">Cg</a> programming language,
+which correspond to mental ray's shader graph and Phenomenon
+design, and enable mental ray to construct a composite
+<a href="node173.html#INDEX853">Cg</a> shader that corresponds exactly,
+subshader by subshader, to the software shader graph.
+<a href="node173.html#INDEX853">Cg</a> versions prior to 1.2 are not
+supported by mental ray.</p>
+<p>In almost all cases, it is sufficient to write only the
+<a href="node168.html#INDEX851">fragment shader</a> in
+<a href="node173.html#INDEX853">Cg</a>. If no
+<a href="node168.html#INDEX850">vertex shader</a> is supplied, mental ray
+supplies a built-in default <a href="node168.html#INDEX850">vertex
+shader</a>. All illumination calculations are performed in the
+<a href="node168.html#INDEX851">fragment shader</a>.</p>
+<p>Also, <a href="node173.html#INDEX853">Cg</a> shaders do not
+normally depend on a shader support library the way OpenGL shaders
+do. No C/C++ code is required to use any of the standard
+<a href="node173.html#INDEX853">Cg</a> shaders shipped with mental ray, so
+no support libraries are supplied. Only the
+<a href="node173.html#INDEX853">Cg</a> files, named according to the
+conventions described above, such as <tt>myphong_f.cg</tt>, must be
+available on the hardware search path (defined with
+<tt>-hardware_path</tt>). This makes it very simple to make a
+third-party <a href="node173.html#INDEX853">Cg</a> shader available
+to mental ray. Each shader must be in a separate file, or pair of
+files if a vertex shader is required as well.</p>
+<h4>Shader Parameters</h4>
+<p>Hardware shaders read their parameters from a set of registers
+on the graphics board called <b><a id="INDEX855"></a>uniform variable</b>s,
+so mental ray needs to know how to copy the shader parameters to the
+<a href="node178.html#INDEX855">uniform variable</a>s before the shader is
+started, and the <a href="node173.html#INDEX853">Cg</a> compiler
+needs to have a matching definition. Here is the
+<a href="node173.html#INDEX853">Cg</a> syntax for defining shader
+parameters:</p>
+<pre>
+    interface miiBoolean {
+        bool eval(vert2frag param);
+    };
+
+    interface miiInteger {
+        int eval(vert2frag param);
+    };
+
+    interface miiScalar {
+        float eval(vert2frag param);
+    };
+
+    interface miiVector {
+        float3 eval(vert2frag param);
+    };
+
+    interface miiColor {
+        float4 eval(vert2frag p);
+    };
+
+    interface miiColorTexture {
+        float4 eval(vert2frag param, float3 uv);
+    };
+
+    interface miiMatrix {
+        float4x4 eval(vert2frag param);
+    };
+
+    interface miiLight {
+        misLightOut eval(vert2frag param);
+    };
+</pre>
+<p>This is the complete list of available types. For example, the
+mental ray data type <tt>miBoolean</tt> is declared to the
+<a href="node173.html#INDEX853">Cg</a> compiler as <tt>miiBoolean</tt>,
+implemented as the <a href="node173.html#INDEX853">Cg</a>
+<tt>bool</tt> type. The <i>eval</i> function tells the
+<a href="node173.html#INDEX853">Cg</a> compiler that the parameter might be
+attached to another shader, which must also be compiled and
+downloaded to the graphics board. (Attaching shader outputs to
+shader parameters is how both mental ray and
+<a href="node173.html#INDEX853">Cg</a> implement shader graphs.)</p>
+<p><a href="node173.html#INDEX853">Cg</a> shader parameters are
+declared in the shader code, right in the function body. For
+example, if the software shader declaration is defined in .mi
+syntax as</p>
+<pre>
+    declare shader
+        color "myshader" (
+            color         "param1",
+            scalar        "param2",
+            vector        "param3",
+            color texture "param4"
+        )
+    end declare
+</pre>
+<p>then it is sufficient to declare these four parameters in the
+<a href="node173.html#INDEX853">Cg</a> shader body, using the
+<tt>mii*</tt> data types listed above, using the same names. Note
+that you can omit parameters from the declaration. For example,
+here is a possible implementation of the shader in
+<a href="node173.html#INDEX853">Cg</a>:</p>
+<pre>
+    struct myshader : miiColor
+    {
+        miiColor        param1;
+        miiScalar       param2;
+        miiVector       param3;
+        miiColorTexture param4;
+
+        float4 eval(vert2frag p) {
+            float4 c = param1.eval(p);
+            float  s = param2.eval(p);
+            float3 v = param3.eval(p);
+            float4 tex = param4.eval(p, float3(u,v,w));
+            return float4(1,1,1,1);
+        }
+    };
+</pre>
+<p>The <a href="node173.html#INDEX853">Cg</a> compiler will be run
+automatically by mental ray at render time. It will collect all
+required shaders by following the <i>eval</i> links, and create a
+single binary shader ready for downloading to the graphics board.
+Users only need to supply the <a href="node173.html#INDEX853">Cg</a>
+<b><a id="INDEX856"></a>source code</b> and leave compilation and
+downloading to mental ray. For more information on the
+<a href="node173.html#INDEX853">Cg</a> language, see
+<a href="node178.html#INDEX854">NVIDIA</a>'s
+<a href="node173.html#INDEX853">Cg</a> 1.2 compiler reference manual.</p>
+<h4>Implicit Shader Parameters</h4>
+<p>mental ray implicitly supplies several extra parameters for
+light and material shaders. They are automatically downloaded to
+the <a href="node168.html#INDEX851">fragment shader</a> when
+matching names are found in the <a href="node173.html#INDEX853">Cg</a>
+declaration.</p>
+<div align="center">
+<table class="table">
+<tr>
+<td>usage</td>
+<td>name</td>
+<td>type</td>
+<td>description</td>
+</tr>
+<tr>
+<td>material</td>
+<td>miLocal2Global</td>
+<td>CG_FLOAT4x4</td>
+<td>Matrix for transforming local coordinates found in
+<i>vert2frag.position</i> to world space.</td>
+</tr>
+<tr>
+<td>light</td>
+<td>light_origin</td>
+<td>CG_FLOAT3</td>
+<td>Position of the light in camera space</td>
+</tr>
+<tr>
+<td></td>
+<td>light_dir</td>
+<td>CG_FLOAT3</td>
+<td>Direction to the light in camera space</td>
+</tr>
+<tr>
+<td></td>
+<td>light_spread</td>
+<td>CG_FLOAT</td>
+<td>Spread angle for spot lights</td>
+</tr>
+<tr>
+<td></td>
+<td>light_type</td>
+<td>CG_INT</td>
+<td>Type of the light from <i>miLight_type</i></td>
+</tr>
+<tr>
+<td></td>
+<td>light_face</td>
+<td>CG_INT</td>
+<td>Illuminate which face of objects: 0=both, 1=front side only,
+2=backside only</td>
+</tr>
+<tr>
+<td>camera</td>
+<td>cam_aspect</td>
+<td>CG_FLOAT</td>
+<td>Aspect ratio (height*aspect = width)</td>
+</tr>
+<tr>
+<td></td>
+<td>cam_aperture</td>
+<td>CG_FLOAT</td>
+<td>Aperture</td>
+</tr>
+<tr>
+<td></td>
+<td>cam_focal</td>
+<td>CG_FLOAT</td>
+<td>Focal (atan(focal/aperture) = field of view)</td>
+</tr>
+<tr>
+<td></td>
+<td>cam_clip</td>
+<td>CG_FLOAT2</td>
+<td>Clip plane (x=near, y=far)</td>
+</tr>
+<tr>
+<td></td>
+<td>cam_size</td>
+<td>CG_FLOAT2</td>
+<td>Resolution of the window</td>
+</tr>
+<tr>
+<td></td>
+<td>cam_ortho</td>
+<td>CG_BOOL</td>
+<td>Is camera orthographic?</td>
+</tr>
+<tr>
+<td></td>
+<td>cam_transfo</td>
+<td>CG_FLOAT4x4</td>
+<td>Camera transformation</td>
+</tr>
+<tr>
+<td>shadowmap</td>
+<td>shdmap_on</td>
+<td>CG_BOOL</td>
+<td>Tell if the shadowmap option is on for the light</td>
+</tr>
+<tr>
+<td></td>
+<td>shdmap_tex[]</td>
+<td>samplerRECT</td>
+<td>Number of shadowmap textures, 1 for spot and directional
+lights, 6 for point lights</td>
+</tr>
+<tr>
+<td></td>
+<td>shdmap_transfo</td>
+<td>CG_FLOAT4x4</td>
+<td>Matrix for transforming <i>vert2frag.cPosition</i> to light
+space</td>
+</tr>
+<tr>
+<td></td>
+<td>shdmap_window</td>
+<td>CG_FLOAT2</td>
+<td>The transformation to apply to UV coordinates for perspective
+and parallel views</td>
+</tr>
+<tr>
+<td></td>
+<td>shdmap_size</td>
+<td>CG_FLOAT2</td>
+<td>The resolution of the shadowmap</td>
+</tr>
+<tr>
+<td></td>
+<td>shdmap_bias</td>
+<td>CG_FLOAT</td>
+<td>The bias to apply to the shadowmap</td>
+</tr>
+</table>
+</div>
+<h4>Shader C/C++ Support Functions</h4>
+<p>In case a <a href="node173.html#INDEX853">Cg</a> shader is not
+sufficient, and extra work is needed, a C/C++ support function can
+be supplied in a separate DSO/DLL. Those functions are mostly
+useful when the information we want to pass to the shader is not
+part of the shader declaration. For example, a noise function could
+compute a lattice data structure and pass it automatically to the
+shader. The C/C++ function name must begin with the prefix
+<i>micg_</i>. For example, here is a C++ support function for the
+<a href="node173.html#INDEX853">Cg</a> shader
+<i>nvo_img_intensity</i>:</p>
+<pre>
+    extern "C" DLLEXPORT miBoolean micg_nvo_img_intensity(
+        CGparameter         *result,
+        miCg_render         *render,
+        miHW_shader         *shader)
+    {
+        static bool binit = true;
+
+        if (binit) {
+            CreateRandomMap();
+            binit = false;
+        }
+
+        CGparameter sParam = 0;
+        CGcontext   ctx  = render-&gt;context_get();
+
+        // Create an instance of the shader
+        CGtype cgtype = cgGetNamedUserType(render-&gt;program_get());
+
+        sParam = cgCreateParameter(ctx, cgtype);
+        *result = sParam;
+
+        // Set automatically all known parameters from the
+        // shader declaration
+        int i, nb_param = shader-&gt;nbparam_get();
+        for (i=0; i &lt; nb_param; i++) {
+            render-&gt;param_eval(sParam, shader-&gt;param_get(i));
+        }
+
+        // Set the random texture
+        CGparameter prnd = cgGetNamedStructParameter(sParam, "random_txt");
+        cgGLSetTextureParameter(prnd, random_map);
+        prnd = cgGetNamedStructParameter(sParam, "random_size");
+        cgGLSetParameter1f(prnd, RES);
+
+        return miTRUE;
+    }
+</pre>
+<p>This support function installs a Cg shader including parameters,
+and also loads a texture.</p>
+<h4>Examples</h4>
+<p>Here is a Cg 1.2 implementation of the <i>mib_illum_phong</i>
+base material shader:</p>
+<pre>
+    struct mib_illum_phong : miiColor
+    {
+        miiColor   ambience, ambient, diffuse, specular;
+        miiScalar  exponent;
+        miiInteger mode;
+        miiLight   lights[];
+
+        float4 eval(vert2frag p)
+        {
+            float4 result;
+            float4 lambience = ambience.eval( p);
+            float4 lambient  = ambient.eval( p);
+            float4 ldiffuse  = diffuse.eval( p);
+            float4 lspecular = specular.eval( p);
+            float  lexponent = exponent.eval(p);
+            float3 vdir      = normalize(p.cPosition);
+
+            result = lambience * lambient;
+
+            // Material calculation for each light
+            for (int i=0; i &lt; lights.length; i++) {
+                misLightOut light = lights[i].eval(p);
+
+                // Lambert's cosine law
+                if (light.dot_nl &gt; 0) {
+                    result += light.dot_nl * ldiffuse * light.color;
+
+                    // Phong's cosine power
+                    float s = mi_phong_specular(lexponent, light.dir, vdir,
+                                                p.cNormal);
+                    result += s * lspecular * light.color;
+                }
+            }
+            return result;
+        }
+    };
+</pre>
+<p>Light Shaders work the same way as material shader, but instead
+of implementing <tt>miiColor</tt> they must implement the
+<tt>miiLight</tt> interface:</p>
+<pre>
+    struct mib_light_spot : miiLight {
+        miiColor    color;
+        miiBoolean  shadow;
+        miiScalar   factor;
+        miiBoolean  atten;
+        miiScalar   start;
+        miiScalar   stop;
+        miiScalar   cone;
+
+        // Information from the light instance
+        float3      origin;             // position of the light
+        float3      ldir;               // direction of the light
+        float       spread;             // cos angle of the spread
+
+        samplerRECT shdmap_tex[1];      // light shadowmap
+        float4x4    shdmap_transfo;     // From eye to local light space
+        float2      shdmap_window;      // size of the window
+        float2      shdmap_size;        // size of the shadowmap
+        float       shdmap_bias;
+
+        // Evaluation of the light
+        misLightOut eval(vert2frag p) {
+            misLightOut ret_val;
+            float4 lcolor = color.eval(p);
+
+            // same for each light?
+            ret_val.dir = normalize(origin - p.cPosition); // vector to light
+            ret_val.dot_nl = dot(p.cNormal, ret_val.dir);
+
+            // shadow
+            if (shadow.eval(p)) {
+                float lfactor = factor.eval(p);
+
+                // Shadow coordinates are created form the eye-space
+                // position, then compare with the shadowmap
+                float4 lPosition = mul(shdmap_transfo, float4(p.cPosition,1));
+                float2 shadowUV  = (lPosition.xy/(-lPosition.z * shdmap_window)
+                                                        + 0.5) * shdmap_size;
+                float4 dist = length(lPosition.xyz);
+
+                float4 pdepth;
+                shadowUV -= 0.5;
+                pdepth.x = f1texRECT(shdmap_tex[0], float2(shadowUV.x,
+                                                    shadowUV.y));
+                pdepth.y = f1texRECT(shdmap_tex[0], float2(shadowUV.x,
+                                                    shadowUV.y+1));
+                pdepth.z = f1texRECT(shdmap_tex[0], float2(shadowUV.x+1,
+                                                    shadowUV.y));
+                pdepth.w = f1texRECT(shdmap_tex[0], float2(shadowUV.x+1,
+                                                    shadowUV.y+1));
+
+                pdepth = pdepth == float4(0,0,0,0) ? dist*2 : pdepth;
+                float4 shd = dist - shdmap_bias - pdepth;
+                float map_z = dot(shd &lt; float4(0,0,0,0) ? float4(1,1,1,1) :
+                                            float4(0,0,0,0), float4(1,1,1,1));
+
+                lcolor.rgb *= lerp(lfactor,1, map_z/4);
+            }
+
+            // cone
+            float d = dot(ret_val.dir, ldir);
+            if (d &lt;= 0) {
+                lcolor.rgb = 0;
+            }
+            if (d &lt; spread) {
+                lcolor.rgb = 0;
+            }
+            float lcone = cone.eval(p);
+            if (d &lt; lcone) {
+                lcolor.rgb *= 1 - (d - lcone) / (spread - lcone);
+                lcolor = saturate(lcolor);
+            }
+
+            // dist attenuation
+            bool latten = atten.eval(p);
+            if (latten) {
+                float dist  = length(origin - p.cPosition);
+                float lstop = stop.eval(p);
+                if (dist &gt;= lstop) {
+                    lcolor.rgb = 0;
+                } else {
+                    float lstart = start.eval(p);
+                    float t = 1 - (dist - lstart) / (lstop - lstart);
+                    lcolor.rgb *= t;
+                }
+            }
+            ret_val.color = lcolor;
+            return ret_val;
+        }
+    };
+</pre>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node177.html">&laquo;&nbsp;prev</a></li>
+<li><a href="chapter4.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

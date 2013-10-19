@@ -1,0 +1,70 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product shader for transforming coordinates
+ *****************************************************************************/
+#include <mcp_lib.msl>
+
+shader Mcp_coordinate_transform
+{
+  input:
+      //the coordinates, normaly come fr om Mcp_coordinate_source 
+Mcp_coordinate uvw = Mcp_coordinate(
+                texture_coordinate[0].xyz,
+                ddx(texture_coordinate[0]).xyz,
+                ddy(texture_coordinate[0]).xyz,
+                float3(1.,0.,0.),
+                float3(0.,1.,0.)
+        )
+{
+        description("the source coordinates");
+};
+      //from those, a transformation matrix is created.
+const float3 rotation = float3(0.) 
+{
+        description("Offset applied to every UV coord.");
+};
+const float3 translation = float3(0.){
+        description("Offset applied to every UV coord.");
+};
+const float3 scaling = float3(1.)	{
+        description("Offset applied to every UV coord.");
+};
+  output:
+    Mcp_coordinate result;
+
+    void main()
+    {
+        float4x4 scale = float4x4(scaling.x,0.,0.,0.,0.,scaling.y,0.,0.,0.,0.,scaling.z,0.,0.,0.,0.,1.);
+            //euler rotation matrix  xyz order
+        float3 s = sin(rotation);
+        float3 c = cos(rotation);
+        float4x4 rotate = float4x4(  c.y*c.z , -c.x*s.z + s.x*s.y*c.z,  s.x*s.z + c.x*s.y*c.z, 0.,
+                                     c.y*s.z ,  c.x*c.z + s.x*s.y*s.z, -s.x*c.z + c.x*s.y*s.z, 0.,
+                                    -s.y	 ,  s.x*c.y	             ,  c.x*c.y, 0.,
+                                    0.,0.,0.,1.);
+            //apply transformation	
+        result.position = uvw.position;
+        result.position = (float4(result.position,0) * scale).xyz + translation;
+        result.position = (float4(result.position-float3(.5),0) * rotate).xyz+float3(.5);
+        result.du = uvw.du;
+        result.du = (float4(result.du,0) * scale).xyz ;
+        result.du = (float4(result.du,0) * rotate).xyz;
+        result.dv = uvw.dv;
+        result.dv = (float4(result.dv,0) * scale).xyz ;
+        result.dv = (float4(result.dv,0) * rotate).xyz;
+        result.ddx = uvw.ddx;
+        result.ddx = (float4(result.ddx,0) * scale).xyz ;
+        result.ddx = (float4(result.ddx,0) * rotate).xyz;
+        result.ddy = uvw.ddy;
+        result.ddy = (float4(result.ddy,0) * scale).xyz ;
+        result.ddy = (float4(result.ddy,0) * rotate).xyz;
+        
+    }
+}{
+    display_name( "Transform coordinate (core shader library)" );
+};
+

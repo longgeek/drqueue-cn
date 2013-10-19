@@ -1,0 +1,94 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Instance Groups</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node90.html">&laquo;&nbsp;prev</a></li>
+<li><a href="assembly.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION89"></a>
+<h3>Instance Groups</h3>
+<pre>
+    instgroup "<i>name</i> "
+        "<i>name</i>"
+        [ tag <i>label</i><sub>int</sub> ]
+        [ data [ "<i>data_name</i>" ]]
+        ...
+    end instgroup
+</pre>
+<p><a id="INDEX350"></a> Instance groups, together
+with instances, provide the structure from which scenes are built.
+The scene is anchored at a root instance group, which contains
+instances referencing objects, cameras, lights, objects, and/or
+other groups. In the simplest case, all cameras, lights, and
+objects can be collected into a single group, forming a "flat
+scene" because there is no hierarchy. Cameras, lights, and objects
+are never put into an instance group directly. Instead, an
+<a href="node90.html#INDEX339">instance</a> must be defined, one for each
+element, and the instance is then put into the group. (This is why
+it is called an "instance group.")</p>
+<p>Instance groups can be nested. An instance group is placed into
+a parent instance group exactly like a camera, light, or object: an
+instance must be defined for the child instance group, and the
+instance is put into the parent instance group. As with other
+entities, it is possible to create more than one instance for an
+instance group; this allows <a href="node75.html#INDEX174">multiple
+instancing</a> of sub-scenes. There is no limit on the nesting
+depth of instance groups.</p>
+<p>Since the only purpose of instance groups is as a container for
+instances, the syntax is very simple. After the name of the
+instance group, one or more names of instances follow. An
+incremental change to an instance group clears the old instance
+list (without deleting the instances themselves); to add or remove
+an instance in an instance group, the incremental change must
+respecify the entire instance list.</p>
+<p>The top-level instance group has no instance. It is called the
+<b><a id="INDEX351"></a>root instance group</b>.
+The root instance group stands for the entire scene. It is passed
+to the <tt>render</tt> command to process the scene. More than one
+root instance group can exist, but only one can be processed at a
+time. Camera instances must always be attached to the root instance
+group, not a lower-level instance group, and it may not be multiply
+instanced to ensure unambiguity. Multiple cameras can exist in the
+root instance group, but only one can be passed to the
+<tt>render</tt> command.</p>
+<p>A label integer can be attached to an instance group using the
+<tt>tag</tt> statement. Labels are not used by mental ray in any
+way, but a shader can use the
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> function to obtain the
+label and perform light-specific operations.</p>
+<p>Also, user data can be attached with a <tt>data</tt> statement.
+The argument must be the name of a previously defined data element
+in the scene file. If the argument is missing, a previously
+existing data reference is removed.</p>
+<p><a id="INDEX352"></a> mental ray 3.3 and later
+also supports groups that contain instances of lights to be used
+like lights, for example in the shader interface. This makes it
+possible to to put a set of lights into a group, and then treating
+the whole group like a single light for the purpose of shading. The
+<i><a href="node140.html#INDEX555">mi_sample_light</a></i> and
+related <a href="node138.html#INDEX510">shader interface
+function</a>s accept instances of light groups as if they were
+instances of lights. Light groups contain instances of lights,
+where the instances contain identity transformations.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node90.html">&laquo;&nbsp;prev</a></li>
+<li><a href="assembly.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

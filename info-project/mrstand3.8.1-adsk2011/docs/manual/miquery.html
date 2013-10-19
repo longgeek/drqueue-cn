@@ -1,0 +1,1388 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Queries with mi_query</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node150.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node151.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="INDEX751"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_query">mi_query</a></li>
+</ul>
+
+<h3>Queries with mi_query</h3>
+
+<h5 class="anchor" id="api:mi_query">mi_query</h5>
+<pre>
+    miBoolean mi_query(
+        const miQ_type  query,
+        miState *const  state,
+        miTag           tag,
+        void * const    result,
+        ...)
+</pre>
+<p>Return various pieces of information about the current state of
+mental ray. <i>query</i> is the request code specifying what piece
+of information to query; <i>state</i> is the shader state,
+<i>tag</i> is the tag of the DB element to query, if any, and
+<i>result</i> is a pointer to the variable to store the results in.
+Some queries do not require a tag; in this case <tt>miNULLTAG</tt>
+must be passed as <i>tag</i>. Some queries require extra arguments
+in addition to the four standard arguments.
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> returns
+<tt>miFALSE</tt> if the queried value is not available or an unknown
+type code is used. The following <i>query</i> codes are available:</p>
+
+<div align="center">
+<table class="table">
+<col>
+<col align="center">
+<col align="center">
+<thead>
+<tr>
+<th><i>query code</i></th>
+<th style="padding:0 1px" title="state"><i>st.</i></th>
+<th style="padding:0"><i>tag</i></th>
+<th><i title="points to primary result">result</i><i title="optional extra arguments">, ...</i></th>
+<th><i>purpose</i></th>
+</tr>
+<tbody>
+<tr>
+<td><tt>miQ_DATA_DECL</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>user data declaration if any, or 0</td>
+</tr>
+<tr>
+<td><tt>miQ_DATA_LABEL</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miUint</code></td>
+<td>translator-defined user data label</td>
+</tr>
+<tr>
+<td><tt>miQ_DATA_NEEDSWAP</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miBoolean</code></td>
+<td>requires byte-swapping by shader</td>
+</tr>
+<tr>
+<td><tt>miQ_DATA_NEXT</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>next user data block in chain, or 0</td>
+</tr>
+<tr>
+<td><tt>miQ_DATA_PARAM</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>char *</code></td>
+<td>user data contents</td>
+</tr>
+<tr>
+<td><tt>miQ_DATA_PARAM_SIZE</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>size of user data block in bytes</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_DATE</tt></td>
+<td>&loz;</td>
+<td>&loz;</td>
+<td><code>char *</code></td>
+<td>mental ray compilation date</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_DECL_LOCK</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>miLock *</code></td>
+<td>shared by all shader instances</td>
+</tr>
+<tr>
+<td><tt>miQ_DECL_NAME</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>char *</code></td>
+<td>shader name</td>
+</tr>
+<tr>
+<td><tt>miQ_DECL_PARAM</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>char *</code></td>
+<td>ascii-encoded parameter declaration</td>
+</tr>
+<tr>
+<td><tt>miQ_DECL_RESULT_SIZE</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>int</code></td>
+<td>result size, 4 unless struct</td>
+</tr>
+<tr>
+<td><tt>miQ_DECL_TYPE</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>int</code></td>
+<td><i>miTYPE_*</i> result type</td>
+</tr>
+<tr>
+<td><tt>miQ_DECL_VERSION</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>int</code></td>
+<td>shader declaration version</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_FINALGATHER_STATE</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>int</code></td>
+<td>0=not a finalgather ray (grand)child, 1=finalgather ray
+(grand)child in a tile rendering, 2=finalgather ray (grand)child in
+finalgather precomputing</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_SAMPLE_MOVING</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>int</code></td>
+<td>Not zero if mental ray has detected geometry motion for the
+current raster sample.</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_FUNC_CALLTYPE</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>int</code></td>
+<td>one of <tt>miSHADER_*</tt>, as specified by the calling
+<i><a href="node138.html#INDEX513">mi_call_shader</a></i></td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_DECL</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>miTag</code></td>
+<td>tag of shader declaration</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_INDIRECT</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>miTag</code></td>
+<td>take params from this shader</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_LOCK</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>miLock *</code></td>
+<td>local shader instance lock</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_NEXT</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>miTag</code></td>
+<td>next shader in shader list</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_PARAM</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>void *</code></td>
+<td>shader parameters</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_PARAM_SIZE</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>int</code></td>
+<td>size of shader parameters in bytes</td>
+</tr>
+<tr>
+<td><tt><a href="#sh:miQ_FUNC_PARAM_VALUE">miQ_FUNC_PARAM_VALUE</a></tt>
+<span class="recent">3.7</span>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code><dfn>type</dfn>,
+char *, miParam_type</code></td>
+<td>value of shader input parameter with given name and type</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_RESULT_SIZE</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>int</code></td>
+<td>shader result size in bytes</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_TAG</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miTag</code></td>
+<td>tag of the currently running shader</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_TLS_GET</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>void *</code></td>
+<td>retrieve thread-local shader data pointer</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_TLS_GETALL</tt>
+<a href="#foot2" class="biglinks" title="This query uses extra parameters."><sup>2</sup></a>
+</td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>void *, int *</code></td>
+<td>array of all valid thread-local shader data pointers,
+return array size in extra parameter</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_TLS_SET</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>void *</code></td>
+<td>set thread-local shader data pointer (see
+<a href="node163.html#querytls">thread-local storage</a>)</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_TYPE</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>int</code></td>
+<td>0=C/C++, 1=phen., 2=output file</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_USERPTR</tt>
+<a href="#foot1" class="biglinks"
+title="This query can be performed for an arbitrary tag or with the current state.">
+<sup>1</sup></a></td>
+<td>&loz;<br />&diams;</td>
+<td>&diams;<br />&loz;</td>
+<td><code>void *</code></td>
+<td>user pointer in shader instance</td>
+</tr>
+<tr>
+<td><tt>miQ_FUNC_IS_ROOT</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miBoolean</code></td>
+<td>shader is root of material/light</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_GEO_DATA</tt></td>
+<td>&loz;</td>
+<td>&loz;</td>
+<td><code>miTag</code></td>
+<td>user data block of current object</td>
+</tr>
+<tr>
+<td><tt>miQ_GEO_HAS_DERIVS</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miBoolean</code></td>
+<td>state has valid derivatives</td>
+</tr>
+<tr>
+<td><tt>miQ_GEO_HAS_DERIVS2</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miBoolean</code></td>
+<td>state has valid second derivatives</td>
+</tr>
+<tr>
+<td><tt>miQ_GEO_LABEL</tt></td>
+<td>&loz;</td>
+<td>&loz;</td>
+<td><code>miUint</code></td>
+<td>translator-defined triangle label</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_GLOBAL_LIGHTS</tt></td>
+<td>&loz;</td>
+<td>&loz;</td>
+<td><code>miTag *</code></td>
+<td>array with global light tags</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_GROUP_DATA</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>user data block</td>
+</tr>
+<tr>
+<td><tt>miQ_GROUP_KID</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td><i>n</i>th child (<i>n</i> is fifth argument)</td>
+</tr>
+<tr>
+<td><tt>miQ_GROUP_LABEL</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miUint</code></td>
+<td>translator-defined group label</td>
+</tr>
+<tr>
+<td><tt>miQ_GROUP_MERGE_GROUP</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miBoolean</code></td>
+<td><tt>miTRUE</tt> if connected</td>
+</tr>
+<tr>
+<td><tt>miQ_GROUP_NKIDS</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>number of child instances</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_IMAGE_BITS</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>num of bits per component (8,16,32)</td>
+</tr>
+<tr>
+<td><tt>miQ_IMAGE_COLORCLIP</tt></td>
+<td>&loz;</td>
+<td>&loz;</td>
+<td><code>miBoolean</code></td>
+<td>color frame buffer color clipping mode</td>
+</tr>
+<tr>
+<td><tt>miQ_IMAGE_COMP</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>num of components (1,2,3,4)</td>
+</tr>
+<tr>
+<td><tt>miQ_IMAGE_DESATURATE</tt></td>
+<td>&loz;</td>
+<td>&loz;</td>
+<td><code>miBoolean</code></td>
+<td>color frame buffer desaturation mode</td>
+</tr>
+<tr>
+<td><tt>miQ_IMAGE_DITHER</tt></td>
+<td>&loz;</td>
+<td>&loz;</td>
+<td><code>miBoolean</code></td>
+<td>color frame buffer dithering mode</td>
+</tr>
+<tr>
+<td><tt>miQ_IMAGE_FILTER</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miBoolean</code></td>
+<td>image allows filtering</td>
+</tr>
+<tr>
+<td><tt>miQ_IMAGE_GAMMA</tt></td>
+<td>&loz;</td>
+<td>&loz;</td>
+<td><code>double</code></td>
+<td>color frame buffer gamma factor</td>
+</tr>
+<tr>
+<td><tt>miQ_IMAGE_HEIGHT</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>height of image in pixels</td>
+</tr>
+<tr>
+<td><tt>miQ_IMAGE_NOPREMULT</tt></td>
+<td>&loz;</td>
+<td>&loz;</td>
+<td><code>miBoolean</code></td>
+<td>color frame buffer
+<a href="node76.html#INDEX211">premultiplication</a> mode</td>
+</tr>
+<tr>
+<td><tt>miQ_IMAGE_WIDTH</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>width of image in pixels</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_INST_AREA</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miScalar</code></td>
+<td>light instances only: area of area light</td>
+</tr>
+<tr>
+<td><tt><a href="#sh:miQ_INST_CAUSTIC">miQ_INST_CAUSTIC</a></tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miUint</code></td>
+<td>bitmap: 1=enable casting, 2=enable receiving, 3=disable
+casting, 4=disable receiving</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_DATA</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>user data block</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_DECL</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>inherited parameter declaration</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_FUNCTION</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>optional procedural transformation</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_GLOBAL_TO_LOCAL</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miMatrix *</code></td>
+<td>instance transformation</td>
+</tr>
+<tr>
+<td><tt><a href="#sh:miQ_INST_GLOBILLUM">miQ_INST_GLOBILLUM</a></tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miUint</code></td>
+<td>bitmap: 1=enable casting, 2=enable receiving, 3=disable
+casting, 4=disable receiving</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_HIDE</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miBoolean</code></td>
+<td>instance is inactive</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_IDENTITY</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miBoolean</code></td>
+<td><tt>miTRUE</tt> if identity transformation</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_ITEM</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>instanced scene element</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_LABEL</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miUint</code></td>
+<td>translator-defined instance label</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_LOCAL_TO_GLOBAL</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miMatrix *</code></td>
+<td>inverse instance transformation</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_MATERIAL</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>inherited material</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_PARAM</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>void *</code></td>
+<td>inherited parameters</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_PARAM_SIZE</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>inherited parameter size</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_PARENT</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td><a href="node180.html#INDEX862">leaf instance</a> parent,
+<code>miNULLTAG</code> otherwise</td>
+</tr>
+<tr>
+<td><tt>miQ_INST_PLACEHOLDER_ITEM</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>content of placeholder instances</td>
+</tr>
+<tr>
+<td><tt><a href="#sh:miQ_INST_SHADOW">miQ_INST_SHADOW</a></tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miUint</code></td>
+<td>invisible to shadow rays</td>
+</tr>
+<tr>
+<td><tt><a href="#sh:miQ_INST_TRACE">miQ_INST_TRACE</a></tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miUint</code></td>
+<td>visible to secondary rays</td>
+</tr>
+<tr>
+<td><tt><a href="#sh:miQ_INST_VISIBLE">miQ_INST_VISIBLE</a></tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miUint</code></td>
+<td>visible to primary rays</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_LIGHT_AREA</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>0=none, 1=rectangle, 2=disc, 3=sphere</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_AREA_C_AXIS</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miVector</code></td>
+<td>axis of cylinder area light</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_AREA_C_RADIUS</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miScalar</code></td>
+<td>radius of cylinder area light</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_AREA_R_EDGE_U</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miVector</code></td>
+<td>U size of rectangular area light</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_AREA_R_EDGE_V</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miVector</code></td>
+<td>V size of rectangular area light</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_AREA_D_NORMAL</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miVector</code></td>
+<td>normal vector of disc area light</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_AREA_D_RADIUS</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miScalar</code></td>
+<td>radius of disc area light</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_AREA_S_RADIUS</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miScalar</code></td>
+<td>radius of spherical area light</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_AREA_SAMPLES_U</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>number of samples in U direction</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_AREA_SAMPLES_V</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>number of samples in V direction</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_CAUSTIC_PHOTONS</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>number of caustic photons to store</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_CAUSTIC_PHOTONS_EMIT</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>number of caustic photons to emit</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_DATA</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>user data block</td>
+</tr>
+<tr>
+<td><tt><a href="#sh:miQ_LIGHT_DIRECTION">miQ_LIGHT_DIRECTION</a></tt></td>
+<td>&diams;</td>
+<td>&diams;</td>
+<td><code>miVector</code></td>
+<td>light direction</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_EMITTER</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miVector</code></td>
+<td>tag of light photon emitter shader</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_ENERGY</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>energy for caustics and globillum</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_EXPONENT</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miScalar</code></td>
+<td>distance falloff, <i>n</i> in <i>1 / r^n</i></td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_GLOBAL_PHOTONS</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miColor</code></td>
+<td>number of globillum photons to store</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_GLOBAL_PHOTONS_EMIT</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miColor</code></td>
+<td>number of globillum photons to emit</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_LABEL</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>light label</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_NORMAL</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miVector</code></td>
+<td>normal vector at light surface in
+<a href="node101.html#INDEX368">world space</a>
+</tr>
+<tr>
+<td><tt><a href="#sh:miQ_LIGHT_ORIGIN">miQ_LIGHT_ORIGIN</a></tt></td>
+<td>&diams;</td>
+<td>&diams;</td>
+<td><code>miVector</code></td>
+<td>light position</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_SHADER</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>tag of light shader</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_SPREAD</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miScalar</code></td>
+<td>outer cone angle of spot light</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_TANGENT_SPACE</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miVector[3]</code></td>
+<td>normal, tangent, bi-tangent (in that order) at light surface in
+<a href="node101.html#INDEX368">world space</a>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_TYPE</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>0=point, 1=directional, 2=spot</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHT_USE_SHADOWMAP</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miBoolean</code></td>
+<td>light has a shadow map</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_LIGHTPROFILE_COSTHETA_MAX</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miScalar</code></td>
+<td>largest possible value of the cosine of the profile vertical
+angle</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHTPROFILE_COSTHETA_MIN</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miScalar</code></td>
+<td>smallest value of the cosine of the profile vertical
+angle.</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHTPROFILE_INTENSITY_MAX</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miScalar</code></td>
+<td>largest intensity value of the profile</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHTPROFILE_PHI_MAX</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miScalar</code></td>
+<td>horizontal angle where the light profile ends</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHTPROFILE_PHI_MIN</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miScalar</code></td>
+<td>horizontal angle where the light profile starts</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHTPROFILE_PHI_RES</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>number of interpolation points in the horizontal direction</td>
+</tr>
+<tr>
+<td><tt>miQ_LIGHTPROFILE_THETA_RES</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>number of interpolation points in the vertical direction</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_MTL_CONTOUR</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>contour shader</td>
+</tr>
+<tr>
+<td><tt>miQ_MTL_DISPLACE</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>displacement shader</td>
+</tr>
+<tr>
+<td><tt>miQ_MTL_ENVIRONMENT</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>environment shader</td>
+</tr>
+<tr>
+<td><tt>miQ_MTL_OPAQUE</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miBoolean</code></td>
+<td>material is opaque to shadow rays</td>
+</tr>
+<tr>
+<td><tt>miQ_MTL_PHOTON</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>photon shader</td>
+</tr>
+<tr>
+<td><tt>miQ_MTL_PHOTONVOL</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>photon volume shader</td>
+</tr>
+<tr>
+<td><tt>miQ_MTL_SHADER</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>material shader</td>
+</tr>
+<tr>
+<td><tt>miQ_MTL_SHADOW</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>shadow shader</td>
+</tr>
+<tr>
+<td><tt>miQ_MTL_VOLUME</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>volume shader</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_NUM_BUMPS</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>int *</code></td>
+<td>number of bumps in state x, y bump lists</td>
+</tr>
+<tr>
+<td><tt>miQ_NUM_GLOBAL_LIGHTS</tt></td>
+<td>&loz;</td>
+<td>&loz;</td>
+<td><code>int</code></td>
+<td>number of global lights</td>
+</tr>
+<tr>
+<td><tt>miQ_NUM_TEXTURES</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>int *</code></td>
+<td>number of textures in state-&gt;tex_list</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_OBJ_CAUSTIC</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miUint</code></td>
+<td>0=none, 1=casts, 2=receives, 3=both</td>
+</tr>
+<tr>
+<td><tt>miQ_OBJ_DATA</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miTag</code></td>
+<td>user data block</td>
+</tr>
+<tr>
+<td><tt>miQ_OBJ_GLOBILLUM</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miUint</code></td>
+<td>0=none, 1=casts, 2=receives, 3=both</td>
+</tr>
+<tr>
+<td><tt>miQ_OBJ_LABEL</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miUint</code></td>
+<td>translator-defined object label</td>
+</tr>
+<tr>
+<td><tt>miQ_OBJ_SHADOW</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miBoolean</code></td>
+<td>invisible to shadow rays</td>
+</tr>
+<tr>
+<td><tt>miQ_OBJ_TRACE</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miBoolean</code></td>
+<td>visible to secondary rays</td>
+</tr>
+<tr>
+<td><tt>miQ_OBJ_TYPE</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>int</code></td>
+<td>0=polygonal, 1=surfaces</td>
+</tr>
+<tr>
+<td><tt>miQ_OBJ_VIEW_DEPENDENT</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miBoolean</code></td>
+<td>contains view-dependent surfaces</td>
+</tr>
+<tr>
+<td><tt>miQ_OBJ_VISIBLE</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miBoolean</code></td>
+<td>visible to primary rays</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_PIXEL_SAMPLE</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miScalar[2]</code></td>
+<td>set up QMC sequences for sampling, and return a jitter value
+for <a href="node135.html#INDEX501">lightmap shader</a>s. See
+<a href="node135.html#miqpixelsample">query pixel sample</a> example.</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_PRI_BBOX_MAX</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miVector</code></td>
+<td>object-space bounding box of intersected primitive</td>
+</tr>
+<tr>
+<td><tt>miQ_PRI_BBOX_MIN</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miVector</code></td>
+<td>object-space bounding box of intersected primitive</td>
+</tr>
+<tr>
+<td><tt><a href="#sh:miQ_PRI_DATA">miQ_PRI_DATA</a></tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><tt><a href="#sh:miPri_data">miPri_data</a></tt></td>
+<td>the per-primitive data of the current primitive in the state</td>
+</tr>
+<tr>
+<td><tt>miQ_PRI_INDEX</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miUint</code></td>
+<td>current primitive index</td>
+</tr>
+<tr>
+<td><tt>miQ_PRI_ASSEMBLY_INST_TAG</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miTag</code></td>
+<td>for geometry from assemblies, leaf instance tag of the hit primitive</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_RAY_INTERFACE</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>MI::RAY:Interface *</code></td>
+<td>pointer to C++ interface class</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_SCENE_BBOX_ALL</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miVector[2]</code></td>
+<td>world-space bounding box of all geometry</td>
+</tr>
+<tr>
+<td><tt>miQ_SCENE_BBOX_CAUSTIC_G</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miVector[2]</code></td>
+<td>bounding box of all caustic-casting geometry</td>
+</tr>
+<tr>
+<td><tt>miQ_SCENE_BBOX_CAUSTIC_R</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miVector[2]</code></td>
+<td>bounding box of all caustic-receiving geometry</td>
+</tr>
+<tr>
+<td><tt>miQ_SCENE_BBOX_GLOBILLUM_G</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miVector[2]</code></td>
+<td>bounding box of all globillum-casting geometry</td>
+</tr>
+<tr>
+<td><tt>miQ_SCENE_BBOX_GLOBILLUM_R</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miVector[2]</code></td>
+<td>bounding box of all globillum-receiving geometry</td>
+</tr>
+<tr>
+<td><tt>miQ_SCENE_BBOX_SHADOW</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miVector[2]</code></td>
+<td>bounding box of all shadow-casting geometry</td>
+</tr>
+<tr>
+<td><tt>miQ_SCENE_ROOT_GROUP</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miTag</code></td>
+<td>the root group of the scene from the render statement; useful
+for custom scene traversals</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_STAGE</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miStage</code></td>
+<td>current rendering stage</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_TEXTURE_DIM</tt></td>
+<td>&loz;</td>
+<td>&diams;</td>
+<td><code>miUint</code></td>
+<td>dimension of <i>n</i>th texture space of intersected primitive
+(<i>n</i> is fifth argument)</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt><a href="#sh:miQ_TILE_PIXELS">miQ_TILE_PIXELS</a></tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>int[4]</code></td>
+<td>lower left and upper right tile pixel coord</td>
+</tr>
+<tr>
+<td><tt><a href="#sh:miQ_TILE_SAMPLES">miQ_TILE_SAMPLES</a></tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>int[4]</code></td>
+<td>same but including filter source margin</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_TRANS_CAMERA_TO_INTERNAL</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miMatrix *</code></td>
+<td>camera to <a href="node101.html#INDEX367">internal space</a>
+transformation</td>
+</tr>
+<tr>
+<td><tt>miQ_TRANS_CAMERA_TO_WORLD</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miMatrix *</code></td>
+<td>camera to <a href="node101.html#INDEX368">world space</a>
+transformation</td>
+</tr>
+<tr>
+<td><tt>miQ_TRANS_INTERNAL_TO_CAMERA</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miMatrix *</code></td>
+<td>internal to <a href="node101.html#INDEX370">camera space</a>
+transformation</td>
+</tr>
+<tr>
+<td><tt>miQ_TRANS_INTERNAL_TO_OBJECT</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miMatrix *</code></td>
+<td>internal to <a href="node101.html#INDEX369">object space</a>
+transformation</td>
+</tr>
+<tr>
+<td><tt>miQ_TRANS_INTERNAL_TO_WORLD</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miMatrix *</code></td>
+<td>internal to <a href="node101.html#INDEX368">world space</a>
+transformation</td>
+</tr>
+<tr>
+<td><tt>miQ_TRANS_OBJECT_TO_INTERNAL</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miMatrix *</code></td>
+<td>object to <a href="node101.html#INDEX367">internal space</a>
+transformation</td>
+</tr>
+<tr>
+<td><tt>miQ_TRANS_OBJECT_TO_WORLD</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miMatrix *</code></td>
+<td>object to <a href="node101.html#INDEX368">world space</a>
+transformation</td>
+</tr>
+<tr>
+<td><tt>miQ_TRANS_WORLD_TO_CAMERA</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miMatrix *</code></td>
+<td>world to <a href="node101.html#INDEX370">camera space</a>
+transformation</td>
+</tr>
+<tr>
+<td><tt>miQ_TRANS_WORLD_TO_INTERNAL</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miMatrix *</code></td>
+<td>world to <a href="node101.html#INDEX367">internal space</a>
+transformation</td>
+</tr>
+<tr>
+<td><tt>miQ_TRANS_WORLD_TO_OBJECT</tt></td>
+<td>&diams;</td>
+<td>&loz;</td>
+<td><code>miMatrix *</code></td>
+<td>internal to <a href="node101.html#INDEX368">world space</a>
+transformation</td>
+</tr>
+<tr></tr>
+<tr>
+<td><tt>miQ_VERSION</tt></td>
+<td>&loz;</td>
+<td>&loz;</td>
+<td><code>char *</code></td>
+<td>mental ray version string</td>
+</tr>
+</table>
+</div>
+
+<div class="foot">
+<p id="foot1"><sup><a>1</a></sup>
+This query can be performed in two ways: for an arbitrary tag,
+or with the current state. In the latter case
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> will take the
+current shader from the state (<code>state&rarr;shader</code>) to fulfill
+the query. This is slightly faster than passing a tag.
+</div>
+
+<p>The &nbsp;&loz;&nbsp; symbol in the <i>state</i> column indicates that
+the state is not used. The &nbsp;&loz;&nbsp; symbol in the <i>tag</i>
+column means that <tt>miNULLTAG</tt> must be passed.
+<p>The <i>result</i> type in the table indicates the type of the
+variable that <i><a href="miquery.html#api:mi_query">mi_query</a></i>
+accepts <em>a pointer</em> to. For example, to obtain an integer result from
+<i>mi_query</i> the table will list an <code>int</code>, but a pointer to an
+integer must be passed as the fourth argument (<code>int *</code>). For
+<i><a href="miquery.html#api:mi_query">mi_query</a></i>, "function" is
+synonymous with "shader".
+<p>
+Note, that a return type of <tt>miMatrix *</tt> means that the address of a
+pointer must be passed, not the address of a matrix. This reduces the number
+of bytes that <i><a href="miquery.html#api:mi_query">mi_query</a></i> has to
+copy from 64 (sixteen floats) to only four (or eight, on some CPU architectures).
+</p>
+<dl>
+<dt><tt id="sh:miQ_FUNC_PARAM_VALUE">miQ_FUNC_PARAM_VALUE</tt>
+<dd>This query can be used to retrieve the value of a shader input parameter
+that is not connected. The <i>result</i> should point to a variable of sufficient
+size to hold a value of the specified parameter type. Here is an example which
+retrieves an "<dfn>intensity</dfn>" parameter value of a shader:</p>
+<pre>
+    miScalar    intensity = 0.0;
+    if (mi_query(miQ_FUNC_PARAM_VALUE, 0, tag,
+                 &intensity, "intensity", miTYPE_SCALAR) == miTRUE) {
+        ... /* use valid intensity value */
+        }
+</pre>
+
+The query will fail by returning <code>miFALSE</code>
+under the following conditions:
+<ul>
+<li>the given tag doesn't refer to a shader,
+<li>the parameter is not an input parameter,
+<li>the parameter is an array or struct,
+<li>the requested parameter type doesn't match the actual type
+of the parameter with the given name.
+</ul>
+
+<dt>
+<tt id="sh:miQ_INST_VISIBLE">miQ_INST_VISIBLE</tt><br />
+<tt id="sh:miQ_INST_SHADOW">miQ_INST_SHADOW</tt><br />
+<tt id="sh:miQ_INST_TRACE">miQ_INST_TRACE</tt><br />
+<tt id="sh:miQ_INST_CAUSTIC">miQ_INST_CAUSTIC</tt><br />
+<tt id="sh:miQ_INST_GLOBILLUM">miQ_INST_GLOBILLUM</tt><dd>
+The result of these queries depend on whether a
+<a href="node83.html#INDEX286">scene DAG</a> or
+<a href="node180.html#INDEX862">leaf instance</a> tag is passed.
+A <a href="node83.html#INDEX286">scene DAG</a> instance contains the flags
+specified by the scene description language when the instance was created.
+A <a href="node180.html#INDEX862">leaf instance</a> contains the effective
+instance flags for rendering, that is, with instance inheritance and object
+flags taken into account.
+<dd class="note"><b>Note:</b> for a scene DAG instance, the visibility etc.
+flags should be interpreted as: unset (0), off (1), on (2); for a leaf instance,
+the flags should be interpreted as: off (0), on (1); see also the description
+for the <a href="node197.html#flags">instance data structure</a>.
+<dd>The <tt>miQ_INST_</tt> modes should be used instead of the <tt>miQ_OBJ_</tt>
+modes because they return the same modes that mental ray uses when rendering.
+
+<dt><tt id="sh:miQ_LIGHT_ORIGIN">miQ_LIGHT_ORIGIN</tt><br />
+<tt id="sh:miQ_LIGHT_DIRECTION">miQ_LIGHT_DIRECTION</tt><dd>
+The result vectors of these queries are defined in
+<a href="node101.html#INDEX367">internal space</a> if the light instance tag
+is passed, otherwise the vectors are defined in local space.
+
+<dt><tt id="sh:miQ_TILE_PIXELS">miQ_TILE_PIXELS</tt><br />
+<tt id="sh:miQ_TILE_SAMPLES">miQ_TILE_SAMPLES</tt><dd>
+These codes retreive the location and size of the currently rendered image tile.
+The returned values are in the order
+<i>x<sub>low</sub>&nbsp;x<sub>high</sub>&nbsp;y<sub>low</sub>&nbsp;y<sub>high</sub></i>.
+The sampled area may be larger than the tile due to filtering and jittering.
+These codes may be used to detect if a shader is called in the finalgather
+pre-computing stage: for finalgather pre-computing the return value is
+<tt>miFALSE</tt> since no tile exist.
+
+<dt><tt id="sh:mi_Q_SAMPLE_MOVING">miQ_SAMPLE_MOVING</tt>
+<dd>This mode can be used by an environment shader to detect if taking several
+samples of a <i>moving</i> environment texture at different shutter times would
+be advantageous. If the queried value is not zero, mental ray does
+such oversampling automatically.</p>
+
+<dt><tt id="sh:miQ_NUM_TEXTURES">miQ_NUM_TEXTURES</tt><br />
+<tt id="sh:miQ_GEO_LABEL">miQ_GEO_LABEL</tt><dd>
+These query codes may only be used if <code>state&rarr;pri</code> has not been
+modified by the shader or calling shader. Ray-marching volume shaders sometimes
+clear this state variable. The <tt>miQ_GEO_LABEL</tt> query also returns
+<tt>miFALSE</tt> if the object is not marked <i>tagged</i> and no polygon/surface
+labels exist.
+
+<dt><tt id="sh:miQ_PRI_DATA">miQ_PRI_DATA</tt>
+<dd><p >This query mode returns an <tt id="sh:miPri_data">miPri_data</tt>
+structure which is defined as follows:</p>
+<pre>
+    typedef struct miPri_data {
+        miUint          info_size;      /* size of info */
+        const miUint    *info;          /* info: data layout */
+        miUint          data_size;      /* size of triangle data */
+        const miUint    *data;          /* primitive (triangle) data */
+    } miPri_data;
+</pre>
+<dd>All fields in this structure are specific to the current
+intersected object. The field <i>info_size</i> specifies the size
+of the per-face userdata information block for the current
+intersection, in multiples of 32 bit. The address of this block is
+given in <i>info</i> if <i>info_size</i> is not zero. The per-face
+data of the hit primitive is returned in <i>data</i>, the length of
+the data block in multiples of 32 bit is given in <i>data_size</i>.
+Per face data can be present even if the information block is not
+specified. The caller must pass a pointer to such a structure which
+is then filled out by <tt>mi_query</tt>.
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node150.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node151.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a><br /></p>
+</body>
+</html>

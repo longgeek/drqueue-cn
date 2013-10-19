@@ -1,0 +1,374 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shader Parameter Declarations</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node111.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node113.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION110"></a>
+<h2>Shader Parameter Declarations</h2>
+<p><a id="INDEX417"></a> In addition to the state
+variables that are provided by mental ray and are shared by all
+shaders, every shader has <i>shader parameters</i>. In the .mi
+scene file, shader references look much like a function call: the
+shader name is given along with a list of parameters. Every shader
+call may have a different list of parameters. mental ray does not
+restrict or predefine the number and types of shader parameters,
+any kind of information may be passed to the shader. Typical
+examples for shader parameters are ambient, diffuse, and specular
+colors for material shaders, attenuation parameters for light
+shaders, and so on. An empty parameter list in a shader call (as
+opposed to a shader declaration) has a special meaning; see the
+note at the end of this chapter.</p>
+<p>In this manual, the term "<b><a id="INDEX418"></a>parameter</b>s" refers to shader parameters in the
+.mi scene file; the term "arguments" is used for arguments to C
+functions.</p>
+<p>Shaders need both state variables and shader parameters.
+Generally, variables that are computed by mental ray, or whose
+interpretation is otherwise known to mental ray, and that are
+useful to different types or instances of shaders are found in
+state variables. Variables that are specific to a shader, and that
+may change for each instance of the shader, are found in shader
+parameters. mental ray does not access or compute shader parameters
+in any way, it merely passes them from the .mi file to the shader
+when it is invoked.</p>
+<p><a id="INDEX419"></a><a id="INDEX420"></a><a id="shaderdecl"></a>
+To interpret these parameters in the .mi file, mental ray needs a
+declaration of parameter names and types that is equivalent to the
+C struct that the shader later uses to access the parameters. The
+declaration in the .mi file must be exactly equivalent to the C
+struct, or the shader will mis-interpret the parameter data
+structure constructed by mental ray. (Using the <a href="node164.html#INDEX841">mkmishader</a> utility ensures that both
+declarations agree, see section <a href="node164.html#mkmishader">mkmishader</a>.) This means that three
+parts are needed to write a shader: the .mi declaration, the C
+parameter struct, and the C source of the shader. The .mi
+declaration is normally stored in a separate file that is included
+into the .mi scene file using a <tt>$include</tt> statement.</p>
+<p>The syntax of .mi shader declarations is fully described in
+section <a href="node112.html#declaration">declaration</a>. Here,
+only a brief overview is given. Shaders must be declared with
+shader name, return type, and the types and names of all
+parameters. Options such as the shader version may be specified
+also:</p>
+<pre>
+    declare shader  
+        [ <i>type</i> ] "<i>shader_name</i>" (  
+            <i>type</i> "<i>parameter_name</i>",  
+            <i>type</i> "<i>parameter_name</i>",  
+            ...  
+            <i>type</i> "<i>parameter_name</i>"  
+        )  
+        [ version <i>version</i><sub>int</sub> ]  
+        [ <i>options</i> ]  
+    end declare  
+</pre>
+<p><a id="INDEX421"></a> For example, a simple
+material shader containing ambient, diffuse, and specular colors,
+transparency, an optional array of bump map textures, and an array
+of lights could be declared in the .mi file as:</p>
+<pre>
+    declare shader  
+        color "my_material" (  
+            color "ambient",  
+            color "diffuse",  
+            color "specular",  
+            scalar "shiny",  
+            scalar "reflect",  
+            scalar "transparency",  
+            scalar "ior",  
+            vector texture "bump",  
+            array light "lights"  
+        )  
+        version 1  
+    end declare  
+</pre>
+<p>If there is only one array, there is a small efficiency
+advantage in listing it last. It is recommended that the largest
+array (arrays of large structs are larger than arrays of
+primitives) is given as the last parameter. The material shader
+declared in this example can be used in a <tt>material</tt>
+statement like this:</p>
+<pre>
+    material "mat1"  
+        "my_material" (  
+            "specular" 1.0 1.0 1.0,  
+            "ambient" 0.3 0.3 0.0,  
+            "diffuse" 0.7 0.7 0.0,  
+            "shiny" 50.0,  
+            "bump" "tex1",  
+            "lights"[ "light1", "light2","light3" ],  
+            "reflect" 0.5  
+        )  
+    end material  
+</pre>
+<p>Note that the parameters can be defined in any order that does
+not have to agree with the order in the declaration, and that
+parameters can be omitted. Omitted parameters default to 0. This
+example assumes that the texture <tt>tex1</tt> and the three lights
+have been defined prior to this material definition. Again, be sure
+to use the names of the textures and lights, not the names of the
+texture and light shaders. All names in the above two examples were
+written as strings enclosed in double quotes to disambiguate names
+from reserved keywords, and to allow special characters in the
+names that would otherwise be illegal.</p>
+<p>When choosing names, avoid double colons and periods, which have
+a special meaning when accessing structured shader return values
+and interface parameters in phenomenon subshaders.</p>
+<p><a id="INDEX422"></a> When the shader
+<tt>my_material</tt> is called, its third argument will be a
+pointer to a data structure built by mental ray from the
+declaration and the actual parameters in the .mi file. In order for
+the C source of the shader to access the parameters, it needs an
+equivalent declaration in C syntax that must agree exactly with the
+.mi declaration. The type names can be translated according to the
+following table:</p>
+<p><a id="INDEX423"></a></p>
+<div align="center">
+<table class="table">
+<tr>
+<th><i>.mi syntax</i></th>
+<th><i>C syntax</i></th>
+</tr>
+<tr>
+<td>boolean</td>
+<td>miBoolean</td>
+</tr>
+<tr>
+<td>integer</td>
+<td>miInteger</td>
+</tr>
+<tr>
+<td>scalar</td>
+<td>miScalar</td>
+</tr>
+<tr>
+<td>vector</td>
+<td>miVector</td>
+</tr>
+<tr>
+<td>transform</td>
+<td>miMatrix</td>
+</tr>
+<tr>
+<td>color</td>
+<td>miColor</td>
+</tr>
+<tr>
+<td>spectrum</td>
+<td>miSpectrum_para <i>as shader argument</i>, miSpectrum
+<i>else</i></td>
+</tr>
+<tr>
+<td>data</td>
+<td>miTag <i>of an miUserdata</i></td>
+</tr>
+<tr>
+<td>shader</td>
+<td>miTag <i>of an miFunction</i></td>
+</tr>
+<tr>
+<td>color texture</td>
+<td>miTag <i>of an miFunction or miImg_image</i></td>
+</tr>
+<tr>
+<td>scalar texture</td>
+<td>miTag <i>of an miFunction or miImg_image</i></td>
+</tr>
+<tr>
+<td>vector texture</td>
+<td>miTag <i>of an miFunction or miImg_image</i></td>
+</tr>
+<tr>
+<td>light</td>
+<td>miTag <i>of an miInstance for a light</i></td>
+</tr>
+<tr>
+<td>light</td>
+<td>miTag <i>of an miInstance for a light group</i></td>
+</tr>
+<tr>
+<td>material</td>
+<td>miTag <i>of an miMaterial</i></td>
+</tr>
+<tr>
+<td>geometry</td>
+<td>miTag <i>of an miObject, miGroup, or miInstance</i></td>
+</tr>
+<tr>
+<td>lightprofile</td>
+<td>miTag <i>of an miLight_profile</i></td>
+</tr>
+<tr>
+<td>struct</td>
+<td>struct</td>
+</tr>
+<tr>
+<td>array</td>
+<td>int, int, <i>type</i>[1]</td>
+</tr>
+</table>
+</div>
+<p>A <b><a id="INDEX424"></a>light group</b> is an
+<a href="node91.html#INDEX350">instance group</a> that contains
+instances of lights. For the purpose of shading, the group is
+treated as if it were a single light.</p>
+<p>It is strongly recommended to use the same parameter names in
+the C declaration as in the .mi declaration. Also, structures in
+either declaration should be reflected in the other, even if not
+enclosed in arrays, to ensure that mental ray inserts the same
+padding as the C compiler.</p>
+<p>Arrays are more complicated than the types in this table because
+the size of the <b><a id="INDEX425"></a>array</b>
+is not known at declaration time. The C declaration of an array
+consists of a start index prefixed with <tt>i_</tt>, the size of
+the array prefixed with <tt>n_</tt>, and the array itself, declared
+as an array with one element. mental ray will allocate the
+structure as large as required by the actual array size at call
+time. To access array element <i>i</i> in the range <span class="math">0&hellip;n_array&minus;1</span>, the C expression
+<code>array[i_array&thinsp;+&thinsp;i]</code> must be used. This
+expression allows mental ray to store the shader parameters in
+virtual shared memory regardless of the base address of the shader
+parameter structure, which is different on every machine on the
+network.</p>
+<p>Here is the C structure for the above example .mi
+declaration:</p>
+<pre>
+    struct my_material {
+        miColor  ambient;
+        miColor  diffuse;
+        miColor  specular;
+        miScalar shiny;
+        miScalar reflect;
+        miScalar transparency;
+        miScalar ior;
+        miTag    bump;
+        int      i_lights;
+        int      n_lights;
+        miTag    lights[1];
+        };
+</pre>
+<p>Note that here the order of structure members must match the
+order in the .mi declaration exactly. For example, suppose a shader
+has a .mi declaration containing an <b><a id="INDEX426"></a>array</b> of integers:</p>
+<pre>
+     declare shader
+         color "myshader" ( array integer "list" )
+         version 1
+     end declare
+</pre>
+<p>The C declaration for the shader's parameters is:</p>
+<pre>
+     struct myshader {
+          int       i_list;
+          int       n_list;
+          miInteger list[1];
+          };
+</pre>
+<p>A shader that needs to operate on this array, for example
+printing all the array elements to stdout, would use a loop like
+this:</p>
+<pre>
+     int *list  =  mi_eval_integer(paras-&gt;list);
+     int i_list = *mi_eval_integer(&amp;paras-&gt;i_list);
+     int n_list = *mi_eval_integer(&amp;paras-&gt;n_list);
+     int i;
+     for (i=0; i &lt; n_list; i++)
+          mi_info("%d", list[i_list + i]);
+</pre>
+<p>assuming that <tt>paras</tt> is the third shader argument and
+has type <tt>struct myshader *</tt>. The use of the <tt>i_list</tt>
+parameter may seem strange to C programmers, who may wish to hide
+it in a macro like</p>
+<pre>
+     #define EL(array,nel) array[i_##array + nel]
+</pre>
+<p>This macro requires an ANSI C preprocessor; K&amp;R
+preprocessors do not support the <tt>##</tt> notation and should
+use <tt>/**/</tt> instead. This macro is not predefined in
+shader.h. The reason for this peculiar way of accessing arrays is
+improved performance. The <b><a id="INDEX427"></a>array</b> <tt>list[1]</tt> has space for only one
+element, because the actual number of array elements depends on the
+shader instance in the .mi file, which may list an arbitrary number
+of elements. Since mental ray is based on a <b><a name="INDEX428"
+id="INDEX428"></a>virtual shared database</b> that moves pieces of
+data such as shader parameters transparently from one machine to
+another, no such piece of data may contain a pointer. Pointers
+would not be valid in another machine's virtual address space.
+Adjusting the pointer on the other machine is impractical because
+it would significantly reduce performance for some scenes, and
+would require knowledge of the structure layout for finding the
+pointers that may not be available in versions of mental ray not
+based on a .mi front-end parser. Therefore, the array is appended
+to the parameter structure, so the entire block can be moved to
+another machine in a single network transfer. It is safe to access
+the first element of the array, because space for it is always
+allocated by declarations such as <tt>list[1]</tt>, but the second
+is a problem because in a C declaration like</p>
+<pre>
+     struct myshader {
+          int       i_list;
+          int       n_list;
+          miInteger list[1];
+          miScalar  factor;
+          miBoolean bool;
+          };
+</pre>
+<p>the second element, <tt>list[1]</tt>, occupies the same address
+as <tt>factor</tt>, and the third overlays <tt>bool</tt>. The
+situation becomes more complex for arrays of structures. The
+solution is to put the value of the first element after the last
+"regular" shader parameter, <tt>bool</tt> in this example, followed
+by the other element values. This means that the first few C array
+elements that overlay other parameters must be skipped. The
+<tt>i_</tt> variable tells the shader exactly how many. In the
+example, <tt>i_list</tt> would be 3. Assuming the following shader
+instance, used as part of a material, texture, or some other
+definition requiring a shader call:</p>
+<pre>
+     "myshader" (
+          "factor" 1.4142136,
+          "list"   [ 42, 123, 486921, 777 ],
+          "bool"   on
+          )
+</pre>
+<p>mental ray would arrange the values in memory like this:</p>
+<div class="pic"><img style="width:60%" src="images/array.jpg" /></div>
+<p>On multithreaded machines, it is possible that any given shader
+runs in multiple threads simultaneously. When this happens, they
+share all static variables defined in the sources, all shader
+parameters, and the <a href="node159.html#INDEX837">user
+pointer</a>. The only things that are separate in separate threads
+are "auto" variables on the stack, and the state variables. Also,
+mental ray makes sure that an <a href="node159.html#INDEX835">init
+shader</a> runs once, in a single thread, before the actual shader
+runs in one or more threads. This makes init shaders the natural
+place to set up the shader user pointer, perhaps to store
+preprocessed shader parameters. See section
+<a href="node156.html#multithreading">multithreading</a> for more
+information on multithreaded shader design.</p>
+<p>Shaders should never write to shader parameters because they
+might be accessed by other threads or hosts or by future frames,
+and because shader and interface assignments might exist that would
+be destroyed. (In general, no shader should ever modify the
+scene.)</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node111.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node113.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

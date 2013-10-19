@@ -1,0 +1,38 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// Evaluates the direct and indirect light contributions of a BRDF shader and
+// stores them in direct_light_result and indirect_light_result.
+//
+// Usage: 
+// This shader must be used in a shader graph that is connected to the surface 
+// slot inside a material definition. The results of this node can be 
+// manipulated further using color manipulation nodes to create a desired look. 
+
+shader Surface_direct_indirect
+{
+	input:
+	output:
+		Color result;
+		Color direct_light_result;
+		Color indirect_light_result;
+	
+	void main()
+	{
+		Spectrum direct_light_res, indirect_light_res;
+		direct_light(direct_light_res);
+		indirect_light(indirect_light_res);
+		
+		direct_light_result = direct_light_res;
+		indirect_light_result = indirect_light_res;
+		
+		result = direct_light_result + indirect_light_result;
+	}
+}
+{
+	description("Use this shader a material definition to evaluate direct and indirect"
+	" illumination contributions separately. It must be used in a graph that is linked to the"
+	" 'surface' slot of a material definition.");
+};

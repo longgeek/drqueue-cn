@@ -1,0 +1,361 @@
+/*****************************************************************************
+* Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+* Germany. All rights reserved.
+*****************************************************************************/
+
+shader Illumination_shadowcatcher
+{
+    input:
+    bool catch_shadows = true
+    {
+        display_name("Catch Shadows");
+        description("Enable or disable the recieving of shadows from "
+            "other objects in the scene.");
+    };
+
+    Color shadows = Color(0,0,0,1)
+    {
+        display_name("Shadow Color");
+        description("The color of the shadowed regions (usually black) "
+            "which will be blended with the background. This color is "
+            "the fully 'in shadow' color");
+        soft_range(Color(0,0,0,0), Color(1,1,1,1));
+    };
+
+    Color ambient = Color(0.2,0.2,0.2,0.2)
+    {
+        display_name("Ambient Color");
+        description("Controls the base light level and brightens the 'in "
+            "shadow' regions will have. For example at 0.2,0.2,0.2 in "
+            "the darkest shadow regions you will see 20% of the "
+            "background and 80% of the shadow.");
+        hard_range(Color(0,0,0,0), Color(1,1,1,1));
+    };
+    
+    bool use_dot_nl = true
+    {
+        display_name("Fade perpendicular");
+        description("Fade shadows as they become perpendicular to the light");
+    };
+
+    bool catch_reflections = false
+    {
+        display_name("Catch Reflections");
+        description("Enable or disable the recieving of reflections from "
+            "other objects in the scene.");
+    };
+
+    Color refl_color = Color(0.2,0.2,0.2,0.2)
+    {
+        display_name("Reflection Color Multipler");
+        description("Multiples the color calculated from the full "
+            "reflection.");
+        soft_range(Color(0,0,0,0), Color(1,1,1,1));
+    };
+
+    Color refl_subtractive = Color(0.2,0.2,0.2,0.2)
+    {
+        display_name("Subtractive Reflection Color");
+        description("Color used when subtractive reflection is required, "
+            "for example when background already looks reflective.");
+        soft_range(Color(0,0,0,0), Color(1,1,1,1));
+    };
+
+    int refl_samples = 0
+    {
+        display_name("Glossy Samples");
+        description("Number of samples used for glossy reflections, if "            
+            "zero then mirror reflections are used. Otherwise the "
+            "refl_glossiness sets the ward glossiness for reflections.");
+        soft_range(0,128);
+    };
+
+    float refl_glossiness = 10.0
+    {
+        display_name("Reflection Glossiness");
+        description("Glossiness for computing ward based glossy "
+            "reflections.");
+        soft_range(0.0,1000.0);
+    };
+
+    float refl_max_dist = 0.0
+    {
+        display_name("Maximum Reflection Distance");
+        description("Maximum distance for reflection rays, objects "
+            "further than this distance will not be seen in reflections. ");
+        soft_range(0.0,100000.0);
+    };
+
+    float refl_falloff = 2.0
+    {
+        display_name("Reflection Falloff Shape");
+        description("Power falloff for fading to environment. 2.0 is distance "
+            "squared, 3.0 is distance cubed etc. "
+            "No effect if refl_max_dist is 0. ");
+        soft_range(0.0,8.0);
+    };
+
+    output:
+    Color result;
+
+    float mi_luminance(Color input)
+    {
+        Color luminance_weight = Color(0.212671, 0.715160, 0.072169, 0.0);
+
+        return input.r * luminance_weight.r + 
+                input.g * luminance_weight.g + 
+                input.b * luminance_weight.b;
+    }
+
+    void xyz2dir(inout float3 dir,
+            in float3 main,
+            in float x,
+            in float y,
+            in float z) {
+        float3 u;
+        float3 v;
+
+#ifdef VERBOSE
+        check_almost_equal(length(main), 1.0);
+        check_almost_equal(x * x + y * y + z * z, 1.0);
+#endif
+        float3 omain = transform_normal("internal", "object", main);
+        if (abs(omain.x) < abs(omain.y)) {
+            // u = n x x_axis
+            u.x =  0.0;
+            u.y = -omain.z;
+            u.z =  omain.y;
+        } // if (abs(omain.x) < abs(omain.y))
+        else {
+            // u = n x y_axis
+            u.x =  omain.z;
+            u.y =  0.0;
+            u.z = -omain.x;
+        } // else [ if (abs(omain.x) < abs(omain.y)) ]
+        u = transform_vector("object", "internal", u);
+        // degenerate transform
+        if (length(u) == 0.0) {
+            if (abs(main.x) < abs(main.y)) {
+                u.x =  0.0;
+                u.y = -main.z;
+                u.z =  main.y;  
+            } // if (abs(main.x) < abs(main.y))
+            else {
+                u.x =  main.z;
+                u.y =  0.0;
+                u.z = -main.x;   
+            } // else [ if (abs(main.x) < abs(main.y)) ]
+        } // if (length(u) == 0.0)
+        u = normalize(u);
+        v = cross(main, u);
+#ifdef VERBOSE
+        check_almost_equal(length(u), 1.0);
+        check_almost_equal(length(v), 1.0);
+        check_almost_zero(dot(u, v));
+        check_almost_zero(dot(u, main));
+        check_almost_zero(dot(v, main));
+#endif
+        dir = x * u + y * v + z * main;
+#ifdef VERBOSE
+        check_almost_equal(length(dir), 1.0);
+#endif
+    } // xyz2dir
+        
+    void mi_reflection_dir_glossy_x(inout float3 refl_dir,
+            // state
+            in float3 dir,
+            in float3 my_normal,
+            // others
+            in float shiny,
+            in float2 my_sample) {
+        // constant: miHUGE_SCALAR (see shader.h)
+        float mi_huge_scalar = 1000000000000000000000000000000000000.0; // 1e36
+        float alpha = 0.0;
+
+        // mi_reflection_dir(&main_dir, state);
+        float3 main_dir = reflect(dir, my_normal);
+        if (shiny > 0) {
+            alpha = 1.0 / shiny;
+        } // if (shiny > 0)
+        else {
+            alpha = mi_huge_scalar;
+        } // else [ if (shiny > 0) ]
+        // Compute spherical coordinates (phi, theta)
+        float phi = 2.0 * PI * my_sample.x;
+        float theta = atan(alpha * sqrt(-log(1.0 - my_sample.y)));
+        // Compute a direction from the main direction and (phi, theta)
+        float x = cos(phi) * sin(theta);
+        float y = sin(phi) * sin(theta);
+        float z = cos(theta);
+        // xyz2dir(state, dir, &main_dir, x, y, z);
+        xyz2dir(refl_dir, main_dir, x, y, z);
+    } // mi_reflection_dir_glossy_x
+
+    float calculate_samples(inout int samples, in float weight) {
+        // FG rays get 1 sample
+        if (is_ray_history_group("final_gather")) {
+            samples = 1;
+        } // if (is_ray_history_group("final_gather"))
+        if (samples > 1) {
+            samples = int(samples * (sqrt(weight) * importance));
+        } // if (samples > 1)
+        if (samples < 1) {
+            samples = 1;
+        } // if (samples < 1)
+        // the ray bundle weight
+        return weight * importance;
+    } // calculate_samples
+
+    float gloss_to_shine(in float gloss) {
+        return pow(2.0, gloss * 8.0);
+    } // gloss_to_shine
+
+    void main() 
+    {
+        result = Color(0);
+        Color transparency = Color(1);
+
+        if (catch_shadows) {
+            Light_iterator light;
+            Color accum=Color(0);
+            Color weight=Color(0);
+            
+            foreach (light) {
+                float cos = use_dot_nl ? light.dot_nl : 1;
+                if (cos > 0) {
+                    Color c = light.raw_contribution * cos;
+                    weight += c;
+                    accum  += c * light.shadow;
+                }
+            }
+            if (any(weight.rgb)) {
+                transparency = lerp(ambient,Color(1),accum/weight);
+            }
+        }
+        
+        if (any(transparency.rgb)) {
+            Color env_col;
+            Ray ray(position,direction);
+            Ray ray_dx(float3(0), float3(0));
+            Ray ray_dy(float3(0), float3(0));
+            
+            Trace_options trace_options;
+            trace_options.set_ray_type("environment");
+            
+            trace(ray, ray_dx, ray_dy, trace_options,
+                    "result", env_col);
+            result = env_col * transparency + shadows * (1-transparency);
+        } else {
+            result = shadows;
+        }
+        
+        if (catch_reflections && any(refl_color.rgb)) {
+            Color refcol  = refl_color;
+            int samples   = refl_samples;
+            float gloss   = refl_glossiness;
+            float max_dep = refl_max_dist;
+            float falloff = refl_falloff;               
+            Color sub     = refl_subtractive;
+
+            float total_samp = 0.0;
+            float2 sample;
+
+            if (gloss > 0.0f && gloss <= 1.0f)
+            {
+                if (gloss == 1.0f) 
+                {
+                    samples = 0;
+                    gloss   = 0.0;
+                }
+                else
+                    gloss = gloss_to_shine(gloss);
+            }
+
+            // mirror special case
+            if (samples <= 0) {
+                samples = 1;
+                gloss   = 0.0;
+            } // if (samples <= 0 || gloss >= 1.0)
+
+            Color gather(0);
+
+            float refl_weight = mi_luminance(refl_color);
+            float level = calculate_samples(samples, refl_weight);
+            // one sample rejection iterator
+            Sample_iterator si(samples);
+            foreach (si) {
+                float ri_sample = (float) si.sample();
+                total_samp += 1.0;
+                sample = (float2) si.sample2();
+                float3 refl_dir = float3(0.0, 0.0, 0.0);
+
+                if (gloss > 0)
+                    mi_reflection_dir_glossy_x(refl_dir,
+                        // state
+                        direction,
+                        normal,
+                        // others
+                        gloss,
+                        sample);
+                else
+                    refl_dir = reflect(direction, normal);
+
+
+                Ray ray(float3(0), float3(0));
+                Ray ray_dx(float3(0), float3(0));
+                Ray ray_dy(float3(0), float3(0));
+                ray = Ray(position, refl_dir);
+                Trace_options trace_options;
+                trace_options.set_ray_type("reflect");
+                trace_options.enable_environment(false);
+                if (gloss > 0.0) {
+                    trace_options.set_ray_dispersal_group("glossy");
+                } // if (gloss < 1.0)
+                else {
+                    trace_options.set_ray_dispersal_group("specular");
+                } // else [ if (gloss < 1.0) ]
+
+                if (max_dep > 0.0) {
+                    trace_options.set_far(max_dep);
+                } // if (distlimit > 0.0)
+
+                trace_options.set_importance(refl_weight / samples);
+                float dist = 0.0;
+                Color col;
+                if (trace(ray, ray_dx, ray_dy, trace_options,
+                        "result", col,
+                        "State::ray_length", dist)) {
+                    // color from environment or from shader parameters?
+                    Color ecol = Color(0.0, 0.0, 0.0, 0.0);
+
+                    float fac = 1.0;
+
+                    if (max_dep > 0.0) {
+                        fac = (float) (1.0 - (dist / max_dep));
+                        /* Tweak fallof by power funcion */
+                        fac = (float) pow(fac, falloff);
+                    }
+
+                    col.a = refl_weight; // Alpha is weight
+                    // Add weighted color to gather
+                    gather += col * fac; 
+                } // if (trace(...))                    
+            } // foreach (si)
+
+            gather /= samples;
+
+            /* Tune subtractiveness to reflection weight */
+            sub.rgb *= gather.a;
+            sub.a    = mi_luminance(sub);
+
+            /* Avoid negative output values! */
+            if (sub.r > 1.0) sub.r = 1.0f;
+            if (sub.g > 1.0) sub.g = 1.0f;
+            if (sub.b > 1.0) sub.b = 1.0f;
+            if (sub.a > 1.0) sub.a = 1.0f;
+
+            /* Composite final result */
+            result = result * (1.0f - sub) + gather * refcol;
+        }
+    }
+};

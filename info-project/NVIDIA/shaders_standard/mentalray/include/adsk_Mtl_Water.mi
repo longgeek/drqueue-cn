@@ -1,0 +1,544 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :    mtarpini
+# Purpose:    Water Material
+#
+#----------------------------------------------
+# Exports:
+#
+# - adsk_Mtl_Water
+#
+#
+# Imports:
+#
+# - 3dsmax9
+#
+#----------------------------------------------
+# History:
+#
+# March 04, 2007 - mtarpini, initial implementation
+# May 28, 2007 - mtarpini, implementing unit scale handles
+# Nov 14, 2007 - mtarpini, corrected new GUI properties.
+# Nov 14, 2007 - mtarpini, propagate_alpha flagged as ON
+# Nov 28, 2007 - mtarpini, mia_mat_x; removed ao_distance uscaling (ao is not available here)
+# Nov 29, 2007 - mtarpini, removed roundcorners from interface (it's rigged internally to support 'meniscus')
+# Jan 02, 2009 - mtarpini, nodevisibility support
+#
+#****************************************************************************/
+
+min version "3.6"
+
+
+
+
+
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+# adsk_Mtl_Water
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+declare phenomenon
+     material "adsk_Mtl_Water"
+    (
+        #-------------------------------------
+        # main parameters
+        #-------------------------------------
+        struct "m"
+        {
+            #----------------------------------
+            integer		"type",
+            integer		"tint_enable",
+            color		"tint_color",
+            scalar		"bump_amount"
+        },
+        
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------
+        struct "p"
+        {
+            #----------------------------------
+              integer "reflection_glossy_samples",    
+              integer "refraction_glossy_samples",                      
+              integer "refl_depth",            
+              integer "refr_depth"              
+        },
+                     
+		#-------------------------------------
+		# Internals
+		#-------------------------------------
+		struct "x"
+		{
+			#----------------------------------
+	      	integer "gbuffer_id"
+		},
+			                     
+        #----------------------------------
+        # Lights and Mode Parameters
+        #----------------------------------
+        integer "mode",
+        array light "lights"
+    )    
+    version 1
+
+
+
+
+    #------------------------------------------------------------------------
+    # Spider
+    #------------------------------------------------------------------------
+    shader "spider__instance" "adsk_Shd_Water_spider"
+    (
+        "type" = interface "m.type",
+        "color_tint" = interface "m.tint_enable",
+        "custom_color" = interface "m.tint_color",
+        
+        "roundcorners_radius_i" 5				#5mm meniscus       
+    )
+
+
+    #------------------------------------------------------------------------
+    # <- end Bump plus Round Corners ########################################
+    #------------------------------------------------------------------------ 
+    #------------------------------------------------------------------------
+    # Ocean Shader
+    #------------------------------------------------------------------------
+    shader "ocean_bump__instance" "Ocean" 
+    (
+        #-------------------------------
+        "Largest" = "spider__instance.ocean_largest", 
+        "Smallest" = "spider__instance.ocean_smallest", 
+        "Quantity" = "spider__instance.ocean_quantity", 
+        "Steepness" = interface "m.bump_amount",
+        
+        #-------------------------------
+        "Relative to World" on, 
+        "Relative to Object" off, 
+        
+        #-------------------------------        
+        "Base Plane Normal" 0 0 1, 
+        "Base Plane Distance" 0, 
+        
+        #-------------------------------        
+        "Directed" on, 
+        "Direction Angle" 45, 
+        
+        #-------------------------------        
+        "Wave Speed" 0.75, 
+        "Loop Animation" off, 
+        "Loop Frames" 100, 
+        
+        #-------------------------------        
+        "Flats" off, 
+        "Size" = "spider__instance.ocean_size", 
+        "Variation" 1, 
+        "Bump" on
+    )
+    #------------------------------------------------------------------------
+    # Round Corners
+    #------------------------------------------------------------------------    
+    shader "bump__instance" "mia_roundcorners" 
+    (
+        "radius" = "spider__instance.roundcorners_radius",
+        "allow_different_materials" on,
+        "bump" "ocean_bump__instance"
+    )
+    #------------------------------------------------------------------------
+    # <- end Bump plus Round Corners ########################################
+    #------------------------------------------------------------------------     
+    
+    
+
+    #------------------------------------------------------------------------
+    # Reflection Blur Multiplication
+    #------------------------------------------------------------------------
+    shader "reflection_gloss_sample|shader" "adsk_blurred_reflection_multiplier"
+    (
+        "blurred_reflection_value" = interface "p.reflection_glossy_samples"
+    )
+    
+    #------------------------------------------------------------------------
+    # Refraction Blur Multiplication
+    #------------------------------------------------------------------------
+    shader "refraction_gloss_sample|shader" "adsk_blurred_refraction_multiplier"
+    (
+        "blurred_refraction_value" = interface "p.refraction_glossy_samples"
+    )
+ 
+
+    #------------------------------------------------------------------------
+    # Visibility Track Support
+    #------------------------------------------------------------------------
+	shader "node_visibility__instance" "adsk_Utility_NodeVisibility" 
+	(
+		"input" 1 1 1 1, 		#this is controlled internally
+		"mode" 0
+	)
+	
+ 
+    #------------------------------------------------------------------------
+    # Arch & Design Shader 
+    #------------------------------------------------------------------------ 
+    shader "adsk_Mtl_Water__instance" "mia_material_x" 
+    (
+    
+        #----------------------------------
+        "diffuse_weight" 1,
+        "diffuse" 0 0.0156863 0.0431373 1,
+        "diffuse_roughness" 0,
+        
+        #----------------------------------        
+        "reflectivity" 1,
+        "refl_color" 1 1 1 1,
+        "refl_gloss" 0.95,
+        "refl_gloss_samples" = "reflection_gloss_sample|shader",
+        "refl_interpolate" off,
+        "refl_hl_only" off,
+        "refl_is_metal" off,
+        
+        #----------------------------------    
+        "transparency" 1,
+        "refr_color" = "spider__instance.refr_color",
+        "refr_gloss" = "spider__instance.refr_gloss",
+        "refr_ior" 1.33,
+        "refr_gloss_samples" = "refraction_gloss_sample|shader",
+        "refr_interpolate" off,
+        "refr_translucency" off,
+        "refr_trans_color" 1 1 1 1,
+        "refr_trans_weight" 0.5,
+        
+        #----------------------------------
+        "anisotropy" 1, 
+        "anisotropy_rotation" 0, 
+        "anisotropy_channel" -1, 
+        
+        #----------------------------------        
+        "brdf_fresnel" on, 
+        "brdf_0_degree_refl" 0.2, 
+        "brdf_90_degree_refl" 1, 
+        "brdf_curve" 5, 
+        "brdf_conserve_energy" on, 
+        
+        #----------------------------------        
+        "intr_grid_density" 2, 
+        "intr_refl_samples" 2, 
+        "intr_refl_ddist_on" off, 
+        "intr_refl_ddist" 0, 
+        "intr_refr_samples" 2, 
+        "single_env_sample" off, 
+        
+        #----------------------------------        
+        "refl_falloff_on" off, 
+        "refl_falloff_dist" 0, 
+        "refl_falloff_color_on" off, 
+        "refl_falloff_color" 0.2 0.2 0.2 1, 
+        "refl_depth" = interface "p.refl_depth",
+        "refl_cutoff" 0.00, 
+        
+        #----------------------------------        
+        "refr_falloff_on" = "spider__instance.refr_falloff_on",
+        "refr_falloff_dist" = "spider__instance.refr_falloff_dist",
+        "refr_falloff_color_on" = "spider__instance.refr_falloff_color_on",
+        "refr_falloff_color" = "spider__instance.refr_falloff_color", 
+        "refr_depth" = interface "p.refr_depth", 
+        "refr_cutoff" 0.00, 
+
+        #----------------------------------        
+        "indirect_multiplier" 1, 
+        "fg_quality" 1, 
+        "fg_quality_w" 1, 
+
+        #----------------------------------
+        "ao_on"  off,
+        "ao_samples"  16,
+        "ao_distance"  0.1,
+        "ao_dark"  1 1 1 1,
+        "ao_ambient"  1 1 1 1,
+        "ao_do_details"  0,
+
+        #----------------------------------        
+        "thin_walled" off, 
+        "no_visible_area_hl" on, 
+        "skip_inside_refl" on, 
+        "do_refractive_caustics" on, 
+        "backface_cull" off, 
+        "propagate_alpha" on, 
+        "hl_vs_refl_balance" 1, 
+        "cutout_opacity" = "node_visibility__instance",			#nodevisibility hook
+        "additional_color" 0 0 0 1, 
+
+        #----------------------------------
+        "bump" "bump__instance",
+        "no_diffuse_bump" on,
+
+        #----------------------------------
+        "mode" = interface "mode",
+        "lights" = interface "lights",
+        
+        #----------------------------------
+        "multiple_outputs" off      
+
+    )#end shader
+
+
+    #------------------------------------------------------------------------
+    # Render Elements support  ##############################################
+    #------------------------------------------------------------------------    
+    shader "max_mia_mat_renderelem__instance" "adsk_Utility_MiaDecomposer" 
+    (
+        "mia_material" "adsk_Mtl_Water__instance", 
+        "GBufferID"  = interface "x.gbuffer_id"
+    )
+
+    #------------------------------------------------------------------------
+    # -> begin, SubMerge volume definition ##################################
+    #------------------------------------------------------------------------
+    shader "submerge_color__instance" "adsk_Utility_ColorPassThrough" 
+    (
+        "color" = "spider__instance.submerge_color",
+    )
+    
+    shader "Curve|Shader[01]" "adsk_Utility_Curve" 
+    (
+        "Flags" 0, 
+        "LookupTableSize" 100, 
+        "Points" [
+            {
+                "x" 0, 
+                "y" 0, 
+                "xIn" 0, 
+                "yIn" 0, 
+                "xOut" 0, 
+                "yOut" 0, 
+                "Flags" 258        
+            }, 
+            {
+                "x" 1, 
+                "y" 1, 
+                "xIn" 0, 
+                "yIn" 0, 
+                "xOut" 0, 
+                "yOut" 0, 
+                "Flags" 256        
+            }    
+        ]
+    )
+
+    shader "Curve|Shader[02]" "adsk_Utility_Curve" 
+    (
+        "Flags" 0, 
+        "LookupTableSize" 100, 
+        "Points" [
+            {
+                "x" 0, 
+                "y" 0, 
+                "xIn" 0, 
+                "yIn" 0, 
+                "xOut" 0, 
+                "yOut" 0, 
+                "Flags" 258        }, 
+            {
+                "x" 1, 
+                "y" 0.257143, 
+                "xIn" 0, 
+                "yIn" 0, 
+                "xOut" 0, 
+                "yOut" 0, 
+                "Flags" 272        
+            }    
+        ]
+    )
+
+    shader "Curve|Shader[03]" "adsk_Utility_Curve" 
+    (
+        "Flags" 0, 
+        "LookupTableSize" 100, 
+        "Points" [
+            {
+                "x" 0, 
+                "y" 0, 
+                "xIn" 0, 
+                "yIn" 0, 
+                "xOut" 0, 
+                "yOut" 0, 
+                "Flags" 258        
+            }, 
+            {
+                "x" 1, 
+                "y" 0.257143, 
+                "xIn" 0, 
+                "yIn" 0, 
+                "xOut" 0, 
+                "yOut" 0, 
+                "Flags" 272        
+            }
+        ]
+    )
+
+    shader "CurveCtl|Shader[01]" "adsk_Utility_CurveControl" 
+    (
+        "Flags" 63, 
+        "XMin" 0, 
+        "XMax" 1, 
+        "YMin" 0, 
+        "YMax" 1, 
+        "Curves" [
+            "Curve|Shader[01]", 
+            "Curve|Shader[02]", 
+            "Curve|Shader[03]"    
+        ]
+    )
+
+    shader "Curve|Shader" "adsk_Utility_Curve" 
+    (
+        "Flags" 0, 
+        "LookupTableSize" 100, 
+        "Points" [
+            {
+                "x" 0, 
+                "y" 0, 
+                "xIn" 0, 
+                "yIn" 0, 
+                "xOut" 0, 
+                "yOut" 0, 
+                "Flags" 258        
+            }, 
+            {
+                "x" 1, 
+                "y" 1, 
+                "xIn" 0, 
+                "yIn" 0, 
+                "xOut" 0, 
+                "yOut" 0, 
+                "Flags" 256        
+            }    
+        ]
+    )
+
+    shader "CurveCtl|Shader" "adsk_Utility_CurveControl"
+    (
+        "Flags" 63, 
+        "XMin" 0, 
+        "XMax" 1, 
+        "YMin" 0, 
+        "YMax" 1, 
+        "Curves" [
+            "Curve|Shader"    
+        ]
+    )
+
+    shader "submerge_baseout__instance" "adsk_Utility_Output" 
+    (
+        "RGBAmount" = "spider__instance.submerge_rgblevel",
+        "RGBOffset" 0,
+        "OutputAmount" 1,
+        "BumpAmount" 1,
+        "Invert" off,
+        "Clamp" off,
+        "AlphaFromRGB" off,
+        "UseColorMap" off,
+        "UseRGBCurve" on,
+        "RGBCurve" "CurveCtl|Shader[01]", 
+        "IntensityCurve" "CurveCtl|Shader"
+    )
+
+    shader "submerge_out__instance" "adsk_Tex_Output"
+    (
+        "Parameters" {
+            "Map1" "submerge_color__instance",
+            "Map1Enabled" on,
+            "Output" "submerge_baseout__instance"
+        },
+        "ExtraParameters" {
+            "GBufferID" 0
+        }
+    )
+
+    shader "submerge_volume__instance" "Submerge"
+    (
+        "Water Color" = "submerge_out__instance",
+        "Vertical Gradation" 0.25,
+        "Density" = "spider__instance.submerge_density",
+        "Base Plane Normal" 0 0 1,
+        "Base Plane Distance" = "spider__instance.submerge_distance"
+    )
+    #------------------------------------------------------------------------
+    # <- end, SubMerge ######################################################
+    #------------------------------------------------------------------------    
+        
+    
+    #------------------------------------------------------------------------    
+    #------------------------------------------------------------------------
+    # Material Connections
+    #------------------------------------------------------------------------
+    material "mat"
+                        = "max_mia_mat_renderelem__instance"
+        shadow    = "adsk_Mtl_Water__instance"                
+        photon    = "adsk_Mtl_Water__instance"
+        volume	  = "submerge_volume__instance"
+    end material
+    root material "mat"
+
+
+
+    #------------------------------------------------------------------------
+    #------------------------------------------------------------------------
+    # UI
+    #------------------------------------------------------------------------
+    gui "gui_adsk_Mtl_Water"
+    {
+        #----------------------------------
+		control "Global" "Global" 
+		(
+			"uiName" "ProMaterials: Water", "category" "Material",          
+			"viewport_diffuse" "m.tint_color",
+			"viewport_specular" 1.0 1.0 1.0,
+			"viewport_shininess" 1,
+			"viewport_transparency" 0.72,
+			"hidden"
+		)    
+		
+        #-------------------------------------
+        #  Material Parameters
+        #-------------------------------------
+        control "m" "struct" ("uiName" "Water Material Parameters", "openstate" "true")
+        {
+            #----------------------------------
+            control "type"  "integer" ("enum", "nonConnectable", "uiName"  "Type", "value" "0 Swimming Pool, 1 Reflecting Pool, 2 Stream/River, 3 Pond/Lake, 4 Sea/Ocean", "range" 0 4, "helpText" "Body of water presets")
+            control "tint_enable"  "integer" ("enum", "nonConnectable", "uiName"  "Color", "value" "0 Tropical, 1 Algae/Green, 2 Murky/Brown, 3 Reflecting Pool, 4 Stream/River, 5 Pond/Lake, 6 Sea/Ocean, 7 Custom Color", "range" 0 7, "helpText" "Affects only Stream/River & Pond/Lake Water types" )
+            control "tint_color"  "color" ("nonConnectable", "uiName"  "-> Custom Color", "value" 0.865 0.91 0.866, "helpText" "Use when 'Color: Custom Color' is selected")
+            control "bump_amount"  "scalar" ("nonConnectable", "uiName"  "Wave Height", "value" 0.5, "helpText" "Wave Height. (Note: Reflecting Pools normally have wave height of 0.0)" )
+        }
+
+         #-------------------------------------
+        # Performance Tuning Parameters
+         #-------------------------------------
+        control "p" "struct" ("uiName" "Performance Tuning Parameters", "openstate" "false")
+        {
+            #----------------------------------
+            control "reflection_glossy_samples"  "integer" ("nonConnectable", "uiName"  "Reflection Glossy Samples", "value" 8, "range" 0 128, "helpText" "Defines the maximum number of samples (rays) that mental ray computes to create glossy reflections.")
+            control "refraction_glossy_samples"  "integer" ("nonConnectable", "uiName"  "Refraction Glossy Samples", "value" 8, "range" 0 128, "helpText" "Defines the maximum number of samples (rays) that mental ray computes to create glossy refractions.")
+            control "refl_depth"  "integer" ("nonConnectable", "uiName"  "Reflection Max Trace Depth", "value" 0, "range" 0 20, "helpText" "Number of times each ray is reflected. When set to zero, global render settings take precedence.")        
+            control "refr_depth"  "integer" ("nonConnectable", "uiName"  "Refraction Max Trace Depth", "value" 0, "range" 0 20, "helpText" "Number of times each ray is refracted. When set to zero, global render settings take precedence.")
+        }
+
+        #-------------------------------------
+		# Internal
+ 		#-------------------------------------
+		control "x" "struct" ("uiName" "Internals", "openstate" "false")
+		{
+			#----------------------------------
+			control "gbuffer_id"  "integer" (hidden, "nonConnectable", "uiName"  "Translator must link here to pass a different ID", "value" 2)
+		}
+	        
+        #-------------------------------------
+        # Lights and Mode Parameters
+        #-------------------------------------
+        control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+        control "lights" "array light" ("hidden","nonConnectable")
+        control "mode" "integer" ("hidden","nonConnectable")
+    }#end gui
+
+end declare #end declare phenomenon

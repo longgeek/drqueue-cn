@@ -1,0 +1,135 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#include <mi_msl_shared.msl>
+
+// performs a cubic interpolation
+float cubic_interpolate(float v0,float v1,float v2, float v3, float x) {   
+	clamp(x, 0.0, 1.0);
+	float P = (v3- v2) - (v0 -v1);  
+	float Q = (v0 - v1) - P;
+	float R = v2 - v0;
+	float S = v1; 
+	
+	return P*x*x*x + Q*x*x + R*x + S;
+}
+
+// returns the first derivative of a cubic interpolation
+float cubic_interpolate_deriv(float v0,float v1,float v2, float v3, float x) {
+	clamp(x, 0.0, 1.0);
+	float P = (v3- v2) - (v0 -v1);  
+	float Q = (v0 - v1) - P;
+	float R = v2 - v0;
+	float S = v1;
+	
+	return 3*x*x*P + 2*x*Q + R;
+}
+
+float mi_perm(
+        Texture1D_sampler_color perm,   /* The permutation table */
+        float x ) {                       /* The texture coordinate / permutation */
+    return perm.lookup(x+0.5/256.0).x;
+}
+
+
+shader Curve_noise_1d
+{
+  input:
+	float t = texture_coordinate[0].x {
+		display_name("Input");
+	};
+	float seed = 0.0 {
+		display_name("Seed");
+		description("Different values will result in different function curves");
+	};
+	float offset = 0.0 {
+		display_name("Offset");
+		description("Offsets the 1d noise function");
+	};
+	float total_scale = 1.0	{
+		display_name("Total Scale");
+		description("Scales the entire 1d function");
+	};
+	float scale_arr[3] = {10.0, 20.0, 50.0} {
+		display_name("Frequencies");
+		description("Sets the frequency for each layer of the noise function");
+	};
+	float amplitude_arr[3] = {1.0, 0.3, 0.08} {
+		display_name("Amplitudes");
+		description("Sets the amplitude for each frequency");
+	};
+	texture1D noise_perm_texture      = "noise_perm.dds" {
+		in_group("Advanced");
+		display_name("Noise Permutation Texture");
+		description("The texture containing the permutation table used for "
+					"generating the noise.");
+		disable_filtering();
+		texture_coord_u("clamp");
+	};
+		
+  output:
+	float result;
+	Color graph_out;
+	
+	void main()
+	{
+		Texture1D_sampler_color perm(noise_perm_texture,0,"data");
+		
+		float	m_t;
+		float accum = 0.0;
+		
+		float A, B;
+		float p, P;
+		
+		m_t = t * total_scale;
+		for(int i = 0; i < 3; i++) {
+			//float x_comp = 
+			
+			p = (m_t + offset)* scale_arr[i];
+			P = fmod(floor(p), 256.0);
+			p -= floor(p);
+
+			P = P / 255.0;
+			float one = 1.0 / 255.0;
+			float seed_seed;
+			
+			seed_seed = mi_perm(perm, seed);
+
+			float v0, v1, v2, v3;
+			A = mi_perm(perm, P.x) + seed_seed;
+			B = mi_perm(perm, A);
+			
+			// get all points for cubic interpolation
+			v1 = B;
+			
+			A = mi_perm(perm, P.x - one) + seed_seed;
+			v0 = mi_perm(perm, A);
+			
+			A = mi_perm(perm, P.x + one) + seed_seed;
+			v2 = mi_perm(perm, A);
+			
+			A = mi_perm(perm, P.x + 2*one) + seed_seed;
+			v3 = mi_perm(perm, A);
+			
+			// interval goes from 0...1 between v1 and v2! 
+			// This is already stored in variable 'p'
+			
+			// do a cubic interpolation 
+			float res   = cubic_interpolate(v0, v1, v2, v3, p); 		
+			res   *= amplitude_arr[i];
+			accum += res;
+		}
+		result = accum;
+		graph_out = (texture_coordinate[0].y) < accum? MI_LOWER_COL : MI_UPPER_COL;
+	}
+}
+{
+	description("Generates a 1d noise function. The function curve has three independent"
+	" layers. The user can control the frequency and amplitude of each layer.");
+};
+
+// declaration for curve shader pack backwards compatibility
+shader curve_noise_1d : Curve_noise_1d {
+};

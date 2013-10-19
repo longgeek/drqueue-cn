@@ -1,0 +1,147 @@
+#*****************************************************************************
+# Copyright 2007 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	Pierre-Felix Breton
+# Purpose:	Simplified Wood map based on the 3ds max Wood map
+#
+# History:
+#
+# 2007 feb 15th - pfbreton, initial implementation
+#
+# 
+#****************************************************************************/
+
+min version "3.4"
+
+#------------------------------------------------------------------------
+# Phenomenon
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Map_Simple_Wood" 
+  (
+      #-------------------------------------
+			# Main parameters
+			#-------------------------------------
+      struct "m" 
+      {
+				
+				color "Color1", 
+				color "Color2",
+				scalar "Thickness", 
+				scalar "RadialNoise", 
+				scalar "AxialNoise"	
+      },
+      
+			#-------------------------------------
+			# XYZ Generator Parameters
+			# 		This is a temporary solution
+			#			minimal set of parameters exposed
+			#			more design work needs to be done
+			#-------------------------------------
+      struct "u" 
+      {
+      	vector "Offset",
+      	vector "Tiling",
+      	vector "Angle"
+
+      },
+      integer "mode",
+      array light "lights"
+      	
+   )#end phenomenon
+
+
+#-------------------------------------
+# XYZ Generator
+#-------------------------------------
+shader "XYZGen|Shader" "max_base_XYZGenerator" 
+(
+	"CoordinateSystem" 0, 				#ObjectXYZ | WorldXYZ | ExplicitMapChannel | VertexColorChannel
+	"MapChannel" 1,  							#Unused in this case, since we are using the ObjectXYZ coordinatesystem
+	#--------------			
+	"Offset" = interface "u.Offset", 
+	"Tiling" = interface "u.Tiling", 
+	"Angle" = interface "u.Angle", 
+	#-------------------
+	"Blur" 1, 
+	"BlurOffset" 0
+)#end shader
+
+#------------------------------------------------------------------------
+# Wood Map Shader
+#------------------------------------------------------------------------
+shader "Map_Wood|Texmap|Shader" "max_Wood" 
+	(
+		"Parameters" 
+		{
+			"Color1" = interface "m.Color1", 
+			"Color2" = interface "m.Color2", 
+			"Map1Enabled" off, 
+			"Map1Enabled" off, 
+			#--------------------------
+		  "Thickness" = interface "m.Thickness",
+			"RadialNoise" = interface "m.RadialNoise", 
+			"AxialNoise" = interface "m.AxialNoise", 
+
+			#--------------------------
+			"Coords" "XYZGen|Shader"
+		}, 
+		"ExtraParameters" 
+		{
+			"GBufferID" 0	
+		}
+
+	)#end shader
+
+
+root = "Map_Wood|Texmap|Shader"
+apply texture
+
+#------------------------------------------------------------------------
+# UI
+#------------------------------------------------------------------------
+
+	gui "gui_adsk_Map_Simple_Wood"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "Simple Wood Map (adsk)", "category" "Texture", "hidden" )
+	
+		#-------------------------------------
+		#  Map Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Simple Wood Map Parameters")
+		{
+			#----------------------------------
+			control "Color1" "color" ("uiName" "Color 1","value" 0.78823537 0.6901961 0.27058825 1.0)
+			control "Color2" "color" ("uiName" "Color 2","value" 0.50980395 0.32156864 0.0509804 1.0)	
+
+			#----------------------------------
+			control "Thickness" "float" ("nonConnectable", "uiName" "Grain Thickness", "value" 7.0, "range" 0 1000000000)
+			control "RadialNoise" "float" ("nonConnectable", "uiName" "Radial Noise", "value" 1, "range" 0 100)
+			control "AxialNoise" "float" ("nonConnectable", "uiName" "Axial Noise", "value" 1, "range" 0 100)
+     	
+		}#end control
+		
+		
+	#-------------------------------------
+	# XYZ Generator Parameters
+	# 		This is a temporary solution
+	#			minimal set of parameters exposed
+	#			more design work needs to be done
+	#-------------------------------------
+		control "u" "struct" ("uiName" "Texture Coordinates Parameters")
+    {  
+         control "Offset" "vector" ("nonConnectable", "value" 0 0 0)
+         control "Tiling" "vector" ("nonConnectable", "value" 1 1 1)
+         control "Angle" "vector" ("nonConnectable", "value" 0 0 0)     
+   }#end struct
+		
+		
+	  #----------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+
+	}#end gui
+
+end declare #end declare phenomenon

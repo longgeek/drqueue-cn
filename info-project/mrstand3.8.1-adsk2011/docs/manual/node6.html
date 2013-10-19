@@ -1,0 +1,173 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Parallelism</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node5.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node7.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION4"></a>
+
+<h2 id="fo:architecture">Architecture</h2>
+
+<h3 id="fo:parallelism">Parallelism</h3>
+
+<p>mental ray has been designed to take full advantage of parallel hardware
+and achieve maximal performance benefit through concurrent execution of
+rendering tasks. On multi-processor and multi-core machines it automatically
+exploits thread <dfn id="INDEX6">parallelism</dfn> where multiple
+<a href="node156.html#INDEX802">thread</a>s of computation can access
+<dfn id="INDEX7">shared memory</dfn>. No user intervention is required
+to take advantage of this type of parallelism.
+<p>
+mental ray is also capable of exploiting thread and
+<dfn id="INDEX8">process</dfn> level parallelism where multiple threads or
+processes cooperate in the rendering of a single image but do not share
+memory. This is done using a <dfn id="INDEX9">distributed shared database</dfn>
+that provides demand-driven transparent sharing of database items on multiple
+systems <a href="#FOOTNOTE1">[1]</a>. This allows parallel execution across
+a network of computers for <a href="#fo:network">distributed rendering</a>.
+<p>
+mental ray also supports <dfn><a id="INDEX10"></a>hyperthreading</dfn> on
+capable processors if enabled. Hyperthreading, introduced on Intel Pentium 4
+CPUs, is a technique that runs a second thread, including a separate process
+counter, on a single CPU chip to exploit otherwise idle execution units on
+the chip. Since this increases memory access frequency and reduces locality
+of reference, hyperthreading achieves a performance increase of only about
+15-25%. Early machines with hyperthreading support are not very reliable,
+so most vendors disable hyperthreading in their hardware, BIOS, or operating
+system even though the CPU supports it. mental ray will not pull a license
+for a hyperthreading companion thread.
+</p>
+
+<a id="fo:network"></a>
+<h3>Distributed Rendering</h3>
+<p>
+A mental ray renderer that is started on a host to read or translate the
+scene, or is executed in application software it is integrated in, may be
+used as a <dfn id="fo:master">master</dfn> to utilize remote machines as
+<dfn id="fo:slave">slave</dfn> renderers to contribute to the rendering of
+the current image and reduce the overall rendering time. mental ray needs
+to be available as a <dfn>service</dfn> on the remote machines to support
+distributed rendering.
+<p>
+The <i>master</i> is responsible for connecting to all other machines,
+assigning the rendering of a specific tile of the image to a slave,
+transporting the requested scene data to the remote host, and collecting the
+final results back on the master to write the complete image.
+<p>
+The <i>slave</i> is always tied to a specific master, message communication
+and resource usage is typically managed by the master. The machine of a slave
+may be used by another user at the same time; systems do not become unavailable
+for other jobs if used as slaves. However, running a mental ray slave on a host
+may degrade the performance of independent interactive application programs
+such as modelers on that host significantly. If a slave aborts rendering, the
+entire network participating in the render (the master and all slaves) will
+be notified and abort as well. mental ray periodically checks the health of
+all hosts on the master/slave network.
+<p>
+The computation of the actual rendering tasks may be pushed to the slave(s)
+in the <a href="node245.html#cli:nomaster">no master</a> rendering mode.
+This can be used to reduce the load and resource consumption on the master
+machine, which is helpful if the master also runs front-end applications
+that must remain responsive during rendering of demanding scenes.
+<p>
+The list of remote machines for distributed rendering can be provided to the
+master in several ways.
+<ul>
+<li>The host names or addresses can be stored in a file named either
+<tt>.ray3hosts</tt> or <tt>.rayhosts</tt>. mental ray will search for such a
+file in the local directory and in the directory pointed to by the environment
+variable <code>$HOME</code> (on Windows: <code>%HOMEDRIVE%%HOMEPATH%</code>),
+in that order. Each line contains a hostname, an optional colon-separated port
+number of the service to connect to, and an optional whitespace-separated
+command line parameter list that is passed to the slave upon start-up. The
+first line that literally matches the name of the master host is ignored;
+this allows all hosts on the network to share a single <tt>.rayhosts</tt> file,
+each ignoring the first reference to itself. Empty lines or lines starting with
+the comment character <code>#</code> will be skipped. Only masters ever access
+the host list.
+<li>
+If the <a href="node245.html#cli:hosts">command line</a> option <tt>-hosts</tt>
+is used to start mental ray then the <tt>.rayhosts</tt> file is ignored, and
+the list of slave hosts is taken from the command line instead. In this case,
+no hosts are ignored.
+<li>
+The integrated version of mental ray may get its host list directly set from
+the application using API functions.
+</ul>
+<p>
+Note, that master and slave can run on the same local machine. They will be
+executed in separate processes which communicate through the network layer
+of the system. They operate on their own copy of the database and don't share
+memory. Thus, this constellation may only be useful in special cases like the
+<a href="node245.html#cli:nomaster">no master</a> rendering mode.</p>
+
+<a id="fo:progressive"></a>
+<h3>Progressive Rendering <span class="recent">3.7</span></h3>
+<p>
+By default, mental ray computes images by splitting them into rectangular
+pieces called <dfn>tiles</dfn> which are rendered as parallel as possible to
+their final quality. This is well suited for distributed rendering of larger
+scenes at highest quality. It has the disadvantage that final images are
+available only after all tiles have been finished.
+The <dfn>progressive rendering</dfn> mode, in contrast, computes and delivers
+images at full resolution with incrementally progressing quality. This
+supports interactive rendering applications of mental ray with full support
+for its feature set. This mode is well suited even for computationally
+expensive effects like ray tracing and indirect illumination, since the first
+few rendered frames will already provide a visual impression of the final
+result. Users will be able to adjust their model instantaneously without the
+need to wait for the complete image. Best performance can be achieved for
+scenes which completely fit into the memory of the machine, coupled with
+<a href="node76.html#features">feature selection</a> and rendering
+<a href="node76.html#options">options</a> in mental ray that best match and
+support the purpose of the rendering.
+
+<p><span class="new">3.8</span>
+Additional <a href="ibl.html#ibl_progressive">optimization techniques</a> are
+available in this mode. They can be used for typical scene setup, like
+illumination with <a href="ibl.html#ibl_progr_cache">IBL</a>, to accelerate
+progressive rendering even further, at the expense of accuracy of certain
+rendering effects which may not contribute much to the intended visual result.
+<p>
+Some advanced mental ray features are not supported with progressive rendering
+to gain speed, see <a href="limitations.html#progressive">Known Limitations</a>.
+This rendering mode can be enabled on the
+<a href="node245.html#cli:progressive">command line</a> or with
+<a href="node76.html#opt:progressive">scene options</a>.
+<p class="note">Note, that rendering a frame in this mode is stopped when
+special quality criteria are fulfilled, or a specified time limit is hit. The
+default settings are very high, which basically let the render go for a very
+long time before it would stop automatically.
+</p>
+
+<p><a id="FOOTNOTE1">[1]</a> The parallel
+rendering technology which is required for the support of
+distributed shared databases has been originally developed by
+mental images as part of the ESPRIT Project 6173 <i>Design by
+Simulation and Rendering on Parallel Architectures</i> (DESIRE).
+See Herken94.
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node5.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node7.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

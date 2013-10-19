@@ -1,0 +1,144 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+native bsdf Bsdf_architectural {
+input:
+
+    Color diffuse_refl = Color(0.5, 0.5, 0.5, 1.0)
+    {
+        display_name("Diffuse Reflection Color");
+        description("The basic material color.");
+        hard_range(Color(0.0, 0.0, 0.0, 1.0), Color(1.0, 1.0, 1.0, 1.0));
+    };
+    float diffuse_refl_scalar = 1.0
+    {
+    display_name("Diffuse Reflection Intensity");
+    description("Modulates the diffuse color.");
+    hard_range(0.0, 1.0);
+    };
+    float diffuse_dev = 0.0
+    {
+    display_name("Diffuse Roughness");
+    description("The microfacet deviation.");
+    hard_range(0.0, 1.0);
+    };
+    Color specular_refl = Color(0.3, 0.3, 0.3, 1.0)
+    {
+    display_name("Specular Reflection Color");
+    description("The color of reflections and highlights.");
+    hard_range(Color(0.0, 0.0, 0.0, 1.0), Color(1.0, 1.0, 1.0, 1.0));
+    };
+    float specular_refl_scalar = 0.6
+    {
+    display_name("Specular Reflection Intensity");
+    description("Modulates the specular color.");
+    hard_range(0.0, 1.0);
+    };
+    float refl_gloss = 1.0
+    {
+    display_name("Reflection Sharpness");
+    description("0: almost diffuse, 1: perfect mirror");
+    hard_range(0.0, 1.0);
+    };
+    bool metal_material = false
+    {
+    display_name("Metal Material");
+    description("Tints the reflection color with the base color.");
+    };
+    Color specular_trans = Color(0.3, 0.3, 0.3, 1.0)
+    {
+    display_name("Refraction Color");
+    description("Color of refractions");
+    hard_range(Color(0.0, 0.0, 0.0, 1.0), Color(1.0, 1.0, 1.0, 1.0));
+    };
+    float specular_trans_scalar = 0.0
+    {
+    display_name("Refraction Intensity");
+    description("Modulates the refracted color.");
+    hard_range(0.0, 1.0);
+    };    
+    float trans_gloss = 1.0
+    {
+    display_name("Refraction Glossiness");
+    description("0: frosted glass etc., 1: perfect refraction");
+    hard_range(0.0, 1.0);
+    };
+    Color diffuse_trans = Color(0.0, 0.0, 0.0, 1.0)
+    {
+    display_name("Translucent Color");
+    description("The diffusely transmitted color.");
+    hard_range(Color(0.0, 0.0, 0.0, 1.0), Color(1.0, 1.0, 1.0, 1.0));
+    };
+    float diffuse_trans_scalar = 0.0
+    {
+    display_name("Translucency Intensity");
+    description("Modulates the translucent color.");
+    hard_range(0.0, 1.0);
+    };
+    float anisotropy = 0.0
+    {
+    display_name("Anisotropy");
+    description("0: isotropic, 1: stretched highlight");
+    hard_range(0.0, 1.0);
+    };
+    float anisotropy_rotation = 0.0
+    {
+    display_name("Anisotropy Rotation");
+    description("The orientation of anisotropic highlights. "
+    "The range from 0 to 1 will be mapped to 0 to 360 degrees.");
+    soft_range(0.0, 1.0);
+    };
+    // temporary
+    float material_ior = 1.4
+    {
+    display_name("Material Index of Refraction.");
+    soft_range(0.0, 1.0);
+    };
+    
+
+member:
+    // There's currently only a built-in software implementation
+    // for the BSDF. Thus this shader will not work in hardware
+    // rendering so far.
+    Spectrum eval(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {   
+        // black result
+        return Spectrum(0.0);
+    }
+
+    Bsdf_components sample(
+        in float3           fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        return state::bsdf_invalid_sample(sampled_direction,sample_weight);
+    }
+
+    Bsdf_components get_components()
+    {
+        // nothing
+        return Bsdf_components{};
+    }
+
+    Bsdf_components get_active_components()
+    {
+        // nothing
+        return Bsdf_components{};
+    }
+}
+{
+    description("A BSDF model that supports a number of reflection and"
+            "refraction components.");
+}
+;
+

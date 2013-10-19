@@ -1,0 +1,271 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+//see gamma.h
+#define DEFAULT_GAMMA 0.68
+   /*  struct WaterSurfaceParams_struct{
+        Color Surface_Material;
+        Color Transparency;
+        float Index_Of_Refraction;
+        bool Looking_Into_Water;
+        bool Looking_Out_of_Water;
+        bool Stain_Underneath;
+    };*/
+
+shader WaterSurface {
+
+
+ input:
+     
+     Color Surface_Material = Color(0.3, 0.3, 0.3, 1.0){
+     };
+     Color Transparency = Color(0.5, 0.5, 0.5, 1.0){
+     };
+     float Index_Of_Refraction = 1.33{
+     };
+     bool Looking_Into_Water = true{
+     };
+     bool Looking_Out_of_Water = false{
+     };
+     bool Stain_Underneath = true{
+     };
+ 
+     bool evalNormal = false{
+     };
+ 
+ output:
+  Color result;
+
+  void lume_water_refraction_index(
+      in float paras_ior,
+      in bool paras_looking_into_water,
+      in bool paras_looking_out_if_water,
+      in bool local_backside,
+      inout float ior_in,
+      inout float ior_out)
+  {
+	
+
+     bool inside = false;
+     
+     if(paras_looking_into_water)
+         inside = false;
+     
+     if(paras_looking_out_if_water)
+         inside = true;
+     
+    
+     if(local_backside && inside)
+     {
+        ior_in = 1.0;
+        ior_out =  paras_ior;
+       
+     }
+     else
+     {
+         ior_in = paras_ior;
+         ior_out = 1.0;
+     }
+
+
+  }
+
+   //From mia_material.msl
+   float mi_fresnel(in float n1,
+		    in float n2,
+		    in float t1,
+		    in float t2) {
+    float d_p;
+    float d_o;
+    float r_p;
+    float r_o;
+    
+    if (n1 == n2) {
+      return 0.0;
+    } // if (n1 == n2)
+    else {
+      d_p = n1 * t2 + n2 * t1;
+      if (d_p == 0.0) {
+	r_p = 1.0;
+      }
+      else {
+	r_p = (n1 * t2 - n2 * t1) / d_p;
+      }
+      d_o = n1 * t1 + n2 * t2;
+      if (d_o == 0.0) {
+	r_o = 1.0;
+      }
+      else {
+	r_o = (n1 * t1 - n2 * t2) / d_o;
+      }
+      
+      return 0.5 * (r_p * r_p + r_o * r_o);
+    } // else [ if (n1 == n2) ]
+  } // mi_fresnel
+
+   //From mia_material.msl
+  float mi_fresnel_reflection(in float my_dot_nd, 
+			       in float ior_in, 
+			       in float ior_out) {
+    float ior;
+    float theta;
+
+    ior = ior_in / ior_out;
+    theta = 1.0 - ior * ior * (1.0 - my_dot_nd * my_dot_nd);
+    if (theta > 0.0) {
+      return mi_fresnel(ior_in, ior_out, my_dot_nd, -sqrt(theta));
+    } // if (theta > 0.0)
+    else {
+      return 1.0;
+    } // else [ if (theta > 0.0) ]
+  } // mi_fresnel_reflection
+
+  //see gamma.c
+  float autogamma_scalar(float x){
+
+      if((x == 0.0) || (x == 1.0))
+          return x;
+      return pow(x, DEFAULT_GAMMA);
+   
+  }
+
+  //from mia_material.msl
+  bool mi_refraction_dir(inout float3 refr_dir,
+			 in float ior_in,
+			 in float ior_out,
+			 // state
+			 in float3 my_direction,
+			 in float3 my_normal,
+			 in float3 my_geometry_normal,
+			 in float my_dot_nd) {
+    if (ior_out <= 0.0) {
+      return false;
+    } // if (ior_out <= 0.0)
+    else {
+#ifdef VERBOSE
+      check_almost_equal(length(my_direction), 1.0);
+      check_almost_equal(length(my_normal), 1.0);
+      check_almost_equal(length(my_geometry_normal), 1.0);
+#endif
+      float ior = ior_in / ior_out;
+      float n_fac = 1.0 - ior * ior * (1.0 - my_dot_nd * my_dot_nd);
+      if (n_fac < 0.0) {
+	return false;
+      } // if (n_fac < 0.0)
+      else {
+	if (n_fac == 0.0) {
+	  refr_dir = my_direction;
+	  return true;
+	} // if (n_fac == 0.0)
+	else {
+	  n_fac = -ior * my_dot_nd - sqrt(n_fac);
+	  refr_dir = n_fac * my_normal + ior * my_direction;
+	  if (dot(refr_dir, my_geometry_normal) > 0.0) {
+	    refr_dir = my_direction;
+	    return true;
+	  } // if (dot(refr_dir, my_geometry_normal) > 0.0)
+	  else {
+	    refr_dir = normalize(refr_dir);
+	    return true;
+	  } // else [ if (dot(refr_dir, my_geometry_normal) > 0.0) ]
+	} // else [ if (n_fac == 0.0) ]
+      } // else [ if (n_fac < 0.0) ]
+    } // else [ if (ior_out <= 0.0) ]
+  } // mi_refraction_dir
+        
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    
+    float local_ior_in;
+    float local_ior_out;
+    float local_reflection_intens;
+    float local_refraction_intens;
+    float3 local_reflection_dir;
+    float3 local_refraction_dir =float3(0);
+    Color local_reflection_color = Color(0);
+    Color local_refraction_color = Color(0);
+    Color local_transparency = Transparency;
+    Ray local_ray;
+    Ray local_ray_dx;
+    Ray local_ray_dy;
+    Trace_options local_trace_options;
+
+    if(ray_type == "environment")return;
+    result = Surface_Material;
+    lume_water_refraction_index(Index_Of_Refraction,
+                                Looking_Into_Water,
+                                Looking_Out_of_Water,
+                                backside,
+                                local_ior_in, 
+                                local_ior_out);
+    local_reflection_intens = 
+        abs(autogamma_scalar(mi_fresnel_reflection(dot_nd, local_ior_in, local_ior_out)));
+    local_refraction_intens = 1.0 - local_reflection_intens;
+
+    if( local_reflection_intens != 0.0 )
+    {
+         // mi_reflection_dir(&main_dir, state);
+         local_reflection_dir = reflect(direction, normal);
+         local_trace_options.set_ray_type("reflect");
+         local_ray = Ray(position, local_reflection_dir); 
+         if(false == trace(local_ray, 
+                           local_ray_dx, 
+                           local_ray_dy, 
+                           local_trace_options, 
+                           "result", 
+                           local_reflection_color)){
+
+             local_trace_options.set_ray_type("environment");
+             trace(local_ray, 
+                 local_ray_dx, 
+                 local_ray_dy, 
+                 local_trace_options,
+                 "result", 
+                 local_reflection_color);
+         }
+
+         result.rgb += (1.0 - local_transparency.rgb)*
+                 local_reflection_intens*local_reflection_color.rgb;
+                 //TODO The original shader was multipling by red only
+                 // is this correct ???
+    }
+
+     if(local_refraction_intens != 0.0){
+
+         //mi_refraction_dir ( &refractionDir, state, ior_in, ior_out )
+         if(mi_refraction_dir(local_refraction_dir, 
+                              local_ior_in, 
+                              local_ior_out, 
+                              direction, 
+                              normal, 
+                              geometry_normal, 
+                              dot_nd)){
+
+     
+            local_trace_options.set_ray_type("refract");
+
+            if (Stain_Underneath)
+                local_trace_options.set_data("lume::stained", true);
+
+            local_ray = Ray(position, local_refraction_dir);
+            if(trace(local_ray, 
+                     local_ray_dx, 
+                     local_ray_dy, 
+                     local_trace_options, 
+                     "result", 
+                     local_refraction_color)){
+            
+                result.rgb += (local_transparency.rgb*
+                                local_refraction_intens*local_refraction_color.rgb);
+            }
+         }//if mi_refraction_dir
+     }//if local_refraction_intens
+
+     
+  } // main
+};

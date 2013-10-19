@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Materials</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node13.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node19.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION12"></a>
+<h2 id="fo:material">Materials</h2>
+
+<p>A <a href="node79.html#INDEX242">material</a> determines the response of a
+surface to <a href="node15.html#INDEX17">illumination</a>. Materials in
+mental ray consist of a material name and one mandatory and several optional
+shaders, each of which can be a standard shader or a user-provided C/C++
+shader:</p>
+<ul>
+<li>
+The primary shader is the <a href="node115.html#INDEX440">material shader</a>
+itself. This is the only one that may not be omitted in case no
+<a href="#fo:material_bsdf">BRDF</a> is specified. The material shader
+determines the color of a point on an object, based on its parameters which
+may include object colors, textures, lists of light sources, and other
+arbitrary parameters.
+<li>
+An optional <a href="node117.html#INDEX460">volume shader</a> controls rays
+passing through the inside of the object. This is functionally equivalent to
+atmosphere calculations, but takes place inside objects, not outside.
+<li>
+An optional <a href="node142.html#INDEX580">photon shader</a> determines how
+the material interacts with <a href="node80.html#INDEX259">indirect
+illumination</a> if <a href="node41.html#INDEX86">caustics</a> or
+<a href="node48.html#INDEX95">global illumination</a> are enabled, much like
+the main <a href="node115.html#INDEX440">material shader</a> determines how
+the material interacts with direct <a href="node15.html#INDEX17">illumination</a>.
+<li>
+An optional <a href="node102.html#INDEX379">photon volume shader</a> determines
+how the inside of the object interacts with
+<a href="node80.html#INDEX259">indirect illumination</a> if
+<a href="node41.html#INDEX86">caustics</a> or
+<a href="node48.html#INDEX95">global illumination</a> are enabled, much like
+the <a href="node117.html#INDEX460">volume shader</a> determines how the
+volume interacts with direct <a href="node15.html#INDEX17">illumination</a>.
+<li>
+An optional <a href="node119.html#INDEX468">environment shader</a> provides an
+environment map for non-raytraced reflections.
+<li>
+An optional <a href="node127.html#INDEX494">displacement shader</a> can be named
+that displaces any type of <a href="database.html#fo:geometry">surface
+geometry</a> at each point in the direction of the normal. Displacement maps
+affect the triangles resulting from the tessellation of
+<a href="node9.html#fo:ffs">free-form surfaces</a>,
+<a href="meshes.html#fo:polys">polygonal meshes</a>,
+and <a href="node12.html#fo:subds">subdivision surface</a>s.
+<li>
+An optional <a href="node121.html#INDEX481">shadow shader</a> determines the
+way shadow rays pass through the object. This can be used for calculating
+effects like colored shadows.
+<li>
+An optional <a href="node133.html#INDEX499">contour shader</a> specifies how
+contours should be drawn in and around the object that this material is
+applied to, if <a href="node92.html#INDEX0">contour</a> rendering is
+enabled.
+<li>
+An optional <a href="node135.html#INDEX501">lightmap shader</a> causes the
+object to be sampled to create a <a href="node25.html#INDEX49">light map</a>,
+which collects arbitrary information (usually illumination) about an object
+that can later be used during rendering.
+<li id="fo:material_bsdf"><span class="recent">3.7</span>
+An optional <a href="brdf_sh.html">BRDF shader</a> as a replacement or
+fallback for any material or photon shader in the material. This allows
+advanced rendering algorithms to take advantage of known shading properties
+provided by a single <a href="#fo:bsdf">BRDF</a>.
+</ul>
+<p>The shading function may be either a user written function
+linked at run time, or it may be one of the standard functions.
+Shaders may define parameters that control their behavior. Shaders
+are completely free to define any set of parameters required for
+their function, but there is a set of commonly used terms and
+parameter names that will be found in many parameter lists.</p>
+<p>Parameters have names and values. The <i>declaration</i> of a
+shader, which is provided by the author of the shader, defines the
+list of possible parameters, including names and types (such as
+"color" or "vector"). The <i>definition</i> of a shader is done in
+a scene file, and provides the values. For example, a shader might
+have a color parameter named <tt>"diffuse"</tt> with the value
+<tt>1.0 1.0 0.0</tt>, which specifies a yellow color. Parameter
+values can be given in any order. Parameters can also be omitted;
+mental ray will substitute null values. Shaders are typically
+programmed to provide reasonable defaults in this case.</p>
+
+<h3 id="fo:brdf_bsdf">BRDF/BSDF <span class="recent">3.7</span></h3>
+<p>
+A <dfn id="fo:brdf">Bidirectional Reflection Distribution Function</dfn>
+(<dfn>BRDF</dfn>) is a common model in computer graphics to describe
+illumination characteristics of a material. A <dfn id="fo:bsdf">Bidirectional
+Scattering Distribution Function</dfn> (<dfn>BSDF</dfn>) is an extension of a
+BRDF with transmission properties like refraction added to the model, and used
+in mental ray as the basis for its internal representation.
+<p>
+A BRDF can provide additional information to the renderer compared to
+conventional shaders normally used in materials. As a benefit, these
+functions typically adhere to physical or mathematical constraints. This
+knowledge can be essential to improve rendering efficiency. On the other
+hand, a BRDF does not offer the same flexibility as a material shader.
+However, this flexibility is not needed for the majority of rendering
+applications, but the performance costs associated with "black box" shading
+can be avoided in those cases.</p>
+<p>
+The current implementation allows rendering algorithms to take advantage of
+specified BRDFs as needed, or still support fully programmable shading.
+mental ray provides a set of built-in <a href="brdf_sh.html">BRDF shaders</a>
+for common shading models. They are exposed as built-in shaders which can be
+attached to materials slots like regular material or photon shaders. For
+advanced rendering algorithms like
+<a href="irradparticles.html">irradiance particles</a> a BRDF should be
+attached to the <code class="mi">bsdf</code> slot of a
+<a href="node79.html#mi:material">material description</a>.
+</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node13.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node19.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

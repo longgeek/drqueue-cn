@@ -1,0 +1,1476 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision: 1139 $
+
+#define NUM_PTS 6 // TODO: this should not be hardcoded
+
+// see utl_curve.cpp
+#define CURVEP_BEZIER   1   // (1<<0)
+#define CURVEP_CORNER   2   // (1<<1)
+#define CURVEP_LOCKED_Y 4   // (1<<2)
+#define CURVEP_LOCKED_X 8   // (1<<3)
+#define CURVEP_SELECTED 16  // (1<<4)
+#define CURVEP_ENDPOINT 256 // (1<<8)
+
+// see utl_curve.cpp
+#define FPARAM_Y_VALUE     0
+#define FPARAM_PARAM_VALUE 1
+
+shader max_base_Curve {
+ input:
+  // parameters for max_base_Curve:
+  // ------------------------------
+  int Flags = 0;
+  int LookupTableSize = 1000;
+  struct Point {
+    float x;
+    float y;
+    float xIn;
+    float yIn;
+    float xOut;
+    float yOut;
+    int Flags;
+  };
+  Point Points[] = {
+    Point(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 258),
+    Point(0.0898447, 0.798472, 0.0, 0.0, 0.0, 0.0, 2),
+    Point(0.218749, 0.151083, 0.0, 0.0, 0.0, 0.0, 2),
+    Point(0.355469, 0.972026, 0.0, 0.0, 0.0, 0.0, 2),
+    Point(0.433594, 0.294439, 0.0, 0.0, 0.0, 0.0, 18),
+    Point(1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 256)
+  };
+ // see mrCurve_EXTRAS in max_texmaps.h
+  int xtra_indx = 0;
+  int xtra_flags = 0;
+  float xtra_location = 0.0;
+  float xtra_xmin = 0.0;
+  float xtra_xmax = 1.0;
+  float xtra_ymin = 0.0;
+  float xtra_ymax = 1.0;
+  int xtra_useLookupTable = 1;
+ 
+ output:
+  Color result;
+
+  // see utl_curve.cpp
+  // maxLerp(t, a, b) ( (a) + (t) * ((b) - (a)) )
+  float maxLerp(in float t, in float a, in float b) {
+    return a + t * (b - a);
+  } // maxLerp
+
+  // see utl_curve.cpp
+  float2 maxInterpPiece(// inst
+			in int inst_numPts,
+			inout float2 mrCurve_point_p[],
+			inout float2 mrCurve_point_in[],
+			inout float2 mrCurve_point_out[],
+			// others
+			in int where,
+			in float p) {
+    float s = 1.0 - p;
+    float p2 = p * p;
+    // where2 = (where+1) % inst->numPts;
+    int where2 = ((where + 1) - 
+		  inst_numPts * ((int) ((where + 1) /
+					((float) inst_numPts))));
+    float2 res = float2(0.0, 0.0);
+    float2 pt1 = mrCurve_point_p[where];
+    float2 pt2 = mrCurve_point_p[where2];
+    float2 out_vec = mrCurve_point_out[where];
+    float2 in_vec  = mrCurve_point_in[where2];
+    res.x = ((s * pt1.x + (3.0 * p) * out_vec.x) * s +
+	     (3.0 * p2) * in_vec.x) * s + p * p2 * pt2.x;
+    res.y = ((s * pt1.y + (3.0f * p) * out_vec.y) * s +
+	     (3.0f * p2) * in_vec.y) * s + p * p2 * pt2.y;
+    return res;
+  } // maxInterpPiece
+
+  // see utl_curve.cpp
+  float maxFindParamValue(// inst
+			  in int inst_numPts,
+			  inout float2 mrCurve_point_p[],
+			  inout float2 mrCurve_point_in[],
+			  inout float2 mrCurve_point_out[],
+			  // others
+			  in int p,
+			  in float location,
+			  in int option) {
+    float2 p1 = maxInterpPiece(// inst
+			       inst_numPts,
+			       mrCurve_point_p,
+			       mrCurve_point_in,
+			       mrCurve_point_out,
+			       // others
+			       p, 0.0);
+    if (p1.x == location) {
+      if (option == FPARAM_PARAM_VALUE) {
+	return 0.0;
+      } // if (option == FPARAM_PARAM_VALUE)
+      else {
+	return p1.y;
+      } // else [ if (option == FPARAM_PARAM_VALUE) ]
+    } // if (p1.x == location)
+    float2 p2 = maxInterpPiece(// inst
+			       inst_numPts,
+			       mrCurve_point_p,
+			       mrCurve_point_in,
+			       mrCurve_point_out,
+			       // others
+			       p, 1.0);
+    if (p2.x == location) {
+      if (option == FPARAM_PARAM_VALUE) {
+	return 1.0;
+      } // if (option == FPARAM_PARAM_VALUE)
+      else {
+	return p2.y;
+      } // else [ if (option == FPARAM_PARAM_VALUE) ]
+    } // if (p2.x == location)
+    bool retrograde = (p1.x > p2.x) ? true : false;
+    // start a binary search for it
+    float low = 0.0;
+    float high = 1.0;
+    float mid = 0.0;
+    float lowSet = retrograde ? high : low;
+    float highSet = retrograde ? low : high;
+    int bin = 0;
+    float2 test = float2(0.0, 0.0);
+    for (bin = 0; bin < 20; bin++) {
+      mid = (lowSet + highSet) / 2.0;
+      test = maxInterpPiece(// inst
+			    inst_numPts,
+			    mrCurve_point_p,
+			    mrCurve_point_in,
+			    mrCurve_point_out,
+			    // others
+			    p, mid);
+      if (test.x == location) break;
+      if (test.x < location) lowSet = mid;
+      else highSet = mid;
+    } // for (bin = 0; bin < 20; bin++)
+    return (option == FPARAM_PARAM_VALUE) ? mid : test.y;
+  } // maxFindParamValue
+
+  // see utl_curve.cpp
+  void maxSetupLookupTable(//paras
+			   in int paras_i_points,
+			   in int paras_lookupTableSize,
+			   in int paras_n_points,
+			   // xtra
+			   in float xtra_paras_xmin,
+			   in float xtra_paras_xmax,
+			   // inst
+			   inout float inst_LookupTbl[1001],
+			   out float inst_n_step,
+			   out float inst_IndexFactor,
+			   out bool inst_LookupTblValid,
+			   // mrCurve_POINT
+			   inout float2 mrCurve_point_p[],
+			   inout float2 mrCurve_point_in[],
+			   inout float2 mrCurve_point_out[],
+			   inout float mrCurve_point_max[],
+			   inout float mrCurve_point_min[],
+			   inout float mrCurve_point_ymax[],
+			   inout float mrCurve_point_ymin[]) {
+    inst_n_step = 0.0;
+    inst_IndexFactor = 0.0;
+    inst_LookupTblValid = false;
+    int i = 0;
+    int s = 0;
+    int b = paras_i_points;
+    float n = xtra_paras_xmin;
+    // TODO: inst_LookupTbl = ...mi_mem_allocate(...);
+    inst_n_step = (xtra_paras_xmax - xtra_paras_xmin) / paras_lookupTableSize;
+    inst_IndexFactor = (paras_lookupTableSize - 1) / (xtra_paras_xmax - xtra_paras_xmin);
+    for (i = 0; i <= paras_lookupTableSize; i++) {
+      for (s = 0; s < (paras_n_points - 1); s++) {
+	if ((mrCurve_point_p[s].x <= n) && (n <= mrCurve_point_p[s+1].x)) {
+	  // inst_LookupTbl[i] = maxFindParamValue(inst, s, n, FPARAM_Y_VALUE);
+	  float tmp = maxFindParamValue(// inst
+					paras_n_points,
+					mrCurve_point_p,
+					mrCurve_point_in,
+					mrCurve_point_out,
+					// others
+					s, n, FPARAM_Y_VALUE);
+	  inst_LookupTbl[i] = tmp;
+	  break;
+	} // if ((mrCurve_point_p[s].x <= n) && ...)
+      } // for (s = 0; s < (paras_n_points - 1); s++) {
+      n += inst_n_step;
+    } // for (i = 0; i <= paras_lookupTableSize; i++)
+    inst_LookupTblValid = true;
+  } // maxSetupLookupTable
+
+  // see utl_curve.cpp
+  void maxCalcBoundaries(// paras
+			 // xtra
+			 in float xtra_paras_ymin,
+			 in float xtra_paras_ymax,
+			 // inst
+			 in int inst_numPts,
+			 inout float inst_pts_min[NUM_PTS],
+			 inout float inst_pts_max[NUM_PTS],
+			 inout float inst_pts_ymin[NUM_PTS],
+			 inout float inst_pts_ymax[NUM_PTS],
+			 inout float2 inst_pts_p[NUM_PTS],
+			 inout float2 inst_pts_in[NUM_PTS],
+			 inout float2 inst_pts_out[NUM_PTS]) {
+    int i = 0;
+    for(i = 0 ; i < inst_numPts ; i++) {
+      if (i == 0 || i == inst_numPts - 1) {
+	inst_pts_min[i] = inst_pts_max[i] = 0.0;
+      } // if (i == 0 || i == inst_numPts - 1)
+      inst_pts_min[i] = -99999999.0;
+      inst_pts_max[i] =  99999999.0;
+      inst_pts_ymin[i] = -99999999.0;
+      inst_pts_ymax[i] =  99999999.0;
+      if (i > 0 && i < inst_numPts - 1) {
+	float dist = 0.0;
+	int prev = i - 1;
+	int next = i + 1;
+
+	// Here we calculate the distance between the current point an
+	// the OutTangent of the previous point. That means how far
+	// can this point be moved to the left.
+	dist = inst_pts_out[prev].x - inst_pts_p[i].x;
+	if (dist > inst_pts_min[i]) inst_pts_min[i] = dist;
+	// Here we calculate the distance between the previous point
+	// an the InTangent of the current point. That means how
+	// far can this point be moved to the left.
+	dist = inst_pts_p[prev].x - inst_pts_in[i].x;
+	if (dist > inst_pts_min[i]) inst_pts_min[i] = dist;
+	// Here we calculate the distance between the current point an
+	// the InTangent of the next point. The InTan of the next
+	// point is constrained already.
+	dist = inst_pts_in[next].x - inst_pts_p[i].x;
+	if (dist < inst_pts_max[i]) inst_pts_max[i] = dist;
+	// Here we calculate the distance between the next point an
+	// the OutTangent of the current point. The next point is
+	// constrained already.
+	dist = inst_pts_p[next].x - inst_pts_out[i].x;
+	if (dist < inst_pts_max[i]) inst_pts_max[i] = dist;
+
+	dist = xtra_paras_ymax - inst_pts_p[i].y;
+	if(dist < inst_pts_ymax[i]) inst_pts_ymax[i] = dist;
+	dist = xtra_paras_ymax - inst_pts_in[i].y;
+	if(dist < inst_pts_ymax[i]) inst_pts_ymax[i] = dist;
+	dist = xtra_paras_ymax - inst_pts_out[i].y;
+	if(dist < inst_pts_ymax[i]) inst_pts_ymax[i] = dist;
+	dist = xtra_paras_ymin - inst_pts_p[i].y;
+	if(dist > inst_pts_ymin[i]) inst_pts_ymin[i] = dist;
+	dist = xtra_paras_ymin - inst_pts_in[i].y;
+	if(dist > inst_pts_ymin[i]) inst_pts_ymin[i] = dist;
+	dist = xtra_paras_ymin - inst_pts_out[i].y;
+	if(dist > inst_pts_ymin[i]) inst_pts_ymin[i] = dist;
+      } // if (i > 0 && i < inst_numPts - 1)
+    } // for(i = 0 ; i < inst_numPts ; i++)
+  } // maxCalcBoundaries
+
+  // see utl_curve.cpp
+  bool IsClosed(in int paras_flags) {
+    float odd = fmod((float) paras_flags, 1.0);
+    if (odd == 1.0) return true;
+    else return false;
+  } // IsClosed
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    int numPts = Points.count;
+    if (numPts != 0) {
+      // begin maxReadyCache
+      int i = 0;
+      // use arrays of simple data types instead of array of struct !!!
+      float2 p[NUM_PTS];
+      float2 p_in[NUM_PTS];
+      float2 p_out[NUM_PTS];
+      for (i = 0; i < numPts; i++) {
+	p[i].x = Points[i].x;
+	p[i].y = Points[i].y;
+	p_in[i].x = Points[i].xIn + p[i].x;
+	p_in[i].y = Points[i].yIn + p[i].y;
+	p_out[i].x = Points[i].xOut + p[i].x;
+	p_out[i].y = Points[i].yOut + p[i].y;
+      } // for (i = 0; i < numPts; i++)
+      if (IsClosed(Flags) && (numPts > 0)) {
+	p[0].x = xtra_xmin;
+	p[numPts-1].x = xtra_xmax;
+      } // if (IsClosed(Flags) && (numPts > 0))
+      float p_min[NUM_PTS];
+      float p_max[NUM_PTS];
+      float p_ymin[NUM_PTS];
+      float p_ymax[NUM_PTS];
+      maxCalcBoundaries(// xtra
+			xtra_ymin, xtra_ymax,
+			// inst
+			numPts, p_min, p_max, p_ymin, p_ymax,
+			p, p_in, p_out);
+      for (i = 0; i < numPts; i++) {
+	float newx = p[i].x + p_min[i];
+	float newy = xtra_ymin;
+	// This is only possible, if p_min[i] is positive, which
+	// means, that the tangent and the point overlap.
+	if (p[i].x < p[i].x + p_min[i]) {
+	  // The following lines are due to Cg compiler problems. It
+	  // looks like you can't swizzle on arrays !!!
+
+	  // p_in[i].x += p_min[i];
+	  float2 tmp = p_in[i];
+	  tmp.x += p_min[i];
+	  p_in[i] = tmp;
+	  // p_out[i].x += p_min[i];
+	  tmp = p_out[i];
+	  tmp.x += p_min[i];
+	  p_out[i] = tmp;
+	  // p[i].x = newx;
+	  tmp = p[i];
+	  tmp.x = newx;
+	  p[i] = tmp;
+	} // if (p[i].x < p[i].x + p_min[i])
+	if (/* TODO: xtra_flags & CC_CONSTRAIN_Y && */ p[i].y < newy) {
+	  // p_in[i].y += newy - p[i].y;
+	  float2 tmp1 = p_in[i];
+	  float2 tmp2 = p[i];
+	  tmp1.y += newy - tmp2.y;
+	  p_in[i] = tmp1;
+	  // p_out[i].y += newy - p[i].y;
+	  tmp1 = p_out[i];
+	  tmp2 = p[i];
+	  tmp1.y += newy - tmp2.y;
+	  p_out[i] = tmp1;
+	  // p[i].y = newy;
+	  tmp1 = p[i];
+	  tmp1.y = newy;
+	  p[i] = tmp1;
+	}
+	maxCalcBoundaries(// xtra
+			  xtra_ymin, xtra_ymax,
+			  // inst
+			  numPts, p_min, p_max, p_ymin, p_ymax,
+			  p, p_in, p_out);
+      } // for (i = 0; i < numPts; i++)
+      for (i = numPts - 1; i >= 0; i--) {
+	float newx = p[i].x + p_max[i];
+	float newy = xtra_ymax;
+	if (p[i].x > newx) {
+	  p_in[i].x  += newx - p[i].x;
+	  p_out[i].x += newx - p[i].x;
+	  p[i].x = newx;
+	}
+	if (/* TODO: xtra_flags & CC_CONSTRAIN_Y && */ p[i].y > newy) {
+	  p_in[i].y  += newy - p[i].y;
+	  p_out[i].y += newy - p[i].y;
+	  p[i].y = newy;
+	}
+	maxCalcBoundaries(// xtra
+			  xtra_ymin, xtra_ymax,
+			  // inst
+			  numPts, p_min, p_max, p_ymin, p_ymax,
+			  p, p_in, p_out);
+      } // for (i = numPts - 1; i >= 0; i--)
+      bool inst_ptsValid = true;
+      // end maxReadyCache
+      // TODO: if (xtra_location > xtra_xmax)
+      // TODO: if (xtra_location < xtra_xmin)
+      bool inst_LookupTblValid = false; // TODO
+      int paras_i_points = 1; // TODO
+      int paras_lookupTableSize = LookupTableSize;
+      int paras_n_points = Points.count;
+      float inst_LookupTbl[1001];   // size should be LookupTableSize + 1 !!!
+      float inst_n_step = 0.0;      // out
+      float inst_IndexFactor = 0.0; // out
+      if (xtra_useLookupTable == 1) {
+	if (inst_LookupTblValid == false) {
+	  maxSetupLookupTable(// paras
+			      paras_i_points,
+			      paras_lookupTableSize,
+			      paras_n_points,
+			      // xtra
+			      xtra_xmin,
+			      xtra_xmax,
+			      // inst
+			      inst_LookupTbl,
+			      inst_n_step,         // out
+			      inst_IndexFactor,    // out
+			      inst_LookupTblValid, // out
+			      // mrCurve_POINT
+			      p,
+			      p_in,
+			      p_out,
+			      p_max,
+			      p_min,
+			      p_ymax,
+			      p_ymin);
+	} // if (inst_LookupTblValid == false)
+        int i = (int) ((xtra_location - xtra_xmin) * inst_IndexFactor);
+        float f = maxLerp((xtra_location - i * inst_n_step) / inst_n_step,
+    		      inst_LookupTbl[i], inst_LookupTbl[i + 1]);
+	result.r = f;
+      } // if (xtra_useLookupTable)
+    } // if (numPts != 0)
+    //     // struct mrCurve_POINT
+    //     float2 mrCurve_point_p[NUM_PTS] = { float2(0.0, 0.0),
+    // 					float2(0.386718, 0.92137),
+    // 					float2(0.433594, 0.130597),
+    // 					float2(1.0, 1.0) };
+    //     float2 mrCurve_point_in[NUM_PTS] = { float2(0.0, 0.0),
+    // 					 float2(0.0, 0.0),
+    // 					 float2(0.0, 0.0),
+    // 					 float2(0.0, 0.0) };
+    //     float2 mrCurve_point_out[NUM_PTS] = { float2(0.0, 0.0),
+    // 					  float2(0.0, 0.0),
+    // 					  float2(0.0, 0.0),
+    // 					  float2(0.0, 0.0) };
+    //     float mrCurve_point_max[NUM_PTS] = { 1.0, 1.0, 1.0, 1.0 };
+    //     float mrCurve_point_min[NUM_PTS] = { 0.0, 0.0, 0.0, 0.0 };
+    //     float mrCurve_point_ymax[NUM_PTS] = { 1.0, 1.0, 1.0, 1.0 };
+    //     float mrCurve_point_ymin[NUM_PTS] = { 0.0, 0.0, 0.0, 0.0 };
+    //     // TODO: we extrapolate the curve to return out of range types
+    //     // ^ does not happen for our example scene
+    //     int paras_i_points = 1; // TODO
+    //     int paras_lookupTableSize = LookupTableSize;
+    //     int paras_n_points = 4; // TODO
+    //     float xtra_xmin = 0.0; // TODO
+    //     float xtra_xmax = 1.0; // TODO
+    //     float xtra_location = Position.r; // WARNING: comes from max_Falloff2 !!!
+    //     float inst_LookupTbl[1001]; // size should be LookupTableSize + 1 !!!
+    //     float inst_n_step = 0.001;       // out
+    //     float inst_IndexFactor = 999.0;  // out
+    //     bool inst_LookupTblValid = false; // out
+    // #if 0
+    //     maxSetupLookupTable(// paras
+    // 			paras_i_points,
+    // 			paras_lookupTableSize,
+    // 			paras_n_points,
+    // 			// xtra
+    // 			xtra_xmin,
+    // 			xtra_xmax,
+    // 			// inst
+    // 			inst_LookupTbl,
+    // 			inst_n_step,         // out
+    // 			inst_IndexFactor,    // out
+    // 			inst_LookupTblValid, // out
+    // 			// mrCurve_POINT
+    // 			mrCurve_point_p,
+    // 			mrCurve_point_in,
+    // 			mrCurve_point_out,
+    // 			mrCurve_point_max,
+    // 			mrCurve_point_min,
+    // 			mrCurve_point_ymax,
+    // 			mrCurve_point_ymin);
+    // #else
+    //     inst_LookupTbl[0] = 0.000000;
+    //     inst_LookupTbl[1] = 0.002383;
+    //     inst_LookupTbl[2] = 0.004765;
+    //     inst_LookupTbl[3] = 0.007147;
+    //     inst_LookupTbl[4] = 0.009530;
+    //     inst_LookupTbl[5] = 0.011913;
+    //     inst_LookupTbl[6] = 0.014295;
+    //     inst_LookupTbl[7] = 0.016677;
+    //     inst_LookupTbl[8] = 0.019060;
+    //     inst_LookupTbl[9] = 0.021443;
+    //     inst_LookupTbl[10] = 0.023825;
+    //     inst_LookupTbl[11] = 0.026208;
+    //     inst_LookupTbl[12] = 0.028591;
+    //     inst_LookupTbl[13] = 0.030973;
+    //     inst_LookupTbl[14] = 0.033355;
+    //     inst_LookupTbl[15] = 0.035738;
+    //     inst_LookupTbl[16] = 0.038120;
+    //     inst_LookupTbl[17] = 0.040503;
+    //     inst_LookupTbl[18] = 0.042886;
+    //     inst_LookupTbl[19] = 0.045268;
+    //     inst_LookupTbl[20] = 0.047651;
+    //     inst_LookupTbl[21] = 0.050033;
+    //     inst_LookupTbl[22] = 0.052416;
+    //     inst_LookupTbl[23] = 0.054799;
+    //     inst_LookupTbl[24] = 0.057181;
+    //     inst_LookupTbl[25] = 0.059563;
+    //     inst_LookupTbl[26] = 0.061945;
+    //     inst_LookupTbl[27] = 0.064329;
+    //     inst_LookupTbl[28] = 0.066711;
+    //     inst_LookupTbl[29] = 0.069094;
+    //     inst_LookupTbl[30] = 0.071476;
+    //     inst_LookupTbl[31] = 0.073858;
+    //     inst_LookupTbl[32] = 0.076241;
+    //     inst_LookupTbl[33] = 0.078623;
+    //     inst_LookupTbl[34] = 0.081006;
+    //     inst_LookupTbl[35] = 0.083388;
+    //     inst_LookupTbl[36] = 0.085771;
+    //     inst_LookupTbl[37] = 0.088153;
+    //     inst_LookupTbl[38] = 0.090537;
+    //     inst_LookupTbl[39] = 0.092918;
+    //     inst_LookupTbl[40] = 0.095302;
+    //     inst_LookupTbl[41] = 0.097684;
+    //     inst_LookupTbl[42] = 0.100067;
+    //     inst_LookupTbl[43] = 0.102450;
+    //     inst_LookupTbl[44] = 0.104832;
+    //     inst_LookupTbl[45] = 0.107214;
+    //     inst_LookupTbl[46] = 0.109597;
+    //     inst_LookupTbl[47] = 0.111979;
+    //     inst_LookupTbl[48] = 0.114363;
+    //     inst_LookupTbl[49] = 0.116744;
+    //     inst_LookupTbl[50] = 0.119126;
+    //     inst_LookupTbl[51] = 0.121509;
+    //     inst_LookupTbl[52] = 0.123891;
+    //     inst_LookupTbl[53] = 0.126274;
+    //     inst_LookupTbl[54] = 0.128657;
+    //     inst_LookupTbl[55] = 0.131040;
+    //     inst_LookupTbl[56] = 0.133422;
+    //     inst_LookupTbl[57] = 0.135805;
+    //     inst_LookupTbl[58] = 0.138187;
+    //     inst_LookupTbl[59] = 0.140570;
+    //     inst_LookupTbl[60] = 0.142952;
+    //     inst_LookupTbl[61] = 0.145336;
+    //     inst_LookupTbl[62] = 0.147718;
+    //     inst_LookupTbl[63] = 0.150100;
+    //     inst_LookupTbl[64] = 0.152482;
+    //     inst_LookupTbl[65] = 0.154865;
+    //     inst_LookupTbl[66] = 0.157247;
+    //     inst_LookupTbl[67] = 0.159630;
+    //     inst_LookupTbl[68] = 0.162012;
+    //     inst_LookupTbl[69] = 0.164396;
+    //     inst_LookupTbl[70] = 0.166777;
+    //     inst_LookupTbl[71] = 0.169160;
+    //     inst_LookupTbl[72] = 0.171542;
+    //     inst_LookupTbl[73] = 0.173925;
+    //     inst_LookupTbl[74] = 0.176307;
+    //     inst_LookupTbl[75] = 0.178690;
+    //     inst_LookupTbl[76] = 0.181072;
+    //     inst_LookupTbl[77] = 0.183455;
+    //     inst_LookupTbl[78] = 0.185837;
+    //     inst_LookupTbl[79] = 0.188221;
+    //     inst_LookupTbl[80] = 0.190604;
+    //     inst_LookupTbl[81] = 0.192986;
+    //     inst_LookupTbl[82] = 0.195367;
+    //     inst_LookupTbl[83] = 0.197751;
+    //     inst_LookupTbl[84] = 0.200133;
+    //     inst_LookupTbl[85] = 0.202516;
+    //     inst_LookupTbl[86] = 0.204899;
+    //     inst_LookupTbl[87] = 0.207281;
+    //     inst_LookupTbl[88] = 0.209664;
+    //     inst_LookupTbl[89] = 0.212046;
+    //     inst_LookupTbl[90] = 0.214428;
+    //     inst_LookupTbl[91] = 0.216811;
+    //     inst_LookupTbl[92] = 0.219193;
+    //     inst_LookupTbl[93] = 0.221576;
+    //     inst_LookupTbl[94] = 0.223958;
+    //     inst_LookupTbl[95] = 0.226341;
+    //     inst_LookupTbl[96] = 0.228724;
+    //     inst_LookupTbl[97] = 0.231106;
+    //     inst_LookupTbl[98] = 0.233488;
+    //     inst_LookupTbl[99] = 0.235870;
+    //     inst_LookupTbl[100] = 0.238254;
+    //     inst_LookupTbl[101] = 0.240637;
+    //     inst_LookupTbl[102] = 0.243019;
+    //     inst_LookupTbl[103] = 0.245401;
+    //     inst_LookupTbl[104] = 0.247785;
+    //     inst_LookupTbl[105] = 0.250165;
+    //     inst_LookupTbl[106] = 0.252550;
+    //     inst_LookupTbl[107] = 0.254932;
+    //     inst_LookupTbl[108] = 0.257314;
+    //     inst_LookupTbl[109] = 0.259696;
+    //     inst_LookupTbl[110] = 0.262079;
+    //     inst_LookupTbl[111] = 0.264463;
+    //     inst_LookupTbl[112] = 0.266845;
+    //     inst_LookupTbl[113] = 0.269226;
+    //     inst_LookupTbl[114] = 0.271610;
+    //     inst_LookupTbl[115] = 0.273992;
+    //     inst_LookupTbl[116] = 0.276374;
+    //     inst_LookupTbl[117] = 0.278757;
+    //     inst_LookupTbl[118] = 0.281140;
+    //     inst_LookupTbl[119] = 0.283521;
+    //     inst_LookupTbl[120] = 0.285905;
+    //     inst_LookupTbl[121] = 0.288288;
+    //     inst_LookupTbl[122] = 0.290669;
+    //     inst_LookupTbl[123] = 0.293052;
+    //     inst_LookupTbl[124] = 0.295434;
+    //     inst_LookupTbl[125] = 0.297817;
+    //     inst_LookupTbl[126] = 0.300201;
+    //     inst_LookupTbl[127] = 0.302582;
+    //     inst_LookupTbl[128] = 0.304965;
+    //     inst_LookupTbl[129] = 0.307347;
+    //     inst_LookupTbl[130] = 0.309731;
+    //     inst_LookupTbl[131] = 0.312113;
+    //     inst_LookupTbl[132] = 0.314495;
+    //     inst_LookupTbl[133] = 0.316878;
+    //     inst_LookupTbl[134] = 0.319260;
+    //     inst_LookupTbl[135] = 0.321643;
+    //     inst_LookupTbl[136] = 0.324024;
+    //     inst_LookupTbl[137] = 0.326407;
+    //     inst_LookupTbl[138] = 0.328791;
+    //     inst_LookupTbl[139] = 0.331173;
+    //     inst_LookupTbl[140] = 0.333555;
+    //     inst_LookupTbl[141] = 0.335939;
+    //     inst_LookupTbl[142] = 0.338321;
+    //     inst_LookupTbl[143] = 0.340703;
+    //     inst_LookupTbl[144] = 0.343085;
+    //     inst_LookupTbl[145] = 0.345469;
+    //     inst_LookupTbl[146] = 0.347850;
+    //     inst_LookupTbl[147] = 0.350233;
+    //     inst_LookupTbl[148] = 0.352615;
+    //     inst_LookupTbl[149] = 0.354999;
+    //     inst_LookupTbl[150] = 0.357381;
+    //     inst_LookupTbl[151] = 0.359763;
+    //     inst_LookupTbl[152] = 0.362147;
+    //     inst_LookupTbl[153] = 0.364528;
+    //     inst_LookupTbl[154] = 0.366911;
+    //     inst_LookupTbl[155] = 0.369293;
+    //     inst_LookupTbl[156] = 0.371677;
+    //     inst_LookupTbl[157] = 0.374060;
+    //     inst_LookupTbl[158] = 0.376442;
+    //     inst_LookupTbl[159] = 0.378824;
+    //     inst_LookupTbl[160] = 0.381206;
+    //     inst_LookupTbl[161] = 0.383589;
+    //     inst_LookupTbl[162] = 0.385972;
+    //     inst_LookupTbl[163] = 0.388354;
+    //     inst_LookupTbl[164] = 0.390737;
+    //     inst_LookupTbl[165] = 0.393120;
+    //     inst_LookupTbl[166] = 0.395502;
+    //     inst_LookupTbl[167] = 0.397885;
+    //     inst_LookupTbl[168] = 0.400267;
+    //     inst_LookupTbl[169] = 0.402649;
+    //     inst_LookupTbl[170] = 0.405031;
+    //     inst_LookupTbl[171] = 0.407415;
+    //     inst_LookupTbl[172] = 0.409797;
+    //     inst_LookupTbl[173] = 0.412179;
+    //     inst_LookupTbl[174] = 0.414561;
+    //     inst_LookupTbl[175] = 0.416944;
+    //     inst_LookupTbl[176] = 0.419326;
+    //     inst_LookupTbl[177] = 0.421709;
+    //     inst_LookupTbl[178] = 0.424093;
+    //     inst_LookupTbl[179] = 0.426475;
+    //     inst_LookupTbl[180] = 0.428857;
+    //     inst_LookupTbl[181] = 0.431241;
+    //     inst_LookupTbl[182] = 0.433623;
+    //     inst_LookupTbl[183] = 0.436005;
+    //     inst_LookupTbl[184] = 0.438388;
+    //     inst_LookupTbl[185] = 0.440771;
+    //     inst_LookupTbl[186] = 0.443152;
+    //     inst_LookupTbl[187] = 0.445534;
+    //     inst_LookupTbl[188] = 0.447919;
+    //     inst_LookupTbl[189] = 0.450301;
+    //     inst_LookupTbl[190] = 0.452684;
+    //     inst_LookupTbl[191] = 0.455066;
+    //     inst_LookupTbl[192] = 0.457447;
+    //     inst_LookupTbl[193] = 0.459830;
+    //     inst_LookupTbl[194] = 0.462213;
+    //     inst_LookupTbl[195] = 0.464596;
+    //     inst_LookupTbl[196] = 0.466978;
+    //     inst_LookupTbl[197] = 0.469361;
+    //     inst_LookupTbl[198] = 0.471744;
+    //     inst_LookupTbl[199] = 0.474126;
+    //     inst_LookupTbl[200] = 0.476508;
+    //     inst_LookupTbl[201] = 0.478889;
+    //     inst_LookupTbl[202] = 0.481273;
+    //     inst_LookupTbl[203] = 0.483656;
+    //     inst_LookupTbl[204] = 0.486039;
+    //     inst_LookupTbl[205] = 0.488421;
+    //     inst_LookupTbl[206] = 0.490803;
+    //     inst_LookupTbl[207] = 0.493186;
+    //     inst_LookupTbl[208] = 0.495569;
+    //     inst_LookupTbl[209] = 0.497950;
+    //     inst_LookupTbl[210] = 0.500334;
+    //     inst_LookupTbl[211] = 0.502716;
+    //     inst_LookupTbl[212] = 0.505098;
+    //     inst_LookupTbl[213] = 0.507481;
+    //     inst_LookupTbl[214] = 0.509863;
+    //     inst_LookupTbl[215] = 0.512246;
+    //     inst_LookupTbl[216] = 0.514629;
+    //     inst_LookupTbl[217] = 0.517012;
+    //     inst_LookupTbl[218] = 0.519394;
+    //     inst_LookupTbl[219] = 0.521777;
+    //     inst_LookupTbl[220] = 0.524159;
+    //     inst_LookupTbl[221] = 0.526542;
+    //     inst_LookupTbl[222] = 0.528924;
+    //     inst_LookupTbl[223] = 0.531306;
+    //     inst_LookupTbl[224] = 0.533689;
+    //     inst_LookupTbl[225] = 0.536072;
+    //     inst_LookupTbl[226] = 0.538455;
+    //     inst_LookupTbl[227] = 0.540838;
+    //     inst_LookupTbl[228] = 0.543219;
+    //     inst_LookupTbl[229] = 0.545603;
+    //     inst_LookupTbl[230] = 0.547985;
+    //     inst_LookupTbl[231] = 0.550367;
+    //     inst_LookupTbl[232] = 0.552750;
+    //     inst_LookupTbl[233] = 0.555133;
+    //     inst_LookupTbl[234] = 0.557513;
+    //     inst_LookupTbl[235] = 0.559897;
+    //     inst_LookupTbl[236] = 0.562280;
+    //     inst_LookupTbl[237] = 0.564661;
+    //     inst_LookupTbl[238] = 0.567045;
+    //     inst_LookupTbl[239] = 0.569426;
+    //     inst_LookupTbl[240] = 0.571809;
+    //     inst_LookupTbl[241] = 0.574192;
+    //     inst_LookupTbl[242] = 0.576575;
+    //     inst_LookupTbl[243] = 0.578957;
+    //     inst_LookupTbl[244] = 0.581339;
+    //     inst_LookupTbl[245] = 0.583723;
+    //     inst_LookupTbl[246] = 0.586104;
+    //     inst_LookupTbl[247] = 0.588486;
+    //     inst_LookupTbl[248] = 0.590871;
+    //     inst_LookupTbl[249] = 0.593252;
+    //     inst_LookupTbl[250] = 0.595634;
+    //     inst_LookupTbl[251] = 0.598019;
+    //     inst_LookupTbl[252] = 0.600399;
+    //     inst_LookupTbl[253] = 0.602784;
+    //     inst_LookupTbl[254] = 0.605164;
+    //     inst_LookupTbl[255] = 0.607549;
+    //     inst_LookupTbl[256] = 0.609929;
+    //     inst_LookupTbl[257] = 0.612313;
+    //     inst_LookupTbl[258] = 0.614696;
+    //     inst_LookupTbl[259] = 0.617077;
+    //     inst_LookupTbl[260] = 0.619461;
+    //     inst_LookupTbl[261] = 0.621843;
+    //     inst_LookupTbl[262] = 0.624226;
+    //     inst_LookupTbl[263] = 0.626607;
+    //     inst_LookupTbl[264] = 0.628991;
+    //     inst_LookupTbl[265] = 0.631373;
+    //     inst_LookupTbl[266] = 0.633755;
+    //     inst_LookupTbl[267] = 0.636137;
+    //     inst_LookupTbl[268] = 0.638521;
+    //     inst_LookupTbl[269] = 0.640903;
+    //     inst_LookupTbl[270] = 0.643285;
+    //     inst_LookupTbl[271] = 0.645669;
+    //     inst_LookupTbl[272] = 0.648050;
+    //     inst_LookupTbl[273] = 0.650433;
+    //     inst_LookupTbl[274] = 0.652815;
+    //     inst_LookupTbl[275] = 0.655198;
+    //     inst_LookupTbl[276] = 0.657580;
+    //     inst_LookupTbl[277] = 0.659962;
+    //     inst_LookupTbl[278] = 0.662345;
+    //     inst_LookupTbl[279] = 0.664728;
+    //     inst_LookupTbl[280] = 0.667111;
+    //     inst_LookupTbl[281] = 0.669493;
+    //     inst_LookupTbl[282] = 0.671876;
+    //     inst_LookupTbl[283] = 0.674257;
+    //     inst_LookupTbl[284] = 0.676639;
+    //     inst_LookupTbl[285] = 0.679024;
+    //     inst_LookupTbl[286] = 0.681406;
+    //     inst_LookupTbl[287] = 0.683787;
+    //     inst_LookupTbl[288] = 0.686170;
+    //     inst_LookupTbl[289] = 0.688552;
+    //     inst_LookupTbl[290] = 0.690934;
+    //     inst_LookupTbl[291] = 0.693319;
+    //     inst_LookupTbl[292] = 0.695700;
+    //     inst_LookupTbl[293] = 0.698083;
+    //     inst_LookupTbl[294] = 0.700465;
+    //     inst_LookupTbl[295] = 0.702848;
+    //     inst_LookupTbl[296] = 0.705230;
+    //     inst_LookupTbl[297] = 0.707613;
+    //     inst_LookupTbl[298] = 0.709995;
+    //     inst_LookupTbl[299] = 0.712378;
+    //     inst_LookupTbl[300] = 0.714761;
+    //     inst_LookupTbl[301] = 0.717144;
+    //     inst_LookupTbl[302] = 0.719526;
+    //     inst_LookupTbl[303] = 0.721909;
+    //     inst_LookupTbl[304] = 0.724290;
+    //     inst_LookupTbl[305] = 0.726674;
+    //     inst_LookupTbl[306] = 0.729055;
+    //     inst_LookupTbl[307] = 0.731438;
+    //     inst_LookupTbl[308] = 0.733821;
+    //     inst_LookupTbl[309] = 0.736204;
+    //     inst_LookupTbl[310] = 0.738585;
+    //     inst_LookupTbl[311] = 0.740968;
+    //     inst_LookupTbl[312] = 0.743351;
+    //     inst_LookupTbl[313] = 0.745732;
+    //     inst_LookupTbl[314] = 0.748115;
+    //     inst_LookupTbl[315] = 0.750498;
+    //     inst_LookupTbl[316] = 0.752880;
+    //     inst_LookupTbl[317] = 0.755264;
+    //     inst_LookupTbl[318] = 0.757646;
+    //     inst_LookupTbl[319] = 0.760028;
+    //     inst_LookupTbl[320] = 0.762410;
+    //     inst_LookupTbl[321] = 0.764794;
+    //     inst_LookupTbl[322] = 0.767175;
+    //     inst_LookupTbl[323] = 0.769558;
+    //     inst_LookupTbl[324] = 0.771940;
+    //     inst_LookupTbl[325] = 0.774323;
+    //     inst_LookupTbl[326] = 0.776706;
+    //     inst_LookupTbl[327] = 0.779088;
+    //     inst_LookupTbl[328] = 0.781470;
+    //     inst_LookupTbl[329] = 0.783853;
+    //     inst_LookupTbl[330] = 0.786235;
+    //     inst_LookupTbl[331] = 0.788618;
+    //     inst_LookupTbl[332] = 0.791001;
+    //     inst_LookupTbl[333] = 0.793383;
+    //     inst_LookupTbl[334] = 0.795765;
+    //     inst_LookupTbl[335] = 0.798149;
+    //     inst_LookupTbl[336] = 0.800532;
+    //     inst_LookupTbl[337] = 0.802912;
+    //     inst_LookupTbl[338] = 0.805295;
+    //     inst_LookupTbl[339] = 0.807678;
+    //     inst_LookupTbl[340] = 0.810060;
+    //     inst_LookupTbl[341] = 0.812443;
+    //     inst_LookupTbl[342] = 0.814825;
+    //     inst_LookupTbl[343] = 0.817207;
+    //     inst_LookupTbl[344] = 0.819590;
+    //     inst_LookupTbl[345] = 0.821973;
+    //     inst_LookupTbl[346] = 0.824355;
+    //     inst_LookupTbl[347] = 0.826737;
+    //     inst_LookupTbl[348] = 0.829120;
+    //     inst_LookupTbl[349] = 0.831503;
+    //     inst_LookupTbl[350] = 0.833886;
+    //     inst_LookupTbl[351] = 0.836268;
+    //     inst_LookupTbl[352] = 0.838650;
+    //     inst_LookupTbl[353] = 0.841034;
+    //     inst_LookupTbl[354] = 0.843416;
+    //     inst_LookupTbl[355] = 0.845798;
+    //     inst_LookupTbl[356] = 0.848180;
+    //     inst_LookupTbl[357] = 0.850564;
+    //     inst_LookupTbl[358] = 0.852946;
+    //     inst_LookupTbl[359] = 0.855328;
+    //     inst_LookupTbl[360] = 0.857710;
+    //     inst_LookupTbl[361] = 0.860093;
+    //     inst_LookupTbl[362] = 0.862476;
+    //     inst_LookupTbl[363] = 0.864859;
+    //     inst_LookupTbl[364] = 0.867241;
+    //     inst_LookupTbl[365] = 0.869623;
+    //     inst_LookupTbl[366] = 0.872006;
+    //     inst_LookupTbl[367] = 0.874388;
+    //     inst_LookupTbl[368] = 0.876771;
+    //     inst_LookupTbl[369] = 0.879153;
+    //     inst_LookupTbl[370] = 0.881536;
+    //     inst_LookupTbl[371] = 0.883919;
+    //     inst_LookupTbl[372] = 0.886301;
+    //     inst_LookupTbl[373] = 0.888683;
+    //     inst_LookupTbl[374] = 0.891066;
+    //     inst_LookupTbl[375] = 0.893448;
+    //     inst_LookupTbl[376] = 0.895831;
+    //     inst_LookupTbl[377] = 0.898214;
+    //     inst_LookupTbl[378] = 0.900596;
+    //     inst_LookupTbl[379] = 0.902979;
+    //     inst_LookupTbl[380] = 0.905361;
+    //     inst_LookupTbl[381] = 0.907744;
+    //     inst_LookupTbl[382] = 0.910126;
+    //     inst_LookupTbl[383] = 0.912508;
+    //     inst_LookupTbl[384] = 0.914891;
+    //     inst_LookupTbl[385] = 0.917273;
+    //     inst_LookupTbl[386] = 0.919656;
+    //     inst_LookupTbl[387] = 0.916637;
+    //     inst_LookupTbl[388] = 0.899768;
+    //     inst_LookupTbl[389] = 0.882899;
+    //     inst_LookupTbl[390] = 0.866029;
+    //     inst_LookupTbl[391] = 0.849160;
+    //     inst_LookupTbl[392] = 0.832290;
+    //     inst_LookupTbl[393] = 0.815422;
+    //     inst_LookupTbl[394] = 0.798552;
+    //     inst_LookupTbl[395] = 0.781683;
+    //     inst_LookupTbl[396] = 0.764814;
+    //     inst_LookupTbl[397] = 0.747945;
+    //     inst_LookupTbl[398] = 0.731075;
+    //     inst_LookupTbl[399] = 0.714206;
+    //     inst_LookupTbl[400] = 0.697336;
+    //     inst_LookupTbl[401] = 0.680468;
+    //     inst_LookupTbl[402] = 0.663599;
+    //     inst_LookupTbl[403] = 0.646728;
+    //     inst_LookupTbl[404] = 0.629860;
+    //     inst_LookupTbl[405] = 0.612990;
+    //     inst_LookupTbl[406] = 0.596121;
+    //     inst_LookupTbl[407] = 0.579251;
+    //     inst_LookupTbl[408] = 0.562383;
+    //     inst_LookupTbl[409] = 0.545514;
+    //     inst_LookupTbl[410] = 0.528645;
+    //     inst_LookupTbl[411] = 0.511775;
+    //     inst_LookupTbl[412] = 0.494906;
+    //     inst_LookupTbl[413] = 0.478036;
+    //     inst_LookupTbl[414] = 0.461167;
+    //     inst_LookupTbl[415] = 0.444298;
+    //     inst_LookupTbl[416] = 0.427429;
+    //     inst_LookupTbl[417] = 0.410560;
+    //     inst_LookupTbl[418] = 0.393691;
+    //     inst_LookupTbl[419] = 0.376822;
+    //     inst_LookupTbl[420] = 0.359952;
+    //     inst_LookupTbl[421] = 0.343082;
+    //     inst_LookupTbl[422] = 0.326213;
+    //     inst_LookupTbl[423] = 0.309344;
+    //     inst_LookupTbl[424] = 0.292475;
+    //     inst_LookupTbl[425] = 0.275605;
+    //     inst_LookupTbl[426] = 0.258736;
+    //     inst_LookupTbl[427] = 0.241867;
+    //     inst_LookupTbl[428] = 0.224997;
+    //     inst_LookupTbl[429] = 0.208129;
+    //     inst_LookupTbl[430] = 0.191259;
+    //     inst_LookupTbl[431] = 0.174390;
+    //     inst_LookupTbl[432] = 0.157521;
+    //     inst_LookupTbl[433] = 0.140651;
+    //     inst_LookupTbl[434] = 0.131217;
+    //     inst_LookupTbl[435] = 0.132752;
+    //     inst_LookupTbl[436] = 0.134287;
+    //     inst_LookupTbl[437] = 0.135822;
+    //     inst_LookupTbl[438] = 0.137357;
+    //     inst_LookupTbl[439] = 0.138892;
+    //     inst_LookupTbl[440] = 0.140426;
+    //     inst_LookupTbl[441] = 0.141962;
+    //     inst_LookupTbl[442] = 0.143497;
+    //     inst_LookupTbl[443] = 0.145031;
+    //     inst_LookupTbl[444] = 0.146566;
+    //     inst_LookupTbl[445] = 0.148101;
+    //     inst_LookupTbl[446] = 0.149637;
+    //     inst_LookupTbl[447] = 0.151171;
+    //     inst_LookupTbl[448] = 0.152706;
+    //     inst_LookupTbl[449] = 0.154241;
+    //     inst_LookupTbl[450] = 0.155776;
+    //     inst_LookupTbl[451] = 0.157311;
+    //     inst_LookupTbl[452] = 0.158845;
+    //     inst_LookupTbl[453] = 0.160381;
+    //     inst_LookupTbl[454] = 0.161916;
+    //     inst_LookupTbl[455] = 0.163451;
+    //     inst_LookupTbl[456] = 0.164986;
+    //     inst_LookupTbl[457] = 0.166520;
+    //     inst_LookupTbl[458] = 0.168055;
+    //     inst_LookupTbl[459] = 0.169590;
+    //     inst_LookupTbl[460] = 0.171125;
+    //     inst_LookupTbl[461] = 0.172660;
+    //     inst_LookupTbl[462] = 0.174195;
+    //     inst_LookupTbl[463] = 0.175730;
+    //     inst_LookupTbl[464] = 0.177265;
+    //     inst_LookupTbl[465] = 0.178799;
+    //     inst_LookupTbl[466] = 0.180335;
+    //     inst_LookupTbl[467] = 0.181870;
+    //     inst_LookupTbl[468] = 0.183405;
+    //     inst_LookupTbl[469] = 0.184939;
+    //     inst_LookupTbl[470] = 0.186474;
+    //     inst_LookupTbl[471] = 0.188009;
+    //     inst_LookupTbl[472] = 0.189544;
+    //     inst_LookupTbl[473] = 0.191080;
+    //     inst_LookupTbl[474] = 0.192614;
+    //     inst_LookupTbl[475] = 0.194149;
+    //     inst_LookupTbl[476] = 0.195684;
+    //     inst_LookupTbl[477] = 0.197219;
+    //     inst_LookupTbl[478] = 0.198753;
+    //     inst_LookupTbl[479] = 0.200289;
+    //     inst_LookupTbl[480] = 0.201824;
+    //     inst_LookupTbl[481] = 0.203358;
+    //     inst_LookupTbl[482] = 0.204894;
+    //     inst_LookupTbl[483] = 0.206429;
+    //     inst_LookupTbl[484] = 0.207963;
+    //     inst_LookupTbl[485] = 0.209498;
+    //     inst_LookupTbl[486] = 0.211034;
+    //     inst_LookupTbl[487] = 0.212568;
+    //     inst_LookupTbl[488] = 0.214103;
+    //     inst_LookupTbl[489] = 0.215637;
+    //     inst_LookupTbl[490] = 0.217172;
+    //     inst_LookupTbl[491] = 0.218707;
+    //     inst_LookupTbl[492] = 0.220242;
+    //     inst_LookupTbl[493] = 0.221777;
+    //     inst_LookupTbl[494] = 0.223312;
+    //     inst_LookupTbl[495] = 0.224847;
+    //     inst_LookupTbl[496] = 0.226382;
+    //     inst_LookupTbl[497] = 0.227917;
+    //     inst_LookupTbl[498] = 0.229452;
+    //     inst_LookupTbl[499] = 0.230988;
+    //     inst_LookupTbl[500] = 0.232522;
+    //     inst_LookupTbl[501] = 0.234058;
+    //     inst_LookupTbl[502] = 0.235592;
+    //     inst_LookupTbl[503] = 0.237127;
+    //     inst_LookupTbl[504] = 0.238661;
+    //     inst_LookupTbl[505] = 0.240197;
+    //     inst_LookupTbl[506] = 0.241731;
+    //     inst_LookupTbl[507] = 0.243267;
+    //     inst_LookupTbl[508] = 0.244802;
+    //     inst_LookupTbl[509] = 0.246337;
+    //     inst_LookupTbl[510] = 0.247872;
+    //     inst_LookupTbl[511] = 0.249406;
+    //     inst_LookupTbl[512] = 0.250941;
+    //     inst_LookupTbl[513] = 0.252477;
+    //     inst_LookupTbl[514] = 0.254012;
+    //     inst_LookupTbl[515] = 0.255547;
+    //     inst_LookupTbl[516] = 0.257082;
+    //     inst_LookupTbl[517] = 0.258617;
+    //     inst_LookupTbl[518] = 0.260151;
+    //     inst_LookupTbl[519] = 0.261687;
+    //     inst_LookupTbl[520] = 0.263222;
+    //     inst_LookupTbl[521] = 0.264756;
+    //     inst_LookupTbl[522] = 0.266291;
+    //     inst_LookupTbl[523] = 0.267825;
+    //     inst_LookupTbl[524] = 0.269360;
+    //     inst_LookupTbl[525] = 0.270896;
+    //     inst_LookupTbl[526] = 0.272430;
+    //     inst_LookupTbl[527] = 0.273966;
+    //     inst_LookupTbl[528] = 0.275501;
+    //     inst_LookupTbl[529] = 0.277036;
+    //     inst_LookupTbl[530] = 0.278571;
+    //     inst_LookupTbl[531] = 0.280106;
+    //     inst_LookupTbl[532] = 0.281641;
+    //     inst_LookupTbl[533] = 0.283175;
+    //     inst_LookupTbl[534] = 0.284710;
+    //     inst_LookupTbl[535] = 0.286245;
+    //     inst_LookupTbl[536] = 0.287780;
+    //     inst_LookupTbl[537] = 0.289315;
+    //     inst_LookupTbl[538] = 0.290849;
+    //     inst_LookupTbl[539] = 0.292384;
+    //     inst_LookupTbl[540] = 0.293919;
+    //     inst_LookupTbl[541] = 0.295454;
+    //     inst_LookupTbl[542] = 0.296989;
+    //     inst_LookupTbl[543] = 0.298523;
+    //     inst_LookupTbl[544] = 0.300059;
+    //     inst_LookupTbl[545] = 0.301594;
+    //     inst_LookupTbl[546] = 0.303129;
+    //     inst_LookupTbl[547] = 0.304663;
+    //     inst_LookupTbl[548] = 0.306199;
+    //     inst_LookupTbl[549] = 0.307734;
+    //     inst_LookupTbl[550] = 0.309269;
+    //     inst_LookupTbl[551] = 0.310803;
+    //     inst_LookupTbl[552] = 0.312338;
+    //     inst_LookupTbl[553] = 0.313874;
+    //     inst_LookupTbl[554] = 0.315408;
+    //     inst_LookupTbl[555] = 0.316944;
+    //     inst_LookupTbl[556] = 0.318478;
+    //     inst_LookupTbl[557] = 0.320014;
+    //     inst_LookupTbl[558] = 0.321548;
+    //     inst_LookupTbl[559] = 0.323083;
+    //     inst_LookupTbl[560] = 0.324618;
+    //     inst_LookupTbl[561] = 0.326153;
+    //     inst_LookupTbl[562] = 0.327688;
+    //     inst_LookupTbl[563] = 0.329222;
+    //     inst_LookupTbl[564] = 0.330758;
+    //     inst_LookupTbl[565] = 0.332293;
+    //     inst_LookupTbl[566] = 0.333828;
+    //     inst_LookupTbl[567] = 0.335362;
+    //     inst_LookupTbl[568] = 0.336897;
+    //     inst_LookupTbl[569] = 0.338432;
+    //     inst_LookupTbl[570] = 0.339968;
+    //     inst_LookupTbl[571] = 0.341503;
+    //     inst_LookupTbl[572] = 0.343037;
+    //     inst_LookupTbl[573] = 0.344572;
+    //     inst_LookupTbl[574] = 0.346106;
+    //     inst_LookupTbl[575] = 0.347642;
+    //     inst_LookupTbl[576] = 0.349176;
+    //     inst_LookupTbl[577] = 0.350712;
+    //     inst_LookupTbl[578] = 0.352246;
+    //     inst_LookupTbl[579] = 0.353781;
+    //     inst_LookupTbl[580] = 0.355317;
+    //     inst_LookupTbl[581] = 0.356851;
+    //     inst_LookupTbl[582] = 0.358387;
+    //     inst_LookupTbl[583] = 0.359921;
+    //     inst_LookupTbl[584] = 0.361455;
+    //     inst_LookupTbl[585] = 0.362991;
+    //     inst_LookupTbl[586] = 0.364527;
+    //     inst_LookupTbl[587] = 0.366061;
+    //     inst_LookupTbl[588] = 0.367596;
+    //     inst_LookupTbl[589] = 0.369130;
+    //     inst_LookupTbl[590] = 0.370666;
+    //     inst_LookupTbl[591] = 0.372200;
+    //     inst_LookupTbl[592] = 0.373735;
+    //     inst_LookupTbl[593] = 0.375270;
+    //     inst_LookupTbl[594] = 0.376805;
+    //     inst_LookupTbl[595] = 0.378341;
+    //     inst_LookupTbl[596] = 0.379875;
+    //     inst_LookupTbl[597] = 0.381409;
+    //     inst_LookupTbl[598] = 0.382946;
+    //     inst_LookupTbl[599] = 0.384480;
+    //     inst_LookupTbl[600] = 0.386015;
+    //     inst_LookupTbl[601] = 0.387550;
+    //     inst_LookupTbl[602] = 0.389085;
+    //     inst_LookupTbl[603] = 0.390620;
+    //     inst_LookupTbl[604] = 0.392155;
+    //     inst_LookupTbl[605] = 0.393689;
+    //     inst_LookupTbl[606] = 0.395224;
+    //     inst_LookupTbl[607] = 0.396759;
+    //     inst_LookupTbl[608] = 0.398294;
+    //     inst_LookupTbl[609] = 0.399828;
+    //     inst_LookupTbl[610] = 0.401365;
+    //     inst_LookupTbl[611] = 0.402899;
+    //     inst_LookupTbl[612] = 0.404433;
+    //     inst_LookupTbl[613] = 0.405970;
+    //     inst_LookupTbl[614] = 0.407503;
+    //     inst_LookupTbl[615] = 0.409039;
+    //     inst_LookupTbl[616] = 0.410574;
+    //     inst_LookupTbl[617] = 0.412108;
+    //     inst_LookupTbl[618] = 0.413643;
+    //     inst_LookupTbl[619] = 0.415179;
+    //     inst_LookupTbl[620] = 0.416713;
+    //     inst_LookupTbl[621] = 0.418248;
+    //     inst_LookupTbl[622] = 0.419783;
+    //     inst_LookupTbl[623] = 0.421317;
+    //     inst_LookupTbl[624] = 0.422853;
+    //     inst_LookupTbl[625] = 0.424389;
+    //     inst_LookupTbl[626] = 0.425924;
+    //     inst_LookupTbl[627] = 0.427458;
+    //     inst_LookupTbl[628] = 0.428992;
+    //     inst_LookupTbl[629] = 0.430527;
+    //     inst_LookupTbl[630] = 0.432062;
+    //     inst_LookupTbl[631] = 0.433598;
+    //     inst_LookupTbl[632] = 0.435133;
+    //     inst_LookupTbl[633] = 0.436668;
+    //     inst_LookupTbl[634] = 0.438202;
+    //     inst_LookupTbl[635] = 0.439737;
+    //     inst_LookupTbl[636] = 0.441272;
+    //     inst_LookupTbl[637] = 0.442808;
+    //     inst_LookupTbl[638] = 0.444343;
+    //     inst_LookupTbl[639] = 0.445877;
+    //     inst_LookupTbl[640] = 0.447413;
+    //     inst_LookupTbl[641] = 0.448947;
+    //     inst_LookupTbl[642] = 0.450481;
+    //     inst_LookupTbl[643] = 0.452016;
+    //     inst_LookupTbl[644] = 0.453552;
+    //     inst_LookupTbl[645] = 0.455088;
+    //     inst_LookupTbl[646] = 0.456622;
+    //     inst_LookupTbl[647] = 0.458157;
+    //     inst_LookupTbl[648] = 0.459691;
+    //     inst_LookupTbl[649] = 0.461227;
+    //     inst_LookupTbl[650] = 0.462761;
+    //     inst_LookupTbl[651] = 0.464297;
+    //     inst_LookupTbl[652] = 0.465831;
+    //     inst_LookupTbl[653] = 0.467366;
+    //     inst_LookupTbl[654] = 0.468901;
+    //     inst_LookupTbl[655] = 0.470436;
+    //     inst_LookupTbl[656] = 0.471970;
+    //     inst_LookupTbl[657] = 0.473505;
+    //     inst_LookupTbl[658] = 0.475041;
+    //     inst_LookupTbl[659] = 0.476576;
+    //     inst_LookupTbl[660] = 0.478111;
+    //     inst_LookupTbl[661] = 0.479646;
+    //     inst_LookupTbl[662] = 0.481181;
+    //     inst_LookupTbl[663] = 0.482715;
+    //     inst_LookupTbl[664] = 0.484250;
+    //     inst_LookupTbl[665] = 0.485785;
+    //     inst_LookupTbl[666] = 0.487319;
+    //     inst_LookupTbl[667] = 0.488854;
+    //     inst_LookupTbl[668] = 0.490390;
+    //     inst_LookupTbl[669] = 0.491925;
+    //     inst_LookupTbl[670] = 0.493460;
+    //     inst_LookupTbl[671] = 0.494996;
+    //     inst_LookupTbl[672] = 0.496530;
+    //     inst_LookupTbl[673] = 0.498065;
+    //     inst_LookupTbl[674] = 0.499599;
+    //     inst_LookupTbl[675] = 0.501135;
+    //     inst_LookupTbl[676] = 0.502670;
+    //     inst_LookupTbl[677] = 0.504203;
+    //     inst_LookupTbl[678] = 0.505740;
+    //     inst_LookupTbl[679] = 0.507274;
+    //     inst_LookupTbl[680] = 0.508809;
+    //     inst_LookupTbl[681] = 0.510345;
+    //     inst_LookupTbl[682] = 0.511879;
+    //     inst_LookupTbl[683] = 0.513414;
+    //     inst_LookupTbl[684] = 0.514949;
+    //     inst_LookupTbl[685] = 0.516485;
+    //     inst_LookupTbl[686] = 0.518018;
+    //     inst_LookupTbl[687] = 0.519553;
+    //     inst_LookupTbl[688] = 0.521087;
+    //     inst_LookupTbl[689] = 0.522623;
+    //     inst_LookupTbl[690] = 0.524159;
+    //     inst_LookupTbl[691] = 0.525692;
+    //     inst_LookupTbl[692] = 0.527229;
+    //     inst_LookupTbl[693] = 0.528764;
+    //     inst_LookupTbl[694] = 0.530299;
+    //     inst_LookupTbl[695] = 0.531834;
+    //     inst_LookupTbl[696] = 0.533367;
+    //     inst_LookupTbl[697] = 0.534904;
+    //     inst_LookupTbl[698] = 0.536438;
+    //     inst_LookupTbl[699] = 0.537972;
+    //     inst_LookupTbl[700] = 0.539507;
+    //     inst_LookupTbl[701] = 0.541042;
+    //     inst_LookupTbl[702] = 0.542577;
+    //     inst_LookupTbl[703] = 0.544112;
+    //     inst_LookupTbl[704] = 0.545648;
+    //     inst_LookupTbl[705] = 0.547181;
+    //     inst_LookupTbl[706] = 0.548717;
+    //     inst_LookupTbl[707] = 0.550251;
+    //     inst_LookupTbl[708] = 0.551788;
+    //     inst_LookupTbl[709] = 0.553322;
+    //     inst_LookupTbl[710] = 0.554856;
+    //     inst_LookupTbl[711] = 0.556393;
+    //     inst_LookupTbl[712] = 0.557927;
+    //     inst_LookupTbl[713] = 0.559462;
+    //     inst_LookupTbl[714] = 0.560997;
+    //     inst_LookupTbl[715] = 0.562531;
+    //     inst_LookupTbl[716] = 0.564066;
+    //     inst_LookupTbl[717] = 0.565601;
+    //     inst_LookupTbl[718] = 0.567135;
+    //     inst_LookupTbl[719] = 0.568671;
+    //     inst_LookupTbl[720] = 0.570207;
+    //     inst_LookupTbl[721] = 0.571742;
+    //     inst_LookupTbl[722] = 0.573276;
+    //     inst_LookupTbl[723] = 0.574811;
+    //     inst_LookupTbl[724] = 0.576345;
+    //     inst_LookupTbl[725] = 0.577882;
+    //     inst_LookupTbl[726] = 0.579416;
+    //     inst_LookupTbl[727] = 0.580950;
+    //     inst_LookupTbl[728] = 0.582486;
+    //     inst_LookupTbl[729] = 0.584020;
+    //     inst_LookupTbl[730] = 0.585555;
+    //     inst_LookupTbl[731] = 0.587091;
+    //     inst_LookupTbl[732] = 0.588626;
+    //     inst_LookupTbl[733] = 0.590160;
+    //     inst_LookupTbl[734] = 0.591696;
+    //     inst_LookupTbl[735] = 0.593231;
+    //     inst_LookupTbl[736] = 0.594765;
+    //     inst_LookupTbl[737] = 0.596299;
+    //     inst_LookupTbl[738] = 0.597835;
+    //     inst_LookupTbl[739] = 0.599371;
+    //     inst_LookupTbl[740] = 0.600905;
+    //     inst_LookupTbl[741] = 0.602441;
+    //     inst_LookupTbl[742] = 0.603975;
+    //     inst_LookupTbl[743] = 0.605509;
+    //     inst_LookupTbl[744] = 0.607045;
+    //     inst_LookupTbl[745] = 0.608579;
+    //     inst_LookupTbl[746] = 0.610114;
+    //     inst_LookupTbl[747] = 0.611648;
+    //     inst_LookupTbl[748] = 0.613185;
+    //     inst_LookupTbl[749] = 0.614718;
+    //     inst_LookupTbl[750] = 0.616254;
+    //     inst_LookupTbl[751] = 0.617789;
+    //     inst_LookupTbl[752] = 0.619323;
+    //     inst_LookupTbl[753] = 0.620859;
+    //     inst_LookupTbl[754] = 0.622395;
+    //     inst_LookupTbl[755] = 0.623930;
+    //     inst_LookupTbl[756] = 0.625464;
+    //     inst_LookupTbl[757] = 0.626997;
+    //     inst_LookupTbl[758] = 0.628533;
+    //     inst_LookupTbl[759] = 0.630067;
+    //     inst_LookupTbl[760] = 0.631604;
+    //     inst_LookupTbl[761] = 0.633139;
+    //     inst_LookupTbl[762] = 0.634674;
+    //     inst_LookupTbl[763] = 0.636208;
+    //     inst_LookupTbl[764] = 0.637744;
+    //     inst_LookupTbl[765] = 0.639279;
+    //     inst_LookupTbl[766] = 0.640813;
+    //     inst_LookupTbl[767] = 0.642348;
+    //     inst_LookupTbl[768] = 0.643883;
+    //     inst_LookupTbl[769] = 0.645417;
+    //     inst_LookupTbl[770] = 0.646952;
+    //     inst_LookupTbl[771] = 0.648487;
+    //     inst_LookupTbl[772] = 0.650022;
+    //     inst_LookupTbl[773] = 0.651557;
+    //     inst_LookupTbl[774] = 0.653091;
+    //     inst_LookupTbl[775] = 0.654627;
+    //     inst_LookupTbl[776] = 0.656162;
+    //     inst_LookupTbl[777] = 0.657697;
+    //     inst_LookupTbl[778] = 0.659231;
+    //     inst_LookupTbl[779] = 0.660767;
+    //     inst_LookupTbl[780] = 0.662302;
+    //     inst_LookupTbl[781] = 0.663836;
+    //     inst_LookupTbl[782] = 0.665371;
+    //     inst_LookupTbl[783] = 0.666907;
+    //     inst_LookupTbl[784] = 0.668442;
+    //     inst_LookupTbl[785] = 0.669976;
+    //     inst_LookupTbl[786] = 0.671511;
+    //     inst_LookupTbl[787] = 0.673047;
+    //     inst_LookupTbl[788] = 0.674582;
+    //     inst_LookupTbl[789] = 0.676116;
+    //     inst_LookupTbl[790] = 0.677650;
+    //     inst_LookupTbl[791] = 0.679186;
+    //     inst_LookupTbl[792] = 0.680720;
+    //     inst_LookupTbl[793] = 0.682256;
+    //     inst_LookupTbl[794] = 0.683790;
+    //     inst_LookupTbl[795] = 0.685325;
+    //     inst_LookupTbl[796] = 0.686861;
+    //     inst_LookupTbl[797] = 0.688396;
+    //     inst_LookupTbl[798] = 0.689931;
+    //     inst_LookupTbl[799] = 0.691465;
+    //     inst_LookupTbl[800] = 0.693000;
+    //     inst_LookupTbl[801] = 0.694535;
+    //     inst_LookupTbl[802] = 0.696069;
+    //     inst_LookupTbl[803] = 0.697604;
+    //     inst_LookupTbl[804] = 0.699140;
+    //     inst_LookupTbl[805] = 0.700676;
+    //     inst_LookupTbl[806] = 0.702211;
+    //     inst_LookupTbl[807] = 0.703745;
+    //     inst_LookupTbl[808] = 0.705280;
+    //     inst_LookupTbl[809] = 0.706814;
+    //     inst_LookupTbl[810] = 0.708349;
+    //     inst_LookupTbl[811] = 0.709884;
+    //     inst_LookupTbl[812] = 0.711420;
+    //     inst_LookupTbl[813] = 0.712954;
+    //     inst_LookupTbl[814] = 0.714489;
+    //     inst_LookupTbl[815] = 0.716024;
+    //     inst_LookupTbl[816] = 0.717560;
+    //     inst_LookupTbl[817] = 0.719093;
+    //     inst_LookupTbl[818] = 0.720630;
+    //     inst_LookupTbl[819] = 0.722164;
+    //     inst_LookupTbl[820] = 0.723699;
+    //     inst_LookupTbl[821] = 0.725234;
+    //     inst_LookupTbl[822] = 0.726769;
+    //     inst_LookupTbl[823] = 0.728305;
+    //     inst_LookupTbl[824] = 0.729838;
+    //     inst_LookupTbl[825] = 0.731374;
+    //     inst_LookupTbl[826] = 0.732908;
+    //     inst_LookupTbl[827] = 0.734444;
+    //     inst_LookupTbl[828] = 0.735978;
+    //     inst_LookupTbl[829] = 0.737514;
+    //     inst_LookupTbl[830] = 0.739048;
+    //     inst_LookupTbl[831] = 0.740582;
+    //     inst_LookupTbl[832] = 0.742118;
+    //     inst_LookupTbl[833] = 0.743652;
+    //     inst_LookupTbl[834] = 0.745188;
+    //     inst_LookupTbl[835] = 0.746722;
+    //     inst_LookupTbl[836] = 0.748258;
+    //     inst_LookupTbl[837] = 0.749794;
+    //     inst_LookupTbl[838] = 0.751327;
+    //     inst_LookupTbl[839] = 0.752862;
+    //     inst_LookupTbl[840] = 0.754396;
+    //     inst_LookupTbl[841] = 0.755933;
+    //     inst_LookupTbl[842] = 0.757467;
+    //     inst_LookupTbl[843] = 0.759003;
+    //     inst_LookupTbl[844] = 0.760536;
+    //     inst_LookupTbl[845] = 0.762071;
+    //     inst_LookupTbl[846] = 0.763606;
+    //     inst_LookupTbl[847] = 0.765142;
+    //     inst_LookupTbl[848] = 0.766678;
+    //     inst_LookupTbl[849] = 0.768213;
+    //     inst_LookupTbl[850] = 0.769747;
+    //     inst_LookupTbl[851] = 0.771283;
+    //     inst_LookupTbl[852] = 0.772817;
+    //     inst_LookupTbl[853] = 0.774352;
+    //     inst_LookupTbl[854] = 0.775886;
+    //     inst_LookupTbl[855] = 0.777422;
+    //     inst_LookupTbl[856] = 0.778956;
+    //     inst_LookupTbl[857] = 0.780491;
+    //     inst_LookupTbl[858] = 0.782025;
+    //     inst_LookupTbl[859] = 0.783560;
+    //     inst_LookupTbl[860] = 0.785097;
+    //     inst_LookupTbl[861] = 0.786631;
+    //     inst_LookupTbl[862] = 0.788166;
+    //     inst_LookupTbl[863] = 0.789701;
+    //     inst_LookupTbl[864] = 0.791235;
+    //     inst_LookupTbl[865] = 0.792771;
+    //     inst_LookupTbl[866] = 0.794305;
+    //     inst_LookupTbl[867] = 0.795841;
+    //     inst_LookupTbl[868] = 0.797375;
+    //     inst_LookupTbl[869] = 0.798911;
+    //     inst_LookupTbl[870] = 0.800444;
+    //     inst_LookupTbl[871] = 0.801981;
+    //     inst_LookupTbl[872] = 0.803516;
+    //     inst_LookupTbl[873] = 0.805051;
+    //     inst_LookupTbl[874] = 0.806584;
+    //     inst_LookupTbl[875] = 0.808120;
+    //     inst_LookupTbl[876] = 0.809654;
+    //     inst_LookupTbl[877] = 0.811190;
+    //     inst_LookupTbl[878] = 0.812725;
+    //     inst_LookupTbl[879] = 0.814259;
+    //     inst_LookupTbl[880] = 0.815795;
+    //     inst_LookupTbl[881] = 0.817330;
+    //     inst_LookupTbl[882] = 0.818864;
+    //     inst_LookupTbl[883] = 0.820400;
+    //     inst_LookupTbl[884] = 0.821934;
+    //     inst_LookupTbl[885] = 0.823469;
+    //     inst_LookupTbl[886] = 0.825004;
+    //     inst_LookupTbl[887] = 0.826539;
+    //     inst_LookupTbl[888] = 0.828075;
+    //     inst_LookupTbl[889] = 0.829608;
+    //     inst_LookupTbl[890] = 0.831143;
+    //     inst_LookupTbl[891] = 0.832679;
+    //     inst_LookupTbl[892] = 0.834214;
+    //     inst_LookupTbl[893] = 0.835748;
+    //     inst_LookupTbl[894] = 0.837284;
+    //     inst_LookupTbl[895] = 0.838818;
+    //     inst_LookupTbl[896] = 0.840353;
+    //     inst_LookupTbl[897] = 0.841889;
+    //     inst_LookupTbl[898] = 0.843424;
+    //     inst_LookupTbl[899] = 0.844959;
+    //     inst_LookupTbl[900] = 0.846493;
+    //     inst_LookupTbl[901] = 0.848028;
+    //     inst_LookupTbl[902] = 0.849563;
+    //     inst_LookupTbl[903] = 0.851097;
+    //     inst_LookupTbl[904] = 0.852632;
+    //     inst_LookupTbl[905] = 0.854169;
+    //     inst_LookupTbl[906] = 0.855703;
+    //     inst_LookupTbl[907] = 0.857237;
+    //     inst_LookupTbl[908] = 0.858773;
+    //     inst_LookupTbl[909] = 0.860307;
+    //     inst_LookupTbl[910] = 0.861842;
+    //     inst_LookupTbl[911] = 0.863378;
+    //     inst_LookupTbl[912] = 0.864911;
+    //     inst_LookupTbl[913] = 0.866448;
+    //     inst_LookupTbl[914] = 0.867981;
+    //     inst_LookupTbl[915] = 0.869517;
+    //     inst_LookupTbl[916] = 0.871052;
+    //     inst_LookupTbl[917] = 0.872587;
+    //     inst_LookupTbl[918] = 0.874121;
+    //     inst_LookupTbl[919] = 0.875657;
+    //     inst_LookupTbl[920] = 0.877191;
+    //     inst_LookupTbl[921] = 0.878726;
+    //     inst_LookupTbl[922] = 0.880262;
+    //     inst_LookupTbl[923] = 0.881797;
+    //     inst_LookupTbl[924] = 0.883331;
+    //     inst_LookupTbl[925] = 0.884866;
+    //     inst_LookupTbl[926] = 0.886401;
+    //     inst_LookupTbl[927] = 0.887936;
+    //     inst_LookupTbl[928] = 0.889472;
+    //     inst_LookupTbl[929] = 0.891006;
+    //     inst_LookupTbl[930] = 0.892541;
+    //     inst_LookupTbl[931] = 0.894076;
+    //     inst_LookupTbl[932] = 0.895610;
+    //     inst_LookupTbl[933] = 0.897145;
+    //     inst_LookupTbl[934] = 0.898681;
+    //     inst_LookupTbl[935] = 0.900216;
+    //     inst_LookupTbl[936] = 0.901750;
+    //     inst_LookupTbl[937] = 0.903285;
+    //     inst_LookupTbl[938] = 0.904821;
+    //     inst_LookupTbl[939] = 0.906355;
+    //     inst_LookupTbl[940] = 0.907890;
+    //     inst_LookupTbl[941] = 0.909425;
+    //     inst_LookupTbl[942] = 0.910960;
+    //     inst_LookupTbl[943] = 0.912495;
+    //     inst_LookupTbl[944] = 0.914029;
+    //     inst_LookupTbl[945] = 0.915564;
+    //     inst_LookupTbl[946] = 0.917100;
+    //     inst_LookupTbl[947] = 0.918635;
+    //     inst_LookupTbl[948] = 0.920169;
+    //     inst_LookupTbl[949] = 0.921704;
+    //     inst_LookupTbl[950] = 0.923239;
+    //     inst_LookupTbl[951] = 0.924774;
+    //     inst_LookupTbl[952] = 0.926310;
+    //     inst_LookupTbl[953] = 0.927845;
+    //     inst_LookupTbl[954] = 0.929379;
+    //     inst_LookupTbl[955] = 0.930914;
+    //     inst_LookupTbl[956] = 0.932449;
+    //     inst_LookupTbl[957] = 0.933984;
+    //     inst_LookupTbl[958] = 0.935519;
+    //     inst_LookupTbl[959] = 0.937053;
+    //     inst_LookupTbl[960] = 0.938589;
+    //     inst_LookupTbl[961] = 0.940124;
+    //     inst_LookupTbl[962] = 0.941658;
+    //     inst_LookupTbl[963] = 0.943194;
+    //     inst_LookupTbl[964] = 0.944728;
+    //     inst_LookupTbl[965] = 0.946263;
+    //     inst_LookupTbl[966] = 0.947798;
+    //     inst_LookupTbl[967] = 0.949333;
+    //     inst_LookupTbl[968] = 0.950868;
+    //     inst_LookupTbl[969] = 0.952403;
+    //     inst_LookupTbl[970] = 0.953938;
+    //     inst_LookupTbl[971] = 0.955473;
+    //     inst_LookupTbl[972] = 0.957007;
+    //     inst_LookupTbl[973] = 0.958543;
+    //     inst_LookupTbl[974] = 0.960077;
+    //     inst_LookupTbl[975] = 0.961613;
+    //     inst_LookupTbl[976] = 0.963148;
+    //     inst_LookupTbl[977] = 0.964682;
+    //     inst_LookupTbl[978] = 0.966217;
+    //     inst_LookupTbl[979] = 0.967753;
+    //     inst_LookupTbl[980] = 0.969287;
+    //     inst_LookupTbl[981] = 0.970822;
+    //     inst_LookupTbl[982] = 0.972357;
+    //     inst_LookupTbl[983] = 0.973892;
+    //     inst_LookupTbl[984] = 0.975427;
+    //     inst_LookupTbl[985] = 0.976962;
+    //     inst_LookupTbl[986] = 0.978497;
+    //     inst_LookupTbl[987] = 0.980032;
+    //     inst_LookupTbl[988] = 0.981566;
+    //     inst_LookupTbl[989] = 0.983101;
+    //     inst_LookupTbl[990] = 0.984636;
+    //     inst_LookupTbl[991] = 0.986171;
+    //     inst_LookupTbl[992] = 0.987706;
+    //     inst_LookupTbl[993] = 0.989241;
+    //     inst_LookupTbl[994] = 0.990776;
+    //     inst_LookupTbl[995] = 0.992311;
+    //     inst_LookupTbl[996] = 0.993846;
+    //     inst_LookupTbl[997] = 0.995381;
+    //     inst_LookupTbl[998] = 0.996916;
+    //     inst_LookupTbl[999] = 0.998451;
+    //     inst_LookupTbl[1000] = 0.999986;
+    // #endif
+    //     int i = (int) ((xtra_location - xtra_xmin) * inst_IndexFactor);
+    //     float f = maxLerp((xtra_location - i * inst_n_step) / inst_n_step,
+    // 		      inst_LookupTbl[i], inst_LookupTbl[i + 1]);
+    //     Color c1 = Color1;
+    //     Color c2 = Color2;
+    //     result.r = c1.r + f * (c2.r - c1.r);
+    //     result.g = c1.g + f * (c2.g - c1.g);
+    //     result.b = c1.b + f * (c2.b - c1.b);
+    //     result.a = c1.a + f * (c2.a - c1.a);
+  } // main
+};

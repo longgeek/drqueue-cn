@@ -1,0 +1,235 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision: 1140 $
+
+// switch for the HW vs. SW version
+#define USE_HW_VERSION
+
+shader mia_exposure_photographic {
+ input:
+#ifdef USE_HW_VERSION
+  Texture2d env_tex = "mia_exposure_photographic.exr" {
+    display_name("Texture");
+  };
+#endif
+  // the "active" parameter is not there on the C/C++ counterpart
+  bool active = true {
+    display_name("Active");
+  };
+  float cm2_factor = 1.0 {
+    display_name("Cm2 Factor");
+    soft_range(Scalar(1.0), Scalar(1000.0));
+  };
+  Color  whitepoint = Color(1.04287, 0.983863, 1.03358, 1.0) {
+    display_name("Whitepoint");
+  };
+  float film_iso = 100.0 {
+    display_name("Film speed (ISO)");
+    soft_range(Scalar(1.0), Scalar(1000.0));
+  };
+  float camera_shutter = 0.125 {
+    display_name("Shutter Speed");
+    soft_range(Scalar(0.0), Scalar(1000.0));
+  };
+  float f_number = 8.0 {
+    display_name("Aperture (f-stop)");
+    soft_range(Scalar(1.0), Scalar(100.0));
+  };
+  float vignetting = 0.0 {
+    display_name("Vignetting");
+    soft_range(Scalar(0.0), Scalar(10.0));
+  };
+  float crush_blacks = 0.2 {
+    display_name("Crush Blacks");
+    soft_range(Scalar(0.0), Scalar(1.0));
+  };
+  float burn_highlights = 0.25 {
+    display_name("Highlights (Burn)");
+  };
+  float saturation = 1.0 {
+    display_name("Color Saturation");
+    soft_range(Scalar(0.0), Scalar(1.0));
+  };
+  float gamma = 2.2 {
+    display_name("Gamma");
+    soft_range(Scalar(1.0), Scalar(3.0));
+  };
+  // TODO: side_channel
+  // String side_channel = "";
+  // Int    side_channel_mode = 0;
+  // TODO: color texture preview
+  // bool   use_preview = false;
+
+ output:
+  Color result;
+
+  float mia_luminance(in Color a, in Color b) {
+    return a.r * b.r + a.g * b.g + a.b * b.b;
+  } // mia_luminance
+
+  void mia_tonemap_api_transform_color(inout Color color,
+				       // paras
+				       in float cm2_factor,
+				       in Color whitepoint,
+				       in float film_iso,
+				       in float camera_shutter,
+				       in float f_number,
+				       in float vignetting,
+				       in float crush_blacks,
+				       in float burn_highlights,
+				       in float saturation,
+				       in float gamma,
+				       // state
+				       in float state_raster_x,
+				       in float state_raster_y,
+				       in int state_image_x_resolution,
+				       in int state_image_y_resolution,
+				       in float state_aperture,
+				       in float state_aspect_ratio) {
+    // TODO: switch (tms->tonemap_id) ...
+    float3 temp = float3(0.0, 0.0, 0.0);
+    temp.x = (((state_raster_x / state_image_x_resolution) - 0.5) *
+	      state_aperture);
+    temp.y = (((state_raster_y / state_image_y_resolution) - 0.5) *
+	      state_aperture / state_aspect_ratio);
+    temp.z = focal_length;
+    temp = normalize(temp);
+    // if (data->v > 0.0f) ...
+    float vignette = 1.0;
+    if (vignetting > 0.0) {
+      vignette = pow(temp.z, vignetting);
+    } // if (vignetting > 0.0)
+    // ------------------------------------------------------------------------
+    // (begin) adjust whitepoint (happens in init)
+    Color nwp = whitepoint;
+    if (nwp.r > 0.0) {
+      nwp.r = 1.0 / nwp.r;
+    } // if (nwp.r > 0.0)
+    else {
+      nwp.r = 1.0;
+    } // else [ if (nwp.r > 0.0) ]
+    if (nwp.g > 0.0) {
+      nwp.g = 1.0 / nwp.g;
+    } // if (nwp.g > 0.0)
+    else {
+      nwp.g = 1.0;
+    } // else [ if (nwp.g > 0.0) ]
+    if (nwp.b > 0.0) {
+      nwp.b = 1.0 / nwp.b;
+    } // if (nwp.b > 0.0)
+    else {
+      nwp.b = 1.0;
+    } // else [ if (nwp.b > 0.0) ]
+    // TODO: The luminance_weight should come from the options block !!!
+    Color luminance_weight = Color(0.212671, 0.715160, 0.072169, 0.0);
+    float temp2 = mia_luminance(luminance_weight, nwp);
+    nwp.r /= temp2;
+    nwp.g /= temp2;
+    nwp.b /= temp2;
+    // (end) adjust whitepoint (happens in init)
+    // ------------------------------------------------------------------------
+    // (begin) adjust data_m (happens in init)
+    float data_m = 0.0;
+    float t = 1.0 / camera_shutter;
+    if (film_iso > 0.0) {
+      data_m = (cm2_factor * (18.0 / 106.0) * (film_iso * t) /
+		(15.4 * f_number * f_number));
+    } // if (film_iso > 0.0)
+    else {
+      data_m = cm2_factor;
+    } // else [ if (film_iso > 0.0) ]
+    float data_g = 1.0 / gamma;
+    // (end) adjust data_m (happens in init)
+    // ------------------------------------------------------------------------
+    // use adjusted whitepoint
+    color.r = color.r * nwp.r * data_m * vignette;
+    color.g = color.g * nwp.g * data_m * vignette;
+    color.b = color.b * nwp.b * data_m * vignette;
+    // Reinhardt photographic...
+    color.r = color.r * (1.0 + (color.r * burn_highlights)) / (1.0 + color.r);
+    color.g = color.g * (1.0 + (color.g * burn_highlights)) / (1.0 + color.g);
+    color.b = color.b * (1.0 + (color.b * burn_highlights)) / (1.0 + color.b);
+    // TODO: #ifdef SATURATION_VIA_GAMMA ...
+    float lum = mia_luminance(luminance_weight, color);
+    float oms = 1.0 - saturation;
+    color.r = color.r * saturation + lum * oms;
+    color.g = color.g * saturation + lum * oms;
+    color.b = color.b * saturation + lum * oms;
+    if (color.r < 0.0) color.r = 0.0;
+    if (color.g < 0.0) color.g = 0.0;
+    if (color.b < 0.0) color.b = 0.0;
+    // ------------------------------------------------------------------------
+    // (begin) adjust data_crunch (happens in init)
+    float data_crunch = crush_blacks * 2.0 + 1.0;
+    // (end) adjust data_crunch (happens in init)
+    // ------------------------------------------------------------------------
+    // crunching blacks
+    float intens = pow(mia_luminance(luminance_weight, color), 0.5);
+    oms = 1.0 - intens;
+    if (intens < 1.0) {
+      color.r = color.r * intens + pow(color.r, data_crunch) * oms;
+      color.g = color.g * intens + pow(color.g, data_crunch) * oms;
+      color.b = color.b * intens + pow(color.b, data_crunch) * oms;
+    } // if (intens < 1.0)
+    color.r = pow(color.r, data_g);
+    color.g = pow(color.g, data_g);
+    color.b = pow(color.b, data_g);
+  } // mia_tonemap_api_transform_color
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+#ifdef USE_HW_VERSION
+    // instead of tracing a ray into the scene we use a texture !!!
+    Vector3 v = Matrix3x3(internal_to_camera) * direction;
+    Vector2 texture;
+    texture.x = raster.x / image_x_resolution;
+    texture.y = raster.y / image_y_resolution;
+    result = tex2d(env_tex, texture);
+#else
+    // trace a ray into the scene
+    Color no_exposure_contrib = Color(0.0, 0.0, 0.0, 0.0);
+    // if (type == miSHADER_LENS)
+    // mi_vector_to_camera(state, &camdir, &state->dir);
+    float3 camdir = transform_vector("internal", "camera", direction);
+    // TODO: if (preview) ...
+    // mi_trace_eye(result, state, &state->org, &state->dir);
+    Ray ray;
+    Ray ray_dx; // ignore for the moment
+    Ray ray_dy; // ignore for the moment
+    String gather_output_name;
+    Trace_options trace_options;
+    ray = Ray(origin, direction);
+    trace_options.set_ray_type("eye");
+    if (trace(ray, ray_dx, ray_dy, trace_options,
+			gather_output_name, no_exposure_contrib)) {
+      result += no_exposure_contrib;
+    } // if (trace(...))
+#endif
+    // TODO: if (data->side_channel_mode) ...
+    if (active) {
+      Color color = result;
+      mia_tonemap_api_transform_color(color,
+				      // paras
+				      cm2_factor,
+				      whitepoint,
+				      film_iso,
+				      camera_shutter,
+				      f_number,
+				      vignetting,
+				      crush_blacks,
+				      burn_highlights,
+				      saturation,
+				      gamma,
+				      // state
+				      raster.x, raster.y,
+				      image_x_resolution, image_y_resolution,
+				      aperture, aspect_ratio);
+      result = color;
+      // else if (type == miSHADER_OUTPUT)
+    } // if (active)
+    // TODO: alpha
+  } // main
+};

@@ -1,0 +1,83 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Color and Width of Contours</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node93.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node95.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION92"></a>
+<h3>Color and Width of Contours</h3>
+<p>The contour properties (color, width, etc.) depend on the object
+the contour is on and its material. For each material that should
+have a contour, one has to specify a <i>contour shader</i>. A
+material will not get a contour if it does not have a contour
+shader. The colors consist of four components: red, green, and blue
+color, and opacity. All four components of the color are normally
+between 0 and 1. The width is specified as a percentage of the
+minimum of image x resolution and y resolution. For example, if the
+image resolution is 700&times;500 and a contour width of <i>1.0</i>
+(percent) is specified, the thickness of the line becomes 5 pixels.
+The color, width, etc. can be parameters, or depend on curvature,
+distance, color, and illumination.</p>
+<p>A material gets a simple contour of constant color and width if
+it has the <tt>contour_shader_simple</tt> contour shader. For
+example, the following specifies red contours that are half a
+percent wide:</p>
+<pre>
+     contour "contour_shader_simple" (
+        "color"  1.0 0.0 0.0 1.0,   # solid red
+        "width"  0.5                # in % of image resol
+     )
+</pre>
+<p>As another example of a contour shader, contours of color and
+width that are linearly interpolated between two values, depending
+on distance to the camera, are specified with the contour shader
+<tt>contour_shader_depthfade</tt>. Two depths, colors, and widths
+are specified. If a contour point is more distant than
+<tt>far_z</tt>, the contour gets color <tt>far_color</tt> and width
+<tt>far_width</tt>. If a point is nearer than <tt>near_z</tt>, the
+contour gets color <tt>near_color</tt> and width
+<tt>near_width</tt>. If the depth is in between, the color and
+width are linearly interpolated. For example, to get contours that
+are interpolated between two percent wide red at depth <i>-10</i>
+and half a percent wide blue at depth <i>-25</i>, specify</p>
+<pre>
+     contour "contour_shader_depthfade" (
+        "near_z"     -10.0,             # from this depth,
+        "near_color"  1.0 0.0 0.0 1.0,  # color (red),
+        "near_width"  2.0,              # and width (in %)
+        "far_z"      -25.0,             # to this depth,
+        "far_color"   0.0 0.0 1.0 1.0,  # color (blue),
+        "far_width"   0.5               # and width (in %)
+     )
+</pre>
+<p>The left figure is a black-and-white illustration of this
+depthfade contour shader. The right figure is a scene with two
+materials with different contour type: illumination-dependent
+contours on the teapot and simple contours on the "floor".</p>
+<div class="pic">
+<img style="float:left;width:50%" src="images/fourcubes.depthfade.jpg" />
+<img style="width:50%" src="images/teapotcontour.jpg" /></div>
+<p>There are many other contour shaders in <tt>contour.so</tt>, and
+new ones can be written by the user.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node93.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node95.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

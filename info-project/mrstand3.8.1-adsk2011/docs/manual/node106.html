@@ -1,0 +1,308 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Rays</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node105.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node107.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h3 id="SECTION104">Rays</h3>
+<p>
+Whenever a ray is cast the following state variables are set to
+describe the ray:</p>
+
+<p><a id="INDEX403"></a></p>
+<div align="center">
+<table class="table">
+<tr>
+<th><i>type</i></th>
+<th><i>name</i></th>
+<th><i>content</i></th>
+</tr>
+<tr>
+<td><tt>miState *</tt></td>
+<td><tt>parent</tt></td>
+<td>state of parent shader</td>
+</tr>
+<tr>
+<td><tt>miState *</tt></td>
+<td><tt>child</tt></td>
+<td>state of child shader</td>
+</tr>
+<tr>
+<td><tt>miRay_type</tt></td>
+<td><tt>type</tt></td>
+<td>type of ray: reflect, light...</td>
+</tr>
+<tr>
+<td><tt>miCBoolean</tt></td>
+<td><tt>scanline</tt></td>
+<td>from scanline algorithm</td>
+</tr>
+<tr>
+<td><tt>void *</tt></td>
+<td><tt>cache</tt></td>
+<td>RC intersection cache</td>
+</tr>
+<tr>
+<td><tt>miVector</tt></td>
+<td><tt>org</tt></td>
+<td>start point of the ray</td>
+</tr>
+<tr>
+<td><tt>miVector</tt></td>
+<td><tt>dir</tt></td>
+<td>direction of the ray</td>
+</tr>
+<tr>
+<td><tt>float</tt></td>
+<td><tt>time</tt></td>
+<td>shutter interval time</td>
+</tr>
+<tr>
+<td><tt>miTag</tt></td>
+<td><tt>volume</tt></td>
+<td>volume shader of primitive</td>
+</tr>
+<tr>
+<td><tt>miTag</tt></td>
+<td><tt>environment</tt></td>
+<td>environment shader</td>
+</tr>
+<tr>
+<td><tt>int</tt></td>
+<td><tt>reflection_level</tt></td>
+<td>current reflection ray depth</td>
+</tr>
+<tr>
+<td><tt>int</tt></td>
+<td><tt>refraction_level</tt></td>
+<td>current refraction ray depth</td>
+</tr>
+<tr>
+<td><tt>int</tt></td>
+<td><tt>face</tt></td>
+<td>facing flag for sub-rays</td>
+</tr>
+</table>
+</div>
+
+<dl>
+<dt><code>parent</code><dd>
+Points to the state of the parent ray. In the first lens shader,
+it is <tt>NULL</tt>. In subsequent lens shaders, it points to the
+previous lens shader. In the material shader that is called when
+the primary ray hits an object, it points to the last lens shader's
+state, or is <tt>NULL</tt> if no lens shader has been applied. For
+material shaders called when a secondary reflection or refraction
+ray hits an object, it points to the parent material shader that
+cast the ray. In light shaders and environment shaders, it points
+to the state of the shader which requested the light or environment
+lookup. For shadow shaders, it points to the state of the light
+shader that started the shadow trace. In volume shaders, its value
+is the same as for a material or light shader of the same ray.
+
+<dt><code>child</code><dd>
+Points to the state of the most recent child ray. After a
+function that created a separate state returns, this state is still
+accessible to the caller of the function through this pointer. For
+example, <i><a href="node140.html#INDEX550">mi_trace_refraction</a></i>
+constructs a state when hitting geometry before calling the material
+shader attached to that geometry with this state. After it returns,
+the new state can be accessed by the caller of
+<i><a href="node140.html#INDEX550">mi_trace_refraction</a></i> to access
+<code>state&rarr;user</code>, <code>state&rarr;label</code>, and all
+other local information.
+
+<dt><code>type</code><dd>
+Specifies the reason for this ray. This is an enumerator.
+<dl>
+<dt><code>miRAY_EYE</code><dd>
+primary rays from the camera.
+<dt><code>miRAY_TRANSPARENT</code><dd>
+<a href="node76.html#INDEX200">transparency</a> rays cast by a
+material shader.
+<dt><code>miRAY_REFRACT</code><dd>
+refraction rays cast by a material shader.
+<dt><code>miRAY_REFLECT</code><dd>
+reflection rays cast by a material shader.
+<dt><code>miRAY_SHADOW</code><dd>
+<a href="node117.html#INDEX463">light ray</a>s cast from a light source.
+<dt><code>miRAY_LIGHT</code><dd>
+rays cast by a material shader when a light source is evaluated
+(which may result in the light source casting shadow rays back).
+<dt><code>miRAY_ENVIRONMENT</code><dd>
+rays that sample an environment (reflection) map.
+<dt><code>miRAY_DISPLACE</code><dd>
+is set for displacement shaders.
+<dt><code>miRAY_OUTPUT</code><dd>
+is set for output shaders.
+<dt><code>miRAY_FINALGATHER</code><dd>
+is set for finalgather rays originating at the final gather point.
+<dt><code>miRAY_LM_VERTEX</code><dd>
+is set for <a href="node135.html#INDEX501">lightmap shader</a> in
+vertex scan mode.
+<dt><code>miRAY_LM_MESH</code><dd>
+is set for <a href="node135.html#INDEX501">lightmap shader</a> in
+mesh output mode.
+<dt><code>miRAY_PROBE</code><dd>
+used by rays cast by <i><a href="node140.html#INDEX554">mi_trace_probe</a></i>.
+<dt><code>miRAY_NONE</code><dd>
+is a catch-all for other types of rays.
+<dt><code>miPHOTON_LIGHT</code><dd>
+is a photon emitted from a light source.
+<dt><code>miPHOTON_REFLECT_SPECULAR</code><dd>
+is a photon reflected specularly from a surface.
+<dt><code>miPHOTON_REFLECT_GLOSSY</code><dd>
+is a photon reflected glossily from a surface.
+<dt><code>miPHOTON_REFLECT_DIFFUSE</code><dd>
+is a photon reflected diffusely from a surface.
+<dt><code>miPHOTON_TRANSMIT_SPECULAR</code><dd>
+is a photon transmitted specularly through a surface.
+<dt><code>miPHOTON_TRANSMIT_GLOSSY</code><dd>
+is a photon transmitted glossily through a surface.
+<dt><code>miPHOTON_TRANSMIT_DIFFUSE</code><dd>
+is a photon transmitted diffusely through a surface.
+<dt><code>miPHOTON_TRANSPARENT</code><dd>
+is a photon transmitted directly (ie., without refraction) through
+a surface.
+<dt><code>miPHOTON_ABSORB</code><dd>
+is a photon being absorbed.
+<dt><code>miPHOTON_SCATTER_VOLUME</code><dd>
+is a photon scattered in a volume.
+<dt><code>miPHOTON_EMIT_CAUSTIC</code><dd>
+is a <a href="node41.html#INDEX86">caustics</a> photon to be cast
+by a photon <a href="node140.html#INDEX569">emitter shader</a>
+attached to a light source.
+<dt><code>miPHOTON_EMIT_GLOBILLUM</code><dd>
+is a <a href="node48.html#INDEX95">global illumination</a> photon
+to be cast by a photon <a href="node140.html#INDEX569">emitter shader</a>
+attached to a light source.
+</dl>
+
+<p>The ray type (<code>state&rarr;type</code>) can be queried with
+the following macros:
+<dl>
+<dt><code>miRAY_PRIMARY(raytype)</code><dd>
+is true if the raytype is a primary or a transparency ray.
+<dt><code>miRAY_SECONDARY(raytype)</code><dd>
+is true if the raytype corresponds to a ray generated at an
+intersection point.
+<dt><code>miRAY_PHOTON(raytype)</code><dd>
+is true if the raytype is one of the <tt>miPHOTON_*</tt> rays. This
+macro can be used to separate the photon tracing part of a shader
+from the regular <a href="node102.html#INDEX390">ray tracing</a>
+part.
+</dl>
+
+<dt><code>scanline</code><dd>
+This flag is set if the current intersection was found by means
+of the <a href="node76.html#INDEX202">scanline rendering</a> algorithm.
+
+<dt><code>cache</code><dd>
+<span class="depr">Deprecated</span> Its existence determines which
+shaders may call which tracing functions. By setting this pointer
+to 0, the shader can ease these restrictions and call tracing
+functions that are not normally legal for this type of shader. For
+details, see the section <i>Shaders and Trace Functions</i>
+below.
+
+<dt><code>org</code><dd>
+The origin (start point) of the ray in
+<a href="node101.html#INDEX367">internal space</a>. In the primary material
+shader, it is set by the last lens shader, or is (0, 0, 0) if there is no
+lens shader and the default non-orthogonal
+<a href="node124.html#INDEX488">pinhole camera</a> is used. In all other
+material shaders, it is the previous intersection point. In light and
+shadow shaders, it is the origin of the light source. If the light source
+does not have an origin, it is undefined.
+
+<dt><code>dir</code><dd>
+The direction of the ray in <a href="node101.html#INDEX367">internal space</a>.
+This is basically the normalized difference between <tt>point</tt> and
+<tt>org</tt>, pointing towards the current intersection point (except in the
+case of directional light sources that have no origin; in this case the
+light direction is used). Light and non-segmented shadow rays point from
+the light source to the intersection.
+
+<dt><code>time</code><dd>
+The time of the ray in the shutter interval. If motion blurring is turned off
+by setting the shutter time to 0.0 (or to the
+<a href="node76.html#INDEX195">shutter</a> delay value), the time is fixed at
+the shutter value. Otherwise, it is systematically sampled in the range from
+the shutter delay to the shutter time.
+
+<dt><code>volume</code><dd>
+The volume shader to be applied to the ray. The volume shader is called
+immediately after the material shader returns, without any change to the
+state. The volume shader changes the result color of the material shader
+to take the distance the ray to the material has traveled into account.
+For primary rays this is the <tt>volume</tt> of the camera, for reflection
+and <a href="node117.html#INDEX463">light ray</a>s the <tt>volume</tt> of the
+parent, and for refraction and <a href="node76.html#INDEX199">transparency
+ray</a>s the <tt>refraction_volume</tt> of the parent. Note that the
+<i><a href="node140.html#api:mi_trace_refraction">mi_trace_refraction</a></i> and
+<i><a href="node140.html#api:mi_trace_transparent">mi_trace_refraction</a></i>
+functions copy <tt>refraction_volume</tt> to <tt>volume</tt> to ensure that
+sub-shaders use the volume shader that applies to the interior of the object.
+Volume shaders are also applied to <a href="node117.html#INDEX463">light
+ray</a>s. This state variable is ignored in
+<a href="node118.html#INDEX466">autovolume</a> mode.
+
+<dt><code>environment</code><dd>
+The active environment shader. For primary rays this is the environment of
+the camera. For reflection and refraction rays the active shader is taken
+from the material, if it specifies an environment shader. If it does not,
+the environment shader defaults to the environment shader in the camera,
+if present. The purpose of the environment shader is to provide a color
+if a ray leaves the scene entirely.
+
+<dt><code>reflection_level</code><dd>
+The reflection level of the ray. It may range from 0 for primary rays to
+<tt>reflection_depth</tt> minus one. The <tt>trace_depth</tt> imposes
+another limit: The sum of <tt>reflection_level</tt> and <tt>refraction_level</tt>
+must be one less than <tt>trace_depth</tt>. A shader may decrement or reset
+the reflection level to circumvent the restrictions imposed by the trace
+depth state variables. The level fields are also used during photon tracing,
+and measure the photon trace depths in this case.
+
+<dt><code>refraction_level</code><dd>
+The refraction level of the ray. This is equivalent to the reflection level
+but applies to refraction and transparency (which is a variation of
+refraction that does not take the index of refraction into account) rays.
+A shader may decrement or reset the refraction level to circumvent the
+restrictions imposed by the trace depth state variables.
+
+<dt><code>face</code><dd>
+This field can be changed by shaders before casting a secondary ray with
+functions such as <i><a href="node140.html#INDEX549">mi_trace_reflection</a></i>.
+The secondary ray will then obey the changed <i>face</i> flag. The field
+will be initialized to 0 by mental ray, in which case the face setting from
+the scene description will take precedence, like render option and face flags
+on objects and instances. Setting this value to <tt>'f'</tt> (front),
+<tt>'b'</tt> (back), or <tt>'a'</tt> (both) will overwrite that default value.
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node105.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node107.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

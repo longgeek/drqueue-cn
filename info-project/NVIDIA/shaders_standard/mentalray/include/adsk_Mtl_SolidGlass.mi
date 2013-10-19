@@ -1,0 +1,673 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :    mtarpini
+# Purpose:    SolidGlass Material 
+#
+# ---------------------------------------------
+# Exports:
+#
+# - adsk_Shd_SolidGlass        (hidden)
+# - adsk_Mtl_SolidGlass
+#
+#
+# Imports:
+#
+# - 3dsmax9
+# - adsk_Mtl_Spider
+# - adsk_Utility_shaders
+#
+# ---------------------------------------------
+# Description:
+#
+# Basically the workflow for the phen class implementation looks like this:
+#
+#   - a first low level phen, the appearance shader.
+#
+#   - a controller shader that takes the UI specs and outputs values to drive
+#     the exposed parameters in the appearence shader.
+#
+#   - the actual material class phen which encapsulates the above shaders.
+#
+#
+# ---------------------------------------------
+# History:
+#
+# May 28, 2007 - mtarpini, appearence shader
+# June 08, 2007 - mtarpini, material phen
+# June 10, 2007 - mtarpini, unit scaling
+# July 12, 2007 - mtarpini, removed ao
+# Nov 14, 2007 - mtarpini, propagate_alpha flagged as ON
+# Nov 19, 2007 - mtarpini, mia_mat_x, removed bumpcombiners, added rcorners and ao checkboxes
+# Nov 20, 2007 - mtarpini, 'appearence' phen has now a 'struct' output, this to work with mia_material and photon slot
+# Jan 02, 2009 - mtarpini, nodevisibility support
+#
+#
+#****************************************************************************
+
+min version "3.6"
+
+
+
+
+
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+# adsk_Shd_SolidGlass (the Apparance phen)
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+declare phenomenon
+	struct 
+	{
+		#-------------------------------------
+        color   "result"        
+    }
+    "adsk_Shd_SolidGlass"
+    (
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        struct "m"
+        {                        
+            #----------------------------------
+            color  "refl_color",
+            
+            #----------------------------------
+            scalar "brdf_0_degree_refl",
+            
+            #----------------------------------            
+            color  "refr_color",
+            scalar "refr_ior",
+            
+            #----------------------------------                
+            scalar "refr_falloff_dist",
+            color  "refr_falloff_color",
+            
+            #----------------------------------                
+            scalar "refl_gloss",                    
+            scalar "refr_gloss" ,            
+            
+            #----------------------------------        
+            integer "bump_enable",
+            scalar  "bump_amount",            
+            shader  "bump_map"
+        },
+        
+        #-------------------------------------
+        # Round Corners
+        #-------------------------------------
+          struct "r"
+          {
+              #----------------------------------
+              scalar  "roundcorners_radius",
+              boolean "roundcorners_allow_different_materials"              
+         },
+         
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------
+        struct "p"
+        {
+            #----------------------------------
+              integer "reflection_glossy_samples",    
+              integer "refraction_glossy_samples",                      
+              integer "refl_depth",            
+              integer "refr_depth"
+        },
+
+        #-------------------------------------
+        # Unit Scalable Parameters
+        #-------------------------------------
+        struct "k"
+        {
+            #----------------------------------
+              vector "bumpwavy_tiling",
+              vector "bumprippled_tiling"
+        },
+
+        #----------------------------------
+        # Lights and Mode Parameters
+        #----------------------------------
+        integer     "mode",
+        array light "lights"
+    )
+
+    apply material, photon, shadow
+    version 1
+    
+    
+    
+    
+    #------------------------------------------------------------------------
+    # -> begin bump    #########################################################
+    #------------------------------------------------------------------------    
+    #------------------------------------------------------------------------
+    # Dummy
+    #------------------------------------------------------------------------    
+    shader "blackcolor__instance" "adsk_Utility_ColorState" 
+    (
+        "the_color" 0 0 0 0
+    )
+    #------------------------------------------------------------------------
+    # Rippled Bump
+    #------------------------------------------------------------------------    
+    shader "bump_rippled" "adsk_Utility_Noise_Tweakable"
+    (
+        "noise_size" 0.25,
+        "noise_color1" 0 0 0 1,
+        "noise_color2" 1 1 1 1,
+        "low" 0.0,
+        "high" 1.0,
+        "tiling" = interface "k.bumprippled_tiling",
+        "angle" 0 0 0
+    )
+    #------------------------------------------------------------------------
+    # Soft Bump
+    #------------------------------------------------------------------------    
+    shader "bump_wavy" "adsk_Utility_Noise_Tweakable"
+    (
+        "noise_size" 0.25,        
+        "noise_color1" 0 0 0 1,
+        "noise_color2" 1 1 1 1,
+        "low" 0.0,
+        "high" 1.0,
+        "tiling" = interface "k.bumpwavy_tiling",
+        "angle" 0 0 0
+    )
+    #------------------------------------------------------------------------
+    # Shaders Switcher (utility)
+    #------------------------------------------------------------------------    
+    shader "bump_switcher__instance" "adsk_Utility_Switch8Shader" (
+        "switcher" = interface "m.bump_enable",
+        "type" 2,
+        "shader_1" "blackcolor__instance",
+        "shader_2" "bump_rippled",
+        "shader_3" "bump_wavy",
+        "shader_4" = interface "m.bump_map"
+    )
+    #------------------------------------------------------------------------
+    # Bump Shader
+    #------------------------------------------------------------------------
+	shader "bump__instance" "adsk_Utility_Mix3Bump"
+    (
+		"bump_1" "bump_switcher__instance",
+		"factor_1" = interface "m.bump_amount"
+    )
+    #------------------------------------------------------------------------
+	# Bump vector
+	#------------------------------------------------------------------------	
+	shader "bump_vector__instance" "adsk_Utility_Color_to_Float3"
+	(
+		"the_color" = "bump__instance"
+	)
+    #------------------------------------------------------------------------
+    # <- end bump ###########################################################
+    #------------------------------------------------------------------------
+    
+    
+    
+    #------------------------------------------------------------------------    
+    # -> begin Round Corners ################################################
+    #------------------------------------------------------------------------
+    #------------------------------------------------------------------------
+    # Round Corners Bump Shader
+    #------------------------------------------------------------------------
+    shader "roundcorners__instance" "mia_roundcorners"
+    (
+        "radius" = interface "r.roundcorners_radius",
+        "allow_different_materials" = interface "r.roundcorners_allow_different_materials"
+    )
+    #------------------------------------------------------------------------
+    # <- end Round Corners ##################################################
+    #------------------------------------------------------------------------    
+ 
+
+    #------------------------------------------------------------------------
+    # Visibility Track Support
+    #------------------------------------------------------------------------
+	shader "node_visibility__instance" "adsk_Utility_NodeVisibility" 
+	(
+		"input" 1 1 1 1, 		#this is controlled internally
+		"mode" 0
+	)
+	
+ 
+     
+    #------------------------------------------------------------------------    
+    #------------------------------------------------------------------------
+    # Arch & Design Shader (Main Shader)
+    #------------------------------------------------------------------------
+    shader "mia_material__instance" "mia_material_x"
+    (
+        #----------------------------------
+        "diffuse_weight" 1, 
+        "diffuse" 0 0 0 1, 
+        "diffuse_roughness" 0, 
+        
+        #----------------------------------        
+        "reflectivity" 1.0, 
+        "refl_color" = interface "m.refl_color",
+        "refl_gloss" = interface "m.refl_gloss", 
+        "refl_gloss_samples" = interface "p.reflection_glossy_samples",
+        "refl_interpolate" off, 
+        "refl_hl_only" off, 
+        "refl_is_metal" off,
+        
+        #----------------------------------        
+        "transparency" 1, 
+        "refr_color" = interface "m.refr_color",
+        "refr_gloss" = interface "m.refr_gloss",
+        "refr_ior" = interface "m.refr_ior",
+        "refr_gloss_samples" = interface "p.refraction_glossy_samples",
+        "refr_interpolate" off, 
+        "refr_translucency" off, 
+        "refr_trans_color" 0.7 0.5 0.2 1, 
+        "refr_trans_weight" 0.5, 
+        
+        #----------------------------------        
+        "anisotropy" 1, 
+        "anisotropy_rotation" 0, 
+        "anisotropy_channel" -1,
+        
+        #----------------------------------        
+        "brdf_fresnel" off, 
+        "brdf_0_degree_refl" = interface "m.brdf_0_degree_refl",
+        "brdf_90_degree_refl" 1.0, 
+        "brdf_curve" 5.0, 
+        "brdf_conserve_energy" on, 
+        
+        #----------------------------------        
+        "intr_grid_density" 2, 
+        "intr_refl_samples" 2, 
+        "intr_refl_ddist_on" off, 
+        "intr_refl_ddist" 0, 
+        "intr_refr_samples" 2, 
+        "single_env_sample" off, 
+        
+        #----------------------------------        
+        "refl_falloff_on" off, 
+        "refl_falloff_dist" 0, 
+        "refl_falloff_color_on" off, 
+        "refl_falloff_color" 0.2 0.2 0.2 1, 
+        "refl_depth"  = interface "p.refl_depth", 
+        "refl_cutoff" 0.0,
+        
+        #-----------------------------------------------------------------------------        
+        "refr_falloff_on" on,
+        "refr_falloff_dist" = interface "m.refr_falloff_dist",
+        "refr_falloff_color_on" on,
+        "refr_falloff_color" = interface "m.refr_falloff_color",
+        "refr_depth"  = interface "p.refr_depth",
+        "refr_cutoff" 0.0,
+
+        #-----------------------------------------------------------------------------
+        "indirect_multiplier" 1,
+        "fg_quality" 1,
+        "fg_quality_w" 1,
+        
+        #----------------------------------
+        "ao_on"  off,
+        "ao_samples"  16,
+        "ao_distance"  0.1,
+        "ao_dark"  1 1 1 1,
+        "ao_ambient"  1 1 1 1,
+        "ao_do_details"  0,
+        
+        #----------------------------------    
+        "thin_walled" off,
+        "no_visible_area_hl" on,
+        "skip_inside_refl" on,
+        "do_refractive_caustics" on,
+        "backface_cull" off,
+        "propagate_alpha" on,
+        "hl_vs_refl_balance" 1,
+        "cutout_opacity" = "node_visibility__instance",			#nodevisibility hook
+        "additional_color" 0 0 0 1,
+
+        #----------------------------------
+        #"bump" "bump__instance",
+        "no_diffuse_bump" on,
+
+        #----------------------------------
+		"mode" = interface "mode",
+		"lights" =	interface "lights",
+        	
+        #----------------------------------
+        "bump_mode" 1, 
+		"overall_bump" = "roundcorners__instance",
+		"standard_bump" = "bump_vector__instance",
+        
+        #----------------------------------
+        "multiple_outputs" off
+
+    )#end shader
+    
+    
+    
+    #------------------------------------------------------------------------
+    # Phenomenon Root
+    #------------------------------------------------------------------------
+    root = "mia_material__instance"
+
+
+
+
+    #------------------------------------------------------------------------
+    # UI
+    #------------------------------------------------------------------------
+    gui "gui_adsk_Shd_SolidGlass"    {
+        #----------------------------------
+        control "Global" "Global" ("uiName" "adsk_Shd_SolidGlass", "category" "Material"
+        , "hidden"
+        )
+        
+        #-------------------------------------
+        # Lights and Mode Parameters
+        #-------------------------------------
+        control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+        control "lights" "array light" ("hidden","nonConnectable")
+        control "mode" "integer" ("hidden","nonConnectable")
+    }
+
+end declare
+#---------------------------------------------------------------------------------
+# <- end, declare phenomenon
+#---------------------------------------------------------------------------------
+
+
+
+
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+# adsk_Mtl_SolidGlass (the Material phen)
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+declare phenomenon
+     material "adsk_Mtl_SolidGlass"
+    (
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        struct "m"
+        {
+            #----------------------------------            
+            integer "transmittance_color",
+            color  "transmittance_map",
+            
+            #----------------------------------            
+            scalar "reflectance",
+            
+            #----------------------------------            
+            scalar "refr_ior",
+            scalar "refr_falloff_dist",
+            
+            #----------------------------------
+            scalar "glossiness",
+            
+            #----------------------------------            
+            integer "bump_enable",
+            shader     "bump_map",
+            scalar    "bump_amount"
+        },
+        
+        #-------------------------------------
+        # Special Effects
+        #-------------------------------------
+        struct "o"
+        {
+			#----------------------------------
+  			boolean	"roundcorners_on",
+			scalar "roundcorners_radius",
+			boolean "roundcorners_allow_different_materials"              
+        },         
+
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------
+        struct "p"
+        {
+            #----------------------------------
+              integer "reflection_glossy_samples",    
+              integer "refraction_glossy_samples",                      
+              integer "refl_depth",            
+              integer "refr_depth"
+        },
+        
+		#-------------------------------------
+		# Internals
+		#-------------------------------------
+		struct "x"
+		{
+			#----------------------------------
+	      	integer "gbuffer_id"
+		},
+	
+        #----------------------------------
+        # Lights Parameters
+        #----------------------------------
+        integer "mode",
+        array light "lights"
+
+    )#end material
+
+
+    #------------------------------------------------------------------------
+    # Spider
+    #------------------------------------------------------------------------
+    shader "spider_instance" "adsk_Shd_SolidGlass_spider"
+    (
+        "transmittance_color" = interface "m.transmittance_color",
+        "transmittance_map" = interface "m.transmittance_map",
+        
+        "reflectance" = interface "m.reflectance",
+        
+        "refr_falloff_dist_i" = interface "m.refr_falloff_dist",
+        "glossiness_i" = interface "m.glossiness",
+
+		"roundcorners_on" = interface "o.roundcorners_on",
+		"roundcorners_radius_i" = interface "o.roundcorners_radius"
+    )
+
+    #------------------------------------------------------------------------
+    # Reflection Blur Multiplication
+    #------------------------------------------------------------------------
+    shader "reflection_gloss_sample|shader" "adsk_blurred_reflection_multiplier"
+    (
+        "blurred_reflection_value" = interface "p.reflection_glossy_samples"
+    )
+    
+    #------------------------------------------------------------------------
+    # Refraction Blur Multiplication
+    #------------------------------------------------------------------------
+    shader "refraction_gloss_sample|shader" "adsk_blurred_refraction_multiplier"
+    (
+        "blurred_refraction_value" = interface "p.refraction_glossy_samples"
+    )
+ 
+    #------------------------------------------------------------------------
+    # adsk_Shd_SolidGlass
+    #------------------------------------------------------------------------    
+    shader "adsk_Shd_SolidGlass__instance" "adsk_Shd_SolidGlass"
+    (    
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        "m"
+        {
+            #----------------------------------
+            "refl_color" = "spider_instance.refl_color",
+
+            #----------------------------------
+            "brdf_0_degree_refl" =  "spider_instance.brdf_0_degree_refl",
+
+            #----------------------------------
+            "refr_color" = "spider_instance.refr_color",
+            "refr_ior" = interface "m.refr_ior",
+
+            #----------------------------------
+            "refr_falloff_dist" =  "spider_instance.refr_falloff_dist",
+            "refr_falloff_color" = "spider_instance.refr_falloff_color",
+
+            #----------------------------------
+            "refl_gloss" = "spider_instance.glossiness",
+            "refr_gloss" = "spider_instance.glossiness",
+
+            #----------------------------------
+            "bump_enable" = interface "m.bump_enable",
+            "bump_amount" = interface "m.bump_amount",
+            "bump_map" = interface    "m.bump_map"
+        },
+        
+        #-------------------------------------
+        # Round Corners Parameters
+        #-------------------------------------
+        "r"
+        {
+            #----------------------------------
+              "roundcorners_radius" = "spider_instance.roundcorners_radius",
+	      	"roundcorners_allow_different_materials" = interface "o.roundcorners_allow_different_materials"
+        },    
+                
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------
+        "p"
+        {
+            #----------------------------------
+              "reflection_glossy_samples" = "reflection_gloss_sample|shader",
+              "refraction_glossy_samples" = "refraction_gloss_sample|shader",              
+              "refl_depth" = interface "p.refl_depth",
+              "refr_depth" = interface "p.refr_depth"              
+        },
+        
+        #-------------------------------------
+        # Unit Scalable Parameters
+        #-------------------------------------
+        "k"
+        {
+            #----------------------------------
+            "bumpwavy_tiling" =    "spider_instance.bumpwavy_tiling",
+              "bumprippled_tiling" = "spider_instance.bumprippled_tiling"
+        },
+        
+        #----------------------------------
+        # Lights Parameters
+        #----------------------------------
+        "mode" = interface "mode",
+        "lights" = interface "lights"    
+    )
+
+
+    #------------------------------------------------------------------------
+    # Render Elements support  ##############################################
+    #------------------------------------------------------------------------    
+    shader "max_mia_mat_renderelem__instance" "adsk_Utility_MiaDecomposer" 
+    (
+        "mia_material" "adsk_Shd_SolidGlass__instance", 
+        "GBufferID" = interface "x.gbuffer_id"
+    )
+    
+
+    #------------------------------------------------------------------------
+    #------------------------------------------------------------------------
+    # Material Connections
+    #------------------------------------------------------------------------
+    material "mat"
+					= "max_mia_mat_renderelem__instance"
+        shadow            = "adsk_Shd_SolidGlass__instance"
+        photon            = "adsk_Shd_SolidGlass__instance"
+    end material
+    root material "mat"
+
+
+
+    #------------------------------------------------------------------------
+    #------------------------------------------------------------------------
+    # UI
+    #------------------------------------------------------------------------
+    gui "gui_adsk_Mtl_SolidGlass"
+    {
+        #----------------------------------
+		control "Global" "Global" 
+		(
+			"uiName" "ProMaterials: Solid Glass", "category" "Material",          
+			"viewport_diffuse" "m.transmittance_map",
+			"viewport_specular" 1.0 1.0 1.0,
+			"viewport_shininess" 1,
+			"viewport_transparency" 0.78,
+			"hidden"
+		)
+
+        #-------------------------------------
+        #  Material Parameters
+        #-------------------------------------
+        control "m" "struct" ("uiName" "Solid Glass Material Parameters", "openstate" "true")
+        {
+            control "transmittance_color" "integer" ("enum", "nonConnectable", 
+				"uiName" "Color (Transmittance)", 
+				"value" "0 Clear, 1 Green, 2 Gray, 3 Blue, 4 Blue-Green, 5 Bronze, 6 Custom Color",  
+				"range" 0 6)
+            control "transmittance_map"  "color" ("uiName"  "-> Custom Color", "value" 0.776 0.827 0.769,
+							"helpText" "Affects Color (Transmittance) of Solid Glass when 'Color (Transmittance): Custom Color' is selected")
+
+            control "reflectance" "scalar" ("nonConnectable", "uiName" "Reflectance", "value" 0.05, "range" 0.01 0.5, "helpText" "Level of reflectivity")
+
+            control "refr_ior" "scalar" ("nonConnectable", "uiName" "Index of Refraction", "value" 1.52, "range" 1.0 5.0, "helpText" "Air: 1.00, Water: 1.33, Alcohol: 1.36, Quartz: 1.46, Plexiglas: 1.51, Glass: 1.52, Diamond: 2.42")        
+            control "refr_falloff_dist" "scalar" ("nonConnectable", "uiName" "Reference Thickness", "value" 6, "units" "world", "helpText" "Reference thickness for glass pane")    
+
+            control "glossiness" "scalar" ("nonConnectable", "uiName" "Surface Roughness", "value" 0.0,  "range" 0 1, "helpText" "Glass surface roughness")
+
+            control "bump_enable" "integer" ("enum", "nonConnectable", "uiName" "Surface Imperfections", "value" "0 None, 1 Rippled, 2 Wavy, 3 Custom", "range" 0 3, "helpText" "Waves or ripples found in solid glass")
+            control "bump_map"  "shader" ("uiName"  "-> Custom Map", "helpText" "Use when 'Surface Imperfections: Custom' is selected")
+            control "bump_amount" "integer" ("nonConnectable", "uiName" "-> Amount", "value" 0.03,  "range" -10.0 10.0, "helpText" "Distortion level of surface imperfections")
+        }
+
+         #-------------------------------------
+		#  Special Effects
+         #-------------------------------------
+		control "o" "struct" ("uiName" "Special Effects", "openstate" "false")
+        {
+            #----------------------------------
+			control "roundcorners_on" "boolean" ("uiName"  "Round Corners", "value" 0, "nonConnectable", "enables" "roundcorners_radius, roundcorners_allow_different_materials",
+												"helpText" "Enables simulated round corners. Note: This is only a shading effect, similar to a bump map, whereby no actual geometric changes occur. This effect only works properly on straight edges.")	
+			control "roundcorners_radius"  "scalar" ("uiName"  "-> Fillet Radius", "value" 0.25, "units" "world", "helpText" "Adjusts the radius of the round corner effect")
+			control "roundcorners_allow_different_materials"  "boolean" ("uiName"  "-> Blend with Other Materials", "nonConnectable",
+												"helpText" "Activate to apply corner rounding effects to any material. Disable to apply corner rounding effects to the surface of the current material only.")
+        }
+    
+
+         #-------------------------------------
+        # Performance Tuning Parameters
+         #-------------------------------------
+        control "p" "struct" ("uiName" "Performance Tuning Parameters", "openstate" "false")
+        {
+            #----------------------------------
+            control "reflection_glossy_samples"  "integer" ("nonConnectable", "uiName"  "Reflection Glossy Samples", "value" 8, "range" 0 128, "helpText" "Defines the maximum number of samples (rays) that mental ray computes to create glossy reflections.")
+            control "refraction_glossy_samples"  "integer" ("nonConnectable", "uiName"  "Refraction Glossy Samples", "value" 8, "range" 0 128, "helpText" "Defines the maximum number of samples (rays) that mental ray computes to create glossy refractions.")            
+            control "refl_depth"  "integer" ("nonConnectable", "uiName"  "Reflection Max Trace Depth", "value" 0, "range" 0 20, "helpText" "Number of times each ray is reflected. When set to zero, global render settings take precedence.")
+            control "refr_depth"  "integer" ("nonConnectable", "uiName"  "Refraction Max Trace Depth", "value" 0, "range" 0 20, "helpText" "Number of times each ray is refracted. When set to zero, global render settings take precedence.")
+        }
+
+        #-------------------------------------
+		# Internal
+ 		#-------------------------------------
+		control "x" "struct" ("uiName" "Internals", "openstate" "false")
+		{
+			#----------------------------------
+			control "gbuffer_id"  "integer" (hidden, "nonConnectable", "uiName"  "Translator must link here to pass a different ID", "value" 3)
+		}
+
+        #-------------------------------------
+        # Lights and Mode Parameters
+        #-------------------------------------
+        control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+        control "lights" "array light" ("hidden","nonConnectable")
+        control "mode" "integer" ("hidden","nonConnectable")
+
+    }#end gui
+
+end declare
+#---------------------------------------------------------------------------------
+# <- end, declare phenomenon
+#---------------------------------------------------------------------------------

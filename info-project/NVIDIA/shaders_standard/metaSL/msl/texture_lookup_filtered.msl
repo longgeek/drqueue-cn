@@ -1,0 +1,107 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Texture_lookup_2d_filtered
+{
+  input:
+    Texture2d texture = "default.dds"
+    {
+        display_name("Texture");
+        description("The texture from which colors will be sampled.");
+    };
+
+    int texture_space = 0 
+    {
+        display_name("Texture Space");
+        literal(); 
+        description("Texture coordinates to use when sampling the "
+                    "input texture.");
+        hard_range(0, 3);
+    };
+
+    float2 translation = float2(0, 0)
+    {
+        display_name("Translation");
+        description("Translation of the uv-coordinates.");
+    };
+
+    float rotation = 0
+    {
+        display_name("Rotation");
+        description("Rotation angle, specified in radians.");
+    };
+
+    float2 scale = float2(1, 1)
+    {
+        display_name("Scale");
+        description("Scaling factor for the uv-coordinates.");
+    };
+
+    float2 blur = float2(1, 1)
+    {
+        display_name("Blur");
+        description("Blur for the texture look-up.");
+    };
+
+  output:
+    Color result;
+    
+    void main()
+    {
+        float2 coords = texture_coordinate[texture_space].xy;
+        float2 ddx_coords = ddx(texture_coordinate[texture_space]).xy;
+        float2 ddy_coords = ddy(texture_coordinate[texture_space]).xy;
+
+        // apply translation
+        coords += translation;
+
+        // apply rotation
+        if (rotation != 0)
+        {
+            float s = sin(rotation);
+            float c = cos(rotation);
+
+            coords = float2(coords.x * c - coords.y * s,
+                            coords.x * s + coords.y * c);
+
+            ddx_coords = float2(ddx_coords.x * c - ddx_coords.y * s,
+                                ddx_coords.x * s + ddx_coords.y * c);
+
+            ddy_coords = float2(ddy_coords.x * c - ddy_coords.y * s,
+                                ddy_coords.x * s + ddy_coords.y * c);
+        }
+
+        // apply scale
+        coords *= scale;
+        ddx_coords *= scale;
+        ddy_coords *= scale;
+
+        // perform texture look-up
+        Texture2D_sampler_color sampler(texture, blur);
+        result = sampler.lookup(coords, ddx_coords, ddy_coords);
+    }
+}
+{
+    description(
+    "This shader node can be used for filtered texture look-up. "
+    "It does not have an uv-coordinate input, but uses the current state "
+    "texture coordinates instead. This has the advantage that the correct "
+    "texture coordinate derivatives are available. "
+    "Therefore texture filtering can be implemented in the rendering core. "
+    "This is the main difference to the previous Texture_lookup_Xd shaders. "
+    "Unfortunately this also means that the uv-coordinates cannot be "
+    "transformed before. That's because it's currently not possible to "
+    "propagate the derivatives correctly in an automated way. "
+    "However, at least some simple transformations are available. "
+    "They are perfomed in the following order: "
+    "1. translation, "
+    "2. rotation, "
+    "3. scale. "
+    "It is assumed that the corresponding inputs are constant. Otherwise "
+    "the computed texture coordinate derivatives are not correct since the "
+    "derivatives of the transformation inputs are not taken into account "
+    "(since they are not known).");
+};
+

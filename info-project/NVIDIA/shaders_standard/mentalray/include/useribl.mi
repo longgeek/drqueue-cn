@@ -1,0 +1,53 @@
+# Copyright 1986, 2013 NVIDIA Corporation. All rights reserved.
+#*****************************************************************************
+# Created:	15.09.2010
+# Module:	userdata
+# Purpose:	.mi declarations for useribl shaders
+#
+# Exports:
+#
+#	useribl_ibl_env
+#       useribl_ibl_rect
+#
+#****************************************************************************/
+
+
+$ifndef "useribl_mi_included"
+set "useribl_mi_included" "true"
+
+min version "3.7.53"
+max version "3.11.99"
+
+
+declare shader
+    color "user_ibl_env" (
+        color texture "texture",                    # environment lookup shader or texture
+        integer "samples" default 0,                # limit number of arealight samples
+        color   "color" default 1 1 1,              # light color scaling
+        scalar "intensity" default 1,               # scalar multiplier
+        integer "shadow_mode" default 2,            # 0=no shadow, 1=opaque, 2=transp
+        scalar  "rotate",                           # rotation
+        boolean "as_reflection" default false,      # treat the texture as a reflection
+        boolean "primary" default true
+    )
+    apply light, environment
+    version 3
+end declare
+
+declare shader
+    color "user_ibl_rect" (
+        color texture "texture",            # environment lookup shader or texture
+        integer "samples" default 0,        # limit number of arealight samples
+        color   "color" default 1 1 1,      # light color scaling
+        scalar  "intensity" default 1,      # scalar multiplier
+        integer "shadow_mode" default 2,    # 0=no shadow, 1=opaque, 2=transp
+        scalar	"cone" default 90.0,
+        scalar  "falloff" default 2.0,
+        scalar  "angular_falloff" default 1,
+        boolean "swap_uv" default false     # swap texture u and v coordinates 
+    )
+    apply light
+    version 4
+end declare
+
+$endif 

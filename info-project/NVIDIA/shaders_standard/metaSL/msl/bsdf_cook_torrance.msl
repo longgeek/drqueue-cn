@@ -1,0 +1,110 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+native bsdf Bsdf_cook_torrance
+{
+  input:
+    Color  diffuse_color = Color(1,1,1,1)
+	{
+		display_name("Diffuse Color");
+		hard_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color used to tint the Diffuse Reflectance Color." );
+	};
+    float diffuse_scalar = 0.7
+	{
+		display_name("Diffuse Float");
+		hard_range(float(0),float(1));
+		description( "The intensity of the light diffusely reflected from "
+					 "this surface." );
+	};
+    Color  specular_color = Color(1,1,1,1)
+	{
+		display_name("Specular Color");
+		hard_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color used to tint the Specular Reflectance "
+					 "Color." );
+	};
+    float specular_scalar = 0.17
+	{
+		display_name("Specular Float");
+		hard_range(float(0),float(0.5));
+		description( "The intensity of the specular light reflections from "
+					 "this surface." );
+	};
+
+    float roughness = 0.18
+	{
+		display_name("Specular Roughness");
+		hard_range(float(0),float(1));
+		description( "The width of specular highlights along the across the "
+					 "surface." );
+	};
+    Color ior = Color(1,1,1,1)
+        {
+		display_name("Index of Refraction");
+	};
+
+  output:
+    Color result;
+
+    // There's currently only a built-in software implementation
+    // for the BSDF. Thus this shader will not work in hardware
+    // rendering so far.
+    Spectrum eval(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        // black result
+        return Spectrum(0.0);
+    }
+
+    Bsdf_components sample(
+        in float3           fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        (void)fixed_direction;
+        (void)primary_sample;
+        (void)sample_probability;
+        (void)allowed_components;
+        (void)transport_source;
+        return state::bsdf_invalid_sample(sampled_direction, sample_weight);
+    }
+
+    float pdf(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        (void)fixed_direction;
+        (void)sampled_direction;
+        (void)allowed_components;
+        (void)transport_source;
+        return 0.f;
+    }
+
+    Bsdf_components get_components()
+    {
+        // nothing
+        return Bsdf_components{};
+    }
+
+    Bsdf_components get_active_components()
+    {
+        // nothing
+        return Bsdf_components{};
+    }
+}
+{
+	description( "An illumination model for rough, shiny "
+	             "surfaces, such as metals." );
+};

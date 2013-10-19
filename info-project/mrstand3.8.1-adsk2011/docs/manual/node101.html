@@ -1,0 +1,189 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Coordinate Systems</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node100.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node102.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h2 id="SECTION99">Coordinate Systems</h2>
+
+<a id="INDEX367"></a>
+<p id="api:internal_space"><i>Internal space</i> is the coordinate system
+mental ray uses to present intersection points and other points and vectors
+to shaders. All points and vectors in the state are presented in
+internal space, namely <tt>org</tt>, <tt>dir</tt>, <tt>point</tt>,
+<tt>normal</tt>, <tt>normal_geom</tt>, <tt>motion</tt> and
+<tt>derivs</tt>, <em>except</em> <tt>bump</tt> basis vectors which are in
+<a href="node101.html#INDEX369">object space</a>.
+The actual meaning of internal space is left
+undefined, it varies between different versions of mental ray and
+depends on the <tt>space</tt> given in the <tt>options</tt> block of
+the scene. <b>A shader must not assume that internal space is identical
+to world space</b>, even though this is true in most scenes.</p>
+
+<dl>
+<a id="INDEX368"></a>
+<a id="api:world_space"></a>
+<dt><i>World space</i>
+<dd>is the coordinate system in which modeling and animation takes place.</p>
+
+<a id="INDEX369"></a>
+<a id="api:object_space"></a>
+<dt><i>Object space</i>
+<dd>is a
+coordinate system relative to the object's origin. The modeler that
+created the scene defines the object's origin. Most translators use
+the center of the bounding box of the object as the object
+origin.</p>
+
+<a id="INDEX370"></a>
+<a id="api:camera_space"></a>
+<dt><i>Camera space</i>
+<dd>is a
+coordinate system in which the camera is at the coordinate origin
+<i>(0, 0, 0)</i> with an <i>up</i> vector of <i>(0, 1, 0)</i> and
+looking down the negative Z axis.</p>
+
+<a id="INDEX371"></a>
+<a id="api:raster_space"></a>
+<dt><i>Raster space</i>
+<dd>is a two-dimensional pixel
+location on the screen bounded by <i>(0, 0)</i> in the lower left
+corner of the image, and the rendered image resolution. The center
+of the pixel in the lower left corner of raster space has the
+coordinates <i>(0.5, 0.5)</i>.</p>
+
+<a id="INDEX372"></a>
+<a id="api:screen_space"></a>
+<dt><i>Screen space</i>
+<dd>is
+defined such that <i>(-1, -1/a)</i> is in the lower left corner of
+the screen and <i>(1, 1/a)</i> is in the upper right, where
+<i>a</i> is the <a href="node77.html#INDEX231">aspect ratio</a> of
+the screen (the relation between its width and height).</p>
+</dl>
+
+<p>Most shaders never need to transform between spaces. Texture
+shaders frequently need to operate in <a href="node101.html#INDEX369">object space</a>. For example, in order to
+apply bump basis vectors to <code>state&rarr;normal</code>, the normal
+must be transformed to object space before the bump basis vectors
+are applied, and back to internal space before the result is passed
+to any mental ray function such as <i><a href="node140.html#api:mi_trace_reflection">mi_trace_reflection</a></i>.
+mental ray offers 18 functions to convert points, vectors and
+normals between coordinate spaces:</p>
+<div align="center">
+<table class="table">
+<tr>
+<th><i>function</i></th>
+<th><i>operation</i></th>
+</tr>
+<tr>
+<td>mi_point_to_world(<i>s</i>,<i>p_r</i>,<i>p</i>)</td>
+<td>internal point to world space</td>
+</tr>
+<tr>
+<td>mi_point_to_camera(<i>s</i>,<i>p_r</i>,<i>p</i>)</td>
+<td>internal point to camera space</td>
+</tr>
+<tr>
+<td>mi_point_to_object(<i>s</i>,<i>p_r</i>,<i>p</i>)</td>
+<td>internal point to object space</td>
+</tr>
+<tr>
+<td>mi_point_from_world(<i>s</i>,<i>p_r</i>,<i>p</i>)</td>
+<td>world point to internal space</td>
+</tr>
+<tr>
+<td>mi_point_from_camera(<i>s</i>,<i>p_r</i>,<i>p</i>)</td>
+<td>camera point to internal space</td>
+</tr>
+<tr>
+<td>mi_point_from_object(<i>s</i>,<i>p_r</i>,<i>p</i>)</td>
+<td>object point to internal space</td>
+</tr>
+<tr>
+<td>mi_vector_to_world(<i>s</i>,<i>v_r</i>,<i>v</i>)</td>
+<td>internal vector to world space</td>
+</tr>
+<tr>
+<td>mi_vector_to_camera(<i>s</i>,<i>v_r</i>,<i>v</i>)</td>
+<td>internal vector to camera space</td>
+</tr>
+<tr>
+<td>mi_vector_to_object(<i>s</i>,<i>v_r</i>,<i>v</i>)</td>
+<td>internal vector to object space</td>
+</tr>
+<tr>
+<td>mi_vector_from_world(<i>s</i>,<i>v_r</i>,<i>v</i>)</td>
+<td>world vector to internal space</td>
+</tr>
+<tr>
+<td>mi_vector_from_camera(<i>s</i>,<i>v_r</i>,<i>v</i>)</td>
+<td>camera vector to internal space</td>
+</tr>
+<tr>
+<td>mi_vector_from_object(<i>s</i>,<i>v_r</i>,<i>v</i>)</td>
+<td>object vector to internal space</td>
+</tr>
+<tr>
+<td>mi_normal_to_world(<i>s</i>,<i>v_r</i>,<i>v</i>)</td>
+<td>internal normal to world space</td>
+</tr>
+<tr>
+<td>mi_normal_to_camera(<i>s</i>,<i>v_r</i>,<i>v</i>)</td>
+<td>internal normal to camera space</td>
+</tr>
+<tr>
+<td>mi_normal_to_object(<i>s</i>,<i>v_r</i>,<i>v</i>)</td>
+<td>internal normal to object space</td>
+</tr>
+<tr>
+<td>mi_normal_from_world(<i>s</i>,<i>v_r</i>,<i>v</i>)</td>
+<td>world normal to internal space</td>
+</tr>
+<tr>
+<td>mi_normal_from_camera(<i>s</i>,<i>v_r</i>,<i>v</i>)</td>
+<td>camera normal to internal space</td>
+</tr>
+<tr>
+<td>mi_normal_from_object(<i>s</i>,<i>v_r</i>,<i>v</i>)</td>
+<td>object normal to internal space</td>
+</tr>
+</table>
+</div>
+<p>Point and vector transformations are similar, except that the
+vector versions ignore the translation part of the matrix. Normal
+transformations are similar to vector transformations, except that
+the transpose of the inverse transformation matrix is used. In this
+way it is ensured that if a vector and a normal are orthogonal in
+one coordinate system they remain orthogonal after they have been
+transformed to a different coordinate system. This holds for
+arbitrary, not necessarily orthogonal transformations.</p>
+<p>The length of vectors is preserved only if the transformation
+matrix does not scale. The <i><a href="node145.html#INDEX660">mi_point_transform</a></i> and <i><a href="node145.html#INDEX661">mi_vector_transform</a></i> functions are
+also available to transform points and vectors between arbitrary
+coordinate systems given by a transformation matrix. <i><a href="node145.html#INDEX662">mi_vector_transform_T</a></i> transforms
+with the transpose of the matrix and can be used for the
+transformation of normals.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node100.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node102.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

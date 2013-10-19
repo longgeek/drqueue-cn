@@ -1,0 +1,275 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>RC Direction Functions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node142.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node144.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION141"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_reflection_dir">mi_reflection_dir</a></li>
+<li><a href="#api:mi_reflection_dir_specular">mi_reflection_dir_specular</a></li>
+<li><a href="#api:mi_reflection_dir_glossy">mi_reflection_dir_glossy</a></li>
+<li><a href="#api:mi_reflection_dir_anisglossy">mi_reflection_dir_anisglossy</a></li>
+<li><a href="#api:mi_reflection_dir_diffuse">mi_reflection_dir_diffuse</a></li>
+<li><a href="#api:mi_refraction_dir">mi_refraction_dir</a></li>
+<li><a href="#api:mi_transmission_dir_specular">mi_transmission_dir_specular</a></li>
+<li><a href="#api:mi_transmission_dir_glossy">mi_transmission_dir_glossy</a></li>
+<li><a href="#api:mi_transmission_dir_anisglossy">mi_transmission_dir_anisglossy</a></li>
+<li><a href="#api:mi_transmission_dir_diffuse">mi_transmission_dir_diffuse</a></li>
+<li><a href="#api:mi_scattering_dir_diffuse">mi_scattering_dir_diffuse</a></li>
+<li><a href="#api:mi_scattering_dir_directional">mi_scattering_dir_directional</a></li>
+<li><a href="#api:mi_scattering_pathlength">mi_scattering_pathlength</a></li>
+</ul>
+
+<h3>RC Direction Functions</h3>
+<p>The functions in this section compute ray or photon directions.
+In both photon and <a href="node102.html#INDEX390">ray tracing</a>,
+shaders normally first compute a direction for secondary photons or
+rays using one of the functions with <i>_dir</i> in the name, and
+then call the corresponding photon or ray tracing function with the
+resulting direction.</p>
+<p>The functions <i><a href="node148.html#INDEX729">mi_choose_scatter_type</a></i>,
+<i>mi_reflection_dir_*</i>, <i>mi_transmission_dir_*</i>, and
+<i>mi_scattering_dir_*</i> can also be used in other contexts than
+photon tracing, but they are listed in the photon tracing column
+above because they are most often used for that purpose. However,
+the glossy direction functions, for example, can just as well be
+used for ray tracing if the rendering quality settings (contrast
+and sampling limits) are high enough to avoid noisy images. Using
+diffuse directions for <a href="node102.html#INDEX390">ray
+tracing</a> is unlikely to produce acceptable results due to
+noise.</p>
+<p>In mental ray 3.4, <i>mi_reflection_dir_*_x</i> and
+<i>mi_transmission_dir_*_x</i> functions are added. They have the
+same functionality as non-<i>_x</i> ones, but get an explicit
+<i>sample</i> argument pointing to a 2-dimensional sample array.
+The values in the <i>sample</i> array can be obtained from
+<i><a href="node141.html#INDEX577">mi_sample</a></i> function. The
+<i>&lt;*_x&gt;</i> functions are useful when multiple glossy of
+diffuse rays are shot.</p>
+<p><a id="INDEX602"></a></p>
+<h5 class="anchor" id="api:mi_reflection_dir">mi_reflection_dir</h5>
+<pre>
+    void mi_reflection_dir(
+        miVector        *dir,
+        miState         *state);
+</pre>
+<p>Calculate the reflection direction based on the <i>dir</i>,
+<i>normal</i>, and <i>normal_geom</i> state variables. The returned
+direction <i>dir</i> can be passed to
+<i><a href="node140.html#INDEX549">mi_trace_reflection</a></i>. It is returned
+in <a href="node101.html#INDEX367">internal space</a>.</p>
+<p><a id="INDEX603"></a></p>
+<h5 class="anchor" id="api:mi_reflection_dir_specular">mi_reflection_dir_specular</h5>
+<pre>
+    void mi_reflection_dir_specular(
+        miVector        *dir,
+        miState         *state);
+  
+</pre>
+<p>Same as <i><a href="node143.html#INDEX602">mi_reflection_dir</a></i>: computes the
+mirror direction. Created for symmetry with the similar functions
+for glossy and diffuse reflection.</p>
+<p><a id="INDEX604"></a></p>
+<h5 class="anchor" id="api:mi_reflection_dir_glossy">mi_reflection_dir_glossy</h5>
+<pre>
+    void mi_reflection_dir_glossy(
+        miVector        *dir,
+        miState         *state,
+        miScalar        shiny);
+   void mi_reflection_dir_glossy_x(
+        miVector        *dir,
+        miState         *state,
+        miScalar        shiny,
+        const double    sample[2]);
+</pre>
+<p>Choose a direction near the direction of ideal specular
+reflection (mirror direction). If <i>shiny</i> is low (for example,
+5), a wide distribution of directions results; if <i>shiny</i> is
+high (for example, 100), a narrow distribution results.</p>
+<p><a id="INDEX605"></a></p>
+<h5 class="anchor" id="api:mi_reflection_dir_anisglossy">mi_reflection_dir_anisglossy</h5>
+<pre>
+    void mi_reflection_dir_anisglossy(
+        miVector        *dir,
+        miState         *state,
+        miVector        *u,
+        miVector        *v,
+        miScalar        shiny_u,
+        miScalar        shiny_v);
+    void mi_reflection_dir_anisglossy_x(
+        miVector        *dir,
+        miState         *state,
+        miVector        *u,
+        miVector        *v,
+        miScalar        shiny_u,
+        miScalar        shiny_v,
+        const double    sample[2]);
+</pre>
+<p>Like <i><a href="node143.html#INDEX604">mi_reflection_dir_glossy</a></i>, but with
+different shinynesses in different directions. The <i>u</i> and
+<i>v</i> vectors specify the local surface orientation.</p>
+<p><a id="INDEX606"></a></p>
+<h5 class="anchor" id="api:mi_reflection_dir_diffuse">mi_reflection_dir_diffuse</h5>
+<pre>
+    void mi_reflection_dir_diffuse(
+        miVector        *dir,
+        miState         *state);
+    void mi_reflection_dir_diffuse_x(
+        miVector        *dir,
+        miState         *state,
+        const double    sample[2]);
+</pre>
+<p>Choose a direction with a distribution according to Lambert's
+cosine law for <a href="node142.html#INDEX584">diffuse
+reflection</a>.</p>
+<p><a id="INDEX607"></a></p>
+<h5 class="anchor" id="api:mi_refraction_dir">mi_refraction_dir</h5>
+<pre>
+    miBoolean mi_refraction_dir(
+        miVector        *dir,
+        miState         *state,
+        miScalar        ior_in,
+        miScalar        ior_out);
+</pre>
+<p>Calculate the refraction direction in <a href="node101.html#INDEX367">internal
+space</a> based on the interior
+and exterior indices of refraction <i>ior_in</i> and
+<i>ior_out</i>, and on <i>dir</i>, <i>normal</i>, and
+<i>normal_geom</i> state variables. The returned direction
+<i>dir</i> can be passed to <i><a href="node140.html#INDEX550">mi_trace_refraction</a></i>.
+Returns <tt>miFALSE</tt> and leaves <tt>*</tt> <i>dir</i> undefined in case
+of <a href="node115.html#INDEX450">total internal
+reflection</a>.</p>
+<p><a id="INDEX608"></a></p>
+<h5 class="anchor" id="api:mi_transmission_dir_specular">mi_transmission_dir_specular</h5>
+<pre>
+    miBoolean mi_transmission_dir_specular(
+        miVector        *dir,
+        miState         *state,
+        miScalar        ior_in,
+        miScalar        ior_out);
+</pre>
+<p>Same as <i><a href="node143.html#INDEX607">mi_refraction_dir</a></i>, since specular
+transmission occurs in the refraction direction. Created for
+symmetry with the similar functions for glossy and diffuse
+transmission.</p>
+<p><a id="INDEX609"></a></p>
+<h5 class="anchor" id="api:mi_transmission_dir_glossy">mi_transmission_dir_glossy</h5>
+<pre>
+    miBoolean mi_transmission_dir_glossy(
+        miVector        *dir,
+        miState         *state,
+        miScalar        ior_in,
+        miScalar        ior_out,
+        miScalar        shiny);
+    miBoolean mi_transmission_dir_glossy_x(
+        miVector        *dir,
+        miState         *state,
+        miScalar        ior_in,
+        miScalar        ior_out,
+        miScalar        shiny,
+        const double    sample[2]);
+</pre>
+<p>Choose a direction near the direction of ideal specular
+transmission (the refraction direction). If <i>shiny</i> is low, a
+very wide distribution of directions results; if <i>shiny</i> is
+high, a narrow distribution results.</p>
+<p><a id="INDEX610"></a></p>
+<h5 class="anchor" id="api:mi_transmission_dir_anisglossy">mi_transmission_dir_anisglossy</h5>
+<pre>
+    miBoolean mi_transmission_dir_anisglossy(
+        miVector     *dir,
+        miState      *state,
+        miScalar     ior_in,
+        miScalar     ior_out,
+        miVector     *u,
+        miVector     *v,
+        miScalar     shiny_u,
+        miScalar     shiny_v);
+    miBoolean mi_transmission_dir_anisglossy_x(
+        miVector     *dir,
+        miState      *state,
+        miScalar     ior_in,
+        miScalar     ior_out,
+        miVector     *u,
+        miVector     *v,
+        miScalar     shiny_u,
+        miScalar     shiny_v,
+        const double sample[2]);
+</pre>
+<p>Choose a direction for anisotropic glossy transmission. The
+<i>u</i> and <i>v</i> vectors specify the local surface
+orientation.</p>
+<p><a id="INDEX611"></a></p>
+<h5 class="anchor" id="api:mi_transmission_dir_diffuse">mi_transmission_dir_diffuse</h5>
+<pre>
+    void mi_transmission_dir_diffuse(
+        miVector        *dir,
+        miState         *state);
+    void mi_transmission_dir_diffuse_x(
+        miVector        *dir,
+        miState         *state,
+        const double    sample[2]);
+</pre>
+<p>Choose a direction with a distribution according to Lambert's
+cosine law for diffuse transmission (also known as "diffuse
+<b><a id="INDEX612"></a>translucency</b>").</p>
+<p><a id="INDEX613"></a></p>
+<h5 class="anchor" id="api:mi_scattering_dir_diffuse">mi_scattering_dir_diffuse</h5>
+<pre>
+    void mi_scattering_dir_diffuse(
+        miVector        *dir,
+        miState         *state)
+</pre>
+<p>Choose a direction with a uniform probability over the whole
+sphere. The returned <i>dir</i> vector is normalized. This is
+useful for <a href="node142.html#INDEX589">volume
+scattering</a>.</p>
+<p><a id="INDEX614"></a></p>
+<h5 class="anchor" id="api:mi_scattering_dir_directional">mi_scattering_dir_directional</h5>
+<pre>
+    void mi_scattering_dir_directional(
+        miVector        *dir,
+        miState         *state
+        miScalar        directionality)
+</pre>
+<p>Choose a direction with a probability determined by
+<i>directionality</i>. For values between <i>-1</i> and 0 it models
+volume backscattering (with <i>-1</i> being the most directional),
+for a value of 0 it models diffuse (isotropic)
+<a href="node142.html#INDEX589">volume scattering</a>, and for values
+between 0 and 1 it models forward volume scattering.</p>
+<p><a id="INDEX615"></a></p>
+<h5 class="anchor" id="api:mi_scattering_pathlength">mi_scattering_pathlength</h5>
+<pre>
+    miScalar mi_scattering_pathlength(
+        miState  *state,
+        miScalar k);
+</pre>
+<p>Based on probability and exponential falloff, select a path
+length for a photon in a participating medium with density
+<i>k</i>.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node142.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node144.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

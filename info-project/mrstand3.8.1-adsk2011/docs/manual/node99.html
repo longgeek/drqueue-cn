@@ -1,0 +1,146 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Using and Writing Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="chapter3.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node100.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION97"></a>
+<h1 id="sh:shaders">Using and Writing Shaders</h1>
+
+<p id="shaders"><a id="INDEX356"></a>
+All color, displacement, contour, and other computation in mental ray
+is based on shaders. There are various types of shaders for different
+situations, such as material shaders to evaluate the material properties
+of a surface, light shaders to control the light-emitting properties
+of a light source, lens shaders to specify camera properties other than
+the default <a href="node124.html#INDEX488">pinhole camera</a>, and so
+on. Much of the power of mental ray relies on the possibility to write
+custom shaders and call them during rendering in mental ray. Traditional
+custom shaders are written in C/C++, using all language features and the
+complete shader interface in mental ray for advanced effects. On the
+other hand, <a href="#sh:metasl">MetaSL</a> shaders may be used to write
+functions for common shading tasks like defining material behavior in a
+standardized form independent of the computing platform or the final
+renderer.
+
+<p>Vendors and integrators of mental ray typically provide custom shader
+libraries which implement compatibility with their products, like Autodesk
+3ds Max, Maya, and Softimage, Dassault Syst&egrave;mes CATIA and SolidWorks,
+and others.
+
+<h2 id="sh:metasl">MetaSL Shaders <span class="new">3.8</span></h2>
+<p>
+MetaSL shaders are provided in files with <code>.msl</code> or <code>.xmsl</code>
+file extension. If such a file name is announced to mental ray, for example
+with the <code>$include</code> statement in a <code>.mi</code> file), it is
+treated as MetaSL shader source code. mental ray will read, parse, and convert
+it to an internal representation. This internal representation is then used to
+create a shader declaration, as well as intermediate shader code in a native
+language of the current platform for final compilation/linking and execution
+in mental ray.  The shader code generation is performed by so-called MetaSL
+back-ends. mental ray currently provides two back-end alternatives :</p>
+<ul>
+<li>
+<a href="#sh:metaslc++">C++ back-end</a> using an external compiler installed
+in the target machine,</li>
+<li>
+<a href="#sh:metaslllvm">LLVM back-end</a> using built-in just-in-time compilation.
+<span class="new">3.8</span>
+</li>
+</ul>
+<p>
+The <dfn id="sh:metaslc++">C++ back-end</dfn> is using an external C++
+compiler and linker that is automatically invoked on intermediate source files
+to create a dynamically linked shared library in the directory containing
+temporary files. That resulting shared object .dll or .so is then loaded into
+mental ray. In order for C++ compilation to succeed, the C++ compiler needs
+to be pointed to include directories containing mental ray headers files
+(like <code>shader.h</code> and others), as well as MetaSL C++ header files
+(in the directory rooted at <code>mi/metasl_runtime/*</code>).
+For convenience, mental ray now applies the common mental ray include path
+also to the compiler invocations automatically. In other words, the include
+paths may be specified on the mental ray standalone command line (option
+<code>-I</code>) or with a registry variable (<code>{_MI_REG_INCLUDE}</code>).
+<p>
+On Windows platforms, shaders need to be linked against <code>shader.lib</code>
+or <code>ray.lib</code>. If <code>shader.lib</code> is not present in the compiler
+library search path, it needs to be specified explicitly (like with command-line
+options <code>-ld_libs</code> and/or <code>-ld_path</code>).</p>
+<p>
+Note, that the C++ compilation and linkage is done on demand. For shader
+declaration, parsing and analysis of the MetaSL source code is done when the
+MetaSL file is loaded.<p>
+<p>
+The <dfn id="sh:metaslllvm">LLVM back-end</dfn> is using internal compilation
+technology, and is executing the generated code using a built-in <em>low-level
+virtual machine</em>. No intermediate files are created and no external tools
+are required to use this back-end. To enable it the <code>{_MI_REG_METASL_BACKEND}</code>
+mental ray registry variable need to be set to the value <code>"llvm"</code>.
+This will automatically disable the C++ MetaSL back-end.</p>
+
+<h2 id="sh:native">Native Shaders</h2>
+
+<p>Here are the steps necessary to create a native shader:</p>
+<ul>
+<li>Write a .mi declaration for the shader, providing the shader
+name, return type, shader parameter names and types, and the
+version to mental ray.</li>
+<li>Write a C shader parameter data structure that agrees exactly
+with the .mi parameter declaration. (The
+<b><a id="INDEX357"></a>mkmishader</b> utility can do this
+translation.)</li>
+<li>Write the shader function in C or C++, using the correct
+signature. The shader computes a result from its shader parameters
+and the state, and by calling shader interface functions provided
+by mental ray.</li>
+<li>Write a version shader (same name with <tt>_version</tt>
+appended to the name) that returns a version number that matches
+the version number in the .mi declaration.</li>
+<li>If required, write initialization and exit shaders (same name
+as the shader with <tt>_init</tt> and <tt>_exit</tt> appended,
+respectively).</li>
+<li>Compile and link the shader, and create a shared
+<b><a id="INDEX358"></a>shader library</b>
+(<a href="node166.html#INDEX844">DSO</a> or
+<a href="node166.html#INDEX845">DLL</a>). This step can be omitted but
+DSO/DLLs are easiest to use and much faster to link than objects or
+sources. Libraries must be installed on all machines on the net
+that are used as masters or network rendering slaves.</li>
+<li>Use a <tt>$include</tt> statement in the scene .mi file to load
+the .mi declaration and a <tt>link</tt> (or <tt>code</tt> or
+<tt>$code</tt>) statement to load the shader DSO/DLL (or
+<a href="node178.html#INDEX856">source code</a>).</li>
+</ul>
+<p>Note that if the shader is expected to work on Windows NT, all
+four function definitions (the shader, the version function, and
+the init and exit shaders) must be preceded with
+<tt>DLLEXPORT</tt>. This is a pseudo type specifier that makes the
+functions visible to users of the generated shader library. On Unix
+systems <tt>DLLEXPORT</tt> evaluates to an empty word.</p>
+<p>The shader is then ready to be used in the scene. These steps
+are described in detail below.</p>
+
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="chapter3.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node100.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

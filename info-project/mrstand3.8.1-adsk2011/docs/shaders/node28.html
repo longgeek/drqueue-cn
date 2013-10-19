@@ -1,0 +1,179 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Contour Output Shaders</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+<style type="text/css">
+.inline	{ margin: 0; padding: 0; display: inline; }
+.inline td { margin: 0; padding: 0 0.1em; }
+</style>
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node27.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node29.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION26"></a>
+
+  <h2>Contour Output Shaders</h2>
+
+  <p>Contour output shaders are called after the regular image has
+  been computed.</p>
+
+  <h3>Contours Only</h3>
+
+  <p>The contour output shader
+  <i><a href="node28.html#INDEX91">contour_only</a></i> generates a contour
+  image with a given background color in the color frame buffer,
+  discarding the rendered color image.</p>
+
+  <a id="INDEX91"></a>
+<h5 class="anchor" id="mi_shader__contour_only">contour_only</h5>
+  <pre>
+    "contour_only" (
+        color           "background",
+        boolean         "glow",
+        boolean         "maxcomp")
+</pre>
+
+<dl>
+  <dt>background<dd> is the background color (default black).
+
+  <dt>glow<dd>if set to <tt>on</tt>, makes all contours become
+  darker and more transparent near their edges, creating a glow
+  effect.
+
+  <dt>maxcomp<dd>if set to <tt>on</tt>, specifies that when a
+  contour is over another contour, the maximum of the two colors
+  (in each color band) should be used. If maxcomp is not specified
+  (or set <tt>off</tt>), normal alpha compositing is used.
+</dl>
+
+  <h3>Composited Contours</h3>
+
+  <p>This contour output shader generates a contour image
+  composited over the rendered color image.</p>
+
+  <a id="INDEX92"></a>
+<h5 class="anchor" id="mi_shader__contour_composite">contour_composite</h5>
+  <pre>
+    "contour_composite" (
+        boolean         "glow",
+        boolean         "maxcomp")
+</pre>
+
+<dl>
+  <dt>glow<dd>if set to <tt>on</tt>, makes all contours become
+  darker and more transparent near their edges, creating a glow
+  effect.
+
+  <dt>maxcomp<dd>if set to <tt>on</tt>, specifies that when a
+  contour is over another contour, the maximum of the two colors
+  (in each color band) should be used. If maxcomp is not specified
+  (or set <tt>off</tt>), normal alpha compositing is used.
+</dl>
+
+  <h3>PostScript Contours</h3>
+
+  <p>The contour output shader
+  <i><a href="node28.html#INDEX93">contour_ps</a></i> creates PostScript
+  code with black contours. The PostScript code can be written to a file
+  with a separate output statement that specifies the file type
+  <tt>ps</tt>. This shader does not touch the rendered color frame
+  buffer.</p>
+
+  <a id="INDEX93"></a>
+<h5 class="anchor" id="mi_shader__contour_ps">contour_ps</h5>
+  <pre>
+    "contour_ps" (
+        integer         "paper_size",
+        scalar          "paper_scale",
+        scalar          "paper_transform_b",
+        scalar          "paper_transform_d",
+        boolean         "title",
+        boolean         "landscape",
+        vector          "ink_stroke_dir",
+        scalar          "ink_min_frac",
+        string          "file_name"
+    )
+</pre>
+
+<dl>
+  <dt>paper_size<dd> is an integer, with 0 indicating "letter"
+  size, 1 indicating "executive", 2 indicating "legal", 3-6
+  indicating "a3", "a4", "a5", "a6", 7-9 indicating "b4",
+  "b5", "b6", and 10 indicating "11x17".
+
+  <dt>paper_scale<dd> scales the PostScript output. The default is 1.
+
+  <dt>paper_transform_b<br>paper_transform_d<dd>
+  transform the Postscript coordinates according to the matrix
+<table class="inline" style="width:auto">
+<tr>
+<td rowspan="2"><span style="font-size:180%">(</span></td>
+<td class="math" style="font-size:90%">1&nbsp;</td>
+<td class="math" style="font-size:90%">b</td>
+<td rowspan="2"><span style="font-size:180%">)</span></td>
+</tr>
+<tr>
+<td class="math" style="font-size:90%">0&nbsp;</td>
+<td class="math" style="font-size:90%">d</td>
+</tr>
+</table> where <i>b</i> and <i>d</i> are the
+  parameters paper_transform_b and paper_transform_d. This allows
+  compensation of printers that print with a slight skew.
+
+  <dt>title<dd>if set to <tt>on</tt>, determines whether a
+  title (consisting of file name and frame number) and a frame
+  around the image are written.
+
+  <dt>landscape<dd>if set to <tt>on</tt>, makes the output be
+  in landscape mode rather than portrait mode.
+
+  <dt>ink_stroke_dir<dd>if set no a non-zero vector, makes the
+  thickness of each contour line segment depend on its orientation;
+  this gives an ink pen look. The contour lines are widest in the
+  stroke direction.
+
+  <dt>ink_min_frac<dd> specifies how thin the "ink look"
+  contour lines should be (relative to the maximum thickness) in
+  directions perpendicular to ink_stroke_dir.
+
+  <dt>file_name<dd> specifies the name of the PostScript file
+  that the contours are written to.
+</dl>
+
+  <p>For example, to get a PostScript file in A4 paper size with
+  full scale, use the following statements in the camera
+  definition:</p>
+  <pre>
+     output "contour,rgba" "contour_ps" (
+        "paper_size"         4,
+        "paper_scale"        1.0,
+        "paper_transform_b"  0.0,
+        "paper_transform_d"  1.0,
+        "title"              on,
+        "landscape"          on,
+        "file_name"          "contourimage.ps"
+     )
+</pre>
+
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node27.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node29.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,519 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Texture Mapping</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node14.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node20.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION17"></a>
+<h2 id="fo:textures">Texture Mapping</h2>
+
+<p>mental ray supports <a href="node78.html#INDEX236">texture</a>,
+<a id="INDEX27"></a> bump, displacement and
+<a href="node21.html#INDEX43">reflection map</a>ping, all of which may be
+derived from an image file or procedurally defined using
+user-supplied shaders. Although there are various support functions
+provided by the mental ray shader interface, all these functions
+are fully implementable in shaders.</p>
+
+<a id="SECTION17texfiles"></a>
+<h3 id="fo:texfiles">Texture Files</h3>
+
+<p>Procedural textures are computed by shaders, while image
+textures are read from image files. In practice, textures are a
+combination of both methods: a procedural texture shaders accepts
+an image texture parameter, which it accesses to read and filter
+pixels, and then modifies it according to other parameters to
+implement projections, scaling, cropping, replication, and other
+common operations on texture images. Purely procedural texture
+shaders that do not rely on texture images at all also exist, for
+example marble or cloud shaders. Some shaders use textures for
+special purposes; for example, a fur shader that computes hair in a
+volume might use a texture image to control the hair length or
+brushing direction.</p>
+<p><a id="picformats"></a> The following table
+lists the <a href="node38.html#INDEX78">file format</a>s accepted
+by mental ray for reading texture image files:</p>
+<table class="table">
+<tr>
+<th>format</th>
+<th>description</th>
+<th>color<br />
+map</th>
+<th>compress</th>
+<th>comp.</th>
+<th>bits/comp.</th>
+<th>extensions</th>
+</tr>
+<tr>
+<td>rla<br />
+rlb</td>
+<td>Wavefront image</td>
+<td>-</td>
+<td>RLE</td>
+<td>3, 4</td>
+<td>8, 16</td>
+<td>color+z channel</td>
+</tr>
+<tr>
+<td>pic</td>
+<td>Softimage image</td>
+<td>-</td>
+<td>RLE, -</td>
+<td>3, 4</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td>alias</td>
+<td>Alias image</td>
+<td>-</td>
+<td>RLE</td>
+<td>3</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td>rgb</td>
+<td>Silicon Graphics color</td>
+<td>-</td>
+<td>RLE, -</td>
+<td>3, 4</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td>jpg</td>
+<td><b><a id="INDEX28"></a>JFIF</b> image</td>
+<td>-</td>
+<td>JPEG</td>
+<td>3</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td>png</td>
+<td>Portable Network Graphics</td>
+<td>-</td>
+<td>RLE, -</td>
+<td>3, 4</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>yes</td>
+<td>RLE, -</td>
+<td>3, 4</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td>exr</td>
+<td><a href="node19.html#INDEX29">OpenEXR</a></li>
+<td>-</td>
+<td>All</td>
+<td>1, 3, 4</td>
+<td>half, float</td>
+<td>tiled storage,<br />
+multi channel,<br />
+filter pyramid</td>
+</tr>
+<tr>
+<td>tif*</td>
+<td>TIFF image</td>
+<td>-</td>
+<td>RLE, Deflate</td>
+<td>1</td>
+<td>1, 4, 8</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>-</td>
+<td>RLE, Deflate</td>
+<td>3, 4</td>
+<td>8, 16, float</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>yes</td>
+<td>RLE, Deflate</td>
+<td>3, 4</td>
+<td>4, 8</td>
+<td></td>
+</tr>
+<tr>
+<td>iff</td>
+<td>Maya IFF image</td>
+<td>-</td>
+<td>RLE, -</td>
+<td>1, 3, 4</td>
+<td>8, 16, float</td>
+<td>tiled storage,<br />
+color+z channel</td>
+</tr>
+<tr>
+<td>picture</td>
+<td>Dassault Syst&egrave;mes PICTURE</td>
+<td>-</td>
+<td>RLE</td>
+<td>3</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td>hdr</td>
+<td>Radiance RGBE</td>
+<td>-</td>
+<td>-</td>
+<td>4</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td>ppm</td>
+<td>Portable pixmap</td>
+<td>-</td>
+<td>-</td>
+<td>3</td>
+<td>8, 16</td>
+<td></td>
+</tr>
+<tr>
+<td>tga</td>
+<td>Targa image</td>
+<td>-</td>
+<td>RLE, -</td>
+<td>1, 3, 4</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>-</td>
+<td>RLE, -</td>
+<td>3</td>
+<td>5</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>-</td>
+<td>RLE, -</td>
+<td>4</td>
+<td>5/1</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>yes</td>
+<td>RLE, -</td>
+<td>3, 4</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td>lwi</td>
+<td>Solidworks texture (read-only)</td>
+<td>-</td>
+<td>RLE</td>
+<td>3</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td>bmp</td>
+<td>MS Windows/OS2 bitmap</td>
+<td>-</td>
+<td>-</td>
+<td>3, 4</td>
+<td>8</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>yes</td>
+<td>-</td>
+<td>3, 4</td>
+<td>1, 4, 8</td>
+<td></td>
+</tr>
+<tr>
+<td>dds</td>
+<td>DirectX texture</td>
+<td>-</td>
+<td>DXTn</td>
+<td>1, 3, 4</td>
+<td>8, 16, float</td>
+<td></td>
+</tr>
+<tr>
+<td>qnt</td>
+<td>Quantel/Abekas YUV image</td>
+<td>-</td>
+<td>YUV</td>
+<td>3</td>
+<td>3</td>
+<td></td>
+</tr>
+<tr>
+<td>ct*</td>
+<td>mental images texture</td>
+<td>-</td>
+<td>-</td>
+<td>4</td>
+<td>8, 16, float</td>
+<td></td>
+</tr>
+<tr>
+<td>st*</td>
+<td>mental images alpha texture</td>
+<td>-</td>
+<td>-</td>
+<td>1</td>
+<td>8, 16</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>-</td>
+<td>-</td>
+<td>1</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>vt<br />
+wt</td>
+<td>mental images basis vectors</td>
+<td>-</td>
+<td>-</td>
+<td>2</td>
+<td>16</td>
+<td></td>
+</tr>
+<tr>
+<td>zt</td>
+<td>mental images depth</td>
+<td>-</td>
+<td>-</td>
+<td>1</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>nt<br />
+mt</td>
+<td>mental images vectors</td>
+<td>-</td>
+<td>-</td>
+<td>3</td>
+<td>float</td>
+<td></td>
+</tr>
+<tr>
+<td>tt</td>
+<td>mental images label (tag)</td>
+<td>-</td>
+<td>-</td>
+<td>1</td>
+<td>32</td>
+<td></td>
+</tr>
+<tr>
+<td>bit</td>
+<td>mental images bit mask</td>
+<td>-</td>
+<td>-</td>
+<td>1</td>
+<td>1</td>
+<td></td>
+</tr>
+<tr>
+<td>map</td>
+<td>memory mapped texture</td>
+<td>-</td>
+<td>-</td>
+<td>any</td>
+<td>any</td>
+<td>filter pyramid</td>
+</tr>
+<tr>
+<td></td>
+<td>remap (tiled) texture</td>
+<td>-</td>
+<td>-</td>
+<td>any</td>
+<td>any</td>
+<td>tiled storage,<br />
+filter pyramid</td>
+</tr>
+</table>
+<p>In the table, any combination of comma separated values
+determines a valid format subtype. For example, the SGI RGB image
+format will be read when the data type is 8 bits per component with
+or without alpha, either RLE compressed or uncompressed. The actual
+image format is determined by analyzing the file content, not just
+by checking the filename extension. This allows replacing texture
+files with memory-mapped textures without changing the name, for
+example. The asterisk (*) indicates omission; for example, ct*
+includes ctfp (floating point), cth (HDR), and ct16 (16 bits).</p>
+<p>The extensions column informs about special support for file
+format features. If an image can be stored in tiles rather than as
+a single large block mental ray is able to optimize access to the
+file using <a href="texcache.html">texture caching</a>. If
+<a href="node22.html">texture filtering</a> is requested in mental ray for
+tiled texture formats then the image file needs to provide the
+pre-filtered subimages as well (extension: <dfn>filter
+pyramid</dfn>) to support caching. Otherwise it will not be used
+for this texture during rendering and mental ray computes the
+<a href="#imfcopyp">filter pyramid</a> as usual.</p>
+<p>Typical image types like black/white, grayscale, color-mapped
+and true-color images, optionally compressed, are supported. Some
+of them could be used to supply additional alpha channel
+information (number of components greater than 3). The collection
+covers most common platform independent formats like TIFF and
+JFIF/JPEG <a href="#FOOTNOTE3">[3]</a>, <a id="INDEX29"></a>OpenEXR
+<a href="#FOOTNOTE4">[4]</a>, special UNIX
+(PPM) or Windows (BMP, DDS) types and well known application
+formats. The mental images formats, normally created by mental ray
+itself, are mainly available to exchange data not storable with
+other formats. As a special case, mental ray allows storing RGBE
+data into file formats that accept RGBA. For formats which support
+to store multiple channels mental ray allows to store several frame
+buffers in the same file. For example, for <dfn>iff</dfn> and
+<dfn>rla</dfn> formats both color and depth buffer can be stored if
+a type list <tt>"+rgba,z"</tt> is specified. For OpenEXR
+<a href="#FOOTNOTE4">[4]</a> files the number of channels is basically
+unlimited.</p>
+<p>A user-defined <a href="node115.html#INDEX440">material
+shader</a> is not restricted to the above applications for
+textures. It is free to evaluate any texture and any number of
+textures for a given point, and use the result for any purpose.</p>
+<p>Typical texture shaders allow a named <a href="node19.html#INDEX27">texture
+map</a> to be given as an input
+parameter, and return a color value taken from the texture image.
+Such shaders can be connected to any color input of other shaders,
+for example <b><a id="INDEX30"></a>diffuse color</b>
+input of a material. The color of the diffuse component will then
+vary across a surface. To shade a given point on a surface, the
+coordinates in <a href="node78.html#INDEX236">texture</a> space are
+first determined for the point. The diffuse color used for shading
+calculations is then the value of the
+<a href="node19.html#INDEX27">texture map</a> at these coordinates. The
+shader interface is extremely flexible and permits user-defined
+shaders to use a number of different approaches, or completely
+different formats. The remainder of this section describes the
+standard shader parameters only.</p>
+<p>The standard mental ray material shaders support
+<a href="node19.html#INDEX27">texture map</a>ping for all standard
+<a href="node79.html#INDEX242">material</a> parameters except the
+<a href="node76.html#INDEX201">index of refraction</a>. Shinyness,
+<b><a id="INDEX31"></a>transparency</b>, refraction
+transparency, and reflectivity are scalar values and may be mapped
+by a <a href="node21.html#INDEX42">scalar map</a>. Most shaders use
+color maps to implement <b><a id="INDEX32"></a>bump
+mapping</b> by sampling the color map three times, but some shaders
+accept a vector map (<dfn>normal map</dfn>) that requires only a
+single sample.</p>
+<p>Color textures are normally not implemented in the
+<a href="node115.html#INDEX440">material shader</a> but in a separate
+<a href="node166.html#INDEX846">texture shader</a>, which is then
+referenced by the material shader. This separation of work between
+material and texture shaders allow more flexibility because any
+texture shader may be combined with any material shader, without
+having to program any new combination in a new material shader.
+Also, texturing does not have to be programmed into every material
+shader parameter. Instead, the material shader offers simple
+parameters like <code class="mi">"diffuse"</code>,
+<code class="mi">"ambient"</code>, <code class="mi">"transparency"</code>,
+<code class="mi">"shinyness"</code>, and so on. Each parameter may
+be assigned a static color such as "white", or it may be attached
+to a texture shader. Even if the material shader was never
+programmed to accept textures, all aspects of its operation for
+which it has a parameter become texturable. In fact it is possible
+to build whole multilevel graphs of shaders using parameter
+assignment.</p>
+<p>Shaders that do all the work internally are called
+<b><a id="INDEX33"></a>monolithic shader</b>s, while shaders
+designed for easy graph building are called <b><a name="INDEX34"
+id="INDEX34"></a>base shader</b>s.</p>
+<p>Determining the <a href="node108.html#INDEX409">texture
+coordinate</a>s of a point on a surface to be shaded requires
+defining a mapping from points on the surface to points in
+<a href="node78.html#INDEX236">texture</a> space. Such a mapping is itself
+referred to as a <a href="node85.html#INDEX314">texture space</a>
+for the surface. Multiple texture spaces may be specified for a
+surface. If the geometry is a <a href="node83.html#INDEX297">polygon</a>
+or <a href="node189.html#INDEX993">subdivision surface</a>, a texture space is
+created by associating texture vertices with the geometric
+vertices. If the geometry is a <a href="node9.html#INDEX13">free-form surface</a>,
+a texture space is created by associating a <b><a id="INDEX35"></a>texture surface</b>
+with the surface. A texture
+surface is a free-form surface which defines the mapping from the
+natural surface parameter space to texture space. Texture maps, and
+therefore texture spaces and texture vertices, may be one, two, or
+three dimensional.</p>
+<p><a id="imfcopyp"></a> Pyramid textures<a id="INDEX36"></a> are a
+variant of <a href="node22.html#INDEX46">mip-map texture</a>s. When loading
+a texture that is flagged with the <tt>filter</tt> keyword, mental ray builds
+a hierarchy of different-resolution texture images that allow
+elliptical filtering of texture samples. (The .map format may
+already contain this pyramid, which saves a lot of time and
+memory.) Without filtering, distant textures would be point-sampled
+at widely separated locations, missing the texture areas between
+the samples, which causes texture aliasing. Texture filtering
+attempts to project the screen pixel on the texture, which results
+in an elliptic area on the texture. Pyramid textures allow sampling
+this ellipse very efficiently, taking every pixel in the texture in
+the ellipse into account without sampling every pixel. Pyramid
+textures are not restricted to square and power-of-two resolutions,
+and work with any RGB or RGBA picture file format. The shader can
+either rely on mental ray's texture projection or specify its own.
+Filter blurriness can be adjusted per texture.</p>
+<p>A <a href="node116.html#INDEX455">procedural texture</a> is free
+to use the texture space in any way it wants, but
+<a href="node78.html#INDEX236">texture</a> files are always defined to have
+unit size and to be repeated through all of texture space. That is,
+the lower-left corner of the file maps to <i>(0.0, 0.0)</i> in
+texture space, and again to <i>(1.0, 0.0)</i>, <i>(2.0, 0.0)</i>,
+and so on; the lower-right corner maps to <i>(1.0, 0.0), (2.0,
+0.0),</i> etc. and the upper right to <i>(1.0, 1.0), (2.0,
+2.0),</i> etc.</p>
+<p><a id="FOOTNOTE3">[3]</a> The JPEG software is
+based in part on the work of the Independent JPEG Group.<br />
+<a id="FOOTNOTE4">[4]</a> OpenEXR is available on
+Windows, Linux, MacOS X, and Irix platforms. Integration source
+code is available on request for custom integration.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node14.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node20.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

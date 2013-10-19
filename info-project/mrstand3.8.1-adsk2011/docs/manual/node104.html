@@ -1,0 +1,309 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Frame</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node103.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node105.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION102"></a>
+<h3 id="sh:state_variables_frame">Frame</h3>
+<p id="INDEX397">This table lists all state variables that remain unchanged
+for the duration of a frame.</p>
+<div align="center">
+<table class="table">
+<tr>
+<th><i>type</i></th>
+<th><i>name</i></th>
+<th><i>content</i></th>
+</tr>
+<tr>
+<td><tt>int</tt></td>
+<td><tt>version</tt></td>
+<td>shader interface version</td>
+</tr>
+<tr>
+<td><tt>miTag</tt></td>
+<td><tt>camera_inst</tt></td>
+<td>tag of camera instance</td>
+</tr>
+<tr>
+<td><tt>miCamera *</tt></td>
+<td><tt>camera</tt></td>
+<td>camera information</td>
+</tr>
+<tr>
+<td><tt>miOptions *</tt></td>
+<td><tt>options</tt></td>
+<td>general rendering options</td>
+</tr>
+</table>
+</div>
+
+<dl>
+<dt><code>version</code><dd>
+The version number of the interface and the state structure.
+Useful to check if the version is compatible with the shader.
+Version 2 stands for mental ray version 2.0 and later.
+
+<dt><code>camera_inst</code><dd>
+The camera instance is a data structure in the mental ray
+database that contains transformation information about the camera.
+Like all other tags in the state, a pointer to that data structure
+can be obtained by calling <i>mi_db_access</i> with the tag as the
+only argument. This function returns a void pointer to the accessed
+data structure. After the pointer is no longer used, the pointer
+must be "returned" by calling <i>mi_db_unpin</i> with it. Failure
+to do so will abort rendering.
+</dl>
+
+<p id="INDEX398">
+The camera data structure pointed to by <i>camera</i> has the following
+fields. None of these may be written to from a shader.
+
+<p><a id="INDEX399"></a></p>
+<div align="center">
+<table class="table">
+<tr>
+<th><i>type</i></th>
+<th><i>name</i></th>
+<th><i>content</i></th>
+</tr>
+<tr>
+<td><tt>miBoolean</tt></td>
+<td><tt>orthographic</tt></td>
+<td>orthographic rendering</td>
+</tr>
+<tr>
+<td><tt>float</tt></td>
+<td><tt>focal</tt></td>
+<td>focal length of the camera</td>
+</tr>
+<tr>
+<td><tt>float</tt></td>
+<td><tt>aperture</tt></td>
+<td>aperture of the camera</td>
+</tr>
+<tr>
+<td><tt>float</tt></td>
+<td><tt>aspect</tt></td>
+<td>aspect ratio <span class="math">y&nbsp;&frasl;&nbsp;x</span></td>
+</tr>
+<tr>
+<td><tt>miRange</tt></td>
+<td><tt>clip</tt></td>
+<td>Z clipping distances</td>
+</tr>
+<tr>
+<td><tt>int</tt></td>
+<td><tt>x_resolution</tt></td>
+<td>image width in pixels</td>
+</tr>
+<tr>
+<td><tt>int</tt></td>
+<td><tt>y_resolution</tt></td>
+<td>image height in pixels</td>
+</tr>
+<tr>
+<td><tt>int</tt></td>
+<td><tt>window.xl</tt></td>
+<td>left image margin</td>
+</tr>
+<tr>
+<td><tt>int</tt></td>
+<td><tt>window.yl</tt></td>
+<td>bottom image margin</td>
+</tr>
+<tr>
+<td><tt>int</tt></td>
+<td><tt>window.xh</tt></td>
+<td>right image margin</td>
+</tr>
+<tr>
+<td><tt>int</tt></td>
+<td><tt>window.yh</tt></td>
+<td>top image margin</td>
+</tr>
+<tr>
+<td><tt>miTag</tt></td>
+<td><tt>volume</tt></td>
+<td>camera volume (atmosphere)</td>
+</tr>
+<tr>
+<td><tt>miTag</tt></td>
+<td><tt>environment</tt></td>
+<td>camera environment shader</td>
+</tr>
+<tr>
+<td><tt>miTag</tt></td>
+<td><tt>lens</tt></td>
+<td>lens shader or lens shader list</td>
+</tr>
+<tr>
+<td><tt>miTag</tt></td>
+<td><tt>output</tt></td>
+<td>output shader or output shader list</td>
+</tr>
+<tr>
+<td><tt>int</tt></td>
+<td><tt>frame</tt></td>
+<td><a href="node199.html#INDEX1061">frame number</a></li>
+</tr>
+<tr>
+<td><tt>float</tt></td>
+<td><tt>frame_time</tt></td>
+<td>frame time in seconds</td>
+</tr>
+<tr>
+<td><tt>float</tt></td>
+<td><tt>frame_field</tt></td>
+<td>0: frame, 1: even field, 2: odd field</td>
+</tr>
+<tr>
+<td><tt>float</tt></td>
+<td><tt>x_offset</tt></td>
+<td>x offset of image in pixels</td>
+</tr>
+<tr>
+<td><tt>float</tt></td>
+<td><tt>y_offset</tt></td>
+<td>y offset of image in pixels</td>
+</tr>
+<tr>
+<td><tt>miTag</tt></td>
+<td><tt>userdata</tt></td>
+<td>user data scene element, or 0</td>
+</tr>
+</table>
+</div>
+
+<dl>
+<dt><code>orthographic</code><dd>
+This flag is <tt>miTRUE</tt> if the renderer is in orthographic
+mode, and <tt>miFALSE</tt> if it is in perspective mode.
+
+<dt><code>focal</code><dd>
+The focal length of the camera (the distance from the origin in
+camera space to the viewing plane that the image pixels are mapped
+on).
+
+<dt><code>aperture</code><dd>
+The aperture of the camera (the width of the viewing plane in
+camera space).
+
+<dt><code>aspect</code><dd>
+The aspect ratio (the ratio of the width and height of the
+viewing plane in camera space).
+
+<dt><code>clip</code><dd>
+This data structure has two members, <i>min</i> and <i>max</i>,
+that specify the hither and yon clipping planes in camera space for
+scanline rendering. Objects will be clipped if their Z coordinate
+in camera space is less than <i>-max</i> or greater than <i>-min</i>.
+
+<dt><code>x_resolution</code><dd>
+The x resolution of the image in pixels.
+
+<dt><code>y_resolution</code><dd>
+The y resolution of the image in pixels.
+
+<dt><code>window</code><dd>
+The window specifies the lower left and the upper right pixel of
+the sub-region of the image to be rendered. If <i>xl</i> and
+<i>yl</i> are 0 and <i>xh</i> and <i>yh</i> match or exceed the
+resolution minus one, the entire image is rendered. The window is
+clipped to the resolution. Pixels outside the window are set to black.
+
+<dt><code>volume</code><dd>
+The global volume (atmosphere) shader from the camera that is
+used for attenuating rays outside of objects, such as the primary
+ray from the camera to the first object intersection. Material
+shaders inherit this volume shader because the <tt>volume</tt>
+state variable defaults to the camera volume, but shaders may
+override the volume. See below.
+
+<dt><code>environment</code><dd>
+The environment (<a href="node21.html#INDEX43">reflection
+map</a>) shader of the camera. It is used to assign a color to
+primary eye rays that leave the scene without ever intersecting an
+object. Material shaders that do not define their own environment
+shaders for evaluation of local reflection maps inherit the camera
+environment shader. Reflection maps give the illusion of true
+raytraced reflections by looking up a texture based on the
+reflection direction.
+
+<dt><code>lens</code><dd>
+The list of lenses applied to the standard
+<a href="node124.html#INDEX488">pinhole camera</a>. Each lens shader in
+this list is called when a primary ray leaves the camera.
+
+<dt><code>output</code><dd>
+The list of output shaders and file outputs attached to the
+camera. File outputs are encoded in special <tt>miFunction</tt>
+data structures that contain a file name and various miscellaneous
+data instead of a shader reference.
+
+<dt><code>pass</code><dd>
+The list of <a href="node182.html#INDEX893">pass rendering</a> statements.
+
+<dt><code>frame</code><dd>
+The current <a href="node199.html#INDEX1061">frame number</a>.
+In field mode, this is the field number, two successive frames
+rendered by mental ray are combined into a single output frame by
+an output shader. In field mode, the odd frame is the first frame
+and the even frame is the second.
+
+<dt><code>frame_time</code><dd>
+The current <a href="node199.html#INDEX1061">frame number</a>,
+expressed as a time in seconds. The relation between <i>frame</i>
+and <i>frame_time</i> depends on the frame rate. Both numbers are
+taken verbatim from the input scene, mental ray does not change or
+verify either number. If the frame time is omitted in the .mi file,
+it is set to 0.0.
+
+<dt><code>x_offset</code><dd>
+The X offset of the rendered image. The default value is 0.0
+which means that the image will be centered on the camera's axis.
+
+<dt><code>y_offset</code><dd>
+The Y offset of the rendered image. The default value is 0.0
+which means that the image will be centered on the camera's
+axis.
+
+<dt><code>userdata</code><dd>
+User data blocks are independent named toplevel scene entities
+that hold structured or unstructured data of any kind. Structured
+data is declared much like shader parameters, while unstructured
+data is a raw byte stream with a fixed size. User data is useful
+for large amounts of shared scene data.
+</dl>
+
+<p>The <i>options</i> field in the state contains all rendering
+options specified in the scene, potentially overridden from the
+command line. Since the number of options is very large, and since
+they are rarely used in a shader, the description can be found near
+the end of this section, on page <a href="node110.html#stateoptions">
+Options</a>.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node103.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node105.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

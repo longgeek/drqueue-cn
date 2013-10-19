@@ -1,0 +1,562 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Objects</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node204.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node206.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION203"></a>
+<h3>Objects</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_OBJECT</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miObject</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>-</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>as described below</td>
+</tr>
+</table>
+<pre>
+enum miObject_type {
+        miOBJECT_POLYGONS,
+        miOBJECT_FACES,
+        miOBJECT_BOXES,
+        miOBJECT_SPACECURVES,
+        miOBJECT_SUBDIVSURFS,
+        miOBJECT_ALGEBRAICS,                    /* for future use */
+        miOBJECT_PLACEHOLDER,                   /* read geometry on demand */
+        miOBJECT_HAIR
+};
+
+typedef struct miObject {
+        int                     spare_0[3];     /* not used */
+        miUint                  volume_id;      /* autovolume identification */
+        miTag                   finalgather_file; /* fgmap file name, if any */
+        enum miObject_type      type;           /* which in union to use     */
+        miUint1                 visible;        /* object visible?           */
+        miUint1                 shadow;         /* cast a shadow?            */
+        miUint1                 reflection;     /* bit0=cast, bit1=receive   */
+        miUint1                 refraction;     /* bit0=cast, bit1=receive   */
+        miUint1                 transparency;   /* bit0=cast, bit1=receive   */
+        miUint1                 caustic;        /* bit0=cast, bit1=receive   */
+        miUint1                 globillum;      /* bit0=cast, bit1=receive   */
+        miUint1                 finalgather;    /* bit0=cast, bit1=receive   */
+        miUint1                 select;         /* selectable when picking?  */
+        char                    face;           /* a=all, f=front, b=back    */
+        miUint1                 spare_1[5];     /* not used                  */
+        miCBoolean              fine;           /* API: has "fine" miApprox  */
+        miBoolean               view_dependent; /* miOBJECT_FACES only       */
+        miBoolean               mtl_is_label;   /* poly/surf mtls are labels */
+        miScalar                maxdisplace;    /* max return of displ shader*/
+        miBoolean               hardware;       /* use hardware shading      */
+        miTag                   userdata;       /* optional user data blocks */
+        miUint                  label;          /* optional label            */
+        miVector                bbox_min;       /* bounding box: low corner  */
+        miVector                bbox_max;       /* bounding box: high corner */
+        miVector                bbox_min_m;     /* bbox shift at T==1.0 (low)*/
+        miVector                bbox_max_m;     /* bbox shift at T==1.0 (hi) */
+        miTag                   functions;      /* SCENE: material req list  */
+        unsigned int            n_functions;    /* SCENE: # tags in functions*/
+        miCBoolean              mbox_explicit;  /* motion box given by user  */
+        miSint1                 min_samples;    /* per-object oversampling,  */
+        miSint1                 max_samples;    /* defaults -128 and 127     */
+        miUchar                 spare_3[4];     /* not used                  */
+        miUint1                 shadowmap;      /* casts shadowmap shadows?  */
+        miScalar                ray_offset;     /* ray offset for the object */
+        miTag                   approx_list;    /* list of miApproximations  */
+        union {
+            miPolygon_list      polygon_list;
+            miFace_list         face_list;
+            miTag               box_list;
+            miSpacecurve_list   spacecurve_list;
+            miSubdivsurf_list   subdivsurf_list;
+            miPlaceholder_list  placeholder_list;
+            miHair_list         hair_list;
+        }                       geo;            /* geometry                  */
+} miObject;
+
+typedef struct miPolygon_list {
+        miGeoIndex              no_polygons;
+        miGeoIndex              no_indices;
+        miGeoIndex              no_vertices;
+        miGeoVector_list        vect_info;      /* contents of vector array */
+        miVertex_content        vert_info;      /* vertex size &amp; content */
+        miTag                   polygons;       /* array of miPolygon */
+        miTag                   indices;        /* array of miGeoIndex */
+        miTag                   vertices;       /* see vert_info */
+        miTag                   vectors;        /* array of miGeoVector */
+        miApprox                approx;         /* poly approx technique */
+} miPolygon_list;
+
+typedef struct miFace_list {
+        miGeoIndex      no_faces;
+        miGeoIndex      no_surfaces;
+        miGeoIndex      no_curves;
+        miGeoIndex      no_specpnts;
+        miGeoIndex      no_surf_scalars;
+        miGeoIndex      no_curve_scalars;
+        miTag           faces;                  /* array of miFace */
+        miTag           surfaces;               /* array of miSurface */
+        miTag           curves;                 /* array of miCurve */
+        miTag           specpnts;               /* array of miCurve_point */
+        miTag           surf_scalars;           /* array of miGeoScalar */
+        miTag           curve_scalars;          /* array of miGeoScalar */
+        miTag           basis_list;             /* miBasis_list */
+} miFace_list;
+
+typedef struct miSpacecurve_list {
+        miGeoIndex      no_spacecurves;
+        miGeoIndex      no_curves;
+        miGeoIndex      no_specpnts;
+        miGeoIndex      no_curve_scalars;
+        miTag           spacecurves;            /* array of miSpacecurve */
+        miTag           curves;                 /* array of miCurve */
+        miTag           specpnts;               /* array of miCurve_point */
+        miTag           curve_scalars;          /* array of miGeoScalar */
+        miTag           basis_list;             /* miBasis_list */
+        miBoolean       pad;                    /* not used */
+} miSpacecurve_list;
+
+typedef struct miSubdivsurf_list {
+        miGeoIndex      no_subdivsurfs;
+        miTag           subdivsurfs;
+} miSubdivsurf_list;
+
+typedef struct miPlaceholder_list {
+        miTag           object;                 /* the real object with geom.*/
+        miTag           filename;               /* file name to read */
+        enum miObject_type      type;           /* type of object created */
+} miPlaceholder_list;
+
+typedef struct miHair_list {
+        miGeoIndex      no_hairs;               /* number of hairs */
+        miGeoIndex      no_scalars;             /* number of vectors */
+        miHair_content  hair_info;              /* data attached to hairs */
+        miHair_content  vert_info;              /* data attached to vertices,*/
+                                                /* bump vars used for radius */
+        miTag           hairs;                  /* 1st hair vec: miInteger[] */
+        miTag           scalars;                /* control points: miScalar[]*/
+        miInteger       approx;                 /* quality control of approx */
+        miTag           material;               /* material for all hairs */
+        miScalar        radius;                 /* hair radius, default 1 */
+        int             degree;                 /* Bezier degree 1..3, def. 1*/
+        int             space_max_size;         /* space subdiv. leaf size */
+        int             space_max_depth;        /* space subdiv. tree depth */
+} miHair_list;
+</pre>
+<p>A translator must provide: <tt>type</tt>, <tt>fine</tt>,
+<tt>geo</tt>.</p>
+<p><b>volume_id</b> assigns a volume identification to the object.
+It allows combining separate objects into a logical group which is
+treated as a single object for inside-outside computation in
+autovolume.</p>
+<p><b>finalgather_file</b> <sup>3.4</sup> <i>file (list)</i>
+argument allows a file name or a list of file names with
+finalgather map(s) to be specified to be used for the object. If
+identical file names or file name lists are used for several
+objects, only one copy of finalgather map will be kept in
+memory.</p>
+<p><b>type</b> (default <tt>miOBJECT_POLYGONS</tt>) specifies the
+type of the geometry attached to this object. It may be one of
+<tt>miOBJECT_POLYGONS</tt>, <tt>miOBJECT_FACES</tt>,
+<tt>miOBJECT_BOXES</tt>, <tt>miOBJECT_SUBDIVSURF</tt>,
+<tt>miOBJECT_PLACEHOLDER</tt>, or
+<tt>miOBJECT_HAIR</tt><sup>3.1</sup>. This field determines which
+member of the union is used. Algebraics are not supported.</p>
+<p><b>visible</b> is, as of mental ray 3.4, a bitmap flag. Bit 0
+controls whether the object is visible. The remaining bits are
+unused.</p>
+<p><b>shadow</b> flag is a bitmap that controls casting and
+receiving of shadows separately. Bit 0 enables shadows cast from
+this surface, and bit 1 allow shadows to be received by (fall onto)
+this object. By default, bit 0 is 0 and bit 1 is 1 ( <i>mode</i>
+2).</p>
+<p><b>reflection</b><sup>3.4</sup>,
+<b>refraction</b><sup>3.4</sup>, and
+<b>finalgather</b><sup>3.4</sup> flags replace the trace flag. Code
+that writes to the trace field must now write to these three flag
+bitmaps instead. Again, bit 0 enables casting and bit 1 enables
+receiving, and the defaults are 0 and 1, respectively ( <i>mode</i>
+2).</p>
+<p><b>transparency</b><sup>3.4</sup> flag that enables visibility
+of the surface to transparency rays, again separately for casting
+(bit 0) and receiving (bit 1). Unlike the other flags, both bits
+are on (<i>mode</i> 3) by default to ensure backwards
+compatibility.</p>
+<p><b>caustic</b> is a bitmap with three valid bits. Bit 0, if set,
+enables generation of caustics cast by this object. Bit 1, if set,
+enables receiving caustics. Bit 4, if set, makes this object
+invisible to caustic photons.</p>
+<p><b>globillum</b> is a bitmap with three valid bits. Bit 0, if
+set, enables generation of global illumination from this object.
+Bit 1, if set, enables receiving of global illumination by this
+object. Bit 4, if set, makes this object invisible to global
+illumination photons.</p>
+<p><b>select</b> (default <tt>miFALSE</tt>) makes the object
+subject to select tracing.</p>
+<p><b>visible</b>, <b>shadow</b>, <b>caustic</b>, <b>globillum</b>,
+and <b>select</b> flags are inherited in the scene DAG. See page 
+<!-- unknown command: \pageref -->instance_inh for an explanation
+of the inheritance.</p>
+<p><b>face</b><sup>3.4</sup> controls face culling.
+<a id="INDEX1064"></a> The possible values are
+<tt>'f'</tt> (front), <tt>'b'</tt> (back), and <tt>'a'</tt> (all).
+If not specified, the culling flag given in the options or in the
+state is used.</p>
+<p><b>fine</b><sup>3.1</sup> must be set if the object contains any
+approximation with the <i>fine</i><sup>3.1</sup> flag set. It is
+set automatically by API. This field is redundant but allows mental
+ray to detect very quickly whether the object needs special
+treatment without scanning its contents.</p>
+<p><b>view_dependent</b> (default <tt>miFALSE</tt>) enables
+view-dependent tessellation if the object has type
+<tt>miOBJECT_FACES</tt>. It should be set to <tt>miTRUE</tt> iff
+any of the surfaces in the object references a view-dependent
+approximation. It should not be changed between preprocessing and
+postprocessing.</p>
+<p><b>mtl_is_label</b> is a flag that informs the renderer that the
+<i>material</i> field in the polygons or surfaces does not hold a
+material but an integer label. The renderer must ignore the
+material in this case and use the inherited material. This flag is
+set for <i>tagged</i> objects in the mi2 language.</p>
+<p><b>maxdisplace</b> specifies the maximum allowed displacement
+applied to object control points in local
+<a href="node101.html#INDEX369">object space</a> in normal direction.</p>
+<p><b>userdata</b> allows attaching a user data block (miUserdata)
+or a chain of user data blocks. Shaders can retrieve the data with
+<i>mi_query</i>.</p>
+<p><b>label</b> is a 32-bit integer that may be used to identify
+the object in shaders. mental ray does not use it in any way.</p>
+<p><b>bbox_min</b> and <b>bbox_max</b> are a bounding box that
+encloses all triangles resulting from tessellating this object,
+without taking <a href="node32.html#INDEX60">motion blur</a> or
+displacement into account. For polygons this is the convex hull of
+all point-in-space vectors, but for other object types better
+bounding boxes should be found to make rendering more
+efficient.</p>
+<p><b>bbox_min_m</b> and <b>bbox_max_m</b> are a bounding box of
+all <a href="node32.html#INDEX62">motion vector</a>s, if there are
+any. bbox_min_m is composed of all the smallest X, Y, and Z
+components of all motion vectors, and bbox_max_m is composed of all
+the greatest components. If setting these fields, set
+<tt>mbox_explicit</tt><sup>3.1</sup> to <tt>miTRUE</tt>.</p>
+<p><b>functions</b> if this is not a null tag, it points to a list
+of material tags. This list represents the required materials for
+the object.</p>
+<p><b>n_functions</b> the number of tags in the <i>functions</i>
+taglist.</p>
+<p><b>mbox_explicit</b><sup>3.1</sup> specifies that the
+<tt>bbox_min_m</tt> and <tt>bbox_max_m</tt> were specified by the
+user, and do not represent defaults computed by mental ray.</p>
+<p><b>min_samples</b><sup>3.1</sup> specifies that this object
+should be oversampled no less than this value. The default is -128,
+which makes the object default to the minimum sampling value in the
+options.</p>
+<p><b>max_samples</b><sup>3.1</sup> specifies that this object
+should be oversampled no more than this value. The default is 127,
+which makes the object default to the maximum sampling value in the
+options.</p>
+<p>Note that neither of the previous two options are used by the
+rasterizer.</p>
+<p><b>shadowmap</b> specifies that the object casts shadows into
+shadowmaps, if the shadow flag is enabled as well.</p>
+<p><b>ray_offset</b> specifies the distance from the surface where
+secondary rays start. Effectively, no intersections closer than
+this distance will be found. This is useful to prevent rays leaving
+a visible-only high-resolution surface hitting the low-resolution
+trace-only version of the same surface. Different versions can be
+constructed with object or instance flags, or with flagged
+approximations.</p>
+<p><b>approx_list</b> is the list with ten approximations inherited
+from the instance.</p>
+<p><b>geo</b> is a union containing type-specific data. The suffix
+"_list" indicates that several types store the actual geometry in
+one or more lists of specific types; these lists are anchored here.
+The <tt>box_list</tt> case is a tag of a database element of type
+<tt>miSCENE_BOX</tt>. The box data type has been described above.
+Polygonal geometry is stored in four lists, all anchored in the
+<tt>geo.polygon_list</tt> structure.</p>
+<p>The following diagram shows the connections between the four
+lists:</p>
+
+<div class="pic"><img src="images/polylist.jpg" /></div>
+
+Polygonal Geometry Storage</div>
+<p>Arrows indicate indices into the pointed-to data structure. All
+four grey boxes are separate Scene database element types, refer to
+the sections for <tt>miSCENE_POLYGON</tt>,
+<tt>miSCENE_GEOINDEX</tt>, and <tt>miSCENE_GEOVECTOR</tt>,
+respectively. The data structures are similar to the box data
+structure, except that the lists are stored in separate database
+elements, and that an index list is inserted that allows storing
+polygons with different numbers of vertices in a <tt>miPolygon</tt>
+data structure that has a constant size. The polygon points to the
+first vertex index in the index list and gives the number of
+vertices, as opposed to triangles in boxes that contain the three
+vertex indices directly.</p>
+<p><b>geo.polygon_list.no_polygons</b> is the number of polygons in
+the <i>polygons</i> list.</p>
+<p><b>geo.polygon_list.no_indices</b> is the number of indices in
+the <i>indices</i> list.</p>
+<p><b>geo.polygon_list.no_vertices</b> is the number of vertices in
+the <i>vertices</i> list. Each vertex consists of
+<i>vert_info.sizeof_vertex</i> indices.</p>
+<p><b>geo.polygon_list.vect_info</b> describes the sections of the
+vector list. For details, see the section for boxes above.</p>
+<p><b>geo.polygon_list.vert_info</b> describes the layout of the
+indices in the vertex list. For details, see the section for boxes
+above.</p>
+<p><b>geo.polygon_list.polygons</b> is the tag of the polygon
+list.</p>
+<p><b>geo.polygon_list.indices</b> is the tag of the index
+list.</p>
+<p><b>geo.polygon_list.vertices</b> is the tag of the vertex
+list.</p>
+<p><b>geo.polygon_list.vectors</b> is the tag of the vector
+list.</p>
+<p><b>geo.polygon_list.approx</b> is the approximation technique
+for displacement-mapped polygons. (It does not apply to polygons
+whose material does not specify displacement maps.)</p>
+<p>Surface geometry is more complex. It is stored in up to seven
+different database elements, all of which are anchored in
+<i>geo.face_list</i>. The term <i>face</i> describes one complete
+visible free-form surface, which is built from one geometry
+<i>surface</i> and multiple optional texture surfaces, bump
+surfaces, and/or motion surfaces that provide certain types of
+mappings on the surface.</p>
+<p>For details on texture surfaces, refer to the mental ray User
+Manual.</p>
+<p>Unlike polygons, surfaces store their parameter lists and
+vectors in large <tt>miGeoScalar</tt> lists. This simplifies
+storing one, two, three, and four dimensional data in the same
+list. Trimming, hole, and special curves can optionally be attached
+to faces; they have their own scalar lists. Both surfaces and
+curves may reference optional special points. Every surface
+references two bases, and every curve references one base. Again,
+all lines in the following diagram indicate indices.</p>
+<div class="pic"><img src="images/facelist.jpg" /><br />
+Free-form Surface Geometry Storage</div>
+<p><b>geo.face_list.no_faces</b> is the number of faces in the
+<i>geo.face_list.faces</i> list.</p>
+<p><b>geo.face_list.no_surfaces</b> is the number of surfaces in
+the <i>geo.face_list.surfaces</i> list.</p>
+<p><b>geo.face_list.no_curves</b> is the number of curves in the
+<i>geo.face_list.curves</i> list.</p>
+<p><b>geo.face_list.no_specpnts</b> is the number of special points
+in the <i>geo.face_list.specpnts</i> list.</p>
+<p><b>geo.face_list.no_surf_scalars</b> is the number of surface
+scalars in the <i>geo.face_list.surf_scalars</i> list.</p>
+<p><b>geo.face_list.no_curve_scalars</b> is the number of curve
+scalars in the <i>geo.face_list.curve_scalars</i> list.</p>
+<p><b>geo.face_list.faces</b> is the tag of the list of faces.</p>
+<p><b>geo.face_list.surfaces</b> is the tag of the list of
+surfaces.</p>
+<p><b>geo.face_list.curves</b> is the tag of the list of curve.</p>
+<p><b>geo.face_list.specpnts</b> is the tag of the list of special
+points.</p>
+<p><b>geo.face_list.surf_scalars</b> is the tag of the list of
+surface scalars, which are used for parameter vectors, control
+points, weights etc. that define all surfaces in this object.</p>
+<p><b>geo.face_list.curve_scalars</b> is the tag of the list of
+curve scalars, which are used for parameter vectors, control
+points, weights etc. that define all curves in this object.</p>
+<p><b>geo.face_list.basis_list</b> is the tag of the list of all
+bases.</p>
+<p>An object of type <tt>miOBJECT_SPACECURVE</tt> contains a list
+of <a href="node86.html#INDEX324">space curve</a>s. A single space
+curve consists of curve segments which are approximated as a single
+three dimensional curve. The approximation result is stored in a
+<i>miLinebox</i>.</p>
+<p><b>geo.spacecurve_list.no_spacecurves</b> is the number of space
+curves in the <i>geo.spacecurve_list.spacecurves</i> list.</p>
+<p><b>geo.spacecurve_list.no_curves</b> is the number of curves in
+the <i>geo.spacecurve_list.curves</i> list.</p>
+<p><b>geo.spacecurve_list.no_specpnts</b> is the number of special
+points in the <i>geo.spacecurve_list.specpnts</i> list.</p>
+<p><b>geo.spacecurve_list.no_curve_scalars</b> is the number of
+curve scalars in the <i>geo.spacecurve_list.curve_scalars</i>
+list.</p>
+<p><b>geo.spacecurve_list.spacecurves</b> is the tag of the list of
+spacecurves.</p>
+<p><b>geo.spacecurve_list.curves</b> is the tag of the list of
+curves.</p>
+<p><b>geo.spacecurve_list.specpnts</b> is the tag of the list of
+curve special points.</p>
+<p><b>geo.spacecurve_list.curve_scalars</b> is the tag of the list
+of curve scalars.</p>
+<p><b>geo.spacecurve_list.basis_list</b> is the tag of the list of
+all bases used by the curves.</p>
+<p>An object of type <tt>miOBJECT_PLACEHOLDER</tt> contains a
+reference to the actual object containing the geometry, which is
+created on demand. A placeholder object <i>must</i> have a bounding
+box, and motion bounding box and maximum displacement fields if
+applicable, and may contain only a single
+<a href="node83.html#mi:group">object group</a>.</p>
+<p><b>geo.placeholder_list.object</b> is the tag of the object that
+holds the actual geometry. This must be a demand-loaded tag, not a
+regular tag. The only way to construct such a tag is the
+<i><a href="node189.html#INDEX947">mi_api_object_file</a></i>
+function. Do not assign or access this field directly.</p>
+<p><b>geo.placeholder_list.filename</b> is the tag of a string
+containing the .mi scene file name that defines the object. This is
+only used for placeholder objects defined with
+<i><a href="node189.html#INDEX947">mi_api_object_file</a></i>.</p>
+<p><b>geo.placeholder_list.type</b><sup>3.4</sup> is the
+<i>myObject_type</i> of the object whose place is being held.</p>
+<p><a id="hairlayout"></a><a id="INDEX1065"></a> An object of type
+<tt>miOBJECT_HAIR</tt><sup>3.1</sup> defines an object with a
+different type of geometry that is not based on triangles but
+hairs. Since there is typically a very large number of hairs, this
+is far more efficient in terms of both memory usage and rendering
+performance. The description is very compact:</p>
+<div class="pic"><img src="images/hairlist.jpg" /><br />
+Hair Geometry Storage</div>
+<p>Hairs are stored in a scalar list. Each hair has some data that
+is shared by all points of that hair, and some data that is
+separate for each point of the hair. All hairs share the exact same
+layout, except that they may have different numbers of points. In
+this example, each hair has two texel scalars (U and V) and a
+radius; and each point has a coordinate (X, Y, and Z; mandatory),
+one motion vector (X, Y, Z), and one texel scalar (T). The
+<tt>hairs</tt> list contains indices into the scalar list where the
+corresponding hair begins, plus one extra hair end marker at the
+end. Here there are two hairs, one with two points and one with
+three.</p>
+<p><b>geo.hair_list.no_hairs</b><sup>3.1</sup> is the number of
+hairs, 2 in the example. There is always one more index in the
+<tt>hairs</tt> list for the end marker. Each index must be greater
+than the previous by <var>i + j &middot; n</var>, where <i>i</i> is
+the size of the header (3 in the example), <i>j</i> is the size of
+a point (7 in the example), and <i>n</i> is the number of points
+for this hair (2 and 3 in the example). API verifies this.</p>
+<p><b>geo.hair_list.no_scalars</b><sup>3.1</sup> is the number of
+scalars in the scalar list.</p>
+<p><b>geo.hair_list.hair_info</b><sup>3.1</sup> describes the size
+and layout of the hair headers in the scalar list. This structure
+and vert_info work like in objects and boxes (see page
+<a href="node204.html#vertinfo">vertinfo</a>), but count scalars, not
+vectors.</p>
+<p><b>geo.hair_list.vert_info</b><sup>3.1</sup> describes the size
+and layout of the points in the scalar list.</p>
+<p><b>geo.hair_list.hairs</b><sup>3.1</sup> is the tag of a
+database element containing the index integers.</p>
+<p><b>geo.hair_list.scalars</b><sup>3.1</sup> is the tag of a
+database element containing the scalars.</p>
+<p><b>geo.hair_list.approx</b><sup>3.1</sup> specifies the number
+of linear segments used to approximate a curve segment.</p>
+<p><b>geo.hair_list.material</b><sup>3.1</sup> is the material
+shader shared by all hairs. If this is a null tag, the material is
+inherited from the instance.</p>
+<p><b>geo.hair_list.radius</b><sup>3.1</sup> specifies the radius
+of all hairs, if neither hair_info nor vert_info specify radius
+values.</p>
+<p><b>geo.hair_list.degree</b><sup>3.1</sup> is the degree of the
+B&eacute;zier curves that approximate the hair. It must be 1, 2, or
+3. Each hair is defined by <var>degree &middot; n + 1</var> points,
+for some integer <i>n &gt; 0</i> . The approximation will result in
+<var>n &middot; approx</var> linear segments.</p>
+<p><b>geo.hair_list.space_max_size</b><sup>3.1</sup> specifies the
+maximum leaf size of the hair BSP tree that is used for
+intersection testing. If left at 0, mental ray chooses a
+default.</p>
+<p><b>geo.hair_list.space_max_depth</b><sup>3.1</sup> specifies the
+maximum depth of the hair BSP tree that is used for intersection
+testing. If left at 0, mental ray chooses a default.</p>
+<p>There are two data structures that are used to describe the
+format of vertices and vectors:</p>
+<pre>
+typedef struct miVertex_content {
+        miUchar         sizeof_vertex;  /* size of a vertex */
+        miUchar         normal_offset;  /* when 0, not present */
+        miUchar         motion_offset;  /* when 0, not present */
+        miUchar         derivs_offset;  /* surf derivs, when 0, not present */
+        miUchar         derivs2_offset; /* 2nd derivs, when 0, not present */
+        miUchar         motion_offset;  /* when 0, not present */
+        miUchar         no_motions;     /* number of motion vectors */
+        miUchar         texture_offset; /* when 0, not present */
+        miUchar         no_textures;    /* number of textures */
+        miUchar         bump_offset;    /* when 0, not present */
+        miUchar         no_bumps;       /* number of bumps */
+        miUchar         user_offset;    /* when 0, not present */
+        miUchar         no_users;       /* number of user vectors */
+} miVertex_content;
+</pre>
+<p>A translator must provide: all fields.<br /></p>
+<p>This structure is used to describe which information is stored
+with each vertex. It is also used to inform the tessellator what
+information to create vertices with. Vertices always consist of at
+least one vector reference for the point in space. The normal, the
+motion vectors, the surface derivative pair, the list of textures,
+the list of bump basis vectors, and the list of user vectors are
+all optional. Multiple motion vectors (up to 15 per vertex) are
+supported only in mental ray 3.1; mental ray 3.0 has the no_motions
+field but ignores it when rendering; mental ray 2.1 lacks this
+field.</p>
+<p>A vertex is a list of indices into the actual vector table. Each
+such list begins with the index for the point in space, said to be
+at offset 0 in the list. The <tt>miVertex_content</tt> structure
+describes at which offset in the list other vector indices can be
+found. For example, if there is an index for a normal in the list
+directly after the index for the point in space,
+<tt>normal_offset</tt> would be 1.</p>
+<p>If some vertices have a certain type type of index and others do
+not (like some vertices have normals and others do not), the offset
+in the <tt>miVertex_content</tt> structure is nonzero but the index
+is set to <tt>miNULL_GEOINDEX</tt> in those vertices that do not
+need it. Using 0 for nonexistent offset members is ok because the
+first index in a vertex (which has offset 0) is the point in space,
+which must always exist. Do not confuse null offsets with null
+indices, which must use <tt>miNULL_GEOINDEX</tt> instead of 0
+because the first vector in a polygon vector list can be something
+other than a point in space. Polygon lists mirror the order in the
+.mi file.</p>
+<p>The second recurring structure is the vector list header:</p>
+<pre>
+typedef struct miGeoVector_list {
+        miGeoIndex      no_vectors;     /* total number of input vectors */
+        miGeoIndex      no_points;      /* number of points in space */
+        miGeoIndex      no_normals;     /* number of normals */
+        miGeoIndex      no_derivs;      /* number of 1st/2nd surface derivs */
+        miGeoIndex      no_motions;     /* number of motion vectors */
+        miGeoIndex      no_textures;    /* number of texture coordinates */
+        miGeoIndex      no_bumps;       /* number of bump basis vectors */
+        miGeoIndex      no_users;       /* number of user-defined vectors */
+} miGeoVector_list;
+</pre>
+<p>A translator must provide: all fields.<br />
+<br /></p>
+<p>All the vertex indices described by the
+<tt>miVertex_content</tt> structure are indices into the actual
+vector list. The vector list itself is partitioned in the eight
+"sections": one for points in space, one for normals, one for
+surface derivatives, and so on.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node204.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node206.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

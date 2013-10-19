@@ -1,0 +1,762 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :    mtarpini
+# Purpose:    Wall Paint Material performing accurate reflections based on real world paint
+#
+#----------------------------------------------
+# Exports:
+#
+# - adsk_Shd_WallPaint        (hidden)
+# - adsk_Mtl_WallPaint
+#
+#
+# Imports:
+#
+# - 3dsmax9.dll
+# - adsk_Mtl_Spider
+#
+#----------------------------------------------
+#
+# Description:
+#
+# Basically the workflow for the phen class implementation looks like this:
+#
+#   - a first low level phen, the apparance shader.
+#
+#   - a controller shader that takes the UI specs and outputs values to drive
+#     the exposed parameters in the apparence shader.
+#
+#   - the actual material class phen which encapsulates the above shaders.
+#
+#
+#----------------------------------------------
+# History:
+#
+# Jan 18, 2007 - mtarpini, initial implementation
+# Jan 22, 2007 - mtarpini, exposed brdf_curve param for apparence shader
+# Jan 24, 2007 - mtarpini, updated noise texutre coordinates
+# Feb 20, 2007 - mtarpini, removed spider (it's now on its own mi file)
+# May 28, 2007 - mtarpini, implementing unit scale handles
+# Nov 14, 2007 - mtarpini, mia_mat_x, removed shader list, added rcorners and ao checkboxes
+# Nov 19, 2007 - mtarpini, 'appearence' phen has now a 'struct' output, this to work with mia_material and photon slot
+# Jan 02, 2009 - mtarpini, nodevisibility support
+#
+#****************************************************************************/
+
+min version "3.5"
+
+
+
+
+
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+# adsk_Shd_WallPaint (Appearance phen)
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+declare phenomenon
+     struct {
+        color   "result"        
+    }
+	"adsk_Shd_WallPaint"
+    (
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        struct "m"
+        {    
+            #----------------------------------
+            color "diffuse_color",
+            scalar "diffuse_roughness",
+                        
+            #----------------------------------
+            scalar "reflectivity",
+            scalar "refl_gloss",
+            scalar "brdf_curve",
+            boolean "refl_hl_only",
+            
+            #----------------------------------
+            scalar "bump_amount",
+            scalar "bump_map",
+            scalar "bump_map2"
+        },
+        
+        #-------------------------------------
+        # Ambient Occlusion 
+        #-------------------------------------
+        struct "o"
+        {
+            #----------------------------------
+            boolean  "ao_on",
+            integer  "ao_samples",
+            scalar   "ao_distance",
+            integer  "ao_do_details"
+        },
+		
+		#-------------------------------------
+	    # Round Corners
+	    #-------------------------------------
+  		struct "r"
+  		{
+  			#----------------------------------
+  			scalar  "roundcorners_radius",
+  			boolean "roundcorners_allow_different_materials"	      	
+        },
+        
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------
+        struct "p"
+        {
+            #----------------------------------
+              integer "reflection_glossy_samples",
+              integer "refl_depth"              
+        },
+        
+        #-------------------------------------
+        # Unit Scalable Parameters
+        #-------------------------------------
+        struct "x"
+        {
+            #----------------------------------
+              vector  "noise_tiling",
+              vector  "brush_tiling",
+              vector  "cellular_tiling",
+              vector  "roller_tiling"
+        },
+
+        #----------------------------------
+        # Lights and Mode Parameters
+        #----------------------------------
+        integer "mode",
+        array light "lights"
+
+    )
+
+    apply material, photon, shadow
+    version 1
+
+
+
+
+    #------------------------------------------------------------------------
+    # -> begin Bump #########################################################
+    #------------------------------------------------------------------------   
+    #------------------------------------------------------------------------
+    # Texture Base Output
+    #------------------------------------------------------------------------
+    shader "TextureOutput|Shader" "adsk_Utility_Output"
+    (
+        "RGBAmount" 1,
+        "RGBOffset" 0,
+        "OutputAmount" 1,
+        "BumpAmount" 1,
+        "Invert" off,
+        "Clamp" off,
+        "AlphaFromRGB" off,
+        "UseColorMap" off,
+        "UseRGBCurve" off
+    )
+    #------------------------------------------------------------------------
+    # Noise01 Texture Coordinates
+    #------------------------------------------------------------------------
+    shader "XYZGen|Noise01|Shader" "adsk_Utility_XYZGenerator"
+    (
+        "CoordinateSystem" 3,
+        "MapChannel" 1,
+        "Offset" 0 0 0,
+        "Tiling" = interface "x.noise_tiling",    # 1 1 1,
+        "Angle" 0 0 0,
+        "Blur" 1,
+        "BlurOffset" 0
+    )
+    #------------------------------------------------------------------------
+    # Noise01 Texture
+    #------------------------------------------------------------------------
+    shader "Map Noise01|Texmap" "adsk_Utility_Noise"
+    (
+        "Parameters" {
+            "Color1" 0 0 0 1,
+            "Color2" 1 1 1 1,
+            "Map1Enabled" on,
+            "Map2Enabled" on,
+            "Size" 0.1,
+            "Phase" 0,
+            "Levels" 3,
+            "ThresholdLow" 0,
+            "ThresholdHigh" 1,
+            "Type" 0,
+            "Coords" "XYZGen|Noise01|Shader",
+            "Output" "TextureOutput|Shader"
+        },
+        "ExtraParameters" {
+            "GBufferID" 0
+        }
+    )
+    #------------------------------------------------------------------------
+    # Brush Texture Coordinates
+    #------------------------------------------------------------------------
+    shader "XYZGen|Brush|Shader" "adsk_Utility_XYZGenerator"
+    (
+        "CoordinateSystem" 3,
+        "MapChannel" 1,
+        "Offset" 0 0 0,
+        "Tiling" = interface "x.brush_tiling",    # 0.005 1.0 0.005,
+        "Angle" 0 0 0,
+        "Blur" 1,
+        "BlurOffset" 0
+    )
+    #------------------------------------------------------------------------
+    # Brush(Noise) Texture
+    #------------------------------------------------------------------------
+    shader "Map Brush|Texmap" "adsk_Utility_Noise"
+    (
+        "Parameters" {
+            "Color1" 1 1 1 1,
+            "Color2" 0 0 0 1,
+            "Map1" "Map Noise01|Texmap",
+            "Map1Enabled" on,
+            "Map2Enabled" on,
+            "Size" 0.25,
+            "Phase" 0.5,
+            "Levels" 3, 
+            "ThresholdLow" 0,
+            "ThresholdHigh" 1,
+            "Type" 2,
+            "Coords" "XYZGen|Brush|Shader",
+            "Output" "TextureOutput|Shader"
+        },
+        "ExtraParameters" {
+            "GBufferID" 0
+        }
+    )    
+    #------------------------------------------------------------------------
+    # Cellular Texture Coordinates
+    #------------------------------------------------------------------------
+    shader "XYZGen|Cellular|Shader" "adsk_Utility_XYZGenerator" 
+    (
+        "CoordinateSystem" 0, 
+        "MapChannel" 1, 
+        "Offset" 0 0 0, 
+        "Tiling" = interface "x.cellular_tiling",    # 1 0.35 0.35, 
+        "Angle" 0 0 0, 
+        "Blur" 0.01, 
+        "BlurOffset" 0
+    )
+    #------------------------------------------------------------------------
+    # Cellular Texture
+    #------------------------------------------------------------------------
+    shader "Map Cellular|Texmap" "adsk_Tex_Cellular" 
+    (
+        "Parameters" {
+            "CellColor" 1 1 1 1, 
+            "DivColor1" 1 1 1 1, 
+            "DivColor2" 0 0 0 1, 
+            "Map1Enabled" on, 
+            "Map2Enabled" on, 
+            "Map3Enabled" on, 
+            "Variation" 0, 
+            "Size" 0.075, 
+            "Spread" 0.35, 
+            "LowThresh" 0, 
+            "MidThresh" 0.5, 
+            "HighThresh" 1, 
+            "type" 0, 
+            "Fractal" off, 
+            "Iteration" 3, 
+            "Roughness" 0, 
+            "Smooth" 0.1, 
+            "Adaptive" on, 
+            "Coords" "XYZGen|Cellular|Shader",
+            "Output" "TextureOutput|Shader"
+        }, 
+        "ExtraParameters" {
+            "GBufferID" 0    
+        }
+    )
+    #------------------------------------------------------------------------
+    # Roller Texture Coordinates
+    #------------------------------------------------------------------------
+    shader "XYZGen|Roller|Shader" "adsk_Utility_XYZGenerator"
+    (
+        "CoordinateSystem" 0,
+        "MapChannel" 1,
+        "Offset" 0 0 0,
+        "Tiling" = interface "x.roller_tiling",    # 1 0.75 0.75,
+        "Angle" 0 0 0,
+        "Blur" 0.01,
+        "BlurOffset" 0
+    )
+    #------------------------------------------------------------------------
+    # Roller(Smoke) Texture
+    #------------------------------------------------------------------------
+    shader "Map Roller|Texmap" "adsk_Tex_Smoke"
+    (
+        "Parameters" {
+            "Size" 0.1, 
+            "Iterations" 5, 
+            "Exponent" 0.25, 
+            "Phase" 1.5, 
+            "Color1" 0.9 0.9 0.9 1, 
+            "Color2" 0 0 0 1, 
+            "Map1" "Map Cellular|Texmap", 
+            "Map1On" on, 
+            "Map2On" on, 
+            "Coords" "XYZGen|Roller|Shader"
+        }, 
+        "ExtraParameters" {
+            "GBufferID" 0    
+        }
+    )
+    #------------------------------------------------------------------------
+    # Bump Mixer
+    #------------------------------------------------------------------------
+	shader "bump__instance" "adsk_Utility_Mix3Bump"
+    (
+		"bump_1"	"Map Roller|Texmap",
+		"factor_1"	= interface "m.bump_map",
+		"bump_2"	"Map Brush|Texmap",
+		"factor_2"	= interface "m.bump_map2",
+
+		"global_factor" = interface "m.bump_amount"
+    )
+	#------------------------------------------------------------------------
+	# Bump vector
+	#------------------------------------------------------------------------	
+	shader "bump_vector__instance" "adsk_Utility_Color_to_Float3"
+	(
+		"the_color" = "bump__instance"
+	)
+    #------------------------------------------------------------------------
+    # <- end bump ###########################################################
+    #------------------------------------------------------------------------        
+    
+        
+    #------------------------------------------------------------------------
+    # -> begin Round Corners ################################################
+    #------------------------------------------------------------------------
+    #------------------------------------------------------------------------
+    # Round Corners Bump Shader
+    #------------------------------------------------------------------------
+    shader "roundcorners__instance" "mia_roundcorners"
+    (
+        "radius" = interface "r.roundcorners_radius",
+        "allow_different_materials" = interface "r.roundcorners_allow_different_materials"
+    )
+    #------------------------------------------------------------------------
+    # <- end Round Corners ##################################################
+    #------------------------------------------------------------------------
+    
+    
+    #------------------------------------------------------------------------
+    # Visibility Track Support
+    #------------------------------------------------------------------------
+	shader "node_visibility__instance" "adsk_Utility_NodeVisibility" 
+	(
+		"input" 1 1 1 1, 		#this is controlled internally
+		"mode" 0
+	)
+    
+    #------------------------------------------------------------------------
+    # Arch & Design Shader
+    #------------------------------------------------------------------------ 
+    shader "wallpaint__instance" "mia_material_x"
+    (
+        #----------------------------------
+        "diffuse_weight" 0.9,
+        "diffuse" =							interface "m.diffuse_color",
+        "diffuse_roughness" =				interface "m.diffuse_roughness",
+
+        #----------------------------------
+        "reflectivity" =					interface "m.reflectivity",
+        "refl_color" 1 1 1 0,
+        "refl_gloss" =						interface "m.refl_gloss",
+        "refl_gloss_samples" =				interface "p.reflection_glossy_samples",
+        "refl_interpolate" off,
+        "refl_hl_only" =					interface "m.refl_hl_only",
+        "refl_is_metal" off,
+
+        #----------------------------------
+        "transparency" 0.0,
+        "refr_color" 1 1 1 0,
+        "refr_gloss" 1,
+        "refr_ior" 1.4,
+        "refr_gloss_samples" 8,
+        "refr_interpolate" off,
+        "refr_translucency" off,
+        "refr_trans_color" 0.7 0.6 0.5 0,
+        "refr_trans_weight" 0.5,
+
+        #----------------------------------
+        "anisotropy" 1,
+        "anisotropy_rotation" 0.0,
+        "anisotropy_channel" -1,
+
+        #----------------------------------
+        "brdf_fresnel" off,
+        "brdf_0_degree_refl" 0.125,
+        "brdf_90_degree_refl" 0.9,
+        "brdf_curve" =						interface "m.brdf_curve",
+        "brdf_conserve_energy" on,
+
+        #----------------------------------
+        "intr_grid_density" 2,
+        "intr_refl_samples" 2,
+        "intr_refl_ddist_on" off,
+        "intr_refl_ddist" 0.0,
+        "intr_refr_samples" 2,
+        "single_env_sample" off,
+
+        #----------------------------------
+        "refl_falloff_on" off,
+        "refl_falloff_dist" 0.0,
+        "refl_falloff_color_on" off,
+        "refl_falloff_color" 0.0 0.0 0.0,
+        "refl_depth" =						interface "p.refl_depth",
+        "refl_cutoff" 0.01,
+        "refr_falloff_on" off,
+        "refr_falloff_dist" 0.0,
+        "refr_falloff_color_on" off,
+        "refr_falloff_color" 0.0 0.0 0.0,
+        "refr_depth" 5,
+        "refr_cutoff" 0.01,
+
+        #----------------------------------
+        "indirect_multiplier" 1,
+        "fg_quality" 1,
+        "fg_quality_w" 1,
+
+        #----------------------------------
+        "ao_on"  =							interface "o.ao_on",
+        "ao_samples"  =						interface "o.ao_samples",
+        "ao_distance"  =					interface "o.ao_distance",
+        "ao_dark"  =						interface "o.ao_dark",
+        "ao_ambient"  =						interface "o.ao_ambient",
+        "ao_do_details"  =					interface "o.ao_do_details",
+
+        #----------------------------------
+        "thin_walled" off,
+        "no_visible_area_hl" on,
+        "skip_inside_refl" on,
+        "do_refractive_caustics" off,
+        "backface_cull" off,
+        "propagate_alpha" off,
+        "hl_vs_refl_balance" 1,
+        "cutout_opacity" = "node_visibility__instance",			#nodevisibility hook
+        "additional_color" 0.0 0.0 0.0,
+
+        #----------------------------------
+        "no_diffuse_bump" on,
+
+        #----------------------------------
+		"mode" = 							interface "mode",
+		"lights" =							interface "lights",
+        	
+        #----------------------------------
+        "bump_mode" 1, 
+        "overall_bump" =					"roundcorners__instance",
+        "standard_bump" =					"bump_vector__instance",
+        
+        #----------------------------------
+        "multiple_outputs" off
+
+    )#end shader
+
+
+    #------------------------------------------------------------------------
+    # Phenomenon Root
+    #------------------------------------------------------------------------
+
+    root = "wallpaint__instance"
+
+
+
+
+    #------------------------------------------------------------------------
+    # UI
+    #------------------------------------------------------------------------
+    gui "gui_adsk_Shd_WallPaint"
+    {
+        #----------------------------------
+        control "Global" "Global" (
+			"uiName" "adsk_Shd_WallPaint", 
+			"category" "Material",	
+			"hidden")
+        }
+        
+end declare #end declare phenomenon
+
+
+
+
+
+
+
+#----------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
+# WallPaint Material Class
+#----------------------------------------------------------------------------------------
+declare phenomenon
+     material "adsk_Mtl_WallPaint"
+    (
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        struct "m"
+        {
+            color   "diffuse_color",
+            integer "type",
+            integer "application"
+        },
+        
+        #-------------------------------------
+		# Special Effects
+        #-------------------------------------
+        struct "o"
+        {
+            #----------------------------------
+            boolean  "ao_on",
+            integer  "ao_samples",
+            scalar   "ao_distance",
+            boolean  "ao_do_details",    
+
+              #----------------------------------
+  			boolean	"roundcorners_on",
+            scalar	"roundcorners_radius",
+            boolean "roundcorners_allow_different_materials"              
+         },
+                         
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------
+        struct "p"
+        {
+            #----------------------------------
+            integer "reflection_glossy_samples",
+            integer "refl_depth"         
+        },
+                                
+		#-------------------------------------
+		# Internals
+		#-------------------------------------
+		struct "x"
+		{
+			#----------------------------------
+	      	integer "gbuffer_id"
+		},
+			                                
+        #----------------------------------
+        # Lights Parameters
+        #----------------------------------
+        integer "mode",
+        array light "lights"
+
+    )#end material
+
+
+
+
+    #------------------------------------------------------------------------
+    # Spider
+    #------------------------------------------------------------------------
+    shader "spider_instance" "adsk_Shd_WallPaint_spider"
+    (
+        "finish" = interface "m.type",
+        "application" = interface "m.application",
+        
+		"roundcorners_on" = interface "o.roundcorners_on",
+		"roundcorners_radius_i" = interface "o.roundcorners_radius",
+		
+		"ao_do_details_i" = interface "o.ao_do_details"
+    )
+
+    #------------------------------------------------------------------------
+    # Reflection Blur Multiplication
+    #------------------------------------------------------------------------
+    shader "reflection_gloss_sample_global" "adsk_blurred_reflection_multiplier"
+    (
+        "blurred_reflection_value" = interface "p.reflection_glossy_samples"
+    )
+    
+    
+    #------------------------------------------------------------------------
+    # adsk_Mtl_WallPaint
+    #------------------------------------------------------------------------    
+    shader "adsk_Shd_WallPaint_instance" "adsk_Shd_WallPaint"
+    (
+
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        "m"
+        {
+            #----------------------------------
+            "diffuse_color" = interface "m.diffuse_color",
+            "diffuse_roughness" = "spider_instance.diffuse_roughness",
+                        
+            #----------------------------------
+            "reflectivity" = "spider_instance.reflectivity",
+            "refl_gloss" = "spider_instance.refl_gloss",
+            "brdf_curve" = "spider_instance.brdf_curve",
+            "refl_hl_only" = "spider_instance.refl_hl_only",
+            
+            #----------------------------------
+            "bump_amount" = "spider_instance.bump_amount",
+            "bump_map" = "spider_instance.bump_map",
+            "bump_map2" = "spider_instance.bump_map2"
+        },
+        
+        #-------------------------------------
+        # Ambient Occlusion Parameters
+        #-------------------------------------
+        "o"
+        {
+            #----------------------------------
+            "ao_on"  = interface "o.ao_on",
+            "ao_samples"  = interface "o.ao_samples",
+			"ao_distance" = interface "o.ao_distance",
+			"ao_do_details"  = "spider_instance.ao_do_details"
+		},
+		
+		#-------------------------------------
+		# Round Corners Parameters
+		#-------------------------------------
+		"r"
+		{
+			#----------------------------------
+	      	"roundcorners_radius" = "spider_instance.roundcorners_radius",
+	      	"roundcorners_allow_different_materials" = interface "o.roundcorners_allow_different_materials"
+        },
+                
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------
+        "p"
+        {
+            #----------------------------------
+            "reflection_glossy_samples" = "reflection_gloss_sample_global",
+            "refl_depth" = interface "p.refl_depth"
+        },
+        
+        #-------------------------------------
+        # Unit Scalable Parameters
+        #-------------------------------------
+        "x"
+        {
+            #----------------------------------
+            "noise_tiling" = "spider_instance.noise_tiling",
+            "brush_tiling" = "spider_instance.brush_tiling",
+            "cellular_tiling" = "spider_instance.cellular_tiling",
+            "roller_tiling" = "spider_instance.roller_tiling"        
+        },
+        
+        #----------------------------------
+        # Lights Parameters
+        #----------------------------------
+        "mode" = interface "mode",
+        "lights" = interface "lights"    
+    )
+
+
+    #------------------------------------------------------------------------
+    # Render Elements support
+    #------------------------------------------------------------------------
+    shader "max_mia_mat_renderelem__instance" "adsk_Utility_MiaDecomposer" 
+    (
+        "mia_material" "adsk_Shd_WallPaint_instance", 
+        "GBufferID" = interface "x.gbuffer_id"
+    )
+        
+    
+    
+    
+    #------------------------------------------------------------------------    
+    #------------------------------------------------------------------------
+    # Material Connections
+    #------------------------------------------------------------------------
+    material "mat"
+					= "max_mia_mat_renderelem__instance"
+        photon		= "adsk_Shd_WallPaint_instance"
+    end material
+    root material "mat"
+
+
+
+    #------------------------------------------------------------------------
+    #------------------------------------------------------------------------
+    # UI
+    #------------------------------------------------------------------------
+    gui "gui_adsk_Mtl_WallPaint"
+    {
+        #----------------------------------
+		control "Global" "Global" 
+		(
+			"uiName" "ProMaterials: Wall Paint", "category" "Material",          
+			"viewport_diffuse" "m.diffuse_color",
+			"viewport_specular" 1.0 1.0 1.0,
+			"viewport_shininess" 1,
+			"hidden"
+		)
+    
+        #-------------------------------------
+        #  Material Parameters
+        #-------------------------------------
+        control "m" "struct" ("uiName" "WallPaint Material Parameters", "openstate" "true")
+        {        
+            control "diffuse_color"  "color" ("nonConnectable", "uiName"  "Color (Reflectance)", "value" 0.55 0.2 0.184 )
+            control "type" "integer" ("enum", "nonConnectable", "uiName" "Surface Finish", "value" "5 Gloss, 4 Semi-Gloss, 3 Pearl, 2 Platinum, 1 Eggshell, 0 Flat", "range" 0 5, "helpText" "Level of reflectivity")        #0 to 5 corresponds to Flat, Eggshell, Platinum, Pearl, Semigloss and Gloss finishes
+            control "application" "integer" ("enum", "nonConnectable", "uiName" "Application Method", "value" "0 Roller, 1 Brush, 2 Spray", "range" 0 2, "helpText" "Method of wall paint application")                    #0 to 2 corresponds to Roller, Brush and Spray application methods
+        }
+        
+        #-------------------------------------
+		#  Special Effects
+        #-------------------------------------
+		control "o" "struct" ("uiName" "Special Effects", "openstate" "false")
+        {
+            #----------------------------------
+			control "ao_on" "boolean" ("uiName" "Ambient Occlusion", "value" 0, "nonConnectable", "enables" "ao_samples, ao_distance, ao_do_details",
+												"helpText" "Enables Ambient Occlusion. Emulates the look of true global illumination by using shaders to calculate the extent that an area is occluded or prevented from receiving incoming light. Use this effect with indirect light.")	
+			control "ao_samples"  "integer" ("uiName"  "-> Samples", "value" 16, "range" 2 256, "nonConnectable", "helpText" "Ambient occlusion quality. (High= Smoother/Slower; Low= Grainier/Faster)")	
+			control "ao_distance"  "scalar" ("uiName"  "-> Max Distance", "value" 4, "units" "world", "nonConnectable", "helpText" "Defines the ambient occlusion radius. (High= Large coverage area/Slower; Low= Small coverage area/Faster)")			
+			control "ao_do_details" "boolean" (enum, "uiName" "-> Use Color From Other Mats (Exact AO)", "value" off, "nonConnectable",
+												"helpText" "Enables a more complex mode of Ambient Occlusion that takes object color into account. Note: This improves excessive 'corner darkening' and solves the creation of 'dark rims' by AO around self-illuminating objects.")
+            
+			#----------------------------------
+			control "roundcorners_on" "boolean" ("uiName"  "Round Corners", "value" 0, "nonConnectable", "enables" "roundcorners_radius, roundcorners_allow_different_materials",
+												"helpText" "Enables simulated round corners. Note: This is only a shading effect, similar to a bump map, whereby no actual geometric changes occur. This effect only works properly on straight edges.")
+			control "roundcorners_radius"  "scalar" ("uiName"  "-> Fillet Radius", "value" 0.25, "units" "world", "helpText" "Adjusts the radius of the round corner effect")
+			control "roundcorners_allow_different_materials"  "boolean" ("uiName"  "-> Blend with Other Materials", "nonConnectable",
+												"helpText" "Activate to apply corner rounding effects to any material. Disable to apply corner rounding effects to the surface of the current material only.")
+        }
+        
+         #-------------------------------------
+        # Performance Tuning Parameters
+         #-------------------------------------
+        control "p" "struct" ("uiName" "Performance Tuning Parameters", "openstate" "false")
+        {
+            #----------------------------------
+            control "reflection_glossy_samples"  "integer" ("nonConnectable", "uiName"  "Reflection Glossy Samples", "value" 8, "range" 0 128, "helpText" "Defines the maximum number of samples (rays) that mental ray computes to create glossy reflections." )
+            control "refl_depth"  "integer" ("nonConnectable", "uiName"  "Reflection Max Trace Depth", "value" 0, "range" 0 20, "helpText" "Number of times each ray is reflected. When set to zero, global render settings take precedence." )
+        }
+                        
+         #-------------------------------------
+		# Internal
+         #-------------------------------------
+		control "x" "struct" ("uiName" "Internals", "openstate" "false")
+        {
+            #----------------------------------
+			control "gbuffer_id"  "integer" (hidden, "nonConnectable", "uiName"  "Translator must link here to pass a different ID", "value" 2)
+        }        
+        
+        #-------------------------------------
+        # Lights and Mode Parameters
+        #-------------------------------------
+        control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+        control "lights" "array light" ("hidden","nonConnectable")
+        control "mode" "integer" ("hidden","nonConnectable")
+
+    }#end gui
+
+end declare #end declare phenomenon

@@ -1,0 +1,34 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Generator_blink
+{
+	input:
+		Color color_1 = Color(1,0,0,1)
+		{			
+			display_name("Color 1");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The first color in the signal." );
+		};
+		Color color_2 = Color(0,0,1,1)
+		{		
+			display_name("Color 2");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The second color in the signal." );
+		};
+
+	output:
+		Color result;
+
+	void main()
+	{
+		float u = frac(animation_time);
+		result = u < 0.5 ? color_1 : color_2;
+	}
+}
+{
+	description( "Generates a blinking signal that alternates between "
+	             "the specified colors." );
+};

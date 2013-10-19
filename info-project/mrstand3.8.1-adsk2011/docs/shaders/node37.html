@@ -1,0 +1,129 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Shaders</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node36.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node38.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION35"></a>
+
+  <h2>Shaders</h2>
+
+  <a id="INDEX102"></a>
+  <h3>Physical Scatter</h3>
+  <p>
+  This shader performs three kinds of simulations which can be used together
+  or independently:</p>
+  <dl>
+    <dt>Multiple-scattering estimation
+    <dd>the most accurate, uses a strictly deterministic simulation of photon
+    tracing to record sites in an internal photon map. These sites are looked
+    up at render time and an optimized ray marching technique estimates
+    multiple scatter irradiance.
+
+    <dt>Single-scattering approximation
+    <dd>is based on light intensities, independent of photon mapping.
+
+    <dt>Diffusion theory
+    <dd>is applied to evaluate the contribution of photons in the deep layer.
+  </dl>
+  <p>The following scattering features are supported:
+  </p>
+  <ul style="list-style-type: disc; margin: 0 2em">
+    <li>Simulate subsurface scattering materials both in still images and
+    animations (although the <i>fast</i> shaders may be more suitable for
+    animation).
+
+    <li>Receive and continue subsurface scattering media caustics from the
+    outside world.
+
+    <li>Cast caustics from the subsurface scattering media to the outside
+    world.
+
+    <li>Specify both absorption and scattering coefficients. The resulting
+    image will simulate correctly areas of absorption and areas of scattering.
+    This is very important to get subtle color changes for example in milk
+    from blue to yellow.
+
+    <li>Perform scattering along the geometry.
+  </ul>
+
+<h5 id="mi_shader__misss_physical_shader">misss_physical</h5>
+  <pre>
+    color "misss_physical" (
+        color           "material",
+        color           "transmission",
+        scalar          "ior",
+        vector          "absorption_coeff",
+        vector          "scattering_coeff",     
+        scalar          "scale_conversion",
+        scalar          "scattering_anisotropy",
+        scalar          "depth",
+        integer         "max_samples",
+        integer         "max_photons",
+        scalar          "max_radius",
+        boolean         "approx_diffusion",
+        boolean         "approx_single_scatter",
+        boolean         "approx_multiple_scatter",
+        array light     "lights",
+        integer         "mode"
+        )
+    version 4
+    apply material, photon
+</pre>
+
+  <p>The shader provides parameters for
+  <a href="node38.html#misss_physical:optical">Optical Properties</a> and
+  <a href="node39.html#misss_physical:tuning">Tuning</a>.
+  The shader has to be applied both as a material and a photon shader.
+
+  <h5 id="mi_shader__misss_physical_phen">misss_physical_phen</h5>
+<pre>
+    material "misss_physical_phen" (
+        color           "material",
+        color           "transmission",
+        scalar          "ior",
+        vector          "absorption_coeff",
+        vector          "scattering_coeff",
+        scalar          "scale_conversion",
+        scalar          "scattering_anisotropy",
+        scalar          "depth",
+        integer         "max_samples",
+        integer         "max_photons",
+        scalar          "max_radius",
+        boolean         "approx_diffusion",
+        boolean         "approx_single_scatter",
+        boolean         "approx_multiple_scatter",
+        array light     "lights",
+        integer         "mode"
+        )
+    version 4
+</pre>
+
+  This is a material Phenomenon with appropriate shader connections both
+  to the material and photon slots. Its parameters and behavior are identical
+  to <i><a href="#mi_shader__misss_physical">misss_physical</a></i>.
+
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node36.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node38.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

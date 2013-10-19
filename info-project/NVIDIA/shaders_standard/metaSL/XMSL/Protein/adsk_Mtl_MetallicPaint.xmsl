@@ -1,0 +1,986 @@
+<root>
+  <version major="2" minor="0"/>
+  <metasl_code file_name="adsk_Utility_MSL_Spiders\adsk_MetallicPaintV2_spider.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Alpha.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_BRDF_Accumulator.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_BRDF_Components.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_ColorCorrection.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Converters.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Environment.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Math.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Mixers.msl"/>
+  <metasl_code file_name="light_point.msl"/>
+  <metasl_code file_name="mi_shaders\mi_bump_flakes.msl"/>
+
+  <phenomenon name="adsk_Mtl_MetallicPaint_MSL">
+    <input name="coat_base_color" type="Color" value="0 0 0 0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Base Coat Color"/>
+      </annotation>
+    </input>
+    <input name="coat_base_highlight_spread" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Highlights Spread"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="flecks_enable" type="int" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Flecks"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="1"/>
+      </annotation>
+    </input>
+    <input name="flecks_color" type="Color" value="0 0 0 0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Color"/>
+      </annotation>
+    </input>
+    <input name="flecks_size" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Size"/>
+      </annotation>
+    </input>
+    <input name="pearl_enable" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Pearl"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="2"/>
+      </annotation>
+    </input>
+    <input name="pearl_amount" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Amount"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="pearl_col" type="Color" value="0 0 0 0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Custom Color"/>
+      </annotation>
+    </input>
+    <input name="pearl_ior" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Custom Falloff"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="1"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="top_coat_types" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Top Coat"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="3"/>
+      </annotation>
+    </input>
+    <input name="top_coat_custom_glossy" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Custom Glossiness"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="top_coat_custom_falloff" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Custom GFalloff"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="finish" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Finish"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="1"/>
+      </annotation>
+    </input>
+    <input name="finish_peel_amount" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="-&gt; Peel Amount"/>
+      </annotation>
+    </input>
+    <input name="tometerscale" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="INTERNAL: Meter Scale Factor"/>
+      </annotation>
+    </input>
+    <input name="wirecoloralpha" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="INTERNAL: Wire Color Alpha"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="Internal parameter to be hooked by translator to pass wireColor.a property thats actually holding object visibility"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <output name="result" type="Color" display_name="result">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="result"/>
+      </annotation>
+    </output>
+    <output name="transparency" type="float" display_name="transparency">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="transparency"/>
+      </annotation>
+    </output>
+
+    <node name="NodeVisibility" class="adsk_Utility_MSL_NodeVisibility">
+      <input name="input" value="1 1 1 1"/>
+      <input name="reverse" value="true"/>
+      <input name="wireColorAlpha" value="1">
+        <attachment target_name="wirecoloralpha"/>
+      </input>
+      <output name="result">
+        <attachment target_name="transparency"/>
+      </output>
+      <gui_data width="2.08484" height="1.21" open_width="2.08484" open_height="1.21" position="6.73216 8.97739" view_translation="0 7.58" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\reverse" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\reverse" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\input" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\wireColorAlpha" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\wireColorAlpha" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\input" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="luma_darker_factor" class="adsk_Utility_MSL_Curve_Mix">
+      <input name="the_value">
+        <attachment target_name="coat_base_highlight_spread"/>
+      </input>
+      <input name="o_min"/>
+      <input name="o_max" value="1"/>
+      <output name="result"/>
+      <gui_data width="3.36259" height="1.21" open_width="3.36259" open_height="1.21" position="2.99921 9.75881" view_translation="0 6.02" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\the_value" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\o_max" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\o_min" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="base_darkner__instance" class="adsk_Utility_MSL_Mix2ColorCompact">
+      <input name="color1" value="0 0 0 1">
+        <attachment target_name="coat_base_color"/>
+      </input>
+      <input name="color2" value="0 0 0 1"/>
+      <input name="mixing_mode" value="0"/>
+      <input name="mixing_factor" value="0.5">
+        <attachment target_name="result" target_node="luma_darker_factor"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="4.10496" height="1.36" open_width="4.10496" open_height="1.36" position="2.55389 8.36774" view_translation="0 32.06" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="MetallicPaint_spider" class="adsk_Shd_MSL_MetallicPaint_V2_spider">
+      <input name="type" value="0">
+        <attachment target_name="top_coat_types"/>
+      </input>
+      <input name="base_color" value="0 0 0 0">
+        <attachment target_name="coat_base_color"/>
+      </input>
+      <input name="base_luma" value="0">
+        <attachment target_name="coat_base_highlight_spread"/>
+      </input>
+      <input name="refl_gloss_i" value="0">
+        <attachment target_name="top_coat_custom_glossy"/>
+      </input>
+      <input name="refl_falloff" value="0">
+        <attachment target_name="top_coat_custom_falloff"/>
+      </input>
+      <input name="flake_enable" value="1">
+        <attachment target_name="flecks_enable"/>
+      </input>
+      <input name="flake_size_i">
+        <attachment target_name="flecks_size"/>
+      </input>
+      <input name="pearl_enable" value="0">
+        <attachment target_name="pearl_enable"/>
+      </input>
+      <input name="pearl_color_i" value="0 0 0 0">
+        <attachment target_name="pearl_col"/>
+      </input>
+      <input name="pearl_ior_i" value="0">
+        <attachment target_name="pearl_ior"/>
+      </input>
+      <input name="iSceneToMeterScale" value="0">
+        <attachment target_name="tometerscale"/>
+      </input>
+      <output name="base_weight"/>
+      <output name="base_bias"/>
+      <output name="reflectivity"/>
+      <output name="refl_gloss"/>
+      <output name="brdf_0_degree_refl"/>
+      <output name="brdf_90_degree_refl"/>
+      <output name="brdf_curve"/>
+      <output name="flake_switcher"/>
+      <output name="flake_reflect"/>
+      <output name="flake_exp"/>
+      <output name="flake_size"/>
+      <output name="pearl_color"/>
+      <output name="pearl_ior"/>
+      <output name="spec_color"/>
+      <output name="spec_exp"/>
+      <output name="spec_weight"/>
+      <output name="highlight_glazing"/>
+      <output name="highlight_factor"/>
+      <output name="highlight_weight"/>
+      <output name="highlight_bypass_glossy_fx"/>
+      <gui_data width="3.5958" height="5.26" open_width="3.5958" open_height="5.26" position="2.61295 -0.134768" view_translation="1.63028 10.3449" view_scale="0.876847" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\flake_size_i" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\spec_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\base_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\pearl_color_i" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\base_bias" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\highlight_glazing" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\flake_reflect" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\flake_exp" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\base_weight" type_name="float" show_preview="false" orbit="0.775398" tilt="0.775398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\base_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\flake_enable" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\flake_switcher" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\refl_gloss_i" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\type" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\highlight_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\brdf_curve" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\base_luma" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\refl_gloss" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\pearl_color_i" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\base_bias" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\flake_reflect" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\flake_exp" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\highlight_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\pearl_ior" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\pearl_enable" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\flake_size" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\brdf_0_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.775398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\brdf_90_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2.1" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\base_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\flake_enable" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\reflectivity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\pearl_ior_i" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\brdf_90_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\pearl_ior_i" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\refl_falloff" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\refl_gloss_i" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\flake_switcher" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\brdf_0_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\spec_exp" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\base_luma" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\type" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iSceneToMeterScale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\brdf_curve" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\pearl_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\pearl_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\pearl_enable" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\pearl_ior" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\reflectivity" type_name="float" show_preview="false" orbit="0.805398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\iSceneToMeterScale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\spec_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\refl_falloff" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\refl_gloss" type_name="float" show_preview="false" orbit="0.795398" tilt="0.805398" zoom="1.95" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\highlight_bypass_glossy_fx" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="pearl_effect__instance" class="adsk_Utility_MSL_Mix2ColorCompact">
+      <input name="color1" value="0 0 0 1">
+        <attachment target_name="result" target_node="base_darkner__instance"/>
+      </input>
+      <input name="color2" value="1 1 1 1">
+        <attachment target_name="pearl_color" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="mixing_mode" value="0"/>
+      <input name="mixing_factor" value="0.5">
+        <attachment target_name="pearl_amount"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="4.10496" height="1.36" open_width="4.10496" open_height="1.36" position="2.4988 4.96584" view_translation="0 32.06" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="pearl_bias_factor" class="adsk_Utility_MSL_Change_Range">
+      <input name="the_value">
+        <attachment target_name="pearl_ior" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="i_min"/>
+      <input name="i_max" value="1"/>
+      <input name="o_min"/>
+      <input name="o_max" value="4"/>
+      <output name="result"/>
+      <gui_data width="3.7589" height="1.51" open_width="3.7589" open_height="1.51" position="2.66408 3.43705" view_translation="0 1.46" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\i_max" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\i_min" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\the_value" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\o_max" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\o_min" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="luma_bias_factor" class="adsk_Utility_MSL_Change_Range">
+      <input name="the_value">
+        <attachment target_name="coat_base_highlight_spread"/>
+      </input>
+      <input name="i_min"/>
+      <input name="i_max" value="1"/>
+      <input name="o_min"/>
+      <input name="o_max" value="8"/>
+      <output name="result"/>
+      <gui_data width="3.78645" height="1.56509" open_width="3.78645" open_height="1.56509" position="2.69162 6.74255" view_translation="3.66608 2.7565" view_scale="1.59429" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\i_max" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\i_min" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\the_value" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\o_max" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\o_min" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="PaintBase" class="adsk_Component_MSL_PaintBase">
+      <input name="base_color" value="0.8 0 0 1">
+        <attachment target_name="result" target_node="base_darkner__instance"/>
+      </input>
+      <input name="diffuse_weight" value="1">
+        <attachment target_name="base_weight" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="diffuse_bias" value="1.5">
+        <attachment target_name="base_bias" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="edge_color" value="0 0 0 1">
+        <attachment target_name="result" target_node="pearl_effect__instance"/>
+      </input>
+      <input name="edge_color_bias" value="0.5">
+        <attachment target_name="result" target_node="pearl_bias_factor"/>
+      </input>
+      <input name="lit_color" value="0.6 0 0.2 1">
+        <attachment target_name="coat_base_color"/>
+      </input>
+      <input name="lit_color_bias" value="8">
+        <attachment target_name="result" target_node="luma_bias_factor"/>
+      </input>
+      <input name="iLightDotNL"/>
+      <input name="iEyeDir"/>
+      <input name="iNormal"/>
+      <output name="result"/>
+      <gui_data width="2.31888" height="2.26" open_width="2.31888" open_height="2.26" position="6.64621 6.29224" view_translation="0 16.94" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\diffuse_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\lit_color_bias" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\edge_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\lit_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\base_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\edge_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\lit_color_bias" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iLightDotNL" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\diffuse_bias" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\base_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iLightDotNL" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\diffuse_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\edge_color_bias" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\edge_color_bias" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\diffuse_bias" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\lit_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="SpecularsPhong" class="adsk_Component_MSL_PhongSpecular">
+      <input name="iGlossy" value="1">
+        <attachment target_name="refl_gloss" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="iAuxFactor" value="8">
+        <attachment target_name="highlight_factor" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="iAuxGlazed" value="false">
+        <attachment target_name="highlight_glazing" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="iAnotherSpec"/>
+      <input name="bypass_glossy_factor">
+        <attachment target_name="highlight_bypass_glossy_fx" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="iLightDir"/>
+      <input name="iEyeDir"/>
+      <input name="iNormal"/>
+      <output name="result"/>
+      <gui_data width="2.29009" height="1.96" open_width="2.29009" open_height="1.96" position="6.66427 3.65725" view_translation="0.316511 29.9464" view_scale="1.85734" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iAnotherSpec" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\bypass_glossy_factor" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iAuxGlazed" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\iLightDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iAuxFactor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\iGlossy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iGlossy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\iAnotherSpec" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iLightDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\iAuxGlazed" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_V2_SL\iAuxFactor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="BRDFfactor" class="adsk_Component_MSL_BRDFfactor">
+      <input name="brdf_0_degree_refl" value="0.2">
+        <attachment target_name="brdf_0_degree_refl" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="brdf_90_degree_refl" value="1">
+        <attachment target_name="brdf_90_degree_refl" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="brdf_curve" value="5">
+        <attachment target_name="brdf_curve" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="result"/>
+      <gui_data width="2.10535" height="1.36" open_width="2.10535" open_height="1.36" position="6.66529 0.023938" view_translation="0 5.3" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="float" show_preview="false" orbit="0.925398" tilt="0.445398" zoom="2" pan="0 0" preview_object="3" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\brdf_0_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\brdf_90_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\brdf_curve" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="spec_factor" class="adsk_Utility_MSL_Mix2Float">
+      <input name="iFloat1" value="0">
+        <attachment target_name="result" target_node="BRDFfactor"/>
+      </input>
+      <input name="iFloat2" value="1">
+        <attachment target_name="highlight_weight" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="mixing_mode" value="2"/>
+      <input name="mixing_factor" value="1"/>
+      <output name="result"/>
+      <gui_data width="2.13726" height="1.36" open_width="2.13726" open_height="1.36" position="6.63632 1.51395" view_translation="0 36.74" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.775398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iFloat1" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iFloat2" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="LightAccumulator" class="adsk_Utility_BRDF_Accumulator">
+      <input name="iDiffuse">
+        <attachment target_name="result" target_node="PaintBase" is_reference="true"/>
+      </input>
+      <input name="iSpecular">
+        <attachment target_name="result" target_node="SpecularsPhong" is_reference="true"/>
+      </input>
+      <input name="iBump"/>
+      <input name="iSpecFx" value="1">
+        <attachment target_name="result" target_node="spec_factor"/>
+      </input>
+      <input name="iNormal" value="0 0 0"/>
+      <input name="paint_model" value="true"/>
+      <output name="result"/>
+      <output name="oDiffuse"/>
+      <output name="oSpecular"/>
+      <gui_data width="2.47672" height="5.72799" open_width="2.47672" open_height="5.72799" position="10.5322 5.66184" view_translation="1.27571 8.08062" view_scale="1.35611" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.775398" tilt="1.1854" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iDiffuse" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\oDiffuse" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iSpecular" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iDiffuse" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iBump" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\oSpecular" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iSpecFx" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\paint_model" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iSpecFx" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iSpecular" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iBump" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\paint_model" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Reflections" class="adsk_Component_MSL_Reflection">
+      <input name="iRefl_color" value="1 1 1 1"/>
+      <input name="iRefl_factor" value="1">
+        <attachment target_name="result" target_node="BRDFfactor"/>
+      </input>
+      <input name="iPosition" value="0 0 0"/>
+      <input name="iDirection" value="0 0 0"/>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="result"/>
+      <gui_data width="2.27323" height="1.51" open_width="2.27323" open_height="1.51" position="6.59637 -1.91414" view_translation="0 70.82" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iPosition" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iRefl_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iRefl_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iDirection" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="AddReflections" class="adsk_Utility_MSL_Mix2ColorCompact">
+      <input name="color1" value="0 0 0 1">
+        <attachment target_name="result" target_node="LightAccumulator"/>
+      </input>
+      <input name="color2" value="1 1 1 1">
+        <attachment target_name="result" target_node="Reflections"/>
+      </input>
+      <input name="mixing_mode" value="1"/>
+      <input name="mixing_factor" value="1">
+        <attachment target_name="reflectivity" target_node="MetallicPaint_spider"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="2.25936" height="4.03565" open_width="2.25936" open_height="4.03565" position="10.5844 -0.594649" view_translation="0.0313016 33.7659" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="1.2154" tilt="0.755396" zoom="1.8" pan="0 0" preview_object="3" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="diffusion_factor" class="adsk_Component_MSL_PhongSpecular">
+      <input name="iGlossy" value="0.5">
+        <attachment target_name="spec_exp" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="iAuxFactor" value="0"/>
+      <input name="iAuxGlazed" value="false"/>
+      <input name="iAnotherSpec"/>
+      <input name="bypass_glossy_factor" value="true"/>
+      <input name="iLightDir"/>
+      <input name="iEyeDir"/>
+      <input name="iNormal"/>
+      <output name="result"/>
+      <gui_data width="4.1963" height="1.96" open_width="4.1963" open_height="1.96" position="14.7777 -1.91263" view_translation="0 28.94" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="float" show_preview="false" orbit="1.1454" tilt="0.765398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iAuxGlazed" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iAuxFactor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iAnotherSpec" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iLightDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\bypass_glossy_factor" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iAuxGlazed" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iAuxFactor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iGlossy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iGlossy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iLightDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iAnotherSpec" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\bypass_glossy_factor" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="difusion_accumulation" class="adsk_Utility_BRDF_Accumulator">
+      <input name="iDiffuse"/>
+      <input name="iSpecular">
+        <attachment target_name="result" target_node="diffusion_factor" is_reference="true"/>
+      </input>
+      <input name="iBump"/>
+      <input name="iSpecFx" value="1"/>
+      <input name="iNormal" value="0 0 0"/>
+      <input name="paint_model" value="false"/>
+      <output name="result"/>
+      <output name="oDiffuse"/>
+      <output name="oSpecular"/>
+      <gui_data width="3.66206" height="1.96" open_width="3.66206" open_height="1.96" position="15.0001 0.248185" view_translation="0 3.38" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\oDiffuse" type_name="Color" show_preview="false" orbit="0.935398" tilt="0.575398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iDiffuse" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iBump" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\oSpecular" type_name="Color" show_preview="false" orbit="0.705398" tilt="1.2054" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\paint_model" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iSpecFx" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iSpecular" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="diffusion_layer" class="adsk_Utility_MSL_Mix2ColorCompact">
+      <input name="color1" value="0 0 0 1">
+        <attachment target_name="spec_color" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="color2" value="0 0 0 1">
+        <attachment target_name="oSpecular" target_node="difusion_accumulation"/>
+      </input>
+      <input name="mixing_mode" value="2"/>
+      <input name="mixing_factor" value="1"/>
+      <output name="result"/>
+      <gui_data width="2.33811" height="4.62948" open_width="2.33811" open_height="4.62948" position="18.3921 -0.602606" view_translation="0 32.06" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="1.1554" tilt="0.9854" zoom="1.65" pan="0 0" preview_object="3" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="metal_compose" class="adsk_Utility_MSL_Mix2ColorCompact">
+      <input name="color1" value="0 0 0 1">
+        <attachment target_name="result" target_node="AddReflections"/>
+      </input>
+      <input name="color2" value="1 1 1 1">
+        <attachment target_name="result" target_node="diffusion_layer"/>
+      </input>
+      <input name="mixing_mode" value="1"/>
+      <input name="mixing_factor" value="1">
+        <attachment target_name="spec_weight" target_node="MetallicPaint_spider"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="2.60353" height="4.57298" open_width="2.60353" open_height="4.57298" position="14.2046 5.45995" view_translation="0 32.06" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.735398" tilt="0.875398" zoom="2" pan="0 0" preview_object="3" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="mi_flakes_base" class="mi_bump_flakes">
+      <input name="flake_color" value="1 1 1 1"/>
+      <input name="flake_density" value="0.152284"/>
+      <input name="flake_strength" value="1.2"/>
+      <input name="flake_scale" value="0.0304569">
+        <attachment target_name="flake_size" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="evalNormal" value="false"/>
+      <input name="mi_noise_table" value="adsk_Data_mi_noise.dds"/>
+      <output name="result"/>
+      <output name="normal_result"/>
+      <gui_data width="1.98409" height="7.00616" open_width="1.98409" open_height="7.00616" position="21.7768 0.714045" view_translation="0 21.62" view_scale="1" open_state="closed" selected_state="true">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="true" orbit="0.355398" tilt="-0.244602" zoom="0.399999" pan="0 0" preview_object="0" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\evalNormal" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\flake_density" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\flake_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\normal_result" type_name="float3" show_preview="true" orbit="0.285398" tilt="-0.334603" zoom="0.3" pan="0 0" preview_object="0" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mi_noise_table" type_name="texture2D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\flake_scale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\flake_strength" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="flake_support" class="adsk_Component_MSL_FlakeSupport">
+      <input name="iLightDir"/>
+      <input name="iEyeDir" value="0 0 0"/>
+      <input name="iNormal" value="0 0 0"/>
+      <input name="iFlakeShader">
+        <attachment target_name="result" target_node="mi_flakes_base" is_reference="true"/>
+      </input>
+      <input name="iFlakeWeight" value="1"/>
+      <input name="iFlakeExp" value="45">
+        <attachment target_name="flake_exp" target_node="MetallicPaint_spider"/>
+      </input>
+      <input name="iFlakeDecay" value="0"/>
+      <input name="iAuxSpecExp" value="20"/>
+      <input name="iAuxFactor" value="1"/>
+      <output name="result"/>
+      <gui_data width="2.70595" height="4.63732" open_width="2.70595" open_height="4.63732" position="24.5402 -0.490421" view_translation="0 75.74" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="float" show_preview="false" orbit="1.5654" tilt="0.225398" zoom="0.800001" pan="0.01 0.27" preview_object="3" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iFlakeExp" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iFlakeShader" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iAuxFactor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iLightDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iFlakeDecay" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iAuxSpecExp" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iFlakeWeight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="flake_speculars" class="adsk_Utility_BRDF_Accumulator">
+      <input name="iDiffuse"/>
+      <input name="iSpecular">
+        <attachment target_name="result" target_node="flake_support" is_reference="true"/>
+      </input>
+      <input name="iBump"/>
+      <input name="iSpecFx" value="0.24"/>
+      <input name="iNormal" value="0 0 0"/>
+      <input name="paint_model" value="false"/>
+      <output name="result"/>
+      <output name="oDiffuse"/>
+      <output name="oSpecular"/>
+      <gui_data width="2.31867" height="4.70014" open_width="2.31867" open_height="4.70014" position="28.0361 -0.386221" view_translation="0.24 6.03" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.885398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iDiffuse" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\oDiffuse" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iSpecular" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iDiffuse" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iBump" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\oSpecular" type_name="Color" show_preview="false" orbit="0.715398" tilt="0.915398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iSpecFx" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\paint_model" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iSpecFx" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\iSpecular" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iBump" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\paint_model" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="adsk_Utility_MSL_Color_to_Float_1" class="adsk_Utility_MSL_Color_to_Float">
+      <input name="the_color" value="1 1 0 1">
+        <attachment target_name="oSpecular" target_node="flake_speculars"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="3.78384" height="0.91" open_width="3.78384" open_height="0.91" position="28.4446 3.65422" view_translation="0 9.14" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\the_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="adsk_Utility_MSL_SmoothThreshold_1" class="adsk_Utility_MSL_SmoothThreshold">
+      <input name="input" value="0">
+        <attachment target_name="result" target_node="adsk_Utility_MSL_Color_to_Float_1"/>
+      </input>
+      <input name="low" value="0.05"/>
+      <input name="high" value="1"/>
+      <output name="result"/>
+      <gui_data width="3.98932" height="4.25146" open_width="3.98932" open_height="4.25146" position="31.4832 -0.299374" view_translation="0 25.22" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="float" show_preview="true" orbit="0.705398" tilt="0.345398" zoom="1.55" pan="0.18 0.15" preview_object="0" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\high" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\low" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\input" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="adsk_Utility_MSL_Float_to_Color_1" class="adsk_Utility_MSL_Float_to_Color">
+      <input name="the_scalar">
+        <attachment target_name="result" target_node="adsk_Utility_MSL_SmoothThreshold_1"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="3.78384" height="0.91" open_width="3.78384" open_height="0.91" position="31.4267 2.67147" view_translation="0 16.82" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.795398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\the_scalar" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="flake_color" class="adsk_Utility_MSL_Mix2ColorCompact">
+      <input name="color1" value="1 0.00819671 0.00819671 1">
+        <attachment target_name="flecks_color"/>
+      </input>
+      <input name="color2" value="1 1 1 1">
+        <attachment target_name="result" target_node="adsk_Utility_MSL_Float_to_Color_1"/>
+      </input>
+      <input name="mixing_mode" value="2"/>
+      <input name="mixing_factor" value="1"/>
+      <output name="result"/>
+      <gui_data width="2.24643" height="3.16904" open_width="2.24643" open_height="3.16904" position="24.7471 3.54758" view_translation="0 32.06" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="1.2354" tilt="-0.924602" zoom="2" pan="0.145 -0.0149997" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Flakes_add" class="adsk_Utility_MSL_Mix2ColorCompact">
+      <input name="color1" value="0 0 0 1">
+        <attachment target_name="result" target_node="metal_compose"/>
+      </input>
+      <input name="color2" value="1 1 1 1">
+        <attachment target_name="result" target_node="flake_color"/>
+      </input>
+      <input name="mixing_mode" value="1"/>
+      <input name="mixing_factor" value="0.949239">
+        <attachment target_name="flake_switcher" target_node="MetallicPaint_spider"/>
+      </input>
+      <output name="result">
+        <attachment target_name="result"/>
+      </output>
+      <gui_data width="4.10496" height="5.51494" open_width="4.10496" open_height="5.51494" position="23.841 8.12294" view_translation="0 32.06" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\result" type_name="Color" show_preview="false" orbit="1.0954" tilt="-0.824602" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_MetallicPaint_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+  </phenomenon>
+
+  <node name="Dimmer" class="Light_point">
+    <input name="color" value="1 1 1 1"/>
+    <input name="intensity" value="1"/>
+    <input name="distance_falloff_exponent" value="0"/>
+    <input name="distance_scale" value="1"/>
+    <output name="result"/>
+    <output name="light_shadow"/>
+    <gui_data width="1.80103" height="2.80082" open_width="1.80103" open_height="2.80082" position="-5.63567 2.08723" view_translation="0 2.18" view_scale="1" open_state="closed" selected_state="false">
+      <preview_data>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\intensity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\distance_scale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\distance_falloff_exponent" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\light_shadow" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <node name="Environment" class="adsk_Utility_MSL_EnvBall">
+    <input name="env_tex" value="adsk_Textures/adsk_Data_ReflectionDefault.png"/>
+    <input name="intensity" value="1"/>
+    <input name="blur" value="1"/>
+    <output name="result"/>
+    <gui_data width="3.11035" height="3.54828" open_width="3.11035" open_height="3.54828" position="-4.98586 -1.2895" view_translation="0 2.54" view_scale="1" open_state="closed" selected_state="false">
+      <preview_data>
+        <preview_data_element name="\blur" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\intensity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\env_tex" type_name="texture2D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <node name="adsk_Mtl_MetallicPaint_MSL" class="adsk_Mtl_MetallicPaint_MSL">
+    <input name="coat_base_color" value="0.983607 0.0161247 0.111287 1"/>
+    <input name="coat_base_highlight_spread" value="0.5"/>
+    <input name="flecks_enable" value="1"/>
+    <input name="flecks_color" value="0.163934 1 0.835527 1"/>
+    <input name="flecks_size" value="0.01"/>
+    <input name="pearl_enable" value="0"/>
+    <input name="pearl_amount" value="0.5"/>
+    <input name="pearl_col" value="1 1 1 1"/>
+    <input name="pearl_ior" value="0.5"/>
+    <input name="top_coat_types" value="0"/>
+    <input name="top_coat_custom_glossy" value="0.8"/>
+    <input name="top_coat_custom_falloff" value="0.2"/>
+    <input name="finish" value="0"/>
+    <input name="finish_peel_amount" value="0.05"/>
+    <input name="tometerscale" value="0"/>
+    <input name="wirecoloralpha" value="1"/>
+    <output name="result"/>
+    <output name="transparency"/>
+    <gui_data width="3.31464" height="6.09251" open_width="3.31464" open_height="6.09251" position="-1.06359 0" view_translation="-25.6093 -3.23627" view_scale="0.0777917" open_state="maximized" selected_state="false">
+      <preview_data>
+        <preview_data_element name="\coat_base_highlight_spread" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\coat_base_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\flecks_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\top_coat_custom_glossy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\flecks_size" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\finish" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="-0.884609" tilt="-11.1846" zoom="0.85" pan="0.085 0.085" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\pearl_enable" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\tometerscale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\finish_peel_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\top_coat_types" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\transparency" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\flecks_enable" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\pearl_ior" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\pearl_col" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\top_coat_custom_falloff" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\wirecoloralpha" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\pearl_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <render_data>
+    <light_list>
+      <light_instance shader="Dimmer" selected="true" on_off="on" camera_space="true" type="point" position="-0.400001 0.6 0" direction="0 0 -1" spread="45" distance_limit="100"/>
+    </light_list>
+    <environment_shader shader="Environment"/>
+    <scene_ambient color="0 0 0 0"/>
+  </render_data>
+</root>

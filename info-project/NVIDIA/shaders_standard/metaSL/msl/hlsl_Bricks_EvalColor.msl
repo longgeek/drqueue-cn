@@ -1,0 +1,425 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#define MINFILTERWIDTH 1.0e-7f
+// see max_texutil.cpp
+#define B 512  // 0x200
+#define RN 10000.0
+#define maxS_curve(t) ( t * t * (3.0 - 2.0 * t) )
+#define maxLerp(t, a, b) ( a + t * (b - a) )
+
+shader hlsl_Bricks_EvalColor {
+ input:
+  Color MortarColor = Color(0.2, 0.2, 0.2, 1.0) {
+    display_name("Mortar Color");
+  };
+  Color BrickColor = Color(0.6, 0.6, 0.6, 1.0) {
+    display_name("Brick Color");
+  };
+  float HorizontalCount = 4.0 {
+    display_name("Horiz. Count");
+  };
+  float VerticalCount = 4.0 {
+    display_name("Vert. Count");
+  };
+  float ColorVariance = 0.0 {
+    display_name("Color Variance");
+  };
+  float VerticalGap = 0.5 {
+    display_name("Vertical Gap");
+  };
+  float HorizontalGap = 0.5 {
+    display_name("Horizontal Gap");
+  };
+  float LineShift = 0.5 {
+    display_name("Line Shift");
+  };
+  float RandomShift = 0.0 {
+    display_name("Random Shift");
+  };
+  int Holes = 0 {
+    display_name("% Holes");
+  };
+  int RandomSeed = 33862 {
+    display_name("Random Seed");
+    hard_range(0, 65535);
+  };
+  // TODO: int LockGapSymmetry
+  float FadeVariance = 0.05 {
+    display_name("Fade Variance");
+  };
+  float EdgeRoughness = 0.0 {
+    display_name("Edge Roughness");
+  };
+  // TODO: bool ShowTextureSwatches
+  const bool UseRowEdit = false {
+    display_name("Row Modify");
+  };
+  const bool UseColumnEdit = false {
+    display_name("Column Modify");
+  };
+  float ChangeRow = 1.0 {
+    display_name("Change Row");
+  };
+  float ChangeColumn = 1.0 {
+    display_name("Change Column");
+  };
+  int PerColumn = 2 {
+    display_name("Per Column");
+  };
+  int PerRow = 2 {
+    display_name("Per Row");
+  };
+  // TODO: int BrickType
+  Shader Coords;
+  Shader MortarMap;
+  Shader BrickMap;
+  const bool MortarMapEnabled = false {
+    display_name("MortarMap Enabled");
+  };
+  const bool BrickMapEnabled = false {
+    display_name("BrickMap Enabled");
+  };
+  // TODO: struct "ExtraParameters"
+  // textures
+  Texture2d noise_tables = "noise_out.dds" {
+    disable_filtering();
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+
+ output:
+  Color result;
+
+  // see max_texutil.cpp
+  void maxSetup(in float v,
+		out int b0, out int b1,
+		out float r0, out float r1) {
+    float t = v + RN;
+    int it = (int) t;
+    b0 = it - (it / B) * B; // ((int)t) & BM;
+    // (b0+1) & BM;
+    b1 = b0 + 1;
+    if (b1 >= B) b1 = 0;
+    r0 = (float)(t - (int) t);
+    r1 = r0 - 1.0; // what if r0 < 1.0?
+  } // maxSetup
+
+  // additional functions for texture lookup
+  int p(in int i1) {
+    // int x_pix = i1 % 114;
+    int y_pix = i1 / 114; // 0 <= y < 9
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    // return int((511.0 * tex2d(noise_tables, float2(x, y)).r + 0.5));
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    return int((c.r + 0.5));
+  } // p
+
+  float g1(in int i1) {
+    // int x_pix = i1 % 114;
+    int y_pix = 9 + i1 / 114; // 9 <= y < 18
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    // return 2.0 * tex2d(noise_tables, float2(x, y)).r - 1.0;
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    return c.r;
+  } // g1
+
+  float g2(in int i1, in int i2) {
+    // int x_pix = i1 % 114;
+    int y_pix = 18 + i1 / 114; // 18 <= y < 27
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    if (i2 == 0)
+      return c.r;
+    else if (i2 == 1)
+      return c.g;
+    else {
+      error("g2(noise_tables, %d, %d)", i1, i2);
+      return 0.0;
+    }
+  } // g2
+
+  // see max_texutil.cpp
+  float maxNoise1(in float arg) {
+    int bx0 = 0;
+    int bx1 = 0;
+    float rx0 = 0.0;
+    float rx1 = 0.0;
+    maxSetup(arg, bx0, bx1, rx0, rx1);
+    float sx = maxS_curve(rx0);
+    float u = rx0 * g1(p(bx0));
+    float v = rx1 * g1(p(bx1));
+    return maxLerp(sx, u, v);
+  } // maxNoise1
+
+  // max_texutil.cpp
+  float maxNoise2(in float x, in float y) {
+    int bx0 = 0;
+    int bx1 = 0;
+    int by0 = 0;
+    int by1 = 0;
+    float rx0 = 0.0;
+    float rx1 = 0.0;
+    float ry0 = 0.0;
+    float ry1 = 0.0;
+    float q = 0.0;
+    maxSetup(x, bx0, bx1, rx0, rx1);
+    maxSetup(y, by0, by1, ry0, ry1);
+    int i = p(bx0);
+    int j = p(bx1);
+    int b00 = p(i + by0);
+    int b10 = p(j + by0);
+    int b01 = p(i + by1);
+    int b11 = p(j + by1);
+    float sx = maxS_curve(rx0);
+    float sy = maxS_curve(ry0);
+    float u = rx0 * g2(b00, 0) + ry0 * g2(b00, 1);
+    float v = rx1 * g2(b10, 0) + ry0 * g2(b10, 1);
+    float a = maxLerp(sx, u, v);
+    u = rx0 * g2(b01, 0) + ry1 * g2(b01, 1);
+    v = rx1 * g2(b11, 0) + ry1 * g2(b11, 1);
+    float b = maxLerp(sx, u, v);
+    return maxLerp(sy, a, b);
+  } // maxNoise2
+
+  // see max_texutil.cpp
+  float maxModF(in float x, in float m) {
+    int n = (int) floor(x / m + 0.5);
+    float local_x = x;
+    local_x -= n*m;
+    return (local_x < 0.0) ? local_x + m : local_x;
+  } // maxModF
+
+  // see max_texutil.cpp
+  float maxThreshold(in float x, in float a, in float b) {
+    if (x < a) return 0.0;
+    if (x > b) return 1.0;
+    if (a == b) return x;
+    return (x - a) / (b - a);
+  } // maxThreshold
+
+  // see max_texutil.cpp
+  float maxClamp(in float x, in float a, in float b) {
+    return (x < a ? a: (x > b ? b: x));
+  } // maxClamp
+
+  // see max_texutil.cpp
+  float maxBoxstep(in float a, in float b, in float x) {
+    return maxClamp((x - a) / (b - a), 0.0, 1.0);
+  } // maxBoxstep
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // uv-coords
+    float u = texture_coordinate[0].x;
+    float v = texture_coordinate[0].y;
+    float du = 0.02; // overwritten by hlsl_base_UVGenerator
+    float dv = 0.02; // overwritten by hlsl_base_UVGenerator
+    // try to call hlsl_base_UVGenerator
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    float2 duv = float2(0.0, 0.0);
+    float3 dPdu = float3(0.0, 0.0, 0.0);
+    float3 dPdv = float3(0.0, 0.0, 0.0);
+    if (Coords.call("output", "result", shader_return,
+		    "output", "duv", duv,
+		    "output", "dPdu", dPdu,
+		    "output", "dPdv", dPdv)) {
+      u = shader_return.r;
+      v = shader_return.g;
+      du = duv.x;
+      dv = duv.y;
+    }
+    // call other shader parameters
+    Color MortarMapColor = Color(0.0, 0.0, 0.0, 0.0);
+    bool useMortarMap = false;
+    if (MortarMapEnabled && 
+	MortarMap.call("output", "result", MortarMapColor)) {
+      useMortarMap = true;
+    }
+    Color BrickMapColor = Color(0.0, 0.0, 0.0, 0.0);
+    bool useBrickMap = false;
+    if (BrickMapEnabled && 
+	BrickMap.call("output", "result", BrickMapColor)) {
+      useBrickMap = true;
+    }
+    // use uv-coords
+
+    // begin of maxBricksBlockMixerFunc
+    float mixer = 0.0;
+    float mortarthicknessx = HorizontalGap * 0.01;
+    float mortarthicknessy = VerticalGap * 0.01;
+    float brickvary = ColorVariance;
+    float rowvary = RandomShift;
+    float brickwidth  = 1.0 / (HorizontalCount + mortarthicknessx);
+    float brickheight = 1.0 / (VerticalCount + mortarthicknessy);
+    float c_row    = floor(v / brickheight) + 1.0;
+    float c_column = floor(u / brickwidth)  + 1.0;
+    int r_row = (int)(maxModF(c_row, (float) PerRow));
+    int r_col = (int)(maxModF(c_column, (float) PerColumn));
+    bool ch_r = false;
+    bool ch_c = false;
+    if (PerRow == 1 || c_row != 1.0) ch_r = true;
+    if (PerColumn == 1 || c_column != 1.0) ch_c = true;
+    float re = 0.0;
+    if ((UseRowEdit == true && r_row == 0 && ch_r) ||
+	UseRowEdit == false) {
+      if ((UseColumnEdit == true && r_col == 0 && ch_c) ||
+	  UseColumnEdit == false) {
+	if (UseRowEdit == true) {
+	  brickwidth *= ChangeRow;
+	} // if (UseRowEdit == true)
+	if (UseColumnEdit == true) {
+	  brickheight *= ChangeColumn;
+	  re = ChangeRow;
+	} // if (UseColumnEdit == true)
+      } // if ((UseColumnEdit == true && r_col == 0 && ch_c) || ...)
+    } // if ((UseRowEdit == true && r_row == 0 && ch_r) || ...)
+    float MWF = mortarthicknessx / brickwidth;
+    float MHF = mortarthicknessy / brickheight;
+    float numwide = 1.0 / brickwidth;
+    float3 ns = float3(0.0, 0.0, 0.0);
+    float3 nv = float3(0.0, 0.0, 0.0);
+    ns.x = u / (brickwidth  / 17.0);
+    ns.y = v / (brickheight / 17.0);
+    nv.x = v / (brickwidth  / 17.0);
+    nv.y = u / (brickheight / 17.0);
+    float qk = EdgeRoughness * 0.001;
+    float scoord = u + (qk * maxNoise2(ns.x, ns.y));
+    float tcoord = v + (qk * maxNoise2(nv.x, nv.y));
+    float swidth = max((float)abs((int)scoord) +
+		       (float)abs((int)tcoord), MINFILTERWIDTH) + du;
+    float twidth = max((float)abs((int)scoord) +
+		       (float)abs((int)tcoord), MINFILTERWIDTH) + dv;
+    swidth /= brickwidth;
+    twidth /= brickheight;
+    float ss = scoord / brickwidth;
+    float tt = tcoord / brickheight;
+    float tbrick = floor(tt);
+    ss += rowvary * (maxNoise1(tbrick + 0.5 + RandomSeed) - 0.5);
+    if (maxModF(tt * 0.5, 1.0) > 0.5) ss += 0.5 + LineShift;
+    float sbrick = floor(ss);
+    ss -= sbrick;
+    tt -= tbrick;
+    float w = 0.0;
+    if (swidth >= 1.0) {
+      w = 1.0 - 2.0 * MWF;
+    } // if (swidth >= 1.0)
+    else {
+      w = (maxClamp(maxBoxstep(MWF - swidth, MWF, ss),
+		    max(1.0 - MWF / swidth, 0.0), 1.0) -
+	   maxClamp(maxBoxstep(1.0 - MWF - swidth, 1.0 - MWF, ss),
+		    0.0, 2.0 * MWF / swidth));
+    } // else [ if (swidth >= 1.0) ]
+    float ht = 0.0;
+    if (twidth >= 1.0) {
+      ht = 1.0 - 2.0 * MHF;
+    } // if (twidth >= 1.0)
+    else {
+      ht = (maxClamp(maxBoxstep(MHF - twidth, MHF, tt),
+		     max(1.0 - MHF / twidth, 0.0), 1.0) -
+	    maxClamp(maxBoxstep(1.0 - MHF - twidth, 1.0 - MHF, tt),
+		     0.0, 2.0 * MHF / twidth));
+    } // else [ if (twidth >= 1.0) ]
+    mixer = w * ht;
+    float sStand = sbrick;
+    float randomPack = 0.0;
+    if ((int)sStand == (int)numwide) sStand = 0.0;
+    if (re > 0.0 && (1.0 - re) != 0.0) {
+      randomPack = (RandomSeed +
+		    ((tbrick + 1.0) * ((sStand + numwide) * (1.0 - re))) +
+		    0.5);
+    } // if (re > 0.0 && (1.0 - re) != 0.0)
+    else {
+      randomPack = (RandomSeed +
+		    (tbrick + 1.0) * (sStand + numwide) +
+		    0.5);
+    } // else [ if (re > 0.0 && (1.0 - re) != 0.0) ]
+    float randPack = randomPack;
+    if (Holes > 0 && Holes != 100){
+      float res  = 0.0;
+      float tres = 0.0;
+      res = maxNoise1(randomPack);
+      if (res < 0.0) res *= res;
+      tres = maxThreshold(res, 0.0, (1.0 / (Holes + 1.0)));
+      if (tres == 1.0) mixer = 0.0;
+    }
+    if (Holes == 100) mixer = 0.0;
+    // end of maxBricksBlockMixerFunc
+    // begin of maxBricksFunc
+    Color bcolor = Color(0.0, 0.0, 0.0, 0.0);
+    Color brickcolor = Color(0.0, 0.0, 0.0, 0.0);
+    Color mortarcolor = Color(0.0, 0.0, 0.0, 0.0);
+    if (mixer == 1.0) {
+      float val = 0.0;
+      if (useBrickMap) {
+        brickcolor = BrickMapColor;
+      }
+      else {
+	brickcolor = BrickColor;
+      }
+      val = 1.0 + brickvary * maxNoise1(randomPack);
+      bcolor.r = brickcolor.r * val;
+      bcolor.g = brickcolor.g * val;
+      bcolor.b = brickcolor.b * val;
+      bcolor.a = brickcolor.a * val;
+      val = 1.0 + (FadeVariance * maxNoise1(randomPack));
+      bcolor.r = bcolor.r * val;
+      bcolor.g = bcolor.g * val;
+      bcolor.b = bcolor.b * val;
+      result = saturate(bcolor);
+      return;
+    } // if (mixer == 1.0)
+    if (mixer == 0.0) {
+      if (useMortarMap) {
+        mortarcolor = MortarMapColor;
+      }
+      else {
+	mortarcolor = MortarColor;
+      }
+      result = saturate(mortarcolor);
+      return;
+    } // else if (mixer == 0.0)
+    float val = 0.0;
+    if (useMortarMap) {
+      mortarcolor = MortarMapColor;
+    }
+    else {
+      mortarcolor = MortarColor;
+    }
+    if (useBrickMap) {
+      brickcolor = BrickMapColor;
+    }
+    else {
+      brickcolor = BrickColor;
+    }
+    val = 1.0 + (brickvary * maxNoise1(randomPack));
+    if (val < 0.0) val = 0.0;
+    bcolor.r = brickcolor.r * val;
+    bcolor.g = brickcolor.g * val;
+    bcolor.b = brickcolor.b * val;
+    bcolor.a = brickcolor.a * val;
+    val = 1.0 + (FadeVariance * maxNoise1(randomPack));
+    if (val < 0.0) val = 0.0;
+    bcolor.r = bcolor.r * val;
+    bcolor.g = bcolor.g * val;
+    bcolor.b = bcolor.b * val;
+    Color Ct = Color(0.0, 0.0, 0.0, 0.0);
+    Ct.r = (mortarcolor.r * (1.0 - mixer))+(bcolor.r * mixer);
+    Ct.g = (mortarcolor.g * (1.0 - mixer))+(bcolor.g * mixer);
+    Ct.b = (mortarcolor.b * (1.0 - mixer))+(bcolor.b * mixer);
+    Ct.a = (mortarcolor.a * (1.0 - mixer))+(bcolor.a * mixer);
+    result = saturate(Ct);
+    // end of maxBricksFunc
+  } // main
+};

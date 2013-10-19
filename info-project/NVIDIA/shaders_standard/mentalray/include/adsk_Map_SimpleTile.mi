@@ -1,0 +1,314 @@
+#*****************************************************************************
+# Copyright 2007 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	Pierre-Felix Breton
+# Purpose:	Simplified Tile map based on the 3ds max Tile (Bricks) map
+#
+# History:
+#
+# 2007 feb 15th - pfbreton, initial implementation
+# 
+#****************************************************************************/
+
+min version "3.4"
+
+#------------------------------------------------------------------------
+# Phenomenon
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Map_Simple_Tile" 
+  (
+      #-------------------------------------
+			# Tiles parameters
+			#-------------------------------------
+      struct "m" 
+      {
+				#--------------- Tiles ------------
+				integer "BrickType", 
+				color "BrickColor", 
+				scalar "HorizontalCount", 
+				scalar "VerticalCount", 
+				scalar "ColorVariance",
+				scalar "FadeVariance"
+			}, #end struct
+			
+			#-------------------------------------
+			# Grout parameters
+			#-------------------------------------
+      struct "n" 
+      {
+				#--------------- Grout ------------
+				color "MortarColor",
+				scalar "HorizontalGap", 
+				scalar "VerticalGap",
+				scalar "EdgeRoughness"		
+			},
+					
+      #-------------------------------------
+			# Rows and Columns Editing
+			#-------------------------------------
+      struct "o" 
+      {			
+      	#------------ Misc ------------
+				integer "RandomSeed",
+      			
+	      #--------------- Stacking Layout -------- 
+				scalar "LineShift", 
+				scalar "RandomShift",
+					
+				#------------- Grout Rows Editing-------
+				boolean "UseRowEdit",
+				scalar "ChangeRow", 
+				integer "PerRow", 
+				 
+				#------------- Grout Columns Editing-------
+				boolean "UseColumnEdit",
+				integer "PerColumn", 
+				scalar "ChangeColumn" 
+				
+      },
+      
+		#-------------------------------------
+    # UV Generator Parameters
+    # 		hidden in applications like revit 
+    #     provided as added value and exposed in 3ds max or maya directly 
+    #			Current issues:
+    #							- The Real World Scale option has no use inside a shader since the code in the MAX UI compensates for the UV Scale and the phenom has no control over that
+    #							- The WAngle is expressed in RAD while its expressed in DEG in the MAX UI
+    #             - Tiling and Mirror Flags don't seem to "connect" when inside a phenomenon
+    #
+    #			Note:  	Currently, minimal set of UI controls are exposed to allow basic placement.  
+    #							Futher work is needed and bug fiex needed to make it fully functionnal
+    #-------------------------------------
+      struct "u" 
+      {
+      	scalar "UScale",
+      	scalar "VScale",
+      	scalar "UOffset",
+      	scalar "VOffset",
+      	scalar "WAngle",
+      	#boolean "UWrap",
+      	#boolean "VWrap",
+      	#boolean "UMirror",
+      	#boolean "VMirror"
+      	# boolean "RealWorldMapSize"  #The Real World Map Size Option has no use inside a phenom, since a lot of locig is burried in the max UI.
+      	integer "MapChannel"
+      },
+      integer "mode",
+      array light "lights"
+      	
+   )#end phenomenon
+
+#-------------------------------------
+# Get the right ratio for V
+# (for non squared bitmap)
+#-------------------------------------
+
+shader "MetersToInternalInverseU|shader" "adsk_scale_meters_to_internal_inverse"
+	(
+		"meterValue" = interface "u.UScale"
+	)
+
+shader "GetAspectRatioV|shader" "adsk_aspect_ratio_width_per_height"
+	(
+		"image_color" = interface "m.Bitmap",
+		"scaling_value" = "MetersToInternalInverseU|shader"
+	)
+
+#-------------------------------------
+# UV Generator 
+#-------------------------------------
+shader "UVGen|Shader" "max_base_UVGenerator" 
+	(
+		"MapSlotType" 0, 																				#Texture|Environment
+		"EnvType" 0, 																						#Screen|Spherical|Cylindrical|ShrinkWrap
+		"UVWSource" 0, 																					#ExplicitMapChannel|VertexCOlorChannel|PlanarFromObjectXYZ|PlanarFromWorldXYZ
+		"MapChannel" = interface "u.MapChannel", 
+		#------------------------
+		"ShowMapOnBack" on, 
+		"RealWorldMapSize" on,  																	#The Real World Map Size Option has no use inside a phenom, since a lot of locig is burried in the max UI.
+		#-------------------------
+		"UOffset" = interface "u.UOffset", 
+		"UScale" = "MetersToInternalInverseU|shader", 
+		"UWrap" on, #= interface "u.UWrap",      										#Tile Flag in 3ds max UI
+		"UMirror" off, #= interface "u.UMirror", 
+		#-------------------------
+		"VOffset" = interface "u.VOffset",
+		"VScale" = "GetAspectRatioV|shader", 
+		"VWrap" on, #= interface "u.VWrap",													#Tile Flag in 3ds max UI	
+		"VMirror" off, #= interface "u.VMirror", 
+		#---------------------
+		"UAngle" 0, 																						#Rotation Expressed in Rads	
+		"VAngle" 0, 																						#Rotation Expressed in Rads
+		"WAngle" = interface "u.WAngle", 												#Rotation Expressed in Rads
+		"UVAxis" 0, 
+		#---------------------
+		"Blur" 1.0, 
+		"BlurOffset" 0, 
+		#-----------------------
+		"Clip" off, 
+		"Noise" off, 
+		"Animate" off, 
+		"Amount" 1, 
+		"Size" 1, 
+		"Level" 1, 
+		"Phase" 0, 
+		#-----------------------
+		"XCanvasSize" 0, 
+		"YCanvasSize" 0
+	)#end shader
+
+#------------------------------------------------------------------------
+# Tile Map Shader
+#------------------------------------------------------------------------
+shader "Map_Tile|Texmap|Shader" "max_Bricks" 
+	(
+		"Parameters" 
+		{	
+			#--------------- Tiles ------------
+			"BrickType" = interface "m.BrickType", 
+			"BrickColor" = interface "m.BrickColor", 
+			"HorizontalCount" = interface "m.HorizontalCount", 
+			"VerticalCount" = interface "m.VerticalCount", 
+			"ColorVariance" = interface "m.ColorVariance", 
+			"FadeVariance" = interface "m.FadeVariance", 
+			"Holes" 0, 
+			"MortarMapEnabled" off,
+			
+			#--------------- Grout ------------
+			"MortarColor" = interface "n.MortarColor", 
+			"VerticalGap" = interface "n.VerticalGap", 
+			"HorizontalGap" = interface "n.HorizontalGap", 
+			"LockGapSymmetry" 0,
+			"EdgeRoughness" = interface "n.EdgeRoughness", 
+			"BrickMapEnabled" off,	
+			
+			#--------------- Stacking Layout -------- 
+			"LineShift" 0, 
+			"RandomShift" 0, 
+			
+			#------------- Grout Rows Editing -------
+			"UseRowEdit" on, 
+			"ChangeRow" 2.8, 
+			"PerRow" 3, 
+			
+			#------------- Grout Columns Editing -------
+			"UseColumnEdit" on, 
+			"ChangeColumn" 1,
+			"PerColumn" 4,
+			
+			#------------- Misc -------
+			"RandomSeed" = interface "o.RandomSeed", 
+			"ShowTextureSwatches" off, 
+			"Coords" "UVGen|Shader" 
+			}, 
+		"ExtraParameters" 
+		{
+			"GBufferID" 0	
+		}
+
+	)#end shader
+
+
+#------------------------------------------------------------------------
+#  Connections
+#------------------------------------------------------------------------
+root = "Map_Tile|Texmap|Shader"
+apply texture
+
+#------------------------------------------------------------------------
+# UI
+#------------------------------------------------------------------------
+
+	gui "gui_adsk_Map_Simple_Tile"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "Simple Tile Map (adsk)", "category" "Texture", "hidden" )
+	
+		#-------------------------------------
+		#  Tiles Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Tiles Parameters")
+		{
+			#----------------------------------
+			control "BrickType" "integer" ("nonConnectable", "uiName" "Pattern Type", "value" 5, "range" 0 7)
+			control "BrickColor" "color" ("uiName" "Tile Color","value" 0.6 0.6 0.6 1)
+			control "HorizontalCount" "float" ("nonConnectable", "uiName" "Horizontal Count", "value" 4, "range" 0 100)
+			control "VerticalCount" "float" ("nonConnectable", "uiName" "Vertical Count", "value" 4, "range" 0 100)
+			control "ColorVariance" "float" ("nonConnectable", "uiName" "Color Variance", "value" 0, "range" 0 100)
+			control "FadeVariance" "float" ("nonConnectable", "uiName" "Fade Variance", "value" 0.05, "range" 0 100)
+			
+		}#end control
+		
+		
+		#-------------------------------------
+		#  Grout Parameters
+		#-------------------------------------
+		control "n" "struct" ("uiName" "Grout Parameters")
+		{
+			#----------------------------------
+			control "MortarColor" "color" ("uiName" "Grout Color","value" 0.2 0.2 0.2 1)
+			control "VerticalGap" "float" ("nonConnectable", "uiName" "Vertical Gap", "value" .5, "range" 0 100)
+			control "HorizontalGap" "float" ("nonConnectable", "uiName" "Horizontal Gap", "value" .5, "range" 0 100)
+			control "EdgeRoughness" "float" ("nonConnectable", "uiName" "Roughness", "value" 0, "range" 0 100)
+			
+		}#end control
+		
+		
+		#-------------------------------------
+		#  Rows and Columns Editing
+		#-------------------------------------
+		control "o" "struct" ("uiName" "Rows and Columns Editing Parameters")
+		{
+			#----------------------------------
+			control "RandomSeed" "integer" ("nonConnectable", "uiName" "Random Seed","value" 30159, "range" 0 1000000)
+			control "LineShift" "float" ("nonConnectable", "uiName" "Line Shift", "value" 0, "range" 0 100)
+			control "RandomShift" "float" ("nonConnectable", "uiName" "Random Shift", "value" 0, "range" 0 100)
+			#----------------------------------
+			control "UseColumnEdit" "boolean" ("hidden", "nonConnectable", "uiName" "Grout Column Modify", "value" 0)
+			control "PerColumn" "integer" ("hidden","nonConnectable", "uiName" "Per Column","value" 0,"range" 0 50)
+			control "ChangeColumn" "float" ("hidden","nonConnectable", "uiName" "Change Column", "value" 0, "range" 0 5)
+			#----------------------------------
+			control "UseRowEdit" "boolean" ("hidden","nonConnectable", "uiName" "Grout Row Modify", "value" 0)
+			control "PerRow" "integer" ("hidden","nonConnectable", "uiName" "Per Row","value" 0,"range" 0 50)
+			control "ChangeRow" "float" ("hidden","nonConnectable", "uiName" "Change Row", "value" 0, "range" 0 5)
+			
+		}#end control
+		
+		
+		#-------------------------------------
+    # UV Generator Parameters
+    # 		hidden in applications like revit 
+    #     provided as added value and exposed in 3ds max or maya directly 
+    #			Current issues:
+    #							- The Real World Scale option has no use inside a shader since the code in the MAX UI compensates for the UV Scale and the phenom has no control over that
+    #							- The WAngle is expressed in RAD while its expressed in DEG in the MAX UI
+    #             - Tiling and Mirror Flags don't seem to "connect" when inside a phenomenon
+    #
+    #			Note:  	Currently, minimal set of UI controls are exposed to allow basic placement.  
+    #							Futher work is needed and bug fiex needed to make it fully functionnal
+    #-------------------------------------
+		control "u" "struct" ("uiName" "Texture Coordinates Parameters")
+    {  
+			control "UScale" "float" ("nonConnectable", "uiName" "U Tiling Scale", "value" 1.0, "range" 0 1000000000000000000)
+			control "VScale" "float" ("nonConnectable", "uiName" "V Tiling Scale", "value" 1.0, "range" 0 1000000000000000000)
+			control "UOffset" "float" ("nonConnectable", "uiName" "U Offset", "value" 0)
+			control "VOffset" "float" ("nonConnectable", "uiName" "V Offset", "value" 0)
+			control "WAngle" "float" ("nonConnectable", "uiName" "Angle", "value" 0, "range" 0 6.283185253783088)
+			control "MapChannel" "integer" ("nonConnectable", "uiName" "Map Channel", "value" 1, "range" 1 99)
+		  #control "UWrap"  "boolean" ("nonConnectable", "uiName"  "U Tile", "value" 1) 
+		  #control "VWrap"  "boolean" ("nonConnectable", "uiName"  "V Tile", "value" 1) 
+		  #control "UMirror"  "boolean" ("nonConnectable", "uiName"  "U Mirror", "value" 0) 
+		  #control "VMirror"  "boolean" ("nonConnectable", "uiName"  "V Mirror", "value" 0) 
+		  # control "RealWorldMapSize"  "boolean" ("nonConnectable", "uiName"  "Use Real-World Scale", "value" on)  #The Real World Map Size Option has no use inside a phenom, since a lot of locig is burried in the max UI.
+		}	#end control
+		
+		
+	  #----------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+
+	}#end gui
+
+end declare #end declare phenomenon

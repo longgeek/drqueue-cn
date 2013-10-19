@@ -1,0 +1,155 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Writing Hardware Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node174.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node176.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION173"></a>
+<h3>Writing Hardware Shaders</h3>
+<p>
+<span class="depr">Deprecated</span>
+<p>
+Hardware shaders are closely tied to the graphics hardware
+available. It is generally not possible to use a
+<a href="node173.html#INDEX853">Cg</a> shader that uses special
+<a href="node178.html#INDEX854">NVIDIA</a> hardware features for ATI
+hardware, and vice versa. The main classes are:</p>
+<ul>
+<li><b><a href="node178.html#INDEX854">NVIDIA</a></b> shaders are
+written in <a href="node178.html#INDEX854">NVIDIA</a>'s
+<a href="node173.html#INDEX853">Cg</a> 1.2 language, which is loosely based
+on C. It supports shader graphs and is well-suited for mental ray's
+shader graphs and Phenomena. <a href="node178.html#INDEX854">NVIDIA</a>
+hardware shaders come in pairs:
+a <a href="node168.html#INDEX850">vertex shader</a> operates on
+triangle vertices, and a <a href="node168.html#INDEX851">fragment
+shader</a> operates on pixel colors. Most of the time, only a
+<a href="node168.html#INDEX851">fragment shader</a> is supplied;
+non-default <a href="node168.html#INDEX850">vertex shader</a> are
+rarely needed.</li>
+<li><b>OpenGL</b> prior to version 2.0 does not support
+programmable shaders at all. All functions must be mapped to the
+hardwired shading model. Only very simple shaders can be mapped to
+OpenGL hardware, but it is still useful for very fast low-quality
+previews.</li>
+<li><b>OpenGL 2.0</b> supports a native shading language similar to
+<a href="node178.html#INDEX854">NVIDIA</a>'s
+<a href="node173.html#INDEX853">Cg</a>, but it has not been finalized at
+this time and will not be described here.</li>
+<li><b>HLSL</b> support may be added in future versions of mental
+ray that support DirectX. HLSL is the native shader language of
+DirectX, which is Microsoft's proprietary alternative to OpenGL It
+and may become available for special OEM versions of mental ray.
+Unlike <a href="node178.html#INDEX854">NVIDIA</a>'s
+<a href="node173.html#INDEX853">Cg</a>, HLSL is not portable.</li>
+</ul>
+<p>The main difference between software and hardware shaders to
+keep in mind is that hardware shading always proceeds triangle by
+triangle, not ray by ray. Each of the three vertices of the
+triangle pass through a <a href="node168.html#INDEX850">vertex
+shader</a> which may move vertices, alter normals, or set up other
+information tied to the vertex.</p>
+<p>When all three vertices have been set up, the hardware
+rasterizes the triangle by picking points on the triangle that
+correspond to image pixels. For each of them, the vertex
+information stored by the vertex shader is interpolated, and the
+<a href="node168.html#INDEX851">fragment shader</a> is called to
+compute a pixel color value that is then stored or merged into the
+frame buffer.</p>
+<p>For the shader writer, this means that there is no geometrical
+information except as stored by the <a href="node168.html#INDEX850">vertex
+shader</a>. There is no way to, for
+example, trace a ray, find a ray or volume length, or do other
+operations that involve other geometry. Reflections, shadows, and
+other features are available only through precomputed map images
+such as texture maps.</p>
+<p>mental ray supports a large number of shader types. Only
+material and light shaders are directly supported. Since
+<a href="node173.html#INDEX853">Cg</a> supports shader graphs, subshaders
+including texture shaders are supported as well.</p>
+<div align="center">
+<table class="table">
+<tr>
+<th>shader type</th>
+<th>support</th>
+</tr>
+<tr>
+<td>material</td>
+<td>supported</td>
+</tr>
+<tr>
+<td>light</td>
+<td>supported</td>
+</tr>
+<tr>
+<td>subshaders</td>
+<td>supported in <a href="node173.html#INDEX853">Cg</a>1.2</td>
+</tr>
+<tr>
+<td>texture</td>
+<td>supported</td>
+</tr>
+<tr>
+<td>volume</td>
+<td>not supported</td>
+</tr>
+<tr>
+<td>environment</td>
+<td>supported for cameras but not materials</td>
+</tr>
+<tr>
+<td>lens</td>
+<td>not supported; will never support ray bending</td>
+</tr>
+<tr>
+<td>output</td>
+<td>not supported</td>
+</tr>
+<tr>
+<td>shadow</td>
+<td>not applicable; shadow shaders are called during ray tracing
+only. Hardware rendering uses shadow maps instead.</td>
+</tr>
+<tr>
+<td>photon</td>
+<td>not applicable; <a href="node48.html#INDEX96">photon
+map</a>ping is based on <a href="node102.html#INDEX390">ray
+tracing</a> and must be completed before hardware rendering
+begins.</td>
+</tr>
+<tr>
+<td>geometry</td>
+<td>not applicable, geometry is built before rendering begins.</td>
+</tr>
+<tr>
+<td>displacement</td>
+<td>not applicable for the same reason, although
+<a href="node168.html#INDEX850">vertex shader</a>s can be written that
+displace preexisting vertices.</td>
+</tr>
+</table>
+</div>
+<p>The next sections will show how to write a simple Phong shader
+and a point light shader.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node174.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node176.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

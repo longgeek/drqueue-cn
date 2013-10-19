@@ -1,0 +1,326 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Texture Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node115.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node117.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h2 id="SECTION114">Texture Shaders</h2>
+
+<p id="texshaderex"> <a id="INDEX454"></a>
+<a id="INDEX455"></a> <a id="INDEX456"></a>
+Texture shaders evaluate a texture and typically return a color, scalar, or
+vector (but like any shader, return values can be freely chosen and may even
+be structures of multiple values). Textures can either be procedural, for
+example evaluating a 3D texture based on noise functions or calling other
+shaders, or they can do an image lookup. The .mi format provides different
+<tt>texture</tt> statements for these two types, one with a function call
+and one with a texture file name. Refer to
+<a href="node78.html#texture">texture</a> section for details.</p>
+<p><a id="INDEX457"></a> Texture shaders are not first-class shaders.
+This means that mental ray never calls one by itself and provides no
+special support for them. Texture shaders are called exclusively by
+other shaders. There are four ways of calling a texture shader from
+a material shader or other shaders:</p>
+<ol>
+<li>by requesting the value of a shader parameter using
+<i><a href="node138.html#INDEX522">mi_eval</a></i>, or
+<li>by using a built-in convenience function like
+<i><a href="node150.html#INDEX741">mi_lookup_color_texture</a></i>, or
+<li>by calling the shader function directly if the C function name is known, or
+<li>with a statement like
+<pre>
+     mi_call_shader_x(result, miSHADER_TEXTURE, state, tag, args);
+</pre>
+The <i>tag</i> argument references the texture function. The texture
+function is a data structure in the scene database that contains a
+reference to the C function itself, plus a pointer to a user argument
+block <i>arg</i> that is passed to the texture shader when it is called.
+Such user arguments are rarely used, and
+<i><a href="node138.html#INDEX514">mi_call_shader_x</a></i> is the only
+way to pass them to a shader. The caller would have to write the required
+arguments into this user argument structure <i>args</i>; it would not have
+access to shader parameters specified in the .mi file.
+</ol>
+<p>The recommended way of calling subshaders
+is implicitly with <i><a href="node138.html#INDEX522">mi_eval</a></i>, which
+does not require the calling shader to be aware that a subshader provides
+the value. This makes shaders very flexible by allowing them to be combined
+in arbitrary ways from the scene file, without changing and recompiling
+shader sources. However, there are cases when not the value of a shader but
+a shader itself is passed as a parameter, and
+<i><a href="node138.html#INDEX514">mi_call_shader_x</a></i> provides a good
+way of calling such shaders.</p>
+<p>Unlike material shaders, texture shaders usually return a simple
+color or scalar or other return value. There are no lighting
+calculations or secondary rays. This greatly simplifies the task of
+changing a textured surface. For example, a simple texture shader
+that does a simple, non-antialiased lookup in a texture image could
+be written as:</p>
+<p><a id="INDEX458"></a></p>
+<pre>
+    struct mib_texture_lookup {
+        miTag           tex;
+        miVector        coord;
+    };
+
+    DLLEXPORT miBoolean mib_texture_lookup(
+        miColor         *result,
+        miState         *state,
+        struct mib_texture_lookup *paras)
+    {
+        miTag           tex   = *mi_eval_tag(&amp;paras-&gt;tex);
+        miVector        *coord = mi_eval_vector(&amp;paras-&gt;coord);
+
+        if (tex &amp;&amp; coord-&gt;x &gt;= 0 &amp;&amp; coord-&gt;x &lt; 1
+                &amp;&amp; coord-&gt;y &gt;= 0 &amp;&amp; coord-&gt;y &lt; 1
+                &amp;&amp; mi_lookup_color_texture(result, state, tex, coord))
+
+                return(miTRUE);
+
+        result-&gt;r = result-&gt;g = result-&gt;b = result-&gt;a = 0;
+        return(miFALSE);
+    }
+</pre>
+<p>This shader can be assigned to parameters of another shader,
+such as a material shader, causing that shader to see textured
+color inputs without having to implement texturing itself. Here is
+an example scene fragment:</p>
+<pre>
+    color texture "texfile" "/some/directory/imagefile.rgb"
+
+    shader "coordshader" "mib_texture_vector" (...)
+
+    shader "texshader" "mib_texture_lookup" (
+        "coord" = "coordshader"
+        "tex"   "texfile")
+
+    material "mtl"
+        "mib_illum_phong" (
+            "ambient" = "texshader",
+            "diffuse" = "texshader",
+            ...)
+    end material
+</pre>
+<p>
+Note that <i>texshader</i> is defined here as a named shader because it is going
+to be assigned in the material. Instead of using a file texture for the <i>tex</i>
+parameter, another shader, perhaps a procedural marble shader, could have been used.
+The texture shader needs to know which point on the texture to look up, as a vector
+assigned to the <i>coord</i> parameter. Coordinate lookups are a very flexible way
+to implement all sorts of projections, wrapping, scaling, replication, distortion,
+cropping, and many other functions, so this is also implemented as another shader.
+It could be done inside the texture lookup shader itself, but separating it out
+into a separate shader allows all those projections and other manipulations to be
+implemented only once, instead of in every texture shader. Here is an example of
+a texture projection shader like <i>mib_texture_vector</i> used in the example above
+(in a simplified form):</p>
+    <pre>
+    #define TP_NONE     0       /* texture/bump-basis vector projection */
+    #define TP_XY       2
+    #define TP_XZ       3
+    #define TP_YZ       4
+    #define TP_SPHERE   5
+
+    #define TS_INTERNAL 0       /* texture coordinate spaces (selspace) */
+    #define TS_OBJECT   1
+    #define TS_WORLD    2
+    #define TS_CAMERA   3
+
+    #define EPS         1e-4
+
+    struct uv {miVector u, v;};
+
+    struct mib_texture_vector_simple {
+        miInteger       selspace;
+        miInteger       project;
+    };
+
+    DLLEXPORT miBoolean mib_texture_vector_simple(
+        miVector        *result,
+        miState         *state,
+        struct mib_texture_vector_simple *paras)
+    {
+        miVector        v;              /* working vector */
+        miVector        *vp;            /* pointer to working vector */
+        miVector        tmp, *tri[3];   /* temporaries */
+        miInteger       selspace = *mi_eval_integer(&amp;paras-&gt;selspace);
+        miInteger       project;
+        miBoolean       success;        /* is mapping successful */
+
+        project = *mi_eval_integer(&amp;paras-&gt;project);
+        vp = &amp;state-&gt;point;
+
+        if (selspace &amp;&amp; state-&gt;time != 0) {
+                v.x = vp-&gt;x + state-&gt;motion.x * state-&gt;time;
+                v.y = vp-&gt;y + state-&gt;motion.y * state-&gt;time;
+                v.z = vp-&gt;z + state-&gt;motion.z * state-&gt;time;
+                vp = &amp;v;
+        }
+        switch(selspace) {
+          case TS_OBJECT:
+                mi_point_to_object(state, &amp;v, vp);
+                vp = &amp;v;
+                break;
+
+          case TS_WORLD:
+                mi_point_to_world(state, &amp;v, vp);
+                vp = &amp;v;
+                break;
+
+          case TS_CAMERA:
+                mi_point_to_camera(state, &amp;v, vp);
+                vp = &amp;v;
+                break;
+        }
+        success = miTRUE;
+        switch(project) {
+          case TP_XY:
+                v.x = vp-&gt;x; v.y = vp-&gt;y; v.z = 0;
+                vp = &amp;v;
+                break;
+
+          case TP_XZ:
+                v.x = vp-&gt;x; v.y = vp-&gt;z; v.z = 0;
+                vp = &amp;v;
+                break;
+
+          case TP_YZ:
+                v.x = vp-&gt;y; v.y = vp-&gt;z; v.z = 0;
+                vp = &amp;v;
+                break;
+
+          case TP_SPHERE: {
+                float length;
+                length = mi_vector_norm(vp);
+                /* put seam in x direction */
+                if (!vp-&gt;z &amp;&amp; !vp-&gt;x) {
+                        /* singularity point */
+                        v.x = 0.0;
+                        success = miFALSE;
+                } else
+                        v.x = atan2(-vp-&gt;z, vp-&gt;x) / M_PI / 2;
+
+                if (v.x &lt; 0) v.x += 1;
+                /* y comes from asin */
+                if (length)
+                        v.y = asin(vp-&gt;y / length) / M_PI + 0.5;
+                else
+                        v.y = 0.5f;
+                v.z = 0;
+                vp = &amp;v;
+                break; }
+        }
+        *result = *vp;
+        state-&gt;tex = *result;
+        return(success);
+    }
+</pre>
+<p>This shader only picks up a vector, here from <code>state&rarr;point</code>.
+The complete base shader has more methods for picking up vectors, especially
+from <code>state&rarr;tex</code>, a variable that is commonly used to pass
+texture lookup coordinates to a texture shader. The
+<i><a href="node150.html#INDEX741">mi_lookup_color_texture</a></i> function
+does this, for example.</p>
+<p>Remapping, including scaling, rotation, cropping, replication, etc., is
+handled by yet another shader (<i>mib_texture_remap</i>) from the base shader
+library. This keeps the base shaders as flexible as possible, although in
+practice higher performance can be achieved by writing shaders that perform
+coordinate lookup and remapping within a single shader.</p>
+<p><a id="elltexex"></a>Finally, here is a shader that uses full
+<a href="node24.html#INDEX48">elliptical filtering</a> for better texture
+anti-aliasing, especially of textures seen at a sharp angle:</p>
+<p><a id="INDEX459"></a></p>
+<pre>
+    struct mib_texture_filter_lookup {
+        miTag           tex;
+        miVector        coord;
+        miScalar        eccmax;
+        miScalar        maxminor;
+        miScalar        disc_r;
+        miBoolean       bilinear;
+        miUint          space;
+        miTag           remap;
+    };
+
+    #define DISC_R      0.3     /* projection matrix circle radius */
+    #define CIRCLE_R    0.8     /* projected screen-space circle */
+
+    DLLEXPORT miBoolean mib_texture_filter_lookup(
+        miColor         *result,
+        miState         *state,
+        struct mib_texture_filter_lookup *paras)
+    {
+        miTag           tex = *mi_eval_tag(&amp;paras-&gt;tex);
+        miVector        *coord;
+        miUint          space;
+        miTag           remap;
+        miVector        p[3], t[3];
+        miMatrix        ST;
+        miTexfilter     ell_opt;
+        miScalar        disc_r;
+
+        if (!tex) {
+                result-&gt;r = result-&gt;g = result-&gt;b = result-&gt;a = 0;
+                return(miFALSE);
+        }
+        coord  = mi_eval_vector(&amp;paras-&gt;coord);
+        space  = *mi_eval_integer(&amp;paras-&gt;space);
+        disc_r = *mi_eval_scalar(&amp;paras-&gt;disc_r);
+        if (disc_r &lt;= 0)
+                disc_r = DISC_R;
+        if (state-&gt;reflection_level == 0 &amp;&amp;
+            mi_texture_filter_project(p, t, state, disc_r, space) &amp;&amp;
+            (remap = *mi_eval_tag(&amp;paras-&gt;remap))) {
+                mi_call_shader_x((miColor*)&amp;t[0], miSHADER_TEXTURE,
+                                                state, remap, &amp;t[0]);
+                mi_call_shader_x((miColor*)&amp;t[1], miSHADER_TEXTURE,
+                                                state, remap, &amp;t[1]);
+                mi_call_shader_x((miColor*)&amp;t[2], miSHADER_TEXTURE,
+                                                state, remap, &amp;t[2]);
+                if (mi_texture_filter_transform(ST, p, t)) {
+                        ell_opt.eccmax    = *mi_eval_scalar(&amp;paras-&gt;eccmax);
+                        ell_opt.max_minor = *mi_eval_scalar(&amp;paras-&gt;maxminor);
+                        ell_opt.bilinear  = *mi_eval_boolean(&amp;paras-&gt;bilinear);
+                        ell_opt.circle_radius = CIRCLE_R;
+                        ST[2*4+0] = coord-&gt;x;
+                        ST[2*4+1] = coord-&gt;y;
+                        if (mi_lookup_filter_color_texture(result, state,
+                                                        tex, &amp;ell_opt, ST))
+                                return(miTRUE);
+                }
+        }
+        /* fallback to standard pyramid or nonfiltered texture lookup */
+        return(mi_lookup_color_texture(result, state, tex, coord));
+    }
+</pre>
+<p>This shader is based on calling a texture shader multiple times
+to derive gradients that can be passed to
+<i><a href="node150.html#INDEX746">mi_texture_filter_transform</a></i>, and
+otherwise passing shader parameters to
+<i><a href="node150.html#INDEX742">mi_lookup_filter_color_texture</a></i>,
+which handles the elliptical lookup. For more information on
+elliptical texture lookups, refer to the base shader
+documentation.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node115.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node117.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

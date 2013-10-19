@@ -1,0 +1,855 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Output Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node37.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node39.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION36"></a>
+<h2 id="fo:outshaders">Output Shaders</h2>
+
+<p><a href="node126.html#INDEX492">Output shaders</a> are
+user-written functions to operate on frame buffers. They have
+access to every pixel in all available frame buffers after
+rendering, and can be used to perform operations like
+post-filtering or compositing.</p>
+
+<h2 id="fo:outfiles">Output Files</h2>
+
+<p>Writing frame buffers to files is enabled by specifying data
+type, file format and file name.</p>
+<p><span class="new">3.6</span>
+In <a href="node77.html#mi:framebuffer">framebuffer statement</a>s, adding
+the file properties to a buffer marks it to be written to the file. For
+multi-channel formats, the same file name may be given to several buffers
+to write them as multiple channels to the same file.</p>
+
+<p><span class="depr">Deprecated</span> In file
+<a href="node77.html#INDEX227">output statement</a>s, if the data type is
+omitted and more than a single target data type is supported by a format,
+then a default data type is chosen that is assumed to be the "best" type
+for the given image format. This default type is underlined in the table below.
+</p>
+<p>
+The data type implies the frame buffer type. There are special file formats for
+depth, vector, and label files, in addition to a variety of standard color file
+formats. By listing the appropriate number and type of
+<a href="node77.html#mi:framebuffer">framebuffer statement</a>s (or
+<a href="node77.html#INDEX227">output statement</a>s), it is possible to write
+multiple files. For example, both a filtered file and the unfiltered version
+can be written to separate files by listing multiple
+<a href="node77.html#mi:framebuffer">framebuffer statement</a>s and
+<a href="node77.html#INDEX227">output statement</a>s:
+one to write the unfiltered image, one that runs an output shader that does
+the filtering into a secondary buffer, and finally another one to write the
+filtered image from that buffer. Output statements are executed in sequence.</p>
+
+<p id="fo:outformat">The following <a href="node38.html#INDEX78">file
+format</a>s are supported for image output:</p>
+<div align="center">
+<table class="table">
+<tr>
+<th><i>format</i></th>
+<th><i>type</i></th>
+<th><i>compress</i></th>
+<th><i>description</i></th>
+</tr>
+<tr>
+<td>pic</td>
+<td>rgba</td>
+<td>RLE</td>
+<td>Softimage color</td>
+</tr>
+<tr>
+<td>Zpic</td>
+<td>z</td>
+<td>-</td>
+<td>Softimage depth map (write only)</td>
+</tr>
+<tr>
+<td>alias</td>
+<td>rgb</td>
+<td>RLE</td>
+<td>Alias color</td>
+</tr>
+<tr>
+<td>rgb</td>
+<td><u>rgba</u></td>
+<td>RLE</td>
+<td>Silicon Graphics</a> 8-bit RGBA color</td>
+</tr>
+<tr>
+<td></td>
+<td>rgb</td>
+<td>RLE</td>
+<td>Silicon Graphics</a> 8-bit RGB
+color</td>
+</tr>
+<tr>
+<td></td>
+<td>rgba_16</td>
+<td>RLE</td>
+<td>Silicon Graphics</a> 16-bit
+RGBA color</td>
+</tr>
+<tr>
+<td></td>
+<td>rgb_16</td>
+<td>RLE</td>
+<td>Silicon Graphics</a> 16-bit
+RGB color</td>
+</tr>
+<tr>
+<td>jpg</td>
+<td>rgb</td>
+<td>JPEG</td>
+<td><a href="node19.html#INDEX28">JFIF</a> picture</td>
+</tr>
+<tr>
+<td>png</td>
+<td>rgb</td>
+<td>RLE</td>
+<td>Portable Network Graphics 8-bit RGB color</td>
+</tr>
+<tr>
+<td></td>
+<td><u>rgba</u></td>
+<td>RLE</td>
+<td>Portable Network Graphics 8-bit RGBA color</td>
+</tr>
+<tr>
+<td>exr</td>
+<td>a</td>
+<td><a href="#exrcompression">*</a></li>
+<td><a href="node19.html#INDEX29">OpenEXR</a> 8-bit scalar</td>
+</tr>
+<tr>
+<td></td>
+<td>rgb</td>
+<td><a href="#exrcompression">*</a></li>
+<td><a href="node19.html#INDEX29">OpenEXR</a> 8-bit RGB color</td>
+</tr>
+<tr>
+<td></td>
+<td>rgba</td>
+<td><a href="#exrcompression">*</a></li>
+<td><a href="node19.html#INDEX29">OpenEXR</a> 8-bit RGBA color</td>
+</tr>
+<tr>
+<td></td>
+<td>a_h</td>
+<td><a href="#exrcompression">*</a></li>
+<td><a href="node19.html#INDEX29">OpenEXR</a> 16-bit scalar</td>
+</tr>
+<tr>
+<td></td>
+<td>rgb_h</td>
+<td><a href="#exrcompression">*</a></li>
+<td><a href="node19.html#INDEX29">OpenEXR</a> 16-bit RGB color</td>
+</tr>
+<tr>
+<td></td>
+<td><u>rgba_h</u></td>
+<td><a href="#exrcompression">*</a></li>
+<td><a href="node19.html#INDEX29">OpenEXR</a> 16-bit RGBA
+color</td>
+</tr>
+<tr>
+<td></td>
+<td>a_fp</td>
+<td><a href="#exrcompression">*</a></li>
+<td><a href="node19.html#INDEX29">OpenEXR</a> 32-bit scalar</td>
+</tr>
+<tr>
+<td></td>
+<td>rgb_fp</td>
+<td><a href="#exrcompression">*</a></li>
+<td><a href="node19.html#INDEX29">OpenEXR</a> 32-bit RGB color</td>
+</tr>
+<tr>
+<td></td>
+<td>rgba_fp</td>
+<td><a href="#exrcompression">*</a></li>
+<td><a href="node19.html#INDEX29">OpenEXR</a> 32-bit RGBA
+color</td>
+</tr>
+<tr>
+<td></td>
+<td>z</td>
+<td><a href="#exrcompression">*</a></li>
+<td><a href="node19.html#INDEX29">OpenEXR</a> depth map</td>
+</tr>
+<tr>
+<td></td>
+<td>n</td>
+<td><a href="#exrcompression">*</a></li>
+<td><a href="node19.html#INDEX29">OpenEXR</a> normal-vector
+map</td>
+</tr>
+<tr>
+<td></td>
+<td>m</td>
+<td><a href="#exrcompression">*</a></li>
+<td><a href="node19.html#INDEX29">OpenEXR</a> motion-vector
+map</td>
+</tr>
+<tr>
+<td>tif</td>
+<td><u>rgba</u></td>
+<td>RLE</td>
+<td>8-bit RGBA TIFF</td>
+</tr>
+<tr>
+<td></td>
+<td>rgba_16</td>
+<td>RLE</td>
+<td>16-bit RGBA TIFF</td>
+</tr>
+<tr>
+<td></td>
+<td>rgba_fp</td>
+<td>RLE</td>
+<td>floating-point RGBA TIFF</td>
+</tr>
+<tr>
+<td></td>
+<td>rgb</td>
+<td>RLE</td>
+<td>8-bit RGB TIFF</td>
+</tr>
+<tr>
+<td></td>
+<td>rgb_16</td>
+<td>RLE</td>
+<td>16-bit RGB TIFF</td>
+</tr>
+<tr>
+<td></td>
+<td>rgb_fp</td>
+<td>RLE</td>
+<td>floating-point RGB TIFF</td>
+</tr>
+<tr>
+<td>tifu</td>
+<td><u>rgba</u></td>
+<td>-</td>
+<td>8-bit RGBA TIFF</td>
+</tr>
+<tr>
+<td></td>
+<td>rgba_16</td>
+<td>-</td>
+<td>16-bit RGBA TIFF</td>
+</tr>
+<tr>
+<td></td>
+<td>rgba_fp</td>
+<td>-</td>
+<td>floating-point RGBA TIFF</td>
+</tr>
+<tr>
+<td></td>
+<td>rgb</td>
+<td>-</td>
+<td>8-bit RGB TIFF</td>
+</tr>
+<tr>
+<td></td>
+<td>rgb_16</td>
+<td>-</td>
+<td>16-bit RGB TIFF</td>
+</tr>
+<tr>
+<td></td>
+<td>rgb_fp</td>
+<td>-</td>
+<td>floating-point RGB TIFF</td>
+</tr>
+<tr>
+<td>iff</td>
+<td>rgb</td>
+<td>RLE</td>
+<td>Autodesk Maya 8-bit RGB image</td>
+</tr>
+<tr>
+<td></td>
+<td><u>rgba</u></td>
+<td>RLE</td>
+<td>Autodesk Maya 8-bit RGBA image</td>
+</tr>
+<tr>
+<td></td>
+<td>rgb_16</td>
+<td>RLE</td>
+<td>Autodesk Maya 16-bit RGB image</td>
+</tr>
+<tr>
+<td></td>
+<td>rgba_16</td>
+<td>RLE</td>
+<td>Autodesk Maya 16-bit RGBA image</td>
+</tr>
+<tr>
+<td></td>
+<td>rgba_fp</td>
+<td>RLE</td>
+<td>Autodesk Maya float RGBA image</td>
+</tr>
+<tr>
+<td></td>
+<td>a</td>
+<td>RLE</td>
+<td>Autodesk Maya 8-bit alpha</td>
+</tr>
+<tr>
+<td></td>
+<td>a_16</td>
+<td>RLE</td>
+<td>Autodesk Maya 16-bit alpha</td>
+</tr>
+<tr>
+<td></td>
+<td>a_fp</td>
+<td>RLE</td>
+<td>Autodesk Maya floating-point alpha</td>
+</tr>
+<tr>
+<td></td>
+<td>z</td>
+<td>RLE</td>
+<td>Autodesk Maya depth map</td>
+</tr>
+<tr>
+<td>rla</td>
+<td>rgba</td>
+<td>RLE</td>
+<td>8-bit or 16-bit Utah/Wavefront color, type A</td>
+</tr>
+<tr>
+<td>rlb</td>
+<td>rgba</td>
+<td>RLE</td>
+<td>Utah/Wavefront color, type B</td>
+</tr>
+<tr>
+<td>picture</td>
+<td>rgb</td>
+<td>RLE</td>
+<td>Dassault Syst&egrave;mes CATIA PICTURE</td>
+</tr>
+<tr>
+<td>hdr</td>
+<td>rgbe</td>
+<td>-</td>
+<td>Radiance <a href="node36.html#INDEX74">high dynamic range</a>
+color, 8-bit RGB color</td>
+</tr>
+<tr>
+<td>ppm</td>
+<td>rgb</td>
+<td>-</td>
+<td>Portable pixmap, 8-bit P6 binary</td>
+</tr>
+<tr>
+<td>tga</td>
+<td>rgba</td>
+<td>-</td>
+<td>Targa color</td>
+</tr>
+<tr>
+<td>bmp</td>
+<td>rgb</td>
+<td>RLE</td>
+<td>MS Windows and OS/2 color</td>
+</tr>
+<tr>
+<td>qntpal</td>
+<td>rgb</td>
+<td>YUV</td>
+<td>Abekas/Quantel, PAL (720&thinsp;&times;&thinsp;576)</td>
+</tr>
+<tr>
+<td>qntntsc</td>
+<td>rgb</td>
+<td>YUV</td>
+<td>Abekas/Quantel, NTSC (720&thinsp;&times;&thinsp;486)</td>
+</tr>
+<tr>
+<td>ct</td>
+<td><u>rgba</u></td>
+<td>-</td>
+<td>mental images 8-bit color (3)</td>
+</tr>
+<tr>
+<td></td>
+<td>rgba_16</td>
+<td>-</td>
+<td>mental images 16-bit color (6)</td>
+</tr>
+<tr>
+<td></td>
+<td>rgba_fp</td>
+<td>-</td>
+<td>mental images floating-point color (11)</td>
+</tr>
+<tr>
+<td>st</td>
+<td><u>a</u></td>
+<td>-</td>
+<td>mental images 8-bit alpha (4)</td>
+</tr>
+<tr>
+<td></td>
+<td>a_16</td>
+<td>-</td>
+<td>mental images 16-bit alpha (7)</td>
+</tr>
+<tr>
+<td></td>
+<td>a_fp</td>
+<td>-</td>
+<td>mental images floating-point alpha (15)</td>
+</tr>
+<tr>
+<td>vt</td>
+<td>vta</td>
+<td>-</td>
+<td>mental images alpha basis vectors (5)</td>
+</tr>
+<tr>
+<td>wt</td>
+<td>vts</td>
+<td>-</td>
+<td>mental images intensity basis vectors (5)</td>
+</tr>
+<tr>
+<td>zt</td>
+<td>z</td>
+<td>-</td>
+<td>mental images depth map (8)</td>
+</tr>
+<tr>
+<td>nt</td>
+<td>n</td>
+<td>-</td>
+<td>mental images normal-vector map (9)</td>
+</tr>
+<tr>
+<td>mt</td>
+<td>m</td>
+<td>-</td>
+<td>mental images motion-vector map (12)</td>
+</tr>
+<tr>
+<td>tt</td>
+<td>tag</td>
+<td>-</td>
+<td>mental images normal-vector map (10)</td>
+</tr>
+<tr>
+<td>bit</td>
+<td>bit</td>
+<td>-</td>
+<td>mental images mask bitmap (13)</td>
+</tr>
+<tr>
+<td>cth</td>
+<td>rgbe</td>
+<td>-</td>
+<td>mental images HDR color, 8-bit RGB color (14)</td>
+</tr>
+<tr>
+<td>map</td>
+<td>any</td>
+<td>-</td>
+<td>mental images memory map</td>
+</tr>
+<tr>
+<td>null</td>
+<td>-</td>
+<td>-</td>
+<td>null, deleted on close, write only</td>
+</tr>
+</table>
+</div>
+<p><a id="exrcompression">*</a> <a href="node19.html#INDEX29">OpenEXR</a>
+<a href="#foot1" class="biglinks"><sup>1</sup></a> in mental ray supports the
+compression modes RLE (run-length encoding), PIZ (wavelet-based),
+ZIP (Huffman dictionary), and PXR24 <a href="#foot2" class="biglinks">
+<sup>2</sup></a>.
+The first three are lossless; PXR24 is lossy if the written data is stored in
+full floating-point precision and lossless otherwise. The fastest ones are
+normally RLE or ZIP; PIZ usually achieves better compression but is much
+slower. The OpenEXR manual recommends PXR24 for depth maps. Note, that
+mental ray defaults to RLE, previous versions were using ZIP compression
+by default.</p>
+
+<p>Each of these file formats implies a particular default data
+type (the entry underlined in column "Supported data types"), like
+<tt>"jpg"</tt> implies 8-bit RGB, and <tt>"zt"</tt> implies Z. The
+data type may be overridden by explicitly specifying another data
+type, such as a 16-bit type, in the
+<a href="node77.html#mi:framebuffer">framebuffer statement</a> (or
+<a href="node77.html#INDEX227">output statement</a>), as long as it is
+supported and appears in the above table.</p>
+<p>Note, that
+mental ray will optimize the actual list frame buffers that actually need to
+be created from the requested types. For example, the standard RGBA color
+frame buffer stores 8 bits per component by default, but if any frame buffer
+statement references a 16-bit type, just a single color frame buffer with
+16 bits per component may be actually created, because the 8 bit color data
+can easily and quickly be computed from that frame buffer.</p>
+<p>The <tt>null</tt> file format is useful to create a stub file
+during rendering, that can be used to attach the <i>imf_disp</i>
+viewer, without leaving the file on disk when rendering
+finishes.</p>
+<p>All mental images <b><a id="INDEX78"></a>native file format</b>s are
+following a simple layout: they contain a header followed by the image data.
+The header consists of a magic number byte identifying the format (as listed
+in table above), a null byte, width and height as unsigned shorts, as well as
+a version number as unsigned short. The image data are simply uncompressed
+values written pixel by pixel (with increasing horizontal x coordinate) and
+line by line (with increasing vertical y coordinate), beginning in the lower
+left corner (x = y = 0). The pixel data consists of one to four 8-bit, 16-bit,
+or 32-bit component values, in RGBA, XYZ, or UV order. All shorts, integers,
+and floats are big-endian (most significant byte first).</p>
+
+<p id="fo:outdatatype">The available data types are:</p>
+<div align="center">
+<table class="table">
+<tr>
+<th><i>type</i></th>
+<th><i>comp</i></th>
+<th><i>bpc</i></th>
+<th><i>contents</i></th>
+</tr>
+<tr>
+<td><tt>rgba</tt></td>
+<td>4</td>
+<td>8</td>
+<td>RGBA color</td>
+</tr>
+<tr>
+<td><tt>rgba_16</tt></td>
+<td>4</td>
+<td>16</td>
+<td>RGBA color (16 bits per component)</td>
+</tr>
+<tr>
+<td><tt>rgba_fp</tt></td>
+<td>4</td>
+<td>32</td>
+<td>RGBA color (floating-point)</td>
+</tr>
+<tr>
+<td><tt>rgb</tt></td>
+<td>3</td>
+<td>8</td>
+<td>RGB color</td>
+</tr>
+<tr>
+<td><tt>rgb_16</tt></td>
+<td>3</td>
+<td>16</td>
+<td>RGB color (16 bits per component)</td>
+</tr>
+<tr>
+<td><tt>rgb_fp</tt></td>
+<td>3</td>
+<td>32</td>
+<td>RGB color (floating-point)</td>
+</tr>
+<tr>
+<td><tt>rgbe</tt></td>
+<td>4</td>
+<td>8</td>
+<td><a href="node36.html#INDEX74">high dynamic range</a> RGB
+color</td>
+</tr>
+<tr>
+<td><tt>a</tt></td>
+<td>1</td>
+<td>8</td>
+<td>Alpha channel</td>
+</tr>
+<tr>
+<td><tt>a_16</tt></td>
+<td>1</td>
+<td>16</td>
+<td>Alpha channel (16 bits per component)</td>
+</tr>
+<tr>
+<td><tt>a_fp</tt></td>
+<td>1</td>
+<td>32</td>
+<td>Alpha channel (floating-point)</td>
+</tr>
+<tr>
+<td><tt>s</tt></td>
+<td>1</td>
+<td>8</td>
+<td>synonymous with <tt>a</tt></td>
+</tr>
+<tr>
+<td><tt>s_16</tt></td>
+<td>1</td>
+<td>16</td>
+<td>synonymous with <tt>a_16</tt></td>
+</tr>
+<tr>
+<td><tt>s_fp</tt></td>
+<td>1</td>
+<td>32</td>
+<td>synonymous with <tt>a_fp</tt></td>
+</tr>
+<tr>
+<td><tt>z</tt></td>
+<td>1</td>
+<td>32</td>
+<td>depth channel</td>
+</tr>
+<tr>
+<td><tt>n</tt></td>
+<td>3</td>
+<td>32</td>
+<td>normal vectors</td>
+</tr>
+<tr>
+<td><tt>m</tt></td>
+<td>3</td>
+<td>32</td>
+<td>motion vectors</td>
+</tr>
+<tr>
+<td><tt>tag</tt></td>
+<td>1</td>
+<td>32</td>
+<td>label channel</td>
+</tr>
+<tr>
+<td><tt>vta</tt></td>
+<td>2</td>
+<td>16</td>
+<td>UV vector texture</td>
+</tr>
+<tr>
+<td><tt>vts</tt></td>
+<td>2</td>
+<td>16</td>
+<td>synonymous with <tt>vta</tt></td>
+</tr>
+<tr>
+<td><tt>bit</tt></td>
+<td>1</td>
+<td>1</td>
+<td>bitmask channel</td>
+</tr>
+<tr>
+<td><tt>coverage</tt></td>
+<td>1</td>
+<td>32</td>
+<td>coverage of most important object</td>
+</tr>
+</table>
+</div>
+<p>The <tt>rgb_h</tt> and <tt>rgba_h</tt> data types are supported
+only for <a href="node19.html#INDEX29">OpenEXR</a> image file format.
+They cause the data to be written to the OpenEXR file in half-float format.
+mental ray's frame buffer is actually storing in full floating point precision.
+This allows to render in full dynamic range but avoid storage overhead by
+writing half-float values with less precision to the OpenEXR file.</p>
+<p>The <a href="node36.html#INDEX73">RGBE</a>
+<a href="node36.html#INDEX74">high dynamic range</a> color data type can
+store RGB data whose components may exceed the value of 1.0, which is the
+normal limit for standard RGB data. There are two specialized file formats
+(HDR and CTH) for RGBE, but mental ray will also allow storing RGBE data in
+any 8-bit RGBA format, such as SGI RGB. This will result in images that can
+not be displayed by standard viewing programs because they would interpret
+the data as RGBA, but it has become common practice to use such formats to
+transport RGBE data to other tools that understand RGBE.</p>
+<p>The floating-point RGBA data type <tt>"rgba_fp"</tt> allows color and alpha
+values outside the normal range (0&hellip;1), and no
+<a href="node76.html#INDEX214">dithering</a> is applied even if explicitly
+enabled. In contrast, any conversion to the 8-bit or 16-bit formats will clamp
+values outside this interval. Note that dithering tends to reduce the
+effectivity of RLE compression.</p>
+<p>The difference between <tt>"vta"</tt> and <tt>"vts"</tt>, and between
+<tt>n</tt> and <tt>m</tt>, is significant only when automatic conversions are
+done. The file contents are identical except for the magic number in the file
+header.</p>
+<p id="INDEX79">mental ray can combine samples within a pixel in different ways,
+called <dfn id="fo:outfiltering">filtering</dfn> or
+<a id="INDEX81"></a><dfn id="fo:outinterpolation">interpolation</dfn>.
+The combination of existing samples can also <dfn id="INDEX80 fo:fb_pad">pad</dfn>
+the frame buffers to "bridge" unsampled pixels. Interpolation of colors, depths,
+normals, and motion vectors means that they are averaged, while interpolation
+of the labels means that the maximum label is used (taking the average label
+is not a good idea).
+Interpolation of depths only takes the average of non-infinite depths, and
+interpolation of normals and motion vectors only takes the average of vectors
+different from the null vector.</p>
+<p>If interpolation is turned off for a frame buffer, the last sample value
+(color, normal, motion vector, or label) within each pixel is stored, and
+pixels without samples get a copy from one of the neighboring pixels.
+Interpolation off for depth images is an exception: rather than using the
+last sample depth, the min depth is used - this can be useful for compositing.
+Interpolation is on by default for color frame buffers (including alpha and
+intensity frame buffers) and off by default for depth, normal, motion vector,
+and <b><a id="INDEX82"></a>label frame buffer</b>s.</p>
+<p><span class="new">3.6</span>
+Interpolation is controlled with the
+<a href="node77.html#mi:framebuffer">framebuffer</a> <code>filtering</code>
+property.
+</p>
+<p><span class="depr">Deprecated</span>
+In backwards compatible <a href="node77.html#INDEX227">output
+statements</a>, it is turned on by writing a "+" in the beginning
+of the output type and turned off by writing a "-" there. For
+example, to interpolate the depth samples, write "<tt>+z</tt>" in
+the output statement:</p>
+<a id="fo:outbuffer"></a>
+<table class="table">
+<tr>
+<th><i>type</i></th>
+<th><i>meaning</i></th>
+</tr>
+<tr>
+<td><tt>-rgba</tt></td>
+<td>last color</td>
+</tr>
+<tr>
+<td><tt>+rgba</tt></td>
+<td>average color</td>
+</tr>
+<tr>
+<td><tt>-z</tt></td>
+<td>lowest depth</td>
+</tr>
+<tr>
+<td><tt>+z</tt></td>
+<td>average depth, excluding infinite depths</td>
+</tr>
+<tr>
+<td><tt>-n</tt></td>
+<td>last normal</td>
+</tr>
+<tr>
+<td><tt>+n</tt></td>
+<td>average normal, excluding null vectors</td>
+</tr>
+<tr>
+<td><tt>-m</tt></td>
+<td>last motion vector</td>
+</tr>
+<tr>
+<td><tt>+m</tt></td>
+<td>average motion vector, excluding null vectors</td>
+</tr>
+<tr>
+<td><tt>-tag</tt></td>
+<td>last label</td>
+</tr>
+<tr>
+<td><tt>+tag</tt></td>
+<td>maximum label</td>
+</tr>
+</table>
+
+<div class="foot">
+
+<p id="foot1"><sup><a>1</a></sup>
+The distribution of OpenEXR requires the following copyright notice:
+<p>
+Copyright (c) 2002, Industrial Light &amp; Magic, a division of
+Lucas Digital Ltd. LLC<br />
+<br />
+All rights reserved.<br />
+<br />
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:</p>
+<ul>
+<li>Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.</li>
+<li>Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following
+disclaimer in the documentation and/or other materials provided
+with the distribution.</li>
+<li>Neither the name of Industrial Light &amp; Magic nor the names
+of its contributors may be used to endorse or promote products
+derived from this software without specific prior written
+permission.</li>
+</ul>
+<p>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+DAMAGE.</p>
+
+<p id="foot2"><sup><a>2</a></sup>
+The distribution of the PXR24 compressor requires the following copyright
+notice:
+<p>
+Copyright (c) 2004, Pixar Animation Studios<br />
+<br />
+All rights reserved.<br />
+<br />
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions
+are met:</p>
+<ul>
+<li>Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.</li>
+<li>Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following
+disclaimer in the documentation and/or other materials provided
+with the distribution.</li>
+<li>Neither the name of Pixar Animation Studios nor the names of
+its contributors may be used to endorse or promote products derived
+from this software without specific prior written permission.</li>
+</ul>
+<p>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+DAMAGE.</p>
+</div>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node37.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node39.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

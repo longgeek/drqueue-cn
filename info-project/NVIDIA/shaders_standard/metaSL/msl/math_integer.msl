@@ -1,0 +1,500 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+shader Math_int_invert
+{
+	input:
+		int integer = 0
+		{			
+			display_name("Integer");
+			soft_range(int(0),int(1));
+			description( "Integer to invert." );
+		};
+
+	output:
+		int result;
+
+	void main()
+	{
+		result   = 1 - integer;
+	}
+}
+{
+	description( "Subtracts the input from 1." );
+}
+;
+
+shader Math_int_expand
+{
+  input:
+    int integer = 0
+	{		
+		display_name("Integer");
+		soft_range(int(0),int(1));
+		description( "Integer to scale." );
+	};
+    int low   = 0
+	{	
+		display_name("Low");
+		soft_range(int(0),int(1));
+		description( "Low value of target range." );
+	};
+    int high  = 1
+	{	
+		display_name("High");
+		soft_range(int(0),int(1));
+		description( "High value of the target range." );
+	};
+   
+  output:
+    int result;
+    
+    void main()
+    {
+	result = (integer - low)/(high - low);
+    }
+}
+{
+	description( "Scales the input from the domain [0,1] to the range "
+                 "[Low, High]." );
+}
+;
+
+shader Math_int_compress
+{
+  input:
+    int integer = 0
+	{	
+		display_name("Integer");
+		soft_range(int(0),int(1));
+		description( "Integer to scale." );
+	};
+    int low   = 0
+	{	
+		display_name("Low");
+		soft_range(int(0),int(1));
+		description( "Low value of the domain." );
+	};
+    int high  = 1
+	{	
+		display_name("High");
+		soft_range(int(0),int(1));
+		description( "High value of the domain." );
+	};
+   
+  output:
+    int result;
+    
+    void main()
+    {
+	result = integer*(high - low) + low;
+    }
+}
+{
+	description( "Scales the input from the domain [Low, High] to the "
+                 "range [0, 1]." );
+}
+;
+
+shader Math_int_threshold
+{
+  input:
+    int integer     = 0
+	{	
+		display_name("Integer");
+		soft_range(int(0),int(1));
+		description( "Integer to threshold." );
+	};
+    int threshold = 0
+	{	
+		display_name("Threshold");
+		soft_range(int(0),int(1));
+		description( "Threshold value." );
+	};
+   
+  output:
+    int result;
+    
+    void main()
+    {
+	if (integer > threshold)
+	    result = integer;
+	else
+	    result = 0;
+    }
+}
+{
+	description( "Returns the input if it exceeds the threshold and "
+	             "zero otherwise." );
+}
+;
+
+shader Math_int_mix
+{
+	input:
+		int integer1 = 0
+		{	
+			display_name("Integer 1");
+			soft_range(int(0),int(1));
+			description( "First integer to mix." );
+		};
+		int integer2 = 1
+		{		
+			display_name("Integer 2");
+			soft_range(int(0),int(1));
+			description( "Second integer to mix." );
+		};
+		float mix = 0.5
+		{		
+			display_name("Mix");
+			soft_range(float(0),float(1));
+			description( "interpolation weight to apply.");
+		};
+
+	output:
+		int result;
+
+	void main()
+	{
+		result = int(lerp(float(integer1), float(integer2), mix));
+	}
+}
+{
+	description( "Performs linear interpolation between the two inputs.");
+}
+;
+
+shader Math_int_mod
+{
+
+	input:
+		int left = int(1)
+		{			
+			display_name("Left");
+			soft_range(int(0),int(1));
+			description( "Integer value to divide (numerator)." );
+		};
+		int right = int(1)
+		{			
+			display_name("Right");
+			soft_range(int(0),int(1));
+			description( "Integer value by which to divide "
+						 "(denominator)." );
+		};
+
+	output:
+		int result;
+
+	void main()
+	{
+	    result = left % right;
+	}
+}
+{
+	description( "Produces the remainder of dividing two integers." );
+}
+;
+
+shader Math_int_fmod
+{
+
+	input:
+		int left = int(1)
+		{
+			display_name("Left");
+			description( "Integer value to divide (numerator)." );
+		};
+		int right = int(1)
+		{
+			display_name("Right");
+			description( "Integer value by which to divide "
+						 "(denominator)." );
+		};
+
+	output:
+		int result;
+
+	void main()
+	{
+	    result = int(fmod(float(left), float(right)));
+	}
+}
+{
+	description( "Produces the floating-point remainder of dividing "
+                     "two integers." );
+}
+;
+
+shader Math_int2_fmod
+{
+
+	input:
+		int2 left = int2(1, 1)
+		{
+			display_name("Left");
+			description( "Integer values to divide (numerator)." );
+		};
+		int2 right = int2(1, 1)
+		{
+			display_name("Right");
+			description( "Integer values by which to divide "
+						 "(denominator)." );
+		};
+
+	output:
+		int2 result;
+
+	void main()
+	{
+	    result = int2(fmod(float2(left), float2(right)));
+	}
+}
+{
+	description( "Produces the floating-point remainder of dividing "
+                     "two sets of two integers." );
+}
+;
+
+shader Math_int3_fmod
+{
+
+	input:
+		int3 left = int3(1, 1, 1)
+		{
+			display_name("Left");
+			description( "Integer values to divide (numerator)." );
+		};
+		int3 right = int3(1, 1, 1)
+		{
+			display_name("Right");
+			description( "Integer values by which to divide "
+						 "(denominator)." );
+		};
+
+	output:
+		int3 result;
+
+	void main()
+	{
+	    result = int3(fmod(float3(left), float3(right)));
+	}
+}
+{
+	description( "Produces the floating-point remainder of dividing "
+                     "two sets of three integers." );
+}
+;
+
+shader Math_int4_fmod
+{
+
+	input:
+		int4 left = int4(1, 1, 1, 1)
+		{
+			display_name("Left");
+			description( "Integer values to divide (numerator)." );
+		};
+		int4 right = int4(1, 1, 1, 1)
+		{
+			display_name("Right");
+			description( "Integer values by which to divide "
+						 "(denominator)." );
+		};
+
+	output:
+		int4 result;
+
+	void main()
+	{
+	    result = int4(fmod(float4(left), float4(right)));
+	}
+}
+{
+	description( "Produces the floating-point remainder of dividing "
+                     "two sets of four integers." );
+}
+;
+
+shader Math_int_exp
+{
+
+	input:
+		int input = int(0)
+		{
+			display_name("Integer");
+			description( "Integer value to which to raise e." );
+		};
+
+	output:
+		int result;
+
+	void main()
+	{
+	    result = int(exp(float(input)));
+	}
+}
+{
+	description( "Produces the number e raised to the value of the input." );
+}
+;
+
+shader Math_int2_exp
+{
+
+	input:
+		int2 input = int2(0, 0)
+		{
+			display_name("Integer");
+			description( "Integer values to which to raise e." );
+		};
+
+	output:
+		int2 result;
+
+	void main()
+	{
+	    result = int2(exp(float2(input)));
+	}
+}
+{
+	description( "Produces the number e raised to each value of the input." );
+}
+;
+
+shader Math_int3_exp
+{
+
+	input:
+		int3 input = int3(0, 0, 0)
+		{	
+			display_name("Integer");
+			description( "Integer values to which to raise e." );
+		};
+
+	output:
+		int3 result;
+
+	void main()
+	{
+	    result = int3(exp(float3(input)));
+	}
+}
+{
+	description( "Produces the number e raised to each value of the input." );
+}
+;
+
+shader Math_int4_exp
+{
+
+	input:
+		int4 input = int4(0, 0, 0, 0)
+		{
+			display_name("Integer");
+			description( "Integer values to which to raise e." );
+		};
+
+	output:
+		int4 result;
+
+	void main()
+	{
+	    result = int4(exp(float4(input)));
+	}
+}
+{
+	description( "Produces the number e raised to each value of the input." );
+}
+;
+
+shader Math_int_exp2
+{
+
+	input:
+		int input = int(0)
+		{
+			display_name("Integer");
+			description( "Integer value to which to raise e." );
+		};
+
+	output:
+		int result;
+
+	void main()
+	{
+	    result = int(exp2(float(input)));
+	}
+}
+{
+	description( "Produces the number 2 raised to the value of the input." );
+}
+;
+
+shader Math_int2_exp2
+{
+
+	input:
+		int2 input = int2(0, 0)
+		{
+			display_name("Integer");
+			description( "Integer values to which to raise e." );
+		};
+
+	output:
+		int2 result;
+
+	void main()
+	{
+	    result = int2(exp2(float2(input)));
+	}
+}
+{
+	description( "Produces the number 2 raised to each value of the input." );
+}
+;
+
+shader Math_int3_exp2
+{
+	input:
+		int3 input = int3(0, 0, 0)
+		{
+			display_name("Integer");
+			description( "Integer values to which to raise e." );
+		};
+
+	output:
+		int3 result;
+
+	void main()
+	{
+	    result = int3(exp2(float3(input)));
+	}
+}
+{
+	description( "Produces the number 2 raised to each value of the input." );
+}
+;
+
+shader Math_int4_exp2
+{
+
+	input:
+		int4 input = int4(0, 0, 0, 0)
+		{
+			display_name("Integer");
+			description( "Integer values to which to raise e." );
+		};
+
+	output:
+		int4 result;
+
+	void main()
+	{
+	    result = int4(exp2(float4(input)));
+	}
+}
+{
+	description( "Produces the number 2 raised to each value of the input." );
+}
+;

@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Memory Allocation</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node154.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node156.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION153"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_mem_allocate">mi_mem_allocate</a></li>
+<li><a href="#api:mi_mem_reallocate">mi_mem_reallocate</a></li>
+<li><a href="#api:mi_mem_release">mi_mem_release</a></li>
+<li><a href="#api:mi_mem_strdup">mi_mem_strdup</a></li>
+<li><a href="#api:mi_mem_test_allocate">mi_mem_test_allocate</a></li>
+<li><a href="#api:mi_mem_test_reallocate">mi_mem_test_reallocate</a></li>
+</ul>
+
+<h3 id="api:mem">Memory Allocation</h3>
+
+<p>mental ray's memory allocation functions replace the standard
+<i>malloc</i> packages found on most systems. They have built-in
+functions for memory leak tracing and consistency checks, and
+handle errors automatically. Shaders should always use these
+functions and not <i>malloc</i> or similar libc functions
+directly.</p>
+
+<a id="INDEX794"></a>
+<h5 class="anchor" id="api:mi_mem_allocate">mi_mem_allocate</h5>
+<pre>
+    void *mi_mem_allocate(
+        const miUint    size) <span class="recent">3.7</span>
+</pre>
+<p>Accepts one argument specifying the size of the memory to
+allocate. A pointer to the allocated memory is returned. If the
+allocation fails, an error is reported automatically, and mental
+ray tries to recover memory or aborts if this fails. This call is
+guaranteed to return a valid pointer, or not to return at all. The
+allocated memory is zeroed. This and most other <i>mem_*</i>
+functions use locking and should therefore not be used in
+time-critical places to prevent
+<a href="node156.html#INDEX798">multithreading</a>
+<a href="node156.html#INDEX808">efficiency</a> from dropping through the
+floor. See page <a href="node156.html#efficiency">efficiency</a>
+for details on the effect of locks on efficiency. A good place for
+memory allocation is <a href="node159.html#INDEX835">init
+shader</a>s.</p>
+
+<h5 class="anchor" id="api:mi_mem_test_allocate">mi_mem_test_allocate</h5>
+<pre>
+    void *mi_mem_test_allocate(
+        const miUint    size) <span class="recent">3.7</span>
+</pre>
+<p>Accepts one argument specifying the size of the memory to
+allocate. A pointer to the allocated memory is returned. The
+allocated memory is zeroed. If the allocation fails, a null pointer
+is returned. This call is used when it is acceptable for an
+allocation to fail.</p>
+
+<a id="INDEX795"></a>
+<h5 class="anchor" id="api:mi_mem_reallocate">mi_mem_reallocate</h5>
+<pre>
+    void *mi_mem_reallocate(
+        void * const    mem,
+        const miUint    size) <span class="recent">3.7</span>
+</pre>
+<p>Changes the size of an allocated block of memory. There are two
+arguments: a pointer to the old block of memory, and the requested
+new size of that block. A pointer to the new block is returned,
+which may be different from the pointer to the old block. If the
+old pointer was a null pointer,
+<i><a href="node155.html#INDEX795">mi_mem_reallocate</a></i> behaves like
+<i>mi_mem_allocate</i>. If the new size is zero,
+<i><a href="node155.html#INDEX795">mi_mem_reallocate</a></i> behaves like
+<i><a href="node155.html#INDEX796">mi_mem_release</a></i>, and
+returns a null pointer. If there is an allocation error, an error
+is reported and raylib is aborted. Like
+<i><a href="node155.html#INDEX794">mi_mem_allocate</a></i>,
+<i><a href="node155.html#INDEX795">mi_mem_reallocate</a></i> never returns if
+the re-allocation fails. If the block grows, the extra bytes are
+zeroed.</p>
+
+<h5 class="anchor" id="api:mi_mem_test_reallocate">mi_mem_test_reallocate</h5>
+<pre>
+    void *mi_mem_test_reallocate(
+        void * const    mem,
+        const miUint    size) <span class="recent">3.7</span>
+</pre>
+<p>Change the size of an allocated block of memory. There are two
+arguments: a pointer to the old block of memory, and the requested
+new size of that block. A pointer to the new block is returned,
+which may be different from the pointer to the old block. If the
+old pointer was a null pointer, mi_mem_test_reallocate behaves like
+<i><a href="#api:mi_mem_test_allocate">mi_mem_test_allocate</a></i>.
+If the new size is zero, mi_mem_test_reallocate behaves like
+<i><a href="node155.html#INDEX796">mi_mem_release</a></i>, and
+returns a null pointer. If the block grows, the extra bytes are
+zeroed. If there is an allocation error, a null pointer is
+returned. This call is used when it is acceptable for an allocation
+to fail.</p>
+
+<a id="INDEX796"></a>
+<h5 class="anchor" id="api:mi_mem_release">mi_mem_release</h5>
+<pre>
+    void mi_mem_release(
+        void * const    mem)
+</pre>
+<p>Frees a block of memory. There is one argument: the address of
+the block. If a null pointer is passed, nothing is done. There is
+no return value. After releasing memory it may no longer be
+accessed.</p>
+
+<a id="INDEX797"></a>
+<h5 class="anchor" id="api:mi_mem_strdup">mi_mem_strdup</h5>
+<pre>
+    char *mi_mem_strdup(
+        const char      *text)
+</pre>
+<p>Allocates enough memory to hold <i>text</i> including the
+trailing null byte, copies <i>text</i> into the allocated memory,
+and returns it. The returned string must be released with
+<i><a href="node155.html#INDEX796">mi_mem_release</a></i>. This
+function is especially useful to pass strings to functions in the
+<i>mi_api_</i> family, which all expect allocated strings (and will
+automatically handle the required
+<i><a href="node155.html#INDEX796">mi_mem_release</a></i>).</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node154.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node156.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

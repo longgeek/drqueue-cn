@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shader Instance Data</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node161.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node163.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION160"></a>
+<h3>Shader Instance Data</h3>
+<p>If the data is separate for each shader instance, it can be
+created in the init shader and attached to the shader instance
+itself. This is the recommended method for preprocessing shader
+parameters into a form that simplifies later shader calls during
+rendering. For example, if a shader parameter specifies an angle in
+radians or degrees, converting the angle to the cosine of the angle
+once in advance can save millions of expensive cosine computations
+in the main body of the shader. Here is an example:</p>
+<pre>
+     DLLEXPORT void myshader_init(      /* init shader */
+         miState         *state,
+         struct myshader *paras,
+         miBoolean       *inst_req)
+     {
+         if (!paras)
+             *inst_req = miTRUE;
+         else {
+             struct mystruct **mydata;
+             mi_query(miQ_FUNC_USERPTR, state, 0, &amp;mydata);
+             *mydata = mi_mem_allocate(...);
+             (*mydata)-&gt;cos_angle = cos(*mi_eval_scalar(&amp;paras-&gt;angle));
+             ...
+         }
+     }
+
+     DLLEXPORT void myshader_exit(      /* exit shader */
+         miState         *state,
+         struct myshader *paras)
+     {
+         if (paras) {
+             struct mystruct **mydata;
+             mi_query(miQ_FUNC_USERPTR, state, 0, &amp;mydata);
+             mi_mem_release(*mydata);
+         }
+         return(miTRUE);
+     }
+
+     DLLEXPORT void myshader(           /* main shader */
+         miState         *state,
+         struct myshader *paras)
+     {
+         struct mystruct **mydata;
+         mi_query(miQ_FUNC_USERPTR, state, 0, &amp;mydata);
+         ...use (*mydata)-&gt;cos_angle...
+         return(miTRUE);
+     }
+</pre>
+<p>Note that the init shader first requests instance
+initializations by setting <i>inst_req</i> to <tt>miTRUE</tt>, and
+creating the instance data for each instance initialization,
+indicated by a nonzero <i>paras</i> pointer. (Refer to page
+<a href="node159.html#shaderinit">shaderinit</a> for information on
+the difference between shader initialization and shader instance
+initialization.) Similarly, the exit instance shader deletes the
+data.</p>
+<p>Note that this relies on the <i>angle</i> shader parameter to be
+constant. It is obtained only once with
+<i><a href="node138.html#INDEX525">mi_eval_scalar</a></i>, so this parameter
+cannot be attached to another shader that computes a new angle for
+each shader call. Since this is often desirable, the example above
+is a bit contrived.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node161.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node163.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

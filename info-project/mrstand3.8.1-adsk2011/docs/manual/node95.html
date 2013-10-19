@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Contour Output</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+<style type="text/css">
+.inline	{ margin: 0; padding: 0; display: inline; }
+.inline td { margin: 0; padding: 0 0.1em; }
+</style>
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node94.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node96.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION93"></a>
+
+<h3>Contour Output</h3>
+
+<p>After the regular image has been computed, a contour output
+shader can get the contour line segments and use them to for
+example render a contour image or write a file with contour
+information. The user can write contour output shaders using the
+built-in function <i><a href="node153.html#INDEX789">mi_get_contour_line</a></i>.</p>
+<p>There are three contour output shaders in <tt>contour.so</tt>.
+They can generate a contour image, a contour image composited over
+the regular image, and a PostScript file with black contours. The
+output shader has to be specified in the <tt>camera</tt>.</p>
+<p>To get a contour image called <tt>mycontourimage.rgb</tt> in
+<tt>rgb</tt> format, write</p>
+<pre>
+     output "contour,rgba" "contour_only" ()
+     output "rgb" "mycontourimage.rgb"
+</pre>
+<p>To get an image called <tt>mycontourimage2.rgb</tt> (in
+<tt>rgb</tt> format) containing contours composited over the
+regular image, write</p>
+<pre>
+     output "contour,rgba" "contour_composite" ()
+     output "rgb" "mycontourimage2.rgb"
+</pre>
+<p>The <tt>contour_composite</tt> output shader has two optional
+Boolean parameters: <tt>glow</tt> and <tt>maxcomp</tt>. The
+<tt>glow</tt> parameter makes all contours become darker and more
+transparent near their edges, creating a glow effect.
+<tt>maxcomp</tt> specifies that when a contour is over another
+contour, the maximum of the two colors (in each color band) should
+be used. If <tt>maxcomp</tt> is not specified (or set
+<tt>off</tt>), normal alpha compositing is used. The
+<tt>contour_only</tt> output shader also has the <tt>glow</tt> and
+<tt>maxcomp</tt> parameters, and in addition it has a
+<tt>background</tt> parameter which determines the background color
+(default is black).</p>
+<p>To get a PostScript file called <tt>mycontourfile.ps</tt> with
+all contours in black, write</p>
+<pre>
+     output "contour,rgba" "contour_ps" (
+        "paper_size"         4,
+        "paper_scale"        1.0,
+        "paper_transform_b"  0.0,
+        "paper_transform_d"  1.0,
+        "title"              on,
+        "landscape"          on,
+        "ink_stroke_dir"     1.0 1.0 0.0,
+        "ink_min_frac"       0.1,
+        "file_name"          "mycontourfile.ps"
+     ) 
+</pre>
+<p>The PostScript file in this example gives A4 paper size with
+full scale. <tt>"paper_size"</tt> is an integer, with 0 indicating
+"letter" size, 1 indicating "executive", 2 indicating "legal", 3-6
+indicating "a3", "a4", "a5", "a6", 7-9 indicating "b4", "b5", "b6",
+and 10 indicating "11x17". The parameter <tt>paper_scale</tt>
+scales the PostScript output. Furthermore, the Postscript
+coordinates are transformed according to the matrix</p>
+<table class="inline" style="width:auto;margin-left:4em">
+<tr>
+<td rowspan="2"><span style="font-size:180%">(</span></td>
+<td class="math" style="font-size:90%">1&nbsp;</td>
+<td class="math" style="font-size:90%">b</td>
+<td rowspan="2"><span style="font-size:180%">)</span></td>
+</tr>
+<tr>
+<td class="math" style="font-size:90%">0&nbsp;</td>
+<td class="math" style="font-size:90%">d</td>
+</tr>
+</table>
+<p>where <i>b</i> and <i>d</i> are the parameters <tt>"paper_transform_b"</tt>
+and <tt>"paper_transform_d"</tt>. This makes it possible to compensate
+for printers that print out with a slight skew. The Boolean
+<tt>title</tt> determines whether a title (consisting of file name
+and <a href="node199.html#INDEX1061">frame number</a>) and a frame
+around the image are written. The Boolean <tt>landscape</tt> makes
+the output be in landscape mode rather than portrait mode. If the
+parameter <tt>ink_stroke_dir</tt> is set, each contour segment will
+have a width that depends on its orientation, giving an ink pen
+look. For the ink pen look, <tt>ink_min_frac</tt> specifies the
+minimum fraction of the original contour thickness (at contour
+segment orientations perpendicular to the stroke direction). The
+<tt>file_name</tt> specifies the name of the file that the contours
+are written to.</p>
+<p>It is also possible to get both the regular image (without
+contours) and one of the above at the same time. For example, to
+get the regular image and an image of the contours, write</p>
+<pre>
+     output "rgb" "myimage.rgb"
+     output "contour,rgba" "contour_only" ()
+     output "rgb" "mycontourimage.rgb"
+</pre>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node94.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node96.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

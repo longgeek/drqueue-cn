@@ -1,0 +1,6234 @@
+#*****************************************************************************
+#
+# Copyright 2008 by Autodesk
+# 
+#*****************************************************************************
+# Author:	Norman Crafts
+# Created:	2001.04.05
+# Module:	3dsmax
+# Purpose:	.mi declarations for 3dsmax state shaders
+#
+# Exports:
+# Revision History:
+#	20 aout 2003 - pfbreton, defaults settings work
+#	20 aout 2003 - pfbreton, defaults settings work
+#	12 Juillet 2003 - pfbreton, hiding dgs and dielectric photons shaders
+#                         defaults and ranges settings
+#****************************************************************************/
+#*****************************************************************************
+# Copyright 1986-2008 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+# Germany. All rights reserved.
+#*****************************************************************************
+# Author:   Zap
+# Created:  07-08-13
+# Module:   max mr render elements
+# Purpose:  mental ray render elements
+#
+# Exports:
+#   max_mrRenderElement
+#   max_mrStoreElement           (for end users)
+#   max_mrStoreElements          (for phenomena writing)
+#   max_VisibilityTrack          (for phenomena writing)
+#   max_WireColor                (for end users)
+#   max_MultiSubMap              (for end users)
+#
+# History:
+#****************************************************************************/
+
+min version "3.6.0"
+max version "3.11.99"
+
+#-------------------------------------------- data declarations
+
+# Include guard for AdskShaders.mi side by side support.
+# The following shaders are declared in both locations.
+
+$ifndef "3ds_max_user_data_defined"
+set "3ds_max_user_data_defined" "true"
+
+declare data
+	"max_SceneData" (
+		boolean "IsMtlEdit",
+			color "AmbientLight",
+			color "GlobalLightLevel",
+			boolean "ForceDoubleSided",
+			scalar "GammaCorrection",
+			scalar "NearRange",
+			scalar "FarRange",
+			scalar "PhysicalScale",
+			scalar "PixelAspectRatio",
+			shader "ToneOpShader",
+			color "backgroundColor",
+			boolean "doingBakeToTexture",
+			boolean "ToneOpInactive",
+			scalar "InternalToMeterScale",
+			boolean "IsProtein",
+			boolean "IsYUp",
+			scalar "BlurredReflectionMultiplier",
+			scalar "BlurredRefractionMultiplier",
+			integer "AreaShadowSamples",
+			boolean "clientManagesUVTransforms",
+			integer "renderQuality" default -1 # -1 implies the mia optimizer will not touch any settings.
+	)
+        version 8
+end declare
+
+declare data
+	"max_NodeData" (
+		color "WireColor",
+		integer "NodeID",
+		integer "NodeRenderID",
+		array light "illuminators",
+		array light "shadowmakers",
+		boolean "useGlobalLights",
+		array integer "materialRequirements",
+		integer "lightIncludeExcludeID",
+		transform "texPreTransform"
+	)
+	version 3
+end declare
+
+declare data
+	"max_ObjectData" (
+		vector "bvmin",
+		vector "bvmax",
+		array integer "mapchannels",
+        data "particleData"
+	)
+	version 7
+end declare
+
+$endif # 3ds_max_user_data_defined
+
+declare data
+    "max_ParticleData" (
+        integer "numParticles",
+        array integer "particleAge",
+        array integer "particleLife",
+        array scalar "particleSize",
+        array vector "particlePosition",
+        array vector "particleVelocity",
+        array integer "particleCenter"
+    )
+    version 1
+end declare
+
+declare data
+	"max_GizmoData" (
+		integer "Type",
+		integer "Seed",
+		scalar  "Radius",
+		scalar  "Height",
+		scalar  "Width",
+		scalar  "Length",
+		transform "tm"
+	)
+	version 1
+end declare
+
+declare data
+	"max_RTTCageData" (
+		array vector "vertices",
+		array integer "faces"
+	)
+	version 1
+end declare
+
+
+# This is a dummy shader used in the mental ray material phenomenon.
+declare shader
+	"max_dummy" ()
+    gui "gui_max_dummy" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+end declare
+
+gui "gui_max_SceneData" {
+    control "Global" "Global" (
+        "hidden"
+    )
+    control "ToneOpShader" "shader" (
+		"referenceTarget"           
+    )       
+}
+
+gui "gui_max_NodeData" {
+    control "Global" "Global" (
+        "hidden"
+    )
+    control "illuminators" "array light" (
+		"no_reference"
+	)
+    control "shadowmakers" "array light" (
+		"no_reference"
+	)
+}
+
+gui "gui_max_ObjectData" {
+    control "Global" "Global" (
+        "hidden"
+    )
+}
+
+gui "gui_max_GizmoData" {
+    control "Global" "Global" (
+        "hidden"
+    )
+}
+
+gui "gui_max_ParticleData" {
+    control "Global" "Global" (
+        "hidden"
+    )
+}
+
+gui "gui_max_RTTCageData" {
+	control "Global" "Global" (
+		"hidden"
+	)
+}
+
+#-------------------------------------------- misc. shaders
+
+# This shader returns true if currently rendering in the material editor,
+# and false otherwise.
+declare shader
+	boolean "max_is_material_editor" ()
+	version 1
+	apply texture
+	gui "gui_max_is_material_editor" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+end declare
+		
+#-------------------------------------------- output shaders
+
+declare shader
+	"max_base_ImageCollector" ()
+	version 1
+	apply output
+    gui "gui_max_base_ImageCollector" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+end declare
+
+declare shader
+	"max_base_VideoColorCorrect" (
+		integer "type",
+		integer "standard"
+	)
+	version 1
+	apply output
+    gui "gui_max_base_VideoColorCorrect" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+end declare
+
+declare shader
+	"max_base_VideoSuperBlack" (
+		integer "threshold"
+	)
+	version 1
+	apply output
+    gui "gui_max_base_VideoSuperBlack" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+end declare
+
+#-------------------------------------------- GBuffer shader
+
+declare shader
+	"max_base_GBuffer" (
+		boolean "MtlID",
+		boolean "NodeID",
+		boolean "NodeRenderID",
+		boolean "RealColor",
+		boolean "UV",
+		boolean "Velocity"
+	)
+	version 1
+    gui "gui_max_base_GBuffer" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+end declare
+
+declare shader
+	"max_base_GBuffer_lens" (
+		boolean "MtlID",
+		boolean "NodeID",
+		boolean "NodeRenderID",
+		boolean "RealColor",
+		boolean "UV",
+		boolean "Velocity"
+	)
+	version 1
+	apply lens
+    gui "gui_max_base_GBuffer_lens" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+end declare
+
+#-------------------------------------------- coord generators
+
+declare shader
+	"max_base_UVGenerator" (
+		integer "MapSlotType",
+		integer "EnvType",
+		integer "MapChannel",
+		integer "UVWSource",
+		boolean "ShowMapOnBack",
+		scalar  "UOffset",
+		scalar  "UScale",
+		boolean "UWrap",
+		boolean "UMirror",
+		scalar  "VOffset",
+		scalar  "VScale",
+		boolean "VWrap",
+		boolean "VMirror",
+		scalar  "UAngle",
+		scalar  "VAngle",
+		scalar  "WAngle",
+		integer "UVAxis",
+		boolean	"Clip",
+		scalar  "Blur",
+		scalar  "BlurOffset",
+		boolean "Noise",
+		boolean "Animate",
+		scalar  "Amount",
+		scalar  "Size",
+		integer "Level",
+		scalar  "Phase",
+		boolean "RealWorldMapSize",
+		integer "XCanvasSize",
+		integer "YCanvasSize",
+		integer "XCanvasOffset" default -1,
+		integer "YCanvasOffset" default -1,
+	)
+	version 4
+
+    apply texture
+
+    gui "gui_max_base_UVGenerator" {
+        control "Global" "Global" (
+            "uiName"  "UV Generator",
+			"helpCHM" "max/max help.chm",
+            "category"  "Texture Space Mapping",
+            "hidden"
+        )
+        control "MapSlotType" "integer" (
+            "value" 0
+        )
+        control "EnvType" "integer" (
+            "value" 4
+        )
+        control "MapChannel" "integer" (
+            "value" 1
+        )
+        control "UVWSource" "integer" (
+            "value" 0
+        )
+        control "ShowMapOnBack" "boolean" (
+            "value" 1
+        )
+        control "UOffset" "float" (
+            "value" 0.0
+        )
+        control "UScale" "float" (
+            "value" 1.0
+        )
+        control "UWrap" "boolean" (
+            "value" 1
+        )
+        control "UMirror" "boolean" (
+            "value" 0
+        )
+        control "VOffset" "float" (
+            "value" 0.0
+        )
+        control "VScale" "float" (
+            "value" 1.0
+        )
+        control "VWrap" "boolean" (
+            "value" 1
+        )
+        control "VMirror" "boolean" (
+            "value" 0
+        )
+        control "UAngle" "float" (
+            "value" 0
+        )
+        control "VAngle" "float" (
+            "value" 0
+        )
+        control "WAngle" "float" (
+            "value" 0
+        )
+        control "UVAxis" "integer" (
+            "value" 0
+        )
+        control "Clip" "boolean" (
+           "value" 1
+        )
+        control "Blur" "float" (
+            "value" 1
+        )
+        control "BlurOffset" "float" (
+            "value" 0
+        )
+        control "Noise" "boolean" (
+            "value" 0
+        )
+        control "Animate" "boolean" (
+            "value" 0
+        )
+        control "Amount" "float" (
+            "value" 1.0
+        )
+        control "Size" "float" (
+            "value" 1.0
+        )
+        control "Level" "integer" (
+            "value" 1
+        )
+        control "Phase" "float" (
+            "value" 0
+        )
+        control "RealWorldMapSize" "boolean" (
+            "value" 0
+        )
+        control "XCanvasSize" "integer" (
+            "value" 0
+        )
+        control "YCanvasSize" "integer" (
+            "value" 0
+        )
+    }
+
+end declare
+
+declare shader
+	struct {
+		vector	"UV",
+		vector	"dUV"
+	}
+	"max_UVCoordinate" (
+		integer "MapSlotType",
+		integer "EnvType",
+		integer "MapChannel",
+		integer "UVWSource",
+		boolean "ShowMapOnBack",
+		scalar  "UOffset",
+		scalar  "UScale",
+		boolean "UWrap",
+		boolean "UMirror",
+		scalar  "VOffset",
+		scalar  "VScale",
+		boolean "VWrap",
+		boolean "VMirror",
+		scalar  "UAngle",
+		scalar  "VAngle",
+		scalar  "WAngle",
+		integer "UVAxis",
+		boolean	"Clip",
+		scalar  "Blur",
+		scalar  "BlurOffset",
+		boolean "Noise",
+		boolean "Animate",
+		scalar  "Amount",
+		scalar  "Size",
+		integer "Level",
+		scalar  "Phase",
+		boolean "RealWorldMapSize"
+	)
+	version 3
+	apply texture
+    gui "gui_max_UVCoordinate" {
+        control "Global" "Global" (
+            "uiName"  "UV Coordinate",
+			"helpCHM" "max/max help.chm",
+            "category"  "Texture Space Mapping",
+            "hidden"
+        )
+    }
+end declare
+
+declare shader
+	"max_base_XYZGenerator" (
+		integer "CoordinateSystem",
+		integer "MapChannel",
+		vector "Offset",
+		vector "Tiling",
+		vector "Angle",
+		scalar "Blur",
+		scalar "BlurOffset"
+	)
+	version 2
+
+    apply texture
+
+    gui "gui_max_base_XYZGenerator" {
+        control "Global" "Global" (
+            "uiName"  "XYZ Generator",
+			"helpCHM" "max/max help.chm",
+            "category"  "Texture Space Mapping",
+            "hidden"
+        )
+        control "CoordinateSystem" "integer" (
+            "value" 0
+        )
+        control "MapChannel" "integer" (
+            "value" 1
+        )
+         control "Offset" "vector" (
+             "value" 0 0 0
+         )
+         control "Tiling" "vector" (
+             "value" 1 1 1
+         )
+         control "Angle" "vector" (
+             "value" 0 0 0
+         )
+        control "Blur" "float" (
+            "value" 1
+        )
+        control "BlurOffset" "float" (
+            "value" 0
+        )
+}
+end declare
+
+declare shader
+	struct {
+		vector "XYZ",
+		vector "dXYZ"
+	}
+	"max_XYZCoordinate" (
+		integer "CoordinateSystem",
+		integer "MapChannel",
+		vector "Offset",
+		vector "Tiling",
+		vector "Angle",
+		scalar "Blur",
+		scalar "BlurOffset"
+	)
+	version 2
+	apply texture
+    gui "gui_max_XYZCoordinate" {
+        control "Global" "Global" (
+            "uiName"  "XYZ Coordinate",
+			"helpCHM" "max/max help.chm",
+            "category"  "Texture Space Mapping",
+            "hidden"
+        )
+    }
+end declare
+
+#-------------------------------------------- utility shaders
+
+declare shader
+	"max_base_Output" (
+		scalar "RGBAmount",
+		scalar "RGBOffset",
+		scalar "OutputAmount",
+		scalar "BumpAmount",
+		boolean "Invert",
+		boolean "Clamp",
+		boolean "AlphaFromRGB",
+		boolean "UseColorMap",
+		boolean "UseRGBCurve",
+		shader "RGBCurve",
+		shader "IntensityCurve"
+	)
+	version 1
+    gui "gui_max_base_Output" {
+        control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+            "category"  "Utility",
+            "hidden"
+        )
+        control "RGBAmount" "scalar" (
+            "value" 1
+        )
+        control "RGBOffset" "scalar" (
+            "value" 0
+        )
+        control "OutputAmount" "scalar" (
+            "value" 1
+        )
+        control "BumpAmount" "scalar" (
+            "value" 1
+        )
+        control "Invert" "boolean" (
+            "value" 0
+        )
+        control "Clamp" "boolean" (
+            "value" 0
+        )
+        control "AlphaFromRGB" "boolean" (
+            "value" 0
+        )
+        control "UseColorMap" "boolean" (
+            "value" 0
+        )
+        control "UseRGBCurve" "boolean" (
+            "value" 0
+        )
+        control "RGBCurve" "shader" (
+			"referenceTarget"           
+        )
+        control "IntensityCurve" "shader" (
+			"referenceTarget"
+        )
+}
+end declare
+
+declare shader
+	"max_base_CurveControl" (
+		integer "Flags",
+		scalar "XMin",
+		scalar "XMax",
+		scalar "YMin",
+		scalar "YMax",
+		array shader "Curves"
+	)
+	version 1
+    gui "gui_max_base_CurveControl" {
+        control "Global" "Global" (
+            "hidden"
+        )
+        control "Curves" "array shader" (
+            "referenceTarget"
+        )
+	}
+
+end declare
+
+declare shader
+	"max_base_Curve" (
+		integer "Flags",
+		integer "LookupTableSize",
+		array struct "Points" {
+			scalar "x",
+			scalar "y",
+			scalar "xIn",
+			scalar "yIn",
+			scalar "xOut",
+			scalar "yOut",
+			integer "Flags"
+		}
+	)
+	version 1
+    gui "gui_max_base_Curve" {
+        control "Global" "Global" (
+            "hidden"
+        )
+	}
+end declare
+
+#-------------------------------------------- texture shaders
+
+declare shader
+	"max_base_MeditBackground" (
+		integer "Type",
+		color "Color",
+		color texture "Image"
+	)
+	version 1
+	apply texture
+
+    gui "gui_max_base_MeditBackground" {
+        control "Global" "Global" (
+            "hidden"
+        ) 
+    }      
+
+end declare
+
+declare shader
+	"max_Bitmap" (
+		struct "Parameters" {
+			scalar "ClipU",
+			scalar "ClipV",
+			scalar "ClipW",
+			scalar "ClipH",
+			scalar "Jitter",
+			boolean "UseJitter",
+			boolean "Apply",
+			integer "CropPlace",
+			integer "Filtering",
+			integer "MonoOutput",
+			integer "RGBOutput",
+			integer "AlphaSource",
+			boolean "PreMultAlpha",
+			color texture "Bitmap",
+			shader "Coords",
+			shader "Output"
+		},
+		struct "time parameters" {
+			integer "startTime",
+			scalar "playBackRate",
+			integer "endCondition",
+			boolean "tieTimeToMatIDs"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID",
+			integer "currentTime",
+			integer "firstFrame",		# BitmapInfo::FirstFrame()
+			integer "lastFrame",		# BitmapInfo::LastFrame()
+			integer "ticksPerFrame",
+			array color texture "bitmapFrames",	#used when tieTimeToMatIDs is true
+                        integer  "bitmapFrames_Padding",   #required by shader for optimisation tricks
+
+			boolean	"useBitmapEvalCallback",
+			integer	"bitmapEvalCallback",
+			integer	"bitmapEvalArg",
+			integer "bitmapType",
+			array integer "bitmapEvalArgFrames", #used when tieTimeToMatIDs is true
+                        integer "bitmapEvalArgFrames_Padding",
+
+			integer	"bitmapWidth",
+			integer	"bitmapHeight",
+                        integer "filterEvalCallback",
+
+                        # Only really needed for 64 bit builds; hi-order values of the pointers.
+                        integer  "bitmapEvalCallbackHi64",
+                        integer  "bitmapEvalArgHi64",
+                        integer "filterEvalCallbackHi64",
+                        array integer "bitmapEvalArgFramesHi64",
+                        integer "bitmapEvalArgsFramesHi64_Padding",
+                        scalar  "Gamma"
+		}
+	)
+   version 4
+	apply texture
+    gui "gui_max_Bitmap" {
+		control "Global" "Global" (
+			"uiName" "Max Bitmap",
+			"helpCHM" "max/max help.chm",
+			"category" "Texture",
+            "hidden"
+		)
+        control "Parameters" "struct" {
+            control "ClipU" "scalar" (
+                "value" 0
+            )
+            control "ClipV" "scalar" (
+                "value" 0
+            )
+            control "ClipW" "scalar" (
+                "value" 1
+            )
+            control "ClipH" "scalar" (
+                "value" 1
+            )
+            control "UseJitter" "boolean" (
+                "value" 1
+            )
+            control "Apply" "boolean" (
+                "value" 0
+            )
+            control "CropPlace" "integer" (
+                "value" 0
+            )
+            control "Filtering" "integer" (
+                "value" 0
+            )
+            control "MonoOutput" "integer" (
+                "value" 0
+            )
+            control "RGBOutput" "integer" (
+                "value" 0
+            )
+            control "AlphaSource" "integer" (
+                "value" 2
+            )
+            control "PreMultAlpha" "integer" (
+                "value" 1
+            )
+            control "Coords" "integer" (
+                "value" "max_base_UVGenerator",
+                "referenceTarget"
+            )
+            control "Output" "shader" (
+                "value" "max_base_Output",
+                "referenceTarget"
+            )
+		}
+        control "Time Parameters" "struct" {
+            control "StartTime" "integer" (
+                "value" 0
+            )
+            control "PlayBackRate" "scalar" (
+                "value" 1
+            )
+            control "EndCondition" "integer" (
+                "value" 0
+            )
+		}
+    }        
+
+end declare
+
+declare shader
+	"max_Bricks" (
+		struct "Parameters" {
+			color "MortarColor",
+			color "BrickColor",
+			scalar "HorizontalCount",
+			scalar "VerticalCount",
+			scalar "ColorVariance",
+			scalar "VerticalGap",
+			scalar "HorizontalGap",
+			scalar "LineShift",
+			scalar "RandomShift",
+			integer "Holes",
+			integer "RandomSeed",
+			integer "LockGapSymmetry",
+			scalar "FadeVariance",
+			scalar "EdgeRoughness",
+			boolean "ShowTextureSwatches",
+			boolean "UseRowEdit",
+			boolean "UseColumnEdit",
+			scalar "ChangeRow",
+			scalar "ChangeColumn",
+			integer "PerColumn",
+			integer "PerRow",
+			integer "BrickType",
+			shader "Coords",
+			color texture "MortarMap",
+			color texture "BrickMap",
+			boolean "MortarMapEnabled",
+			boolean "BrickMapEnabled"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+    gui "gui_max_Bricks" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Bricks",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "MortarMap" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "BrickMap" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+
+			control "MortarColor" "color" (
+				"uiName" "Mortar Color",
+				"value" 0.83 0.77 0.72
+			)
+			control "BrickColor" "color" (
+				"uiName" "Brick Color",
+				"value" 0.65 0.3 0.2
+			)
+			control "HorizontalCount" "float" (
+				"uiName" "Horizontal Count",
+				"value" 3.0
+			)
+			control "VerticalCount" "float" (
+				"uiName" "Vertical Count",
+				"value" 8.0
+			)
+			control "ColorVariance" "float" (
+				"uiName" "Color Variance",
+				"value" 0.4
+			)
+			control "VerticalGap" "float" (
+				"uiName" "Vertical Gap",
+				"value" 1.0
+			)
+			control "HorizontalGap" "float" (
+				"uiName" "Horizontal Gap",
+				"value" 1.0
+			)
+			control "LineShift" "float" (
+				"uiName" "Line Shift",
+				"value" 0.0
+			)
+			control "RandomShift" "float" (
+				"uiName" "Random Shift",
+				"value" 0.0
+			)
+			control "Holes" "float" (
+				"uiName" "Holes",
+				"value" 0.0
+			)
+			control "RandomSeed" "integer" (
+				"uiName" "Random Seed",
+				"value" 21996
+			)
+			control "LockGapSymmetry" "integer" (
+				"uiName" "Lock Gap Symetry",
+				"value" 1
+			)
+			control "FadeVariance" "float" (
+				"uiName" "Fade Variance",
+				"value" 0.2
+			)
+			control "EdgeRoughness" "float" (
+				"uiName" "Edge Roughness",
+				"value" 0.0
+			)
+ 			control "ShowTextureSwatches" "boolean" (
+				"uiName" "ShowTexture Swatches",
+ 				"value" 1
+ 			)
+ 			control "UseRowEdit" "boolean" (
+				"uiName" "Use Row Edit",
+ 				"value" 0
+ 			)
+ 			control "UseColumnEdit" "boolean" (
+				"uiName" "Use Column Edit",
+ 				"value" 0
+ 			)
+			control "ChangeRow" "float" (
+				"uiName" "Change Row",
+				"value" 1.0
+			)
+			control "ChangeColumn" "float" (
+				"uiName" "Change Column",
+				"value" 1.0
+			)
+			control "PerColumn" "integer" (
+				"uiName" "Per Coloumn",
+				"value" 2
+			)
+			control "PerRow" "integer" (
+				"uiName" "Per Row",
+				"value" 2
+			)
+			control "BrickType" "integer" (
+				"uiName" "Brick Type",
+				"value" 1
+			)
+			control "MortarMapEnabled" "float" (
+				"uiName" "Use Mortar Map",
+				"value" 0.0
+			)
+			control "BrickMapEnabled" "float" (
+				"uiName" "Use Brick Map",
+				"value" 0.0
+			)
+ 			control "Coords" "shader" (
+ 				"value" "max_base_UVGenerator",
+                "referenceTarget"
+ 			)
+
+        }
+    }  
+
+end declare
+
+declare shader
+	"max_Cellular" (
+		struct "Parameters" {
+			color "CellColor",
+			color "DivColor1",
+			color "DivColor2",
+			color texture "CellMap",
+			color texture "DivMap1",
+			color texture "DivMap2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			boolean "Map3Enabled",
+			scalar "Variation",
+			scalar "Size",
+			scalar "Spread",
+			scalar "LowThresh",
+			scalar "MidThresh",
+			scalar "HighThresh",
+			integer "type",
+			boolean "Fractal",
+			scalar "Iteration",
+			scalar "Roughness",
+			scalar "Smooth",
+			boolean "Adaptive",
+			shader "Coords",
+			shader "Output"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+    gui "gui_max_Cellular" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Cellular",
+			"category" "Texture",
+            "hidden"
+		)
+        control "Parameters" "struct" {
+			control "CellColor" "color" (
+				"uiName" "Cell Color",
+				"value" 1.000000 1.000000 1.000000
+			)
+			control "DivColor1" "color" (
+				"uiName" "Division Color 1",
+				"value" 0.5 0.5 0.5
+			)
+			control "DivColor2" "color" (
+				"uiName" "Division Color 2",
+				"value" 0 0 0
+			)
+            control "CellMap" "color texture" (
+				"uiName" "Cell map",
+                "textureInfo" "max_texmap"
+            )
+            control "DivMap1" "color texture" (
+				"uiName" "Division Map 1",
+                "textureInfo" "max_texmap"
+            )
+            control "DivMap2" "color texture" (
+				"uiName" "Division Map 2",
+                "textureInfo" "max_texmap"
+            )
+ 			control "Map1Enabled" "boolean" (
+				"uiName" "Use Cell Map",
+ 				"value" 1
+ 			)
+ 			control "Map2Enabled" "boolean" (
+				"uiName" "Use Division 1 map",
+ 				"value" 1
+ 			)
+ 			control "Map3Enabled" "boolean" (
+				"uiName" "Use Division 2 map",
+ 				"value" 1
+ 			)
+			control "Variation" "float" (
+				"uiName" "Variation",
+				"value" 0,
+				"range" 0.000000 100.000000
+			)
+			control "Size" "float" (
+				"uiName" "Size",
+				"value" 5,
+				"range" 0.001000 1000000000.000000
+			)
+			control "Spread" "float" (
+				"uiName" "Spread",
+				"value" 0.5,
+				"range" 0.001000 1000000000.000000
+			)
+			control "LowThresh" "float" (
+				"uiName" "Low Threshold",
+				"value" 0,
+				"range" 0.000000 1.000000
+			)
+			control "MidThresh" "float" (
+				"uiName" "Mid Threshold",
+				"value" 0.5,
+				"range" 0.000000 1.000000
+			)
+			control "HighThresh" "float" (
+				"uiName" "High Threshold",
+				"value" 1,
+				"range" 0.000000 1.000000
+			)
+			control "type" "enum" (
+				"uiName" "Type",
+				"value" 0,
+				"range" 0 2
+			)
+ 			control "Fractal" "boolean" (
+				"uiName" "Fractal",
+ 				"value" 0
+ 			)
+			control "Iteration" "float" (
+				"uiName" "Iterations",
+				"value" 3,
+				"range" 1.000000 20.000000
+			)
+			control "Roughness" "float" (
+				"uiName" "Roughness",
+				"value" 0,
+				"range" 0.000000 1.000000
+			)
+			control "Smooth" "float" (
+				"uiName" "Smooth",
+				"value" 0.1,
+				"range" 0.000000 1.000000
+			)
+ 			control "Adaptive" "boolean" (
+				"uiName" "Adaptive",
+ 				"value" 1
+ 			)
+ 			control "Coords" "shader" (
+				"uiName" "Coordinates",
+ 				"value" "max_base_XYZGenerator",
+                "referenceTarget"
+ 			)
+ 			control "Output" "shader" (
+				"uiName" "Output",
+ 				"value" "max_base_Output",
+                "referenceTarget"
+ 			)
+        }
+    }  
+
+end declare
+
+declare shader
+	"max_Checker" (
+		struct "Parameters" {
+			scalar "Soften",
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+    
+    gui "gui_max_Checker" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Checker",
+			"category" "Texture",
+            "hidden"
+		)        
+		control "Parameters" "struct" {
+            control "Soften" "scalar" (
+                "value" 0,
+		"range" 0 5
+            )
+            control "Color1" "color" (
+                "value" 0 0 0
+            )
+            control "Color2" "color" (
+                "value" 1 1 1
+            )
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map1Enabled" "boolean" (
+                "value" 1
+            )
+            control "Map2Enabled" "boolean" (
+                "value" 1
+            )
+            control "Coords" "shader" (
+                "value" "max_base_UVGenerator",
+                "referenceTarget"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Composite" (
+		struct "Parameters" {
+			array color   texture   "mapList",
+            array boolean           "mapEnabled",
+            array scalar  texture   "mask",
+            array boolean           "maskEnabled",
+            array scalar           "opacity",
+            array integer           "blendMode"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	
+	version 3
+	apply texture
+
+    gui "gui_max_Composite" {
+		control "Global" "Global" (
+			"uiName" "Composite",
+			"helpCHM" "max/max help.chm",
+			"category" "Texture",
+			"hidden"
+		)
+        control "Parameters" "struct" {
+            control "mapList" "array color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "mask"    "array scalar texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_ColorCorrection" (
+		struct "Parameters" {
+			color             "color",
+			color   texture   "map",
+			
+			# Channel Rewiring
+			integer           "rewireR",
+			integer           "rewireG",
+			integer           "rewireB",
+			integer           "rewireA",
+			
+			# Color
+			scalar            "hueShift",
+			scalar            "saturation",
+			color             "tint",
+			scalar            "tintStrength",
+			
+			# Lightness
+			integer           "lightnessMode",
+				# Standard ( lightnessMode == 0 )
+				scalar        "contrast",
+				scalar        "brightness",
+				
+				# Advanced ( lightnessMode != 0 )
+				integer       "exposureMode",
+				boolean       "enableR",
+				boolean       "enableG",
+				boolean       "enableB",
+				
+				scalar        "gainRGB",
+				scalar        "gainR",
+				scalar        "gainG",
+				scalar        "gainB",
+				scalar        "gammaRGB",
+				scalar        "gammaR",
+				scalar        "gammaG",
+				scalar        "gammaB",
+				scalar        "pivotRGB",
+				scalar        "pivotR",
+				scalar        "pivotG",
+				scalar        "pivotB",
+				scalar        "liftRGB",
+				scalar        "liftR",
+				scalar        "liftG",
+				scalar        "liftB",
+				scalar        "printerLights"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	
+	version 1
+	apply texture
+
+    gui "gui_max_ColorCorrection" {
+		control "Global" "Global" (
+			"uiName" "Color Correction",
+			"helpCHM" "max/max help.chm",
+			"category" "Texture",
+			"hidden"
+		)
+        control "Parameters" "struct" {
+            control "map" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Dent" (
+		struct "Parameters" {
+			color texture "Map1",
+			color texture "Map2",
+			color "Color1",
+			color "Color2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			scalar "Size",
+			scalar "Strength",
+			integer "Iterations",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+    gui "gui_max_Dent" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Dent",
+			"category" "Texture",
+            "hidden"
+		)
+        control "Parameters" "struct" {
+            control "Color1" "color" (
+		"uiName" "Color #1",
+                "value" 0 0 0
+            )
+            control "Color2" "color" (
+		"uiName" "Color #2",
+                "value" 1 1 1
+            )
+            control "Size" "scalar" (
+		"uiName" "Size",
+                "value" 200,
+		"range" 0.000000 1000000000.000000
+            )
+            control "Strength" "scalar" (
+		"uiName" "Strength",
+		"range" 0.000000 1000000000.000000,
+                "value" 20
+            )
+            control "Iterations" "integer" (
+		"uiName" "Iterations",
+                "value" 2,
+		"range" 0 10
+            )
+            control "Coords" "integer" (
+		        "uiName" "Coordinates",
+                "value" "max_base_XYZGenerator",
+                "referenceTarget"
+            )
+            control "Map1" "color texture" (
+		"uiName" "Color #1 map",
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+		"uiName" "Color #2 map",
+                "textureInfo" "max_texmap"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Falloff" (
+		struct "Parameters" {
+			scalar "PerpendicularValue",
+			scalar "ParallelValue",
+			integer "Type",
+			integer "Direction"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID",
+			vector "Position"
+		}
+	)
+    gui "gui_max_Falloff" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Falloff",
+			"category" "Texture",
+            "hidden"
+		)
+    }
+	version 1
+	apply texture
+end declare
+
+declare shader
+	"max_Falloff2" (
+		struct "Parameters" {
+			color "Color1",
+			scalar "Map1Amount",
+			color texture "Map1",
+			boolean "Map1On",
+			color "Color2",
+			scalar "Map2Amount",
+			color texture "Map2",
+			boolean "Map2On",
+			integer "Type",
+			integer "Direction",
+#			geometry "Node",
+			boolean "MtlIOROverride",
+			scalar "Ior",
+			boolean "ExtrapolateOn",
+			scalar "NearDistance",
+			scalar "FarDistance"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID",
+			vector "Position",
+			shader "Output",
+			shader "CurveControl",
+			boolean "Self"
+		}
+	)
+	version 1
+	apply texture
+
+    gui "gui_max_Falloff2" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Falloff2",
+			"category" "Texture",
+            "hidden"
+		)
+        control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+        control "ExtraParameters" "struct" {
+            control "Output" "shader" (
+                "referenceTarget"
+            )
+            control "CurveControl" "shader" (
+                "referenceTarget"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_FlatMirror" (
+		struct "Parameters" {
+			scalar "BlurAmount",
+			scalar "DistortionAmount",
+			scalar "Level",
+			scalar "Size",
+			scalar "Phase",
+			boolean "ApplyBlur",
+			integer "NthFrame",
+			integer "Frame",
+			boolean "UseEnviroment",
+			boolean "ApplyToFaceID",
+			integer "FaceID",
+			integer "DistortionType",
+			integer "NoiseType"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+    gui "gui_max_FlatMirror" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Flat Mirror",
+			"category" "Texture",
+            "hidden"
+		)
+    }
+	version 1
+	apply texture
+end declare
+
+declare shader
+	"max_Gradient" (
+		struct "Parameters" {
+			color "Color1",
+			color "Color2",
+			color "Color3",
+			color texture "Map1",
+			color texture "Map2",
+			color texture "Map3",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			boolean "Map3Enabled",
+			scalar "Color2Pos",
+			integer "GradientType",
+			scalar "NoiseAmount",
+			integer "NoiseType",
+			scalar "NoiseSize",
+			scalar "NoisePhase",
+			scalar "NoiseLevels",
+			scalar "NoiseThresholdLow",
+			scalar "NoiseThresholdHigh",
+			scalar "NoiseThresholdSmooth",
+			shader "Coords",
+			shader "Output"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+    gui "gui_max_Gradient" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Gradient",
+			"category" "Texture",
+            "hidden"
+		)
+        control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map3" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+			control "Coords" "shader" (
+				"referenceTarget"
+			)
+            control "Output" "shader" (
+                "referenceTarget"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_GradientRamp" (
+		struct "Parameters" {
+			integer "Type",
+			scalar "Amount",
+			scalar "Size",
+			scalar "Phase",
+			integer "NoiseType",
+			scalar "NoiseLevels",
+			scalar "NoiseThresholdLow",
+			scalar "NoiseThresholdHigh",
+			scalar "NoiseThresholdSmooth",
+			integer "VOID",
+			boolean "MapOn",
+			shader "Coords",
+			shader "Output",
+			shader "SourceMap",
+			integer "InterpType",
+			integer "Mode",
+			color texture "Bitmap",
+			array struct "Flags" {
+				scalar "Position",
+				integer "Number",
+				integer "Interp",
+				color "Color",
+				shader "Shader"
+			}
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+    gui "gui_max_GradientRamp" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Gradient Ramp",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+			control "Coords" "shader"(
+				"referenceTarget"
+			)
+            control "Output" "shader" (
+                "referenceTarget"
+            )
+		}
+    }
+	version 2
+	apply texture
+end declare
+
+declare shader
+	"max_Marble" (
+		struct "Parameters" {
+			color texture "Map1",
+			color texture "Map2",
+			color "Color1",
+			color "Color2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			scalar "Size",
+			scalar "Width",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+    gui "gui_max_Marble" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Marble",
+			"category" "Texture",
+            "hidden"
+		)
+        control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+			control "Coords" "shader" (
+				"referenceTarget"
+			)
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Mask" (
+		struct "Parameters" {
+			color texture "Map",
+			scalar texture "Mask",
+			boolean "MapEnabled",
+			boolean "MaskEnabled",
+			boolean "MaskInverted"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_Mask" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Mask",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Mask" "scalar texture" (
+                "typeOverride" "scalar texture",
+                "textureInfo" "max_texmap"
+            )
+            control "Map" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Mix" (
+		struct "Parameters" {
+			scalar "MixAmount",
+			scalar "Lower",
+			scalar "Upper",
+			boolean "UseCurve",
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			scalar texture "Mask",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			boolean "MaskEnabled",
+			shader "Output"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_Mix" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Mix",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Mask" "scalar texture" (
+                "typeOverride" "scalar texture",
+                "textureInfo" "max_texmap"
+            )
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Output" "shader" (
+                "referenceTarget"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Noise" (
+		struct "Parameters" {
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			scalar "Size",
+			scalar "Phase",
+			scalar "Levels",
+			scalar "ThresholdLow",
+			scalar "ThresholdHigh",
+			integer "Type",
+			shader "Coords",
+			shader "Output"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_Noise" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Noise",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+			control "Coords" "shader" (
+				"referenceTarget"
+			)
+            control "Output" "shader" (
+                "referenceTarget"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Output" (
+		struct "Parameters" {
+			color texture "Map1",
+			boolean "Map1Enabled",
+			shader "Output"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+    
+	gui "gui_max_Output" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Output",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Output" "shader" (
+                "referenceTarget"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_ParticleAge" (
+		struct "Parameters" {
+			color "Color1",
+			color "Color2",
+			color "Color3",
+			color texture "Map1",
+			color texture "Map2",
+			color texture "Map3",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			boolean "Map3Enabled",
+			scalar "Age1",
+			scalar "Age2",
+			scalar "Age3",
+			shader "Output"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_ParticleAge" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Particle Age",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map3" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Output" "shader" (
+                "referenceTarget"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_ParticleBlur" (
+		struct "Parameters" {
+			color "Color1",
+			color "Color2",
+			scalar "Sharp"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+	gui "gui_max_ParticleBlur" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Particle Blur",
+			"category" "Texture",
+            "hidden"
+		)
+    }
+end declare
+
+declare shader
+	"max_PerlinMarble" (
+		struct "Parameters" {
+			color texture "Map1",
+			color texture "Map2",
+			color "Color1",
+			color "Color2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			scalar "Saturation1",
+			scalar "Saturation2",
+			scalar "Size",
+			scalar "Level",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_PerlinMarble" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Perlin Marble",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+			control "Coords" "shader" (
+				"referenceTarget"
+			)
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Planet" (
+		struct "Parameters" {
+			color "Color1",
+			color "Color2",
+			color "Color3",
+			color "Color4",
+			color "Color5",
+			color "Color6",
+			color "Color7",
+			color "Color8",
+			scalar "ContinentSize",
+			scalar "IslandFactor",
+			scalar "OceanPercent",
+			integer "RandomSeed",
+			boolean "BlendWaterLand",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+	gui "gui_max_Planet" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Planet",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+			control "Coords" "shader" (
+				"referenceTarget"
+			)
+		}
+    }
+end declare
+
+declare shader
+	"max_Raytrace" (
+        struct "Parameters" {
+            boolean "raytraceON",
+            boolean "atmosphereON",
+            boolean "selfreflON",
+            boolean "matidON",
+            integer "traceMode",
+            integer "bgMode",
+            color "bgCol",
+            boolean "antialiasON",
+            boolean "antialias_overrideON",
+            boolean "lAdaptiveON",
+            integer "lMinRays",
+            integer "lMaxRays",
+            scalar "lThreshold",
+            scalar "lBlur",
+            scalar "lBlurAsp",
+            scalar "lDefocus",
+            scalar "lDefocusAsp",
+            boolean "blurmapON",
+            boolean "defocusmapON",
+            integer "attenMode",
+            scalar "attenStart",
+            scalar "attenEnd",
+            scalar "attenExp",
+            scalar "attenNear",
+            scalar "attenCtrl1",
+            scalar "attenCtrl2",
+            scalar "attenFar",
+            integer "attencolorMode",
+            color "attenCol",
+            boolean "reflmapON",
+            scalar "reflmapAmt",
+            boolean "tintON",
+            scalar "tintAmt",
+            color "tintCol",
+            boolean "tintmapON",
+            scalar "tint_map_amt",
+            scalar "bump_mult",
+            boolean "coldensityON",
+            scalar "coldensityStart",
+            scalar "coldensityEnd",
+            scalar "coldensityAmt",
+            color "coldensityCol",
+            boolean "coldensitymapON",
+            scalar "colden_map_amt",
+            boolean "fogON",
+            scalar "fogStart",
+            scalar "fodEnd",
+            scalar "fodAmt",
+            color "fogCol",
+            boolean "fogmapON",
+            scalar "fog_map_amt",
+            boolean "objinglassON",
+            boolean "atmosinglassON",
+            boolean "fresnel_on",
+            color texture "bgMap",
+            color texture "blurMap",
+            color texture "defocusMap",
+            color texture "reflMap",
+            color texture "tintMap",
+            color texture "coldensityMap",
+            color texture "fogMap",
+			boolean "isIncludeList",		# if true, list is include list, else list is exclude list
+			array string "exclList"            
+        },
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 2
+	apply texture
+	gui "gui_max_Raytrace" {
+		control "Global" "Global" (
+			"hidden"
+		)
+        control "Parameters" "struct" {
+            control "bgMap" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "blurMap" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "defocusMap" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "reflMap" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "tintMap" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "coldensityMap" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "fogMap" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+    }
+end declare
+
+declare shader
+	"max_ReflectRefract" (
+		struct "Parameters" {
+			integer "Size",
+			scalar "Blur",
+			scalar "BlurOffset",
+			scalar "Near",
+			scalar "Far",
+			integer "Source",
+			boolean "UseAtmosphericMap",
+			boolean "Apply",
+			integer "FrameType",
+			integer "NthFrame",
+			array integer "BitmapName"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+	gui "gui_max_ReflectRefract" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Reflect/Refract",
+			"category" "Texture",
+            "hidden"
+		)
+    }
+end declare
+
+declare shader
+	"max_ThinWallRefraction" (
+		struct "Parameters" {
+			scalar "Blur",
+			scalar "ThicknessOffset",
+			scalar "BumpMapEffect",
+			boolean "ApplyBlur",
+			integer "NthFrame",
+			boolean "UseEnviroment",
+			integer "Frame"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	gui "gui_max_ThinWallRefraction" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Thin Wall Refraction",
+			"category" "Texture",
+            "hidden"
+		)
+    }
+	version 1
+	apply texture
+end declare
+
+declare shader
+	"max_RGBMultiplier" (
+		struct "Parameters" {
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			integer "AlphaFrom"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_RGBMultiplier" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "RGB Multiply",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Smoke" (
+		struct "Parameters" {
+			scalar "Size",
+			integer "Iterations",
+			scalar "Exponent",
+			scalar "Phase",
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1On",
+			boolean "Map2On",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_Smoke" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Smoke",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+			control "Coords" "shader" (
+				"referenceTarget"
+			)
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Speckle" (
+		struct "Parameters" {
+			scalar "Size",
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1On",
+			boolean "Map2On",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_Speckle" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Speckle",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+			control "Coords" "shader" (
+				"referenceTarget"
+			)
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Splat" (
+		struct "Parameters" {
+			scalar "Size",
+			integer "Iterations",
+			scalar "Threshold",
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1On",
+			boolean "Map2On",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_Splat" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Splat",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+			control "Coords" "shader" (
+				"referenceTarget"
+			)
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Stucco" (
+		struct "Parameters" {
+			scalar "Size",
+			scalar "Thickness",
+			scalar "Threshold",
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1On",
+			boolean "Map2On",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_Stucco" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Stucco",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+			control "Coords" "shader" (
+				"referenceTarget"
+			)
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Swirl" (
+		struct "Parameters" {
+			color "SwirlColor",
+			color "BaseColor",
+			scalar "Intensity",
+			scalar "Twist",
+			scalar "ColorContrast",
+			scalar "XCenter",
+			scalar "YCenter",
+			scalar "Amount",
+			integer "ConstantDetail",
+			scalar "RandomSeed",
+			boolean "LockBackground",
+			shader "Coords",
+			color texture "SwirlMap",
+			color texture "BaseMap",
+			boolean "SwirlMapEnabled",
+			boolean "BaseMapEnabled"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_Swirl" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Swirl",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "SwirlMap" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "BaseMap" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+			control "Coords" "shader" (
+				"referenceTarget"
+			)
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Tint" (
+		struct "Parameters" {
+			color "Red",
+			color "Green",
+			color "Blue",
+			color texture "Map1",
+			boolean "Map1Enabled"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_Tint" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Tint",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_VertexColor" (
+		struct "Parameters" {
+			integer "map",
+			integer "subid"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+	gui "gui_max_VertexColor" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Vertex Color",
+			"category" "Texture",
+            "hidden"
+		)
+    }
+end declare
+
+declare shader
+	"max_Water" (
+		struct "Parameters" {
+			integer "NumWaveSets",
+			scalar "WaveRadius",
+			scalar "WaveLenMin",
+			scalar "WaveLenMax",
+			scalar "Amplitude",
+			scalar "Phase",
+			integer "Distribution",
+			integer "RandomSeed",
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1On",
+			boolean "Map2On",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_Water" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Water",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+			control "Coords" "shader" (
+				"referenceTarget"
+			)
+        }
+    }
+
+end declare
+
+declare shader
+	"max_Wood" (
+		struct "Parameters" {
+			color texture "Map1",
+			color texture "Map2",
+			color "Color1",
+			color "Color2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			scalar "Thickness",
+			scalar "RadialNoise",
+			scalar "AxialNoise",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_max_Wood" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Wood",
+			"category" "Texture",
+            "hidden"
+		)
+		control "Parameters" "struct" {
+            control "Map1" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Map2" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+			control "Coords" "shader" (
+				"referenceTarget"
+			)
+        }
+    }
+
+end declare
+
+#-------------------------------------------- bump shaders
+
+declare shader
+	"max_Bump" (
+		scalar "Multiplier",
+		color texture "Map"
+	)
+	version 1
+
+	gui "gui_max_Bump" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"addApply" "bump",
+			"uiName" "Bump",
+			"category" "Bump",
+			"hidden"
+		)
+        control "Multiplier" "float" ("value" 1.0)
+        control "Map" "vector texture" (
+            "textureInfo" "max_texmap"
+        )
+    }
+
+end declare
+
+#-------------------------------------------- environment shaders
+
+declare shader
+	"max_Environment" (
+		boolean "UseAlpha",
+		color "Color",
+		color texture "Map",
+		array light "skylights",
+		shader "Sky"
+	)
+	version 1
+	apply environment
+
+	gui "gui_max_Environment" {
+		control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"uiName" "Environment",
+			"category" "Environment",
+			"hidden"
+		)
+        control "Map" "color texture" (
+            "textureInfo" "max_texmap"
+        )
+		control "skylights" "array light" (
+			"hidden"
+		)
+	}
+
+end declare
+
+declare shader
+	"max_TexturedSkylight" (
+		struct "TexSkyParams" {
+			boolean "on",
+			scalar "multiplier",
+			color "color",
+			shader "sky_color_map",
+			boolean "sky_color_map_on",
+			scalar "sky_color_map_amt",
+			integer "sky_mode"
+		}
+	)
+	
+	version 1
+	apply light
+	
+	gui "gui_max_TexturedSkylight" {
+		control "Global" "Global" (
+			"hidden"
+		)
+    }	
+	
+end declare
+
+declare shader
+	"max_IesSkylight" (
+		struct "IesSkyParams" {
+			boolean "on",
+			scalar "multiplier",
+			color "color",
+			scalar "sky_cover"
+		},
+		struct "ExtaParams" {
+			transform "lightToWorld"
+		}			
+	)
+	version 1
+	apply light
+	
+	gui "gui_max_IesSkylight" {
+		control "Global" "Global" (
+			"hidden"
+		)
+    }		
+	
+end declare		
+
+#-------------------------------------------- illumination shaders
+
+declare shader
+	"max_base_BlinnIllumination" (
+		struct "Parameters" {
+			color "Ambient",
+			color "Diffuse",
+			color "Specular",
+			boolean "ADTextureLock",
+			boolean "ADLock",
+			boolean "DSLock",
+			boolean "UseSelfIllumColor",
+			scalar "SelfIllumAmount",
+			color "SelfIllumColor",
+			scalar "SpecularLevel",
+			scalar "Glossiness",
+			scalar "Soften"
+		}
+	)
+	version 1
+
+    gui "gui_max_base_BlinnIllumination" {
+        control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+			"addApply" "illum",
+			"hidden"
+        )
+    }    
+	
+#	gui "gui_max_base_BlinnIllumination" {
+#		control "Global" "Global" (
+#			"hidden",
+#			"addApply" "illum"
+#
+#		)
+#	}
+
+end declare
+
+declare shader
+	"max_base_PhongIllumination" (
+		struct "Parameters" {
+			color "Ambient",
+			color "Diffuse",
+			color "Specular",
+			boolean "ADTextureLock",
+			boolean "ADLock",
+			boolean "DSLock",
+			boolean "UseSelfIllumColor",
+			scalar "SelfIllumAmount",
+			color "SelfIllumColor",
+			scalar "SpecularLevel",
+			scalar "Glossiness",
+			scalar "Soften"
+		}
+	)
+	version 1
+
+#	gui "gui_max_base_PhongIllumination" {
+#		control "Global" "Global" (
+#			"addApply" "illum",
+#			"hidden"
+#		)
+#	}
+    gui "gui_max_base_PhongIllumination" {
+        control "Global" "Global" (
+			"addApply" "illum",
+			"hidden"
+        )
+    }   
+
+end declare
+
+declare shader
+	"max_base_MetalIllumination" (
+		struct "Parameters" {
+			color "Ambient",
+			color "Diffuse",
+			color "Specular",
+			boolean "ADTextureLock",
+			boolean "ADLock",
+			boolean "DSLock",
+			boolean "UseSelfIllumColor",
+			scalar "SelfIllumAmount",
+			color "SelfIllumColor",
+			scalar "SpecularLevel",
+			scalar "Glossiness",
+			scalar "Soften"
+		}
+	)
+	version 1
+
+	gui "gui_max_base_MetalIllumination" {
+		control "Global" "Global" (
+			"addApply" "illum",
+			"hidden"
+		)
+	}
+
+end declare
+
+declare shader
+	"max_base_ConstantIllumination" (
+		struct "Parameters" {
+			color "Ambient",
+			color "Diffuse",
+			color "Specular",
+			boolean "ADTextureLock",
+			boolean "ADLock",
+			boolean "DSLock",
+			boolean "UseSelfIllumColor",
+			scalar "SelfIllumAmount",
+			color "SelfIllumColor",
+			scalar "SpecularLevel",
+			scalar "Glossiness",
+			scalar "Soften"
+		}
+	)
+	version 1
+
+	gui "gui_max_base_ConstantIllumination" {
+		control "Global" "Global" (
+			"addApply" "illum",
+			"hidden"
+		)
+	}
+
+end declare
+
+declare shader
+	"max_base_AnisotropicIllumination" (
+		struct "ShaderParameters" {
+			color "Ambient",
+			color "Diffuse",
+			color "Specular",
+			color "SelfIllumColor",
+			scalar "DiffuseLevel",
+			scalar "SpecularLevel",
+			scalar "SelfIllumAmount",
+			scalar "Glossiness",
+			scalar "Anisotropy",
+			scalar "Orientation",
+			boolean "ADTextureLock",
+			boolean "ADLock",
+			boolean "DSLock",
+			boolean "UseSelfIllumColor"
+		}
+	)
+	version 1
+
+	gui "gui_max_base_AnisotropicIllumination" {
+		control "Global" "Global" (
+			"addApply" "illum",
+			"hidden"
+		)
+	}
+
+end declare
+
+declare shader
+	"max_base_MultiLayerIllumination" (
+		struct "ShaderParameters" {
+			color "Ambient",
+			color "Diffuse",
+			color "SelfIllumColor",
+			scalar "SelfIllumAmount",
+			scalar "DiffuseLevel",
+			scalar "DiffuseRoughness",
+			color "Specular",
+			scalar "SpecularLevel",
+			scalar "Glossiness",
+			scalar "Anisotropy",
+			scalar "Orientation",
+			color "Specular2",
+			scalar "SpecularLevel2",
+			scalar "Glossiness2",
+			scalar "Anisotropy2",
+			scalar "Orientation2",
+			boolean "ADTextureLock",
+			boolean "ADLock",
+			boolean "UseSelfIllumColor"
+		}
+	)
+	version 1
+
+	gui "gui_max_base_MultiLayerIllumination" {
+		control "Global" "Global" (
+			"addApply" "illum",
+			"hidden"
+		)
+	}
+
+end declare
+
+declare shader
+	"max_base_OrenNayarBlinnIllumination" (
+		struct "ShaderParameters" {
+			color "Ambient",
+			color "Diffuse",
+			color "Specular",
+			boolean "ADTextureLock",
+			boolean "ADLock",
+			boolean "DSLock",
+			boolean "UseSelfIllumColor",
+			scalar "SelfIllumAmount",
+			color "SelfIllumColor",
+			scalar "SpecularLevel",
+			scalar "Glossiness",
+			scalar "Soften",
+			scalar "DiffuseLevel",
+			scalar "DiffuseRoughness"
+		}
+	)
+	version 1
+
+	gui "gui_max_base_OrenNayarBlinnIllumination" {
+		control "Global" "Global" (
+			"addApply" "illum",
+			"hidden"
+		)
+	}
+
+end declare
+
+declare shader
+	"max_base_StraussIllumination" (
+		struct "ShaderParameters" {
+			color "Diffuse",
+			scalar "Glossiness",
+			scalar "Metalness"
+		}
+	)
+	version 1
+
+	gui "gui_max_base_StraussIllumination" {
+		control "Global" "Global" (
+			"addApply" "illum",
+			"hidden"
+		)
+	}
+
+end declare
+
+declare shader
+	"max_base_WardIllumination" (
+		struct "Parameters" {
+			color "Ambient",
+			color "Diffuse",
+			color "Specular",
+			scalar "DiffuseLevel",
+			scalar "SpecularLevel",
+			scalar "XGlossiness",
+			scalar "YGlossiness"
+		}
+	)
+	version 1
+
+	gui "gui_max_base_WardIllumination" {
+		control "Global" "Global" (
+			"addApply" "illum",
+			"hidden"
+		)
+	}
+
+end declare
+
+declare shader
+    "max_base_TranslucentIllumination" (
+        struct "shaderParameters" {
+            color "ambient",
+            color "diffuse",
+            color "specular",
+            color "filter",
+            color "translucentColor",
+            boolean "backSideSpecular",
+            boolean "adTextureLock",
+            boolean "adLock",
+            boolean "dsLock",
+            boolean "useSelfIllumColor",
+            scalar "selfIllumAmount",
+            color "selfIllumColor",
+            scalar "specularLevel",
+            scalar "glossiness",
+            scalar "diffuseLevel"
+        }
+    )
+    version 1
+
+    gui "gui_max_base_TranslucentIllumination" {
+        control "Global" "Global" (
+            "addApply" "illum",
+            "hidden"
+        )
+    }
+end declare
+           
+#-------------------------------------------- material shaders
+
+declare shader
+	"max_DefaultMaterial" (
+		struct "Parameters" {
+			color "ambient",
+			color "specular",
+			scalar "shinyness"
+		}
+	)
+	version 1
+	apply material, photon
+
+    gui "gui_max_DefaultMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+end declare
+
+
+
+declare shader
+	"max_DefaultShadow" ()
+	version 1
+	apply shadow
+
+    gui "gui_max_DefaultShadow" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+end declare
+
+declare shader
+	"max_StandardMaterial" (
+		struct "ShaderParameters" {
+			boolean "Wire",
+			boolean "TwoSided",
+			boolean "FaceMap",
+			boolean "Faceted"
+		},
+		struct "ExtendedParameters" {
+			integer "OpacityType",
+			scalar "Opacity",
+			color "FilterColor",
+			color texture "FilterMap",
+			integer "OpacityFallOffType",
+			scalar "OpacityFallOff",
+			scalar "Ior",
+			scalar "WireSize",
+			integer "WireUnits",
+			boolean "ApplyReflectionDimming",
+			scalar "DimLevel",
+			scalar "ReflectionLevel"
+		},
+		struct "Maps" {
+			array boolean "MapEnables",
+			array shader "Maps",
+			array scalar "MapAmounts",
+			boolean "ADTextureLock"
+		},
+		struct "DynamicParameters" {
+			scalar "Bounce",
+			scalar "StaticFriction",
+			scalar "SlidingFriction"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID",
+			shader "IlluminationShader"
+		}
+	)
+	version 1
+	apply material
+
+	gui "gui_max_StandardMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+		control "ExtendedParameters" "struct" {
+            control "FilterMap" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+        control "ExtraParameters" "struct" {
+            control "IlluminationShader" "shader" (
+                "referenceTarget"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_CompositeMaterial_Contour" (
+		struct "Parameters" {
+			array material "MaterialList",
+			array integer "MixType",
+			array boolean "MapEnables",
+			array scalar "Amount"
+		}
+	)
+	version 1
+
+    gui "gui_max_CompositeMaterial_Contour" {
+        control "Global" "Global" (
+            "hidden",
+            "addApply" "contour_shader"
+        )
+    }
+
+end declare
+
+declare shader
+	"max_CompositeMaterial" (
+		struct "Parameters" {
+			array material "MaterialList",
+			array integer "MixType",
+			array boolean "MapEnables",
+			array scalar "Amount"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply material
+
+    gui "gui_max_CompositeMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+end declare
+
+declare shader
+	"max_TopBottomMaterial" (
+		struct "Parameters" {
+			material "TopMaterial",
+			material "BottomMaterial",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			scalar "Blend",
+			scalar "Position",
+			integer "Coordinates"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply material
+
+    gui "gui_max_TopBottomMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+end declare
+
+declare shader
+	"max_TopBottomMaterial_Contour" (
+		struct "Parameters" {
+			material "TopMaterial",
+			material "BottomMaterial",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			scalar "Blend",
+			scalar "Position",
+			integer "Coordinates"
+		}
+	)
+	version 1
+
+    gui "gui_max_TopBottomMaterial_Contour" {
+        control "Global" "Global" (
+            "hidden",
+            "addApply" "contour_shader"
+        )
+    }
+
+end declare
+
+declare shader
+	"max_DoubleSidedMaterial" (
+		struct "Parameters" {
+			material "Material1",
+			material "Material2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			scalar "Translucency"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply material
+
+    gui "gui_max_DoubleSidedMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+end declare
+
+declare shader
+	"max_DoubleSidedMaterial_Contour" (
+		struct "Parameters" {
+			material "Material1",
+			material "Material2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			scalar "Translucency"
+		}
+	)
+	version 1
+
+    gui "gui_max_DoubleSidedMaterial_Contour" {
+        control "Global" "Global" (
+            "hidden",
+            "addApply" "contour_shader"
+        )
+    }
+
+end declare
+
+declare shader
+	"max_MatteMaterial" (
+		struct "Parameters" {
+			boolean "OpaqueAlpha",
+			boolean "ApplyAtmosphere",
+			integer "AtmosphereDepth",
+			boolean "ReceiveShadows",
+			boolean "AffectAlpha",
+			scalar "ShadowBrightness",
+			color "Color",
+			scalar "Amount",
+			color texture "Map",
+			boolean "UseReflMap"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply material
+
+	gui "gui_max_MatteMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+		control "Parameters" "struct" {
+            control "Map" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_MultiMaterial" (
+		struct "Parameters" {
+			array material "MaterialList",
+			array boolean "MapEnabled",
+			array integer "MaterialIDList"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply material
+
+    gui "gui_max_MultiMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+end declare
+
+declare shader
+	"max_MultiMaterial_Contour" (
+		struct "Parameters" {
+			array material "MaterialList",
+			array boolean "MapEnabled",
+			array integer "MaterialIDList"
+		}
+	)
+	version 1
+
+    gui "gui_max_MultiMaterial_Contour" {
+        control "Global" "Global" (
+            "hidden",
+            "addApply" "contour_shader"
+        )
+    }
+end declare
+
+declare shader
+	"max_BlendMaterial" (
+		struct "Parameters" {
+			scalar "MixAmount",
+			scalar "Lower",
+			scalar "Upper",
+			boolean "UseCurve",
+			integer "Interactive",
+			material "Map1",
+			material "Map2",
+			shader "Mask",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			boolean "MaskEnabled"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply material
+
+    gui "gui_max_BlendMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+end declare
+
+declare shader
+	"max_BlendMaterial_Contour" (
+		struct "Parameters" {
+			scalar "MixAmount",
+			scalar "Lower",
+			scalar "Upper",
+			boolean "UseCurve",
+			integer "Interactive",
+			material "Map1",
+			material "Map2",
+			shader "Mask",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			boolean "MaskEnabled"
+		}
+	)
+	version 1
+
+    gui "gui_max_BlendMaterial_Contour" {
+        control "Global" "Global" (
+            "hidden",
+            "addApply" "contour_shader"
+        )
+    }
+
+end declare
+
+declare shader
+	"max_ShellacMaterial" (
+		struct "Parameters" {
+			material "ShellacMtl1",
+			material "ShellacMtl2",
+			scalar "ShellacColorBlend"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply material
+
+    gui "gui_max_ShellacMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+end declare
+
+declare shader
+	"max_ShellacMaterial_Contour" (
+		struct "Parameters" {
+			material "ShellacMtl1",
+			material "ShellacMtl2",
+			scalar "ShellacColorBlend"
+		}
+	)
+	version 1
+
+    gui "gui_max_ShellacMaterial_Contour" {
+        control "Global" "Global" (
+            "hidden",
+            "addApply" "contour_shader"
+        )
+    }
+
+end declare
+
+# New raytrace material. 
+declare shader
+	"max_RaytraceMaterial" (
+		struct "Parameters" {
+			boolean "TwoSided",
+			boolean "FaceMap",
+			boolean "Wire",
+			boolean "Faceted",
+			color 	"Ambient",
+			scalar 	"AmbientAmount",
+			boolean	"AmbientOn",
+			color	"Diffuse",
+			color	"Reflect",
+			scalar	"ReflectAmount",
+			integer	"ReflectColorMode",
+			color	"Luminosity",
+			scalar	"LuminosityAmount",
+			boolean	"LuminosityOn",
+			color	"Transparency",
+			scalar	"TransparencyAmount",
+			boolean	"TransparencyOn",
+			scalar	"IndexOfRefraction",
+			color	"Specular",
+			scalar	"Shininess",
+			scalar	"ShininessStrength",
+			scalar	"Soften",
+			scalar  "Anisotropy",
+			scalar  "AnisotropyOrientation",
+			color	"FilterDensityColor",
+            integer "addReflType",
+			scalar	"ReflectionGain",
+            boolean "env_map_locks_on",
+            boolean "coldensityON",
+            scalar  "coldensityStart",
+            scalar  "coldensityEnd",
+            scalar  "coldensityAmt",
+            integer       "attencolorMode",
+            color         "attenCol",
+            integer       "rl_attenMode",
+            integer       "rr_attenMode",
+            scalar        "attenStart",
+            scalar        "rl_attenEnd",
+            scalar        "rr_attenEnd",
+            scalar        "attenExp",
+            scalar        "attenNear",
+            scalar        "attenCtrl1",
+            scalar        "attenCtrl2",
+            scalar        "attenFar"
+		},
+		struct "ExtendedParameters" {
+			color 	"ExtraLighting",
+			color	"Translucency",
+			color	"Fluorescence",
+			scalar	"FluorescenceBias",
+			scalar	"WireSize",
+            integer "WireUnits",
+			color	"FogColor",
+			boolean	"FogOn",
+			scalar  "FogStart",
+			scalar  "FogEnd",
+			scalar  "FogAmount"
+		},
+		struct "RaytracingControls" {
+			boolean "RaytraceReflections",
+			boolean "RaytraceRefractions",
+			boolean "selfReflectRefract",
+			boolean "isIncludeList",		# if true, list is include list, else list is exclude list
+			array string "exclList"		
+		},
+		struct "Maps" {
+			array boolean "MapEnables",
+                        integer "MapEnables_Padding", # Required in x64 land because of the shader's optimisation tricks
+			array shader "Maps",
+                        integer "Maps_Padding",
+                        array scalar "MapAmounts",
+                        integer "MapAmounts_Padding"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID",
+			integer "ShadingMode",
+			boolean "atmosphereOn",
+			boolean "atmosInGlass"
+		}
+	)
+   version 4
+	apply material
+
+    gui "gui_max_RaytraceMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+end declare
+
+# Architectural Material
+declare shader
+    "max_ArchitecturalMaterial" (
+        struct "ArchitecturalMaterialParams" {
+            boolean "twoSided",
+            boolean "emitLuminance",
+            boolean "rawDiffuseTexture",
+
+            color   "diffuse",
+            scalar  "diffuseMapAmount",
+            boolean "diffuseMapEnable",
+            shader  "diffuseMap",
+
+            scalar  "shininess",
+            boolean "shininessMapEnable",
+            shader  "shininessMap",
+
+            scalar  "transparency",
+            boolean "transparencyMapEnable",
+            shader  "filterMap",
+
+            scalar  "translucency",
+            boolean "translucencyEnable",
+            shader  "translucencyMap",
+
+            scalar  "ior",
+
+            scalar  "luminance",
+            boolean "luminanceMapEnable",
+            shader  "luminanceMap",
+
+            scalar  "bumpMapAmount",
+            boolean "bumpMapEnable",
+            shader  "bumpMap",
+
+            scalar  "intensityMapAmount",
+            boolean "intensityMapEnable",
+            shader  "intensityMap",
+
+            scalar  "cutoutMapAmount",
+            boolean "cutoutMapEnable",
+            shader  "cutoutMap",
+
+            scalar  "colorBleed",
+            scalar  "indirectBumpAmount",
+            scalar  "reflectanceScale",
+            scalar  "transmittanceScale",
+
+            boolean "useTextureSize",
+            scalar  "textureWidth",
+            scalar  "textureHeight",
+            scalar  "textureUOffset",
+            scalar  "textureVOffset"
+        },
+		struct "ExtraParameters" {
+			integer "GBufferId",
+            integer "shaderType",        # 0 = phong, 1 = metal
+            scalar "physicalScale"
+		}
+    )
+
+    version 1
+    apply material, shadow, photon
+
+    gui "gui_max_ArchitecturalMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+end declare
+
+declare shader 
+	"max_InkNPaint" (
+		struct "basic parameters" {
+			boolean	"fog_bg",
+			boolean "bump_map_on",
+			boolean	"dsp_map_on",
+			boolean	"face_map_on",
+			boolean	"two_side_on",
+			boolean	"faceted_on",
+			scalar	"bump_map_amt",
+			scalar	"dsp_map_amt",
+			shader	"bump_map",
+			shader	"dsp_map",
+			boolean	"pixel_grid_on",
+			boolean	"opaque_alpha_on"
+		},
+		struct "paint parameters" {
+			boolean "paint_on",
+			color   "paint_color",
+			scalar  "paint_map_amt",
+			boolean "paint_map_on",
+			shader  "paint_map",		
+			integer "paint_levels",
+			boolean "shade_amt_on",
+			scalar  "shade_amt",
+			color   "shade_color",
+			scalar  "shade_color_map_amt",
+			boolean "shade_color_map_on",
+			shader  "shade_color_map",		
+			scalar  "spec_gloss",
+			boolean "spec_on",
+			color   "spec_color",
+			scalar  "spec_map_amt",
+			boolean "spec_map_on",
+			shader  "spec_map"	
+		},
+		struct "ink parameters" {
+			boolean "ink_on",
+			boolean "ink_width_clamp_on",
+			boolean "ink_auto_vary_on",
+			integer	"ink_quality",
+			scalar	"min_ink_width",
+			scalar	"max_ink_width",
+			boolean	"self_overlap_ink_on",
+			boolean	"self_underlap_ink_on",
+			boolean	"out_ink_on",
+			boolean	"internal_ink",
+			boolean	"matid_ink_on",
+			boolean	"smgroup_edge_ink_on",
+			boolean	"matid_adj_req_on",
+			color	"self_overlap_ink_color",
+			color	"self_underlap_ink_color",
+			color	"color1",
+			color	"internal_ink_color",
+			color	"matid_ink_color",
+			color	"smgroup_edge_ink_color",
+			scalar	"intersect_bias",
+			scalar	"self_overlap_bias",
+			scalar	"self_underlap_bias",
+			scalar	"matid_intersect_bias",
+			shader  "width_map",
+			shader  "out_ink_map",
+			shader  "smgroup_edge_map",
+			shader  "matid_map",
+			shader  "self_underlap_ink_map",
+			shader  "self_overlap_ink_map",
+			boolean "width_map_on",
+			boolean "out_ink_map_on",
+			boolean "smgroup_edge_map_on",
+			boolean "matid_map_on",
+			boolean "self_underlap_ink_map_on",
+			boolean "self_overlap_ink_map_on",
+			scalar  "out_ink_map_amt",
+			scalar  "smgroup_edge_map_amt",
+			scalar  "matid_map_amt",
+			scalar  "width_map_amt",
+			scalar  "self_overlap_ink_map_amt",
+			scalar  "self_underlap_ink_map_amt"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferId"
+		}
+	) 
+	version 1 
+	apply material
+
+    gui "gui_max_InkNPaint" {
+        control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+            "uiName" "Ink 'N Paint",
+            "category" "Illumination",
+            "hidden"
+        )
+        control "Paint" "struct" {
+        control "Lighted" "boolean" (
+            "value" 1
+        )        
+		control "LightedColor" "color" (
+            "value" 0.33 0.6 0.8
+        )
+        control "LightedMix" "scalar" (
+            "value" 100
+        )
+        control "LightedUseMap" "boolean" (
+            "value" 0
+        )
+        control "LightedMap" "shader" (
+        )
+        control "PaintLevels" "integer" (
+            "value" 2
+        )
+        control "Shaded" "boolean" (
+            "value" 1
+        )
+        control "ShadedIntensity" "scalar" (
+            "value" 70
+        )
+        control "ShadedColor" "color" (
+            "value" 0.2 0.32 0.4
+        )
+        control "ShadedMix" "scalar" (
+            "value" 100
+        )
+        control "ShadedUseMap" "boolean" (
+            "value" 0
+        )
+        control "ShadedMap" "shader" (
+        )
+        control "Glossiness" "scalar" (
+            "value" 50
+        )
+        control "Highlight" "boolean" (
+            "value" 0
+        )
+        control "HighlightColor" "color" (
+            "value" 1 1 1
+        )
+        control "HighlightMix" "scalar" (
+            "value" 100
+        )
+        control "HighlightUseMap" "boolean" (
+            "value" 0
+        )
+        control "HighlightMap" "shader" (
+        )
+    } 
+        control "Ink" "struct" {
+			control "inkOn" "boolean" (
+				"value" 1
+			)
+			control "inkQuality" "integer" (
+				"value" 1
+			)
+			control "inkWidthMax" "scalar" (
+				"value" 5.0
+			)
+			control "inkWidthMin" "scalar" (
+				"value" 2.0
+			)
+			control "self_overlap_ink" "boolean" (
+				"value" 1
+			)
+			control "self_underlap_ink" "boolean" (
+				"value" 1
+			)
+			control "out_ink" "boolean" (
+				"value" 1
+			)
+			control "internal_ink" "boolean" (
+				"value" 1
+			)
+			control "mat_ink" "boolean" (
+				"value" 1
+			)
+			control "shap_edge_ink" "boolean" (
+				"value" 1
+			)
+			control "self_underlap_ink_color" "color" (
+				"value" 0 0 0
+			)
+			control "self_overlap_ink_color" "color" (
+				"value" 0 0 0
+			)
+			control "out_ink_color" "color" (
+				"value" 0 0 0
+			)
+			control "internal_ink_color" "color" (
+				"value" 0 0 0
+			)
+			control "mat_ink_color" "color" (
+				"value" 0 0 0
+			)
+			control "shap_edge_ink_color" "color" (
+				"value" 0 0 0
+			)
+			control "outline_bias" "scalar" (
+				"value" 0.0
+			)
+			control "overlap_bias" "scalar" (
+				"value" 10.0
+			)
+			control "underlap_bias" "scalar" (
+				"value" 10.0
+			)
+			control "mat_bias" "scalar" (
+				"value" 0.0
+			)
+		}
+
+    } 
+	
+end declare
+
+declare shader
+	"max_UnknownMaterial" ()
+	version 1
+	apply material
+
+    gui "gui_max_UnknownMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+end declare
+
+#-------------------------------------------- light shaders
+
+declare shader
+	 "max_DefaultLight" (		
+		 color "color",
+		 scalar "multiplier"	
+	 )
+	 version 1
+	 apply light
+    gui "gui_max_DefaultLight" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+end declare
+
+declare shader
+	"max_OmniLight" (
+		struct "GeneralParameters" {
+			boolean "On",
+			color   "Color",
+			scalar  "Multiplier",
+			scalar  "Contrast",
+			scalar  "SoftenDiffuseEdge",
+		 	boolean "AffectDiffuse",
+			boolean "AffectSpecular",
+			boolean "AmbientOnly"
+		},
+		struct "AttenuationParameters" {
+			boolean "UseNearAttenuation",
+			scalar  "NearStart",
+			scalar  "NearEnd",
+			boolean "UseFarAttenuation",
+			scalar  "FarStart",
+			scalar  "FarEnd",
+			integer "Decay",
+			scalar  "DecayRadius"
+		},
+		struct "ShadowParameters" {
+			boolean "CastShadows",
+			color   "ShadowColor",
+			scalar  "ShadowDensity",
+			boolean "ShadowAffected",
+			boolean "UseShadowProjector",
+			color texture "ShadowProjector"
+		},
+		struct "ProjectorParameters" {
+			boolean "UseProjector",
+			color texture "Projector"
+		},
+		struct "AtmosphericShadows" {
+			boolean "AtmospheresCastShadows",
+			scalar  "ShadowOpacity",
+			scalar  "ShadowAmount"
+		},
+		struct "LightIncludeExclude" {
+			array boolean "exclusionList"
+		}
+	 )
+	 version 2
+	 apply light
+
+	gui "gui_max_OmniLight" {
+        control "Global" "Global" (
+            "hidden"
+        )
+		control "ShadowParameters" "struct" {
+            control "ShadowProjector" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+		control "ProjectorParameters" "struct" {
+            control "Projector" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_DirectionalLight" (
+		struct "GeneralParameters" {
+			boolean "On",
+			color   "Color",
+			scalar  "Multiplier",
+			scalar  "Contrast",
+			scalar  "SoftenDiffuseEdge",
+		 	boolean "AffectDiffuse",
+			boolean "AffectSpecular",
+			boolean "AmbientOnly"
+		},
+		struct "DirectionalParameters" {
+			scalar  "HotSpot",
+			scalar  "Falloff",
+			integer "Overshoot",
+			integer "Shape",
+			scalar  "Aspect"
+		},
+		struct "AttenuationParameters" {
+			boolean "UseNearAttenuation",
+			scalar  "NearStart",
+			scalar  "NearEnd",
+			boolean "UseFarAttenuation",
+			scalar  "FarStart",
+			scalar  "FarEnd",
+			integer "Decay",
+			scalar  "DecayRadius"
+		},
+		struct "ShadowParameters" {
+			boolean "CastShadows",
+			color   "ShadowColor",
+			scalar  "ShadowDensity",
+			boolean "ShadowAffected",
+			boolean "UseShadowProjector",
+			color texture "ShadowProjector"
+		},
+		struct "ProjectorParameters" {
+			boolean "UseProjector",
+			color texture "Projector"
+		},
+		struct "AtmosphericShadows" {
+			boolean "AtmospheresCastShadows",
+			scalar  "ShadowOpacity",
+			scalar  "ShadowAmount"
+		},
+		struct "LightIncludeExclude" {
+			array boolean "exclusionList"
+		}
+	 )
+	 version 2
+	 apply light
+
+	gui "gui_max_DirectionalLight" {
+        control "Global" "Global" (
+            "hidden"
+        )
+		control "ShadowParameters" "struct" {
+            control "ShadowProjector" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+		control "ProjectorParameters" "struct" {
+            control "Projector" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_SpotLight" (
+		struct "GeneralParameters" {
+			boolean "On",
+			color   "Color",
+			scalar  "Multiplier",
+			scalar  "Contrast",
+			scalar  "SoftenDiffuseEdge",
+		 	boolean "AffectDiffuse",
+			boolean "AffectSpecular",
+			boolean "AmbientOnly"
+		},
+		struct "DirectionalParameters" {
+			scalar  "HotSpot",
+			scalar  "Falloff",
+			integer "Overshoot",
+			integer "Shape",
+			scalar  "Aspect"
+		},
+		struct "AttenuationParameters" {
+			boolean "UseNearAttenuation",
+			scalar  "NearStart",
+			scalar  "NearEnd",
+			boolean "UseFarAttenuation",
+			scalar  "FarStart",
+			scalar  "FarEnd",
+			integer "Decay",
+			scalar  "DecayRadius"
+		},
+		struct "ShadowParameters" {
+			boolean "CastShadows",
+			color   "ShadowColor",
+			scalar  "ShadowDensity",
+			boolean "ShadowAffected",
+			boolean "UseShadowProjector",
+			color texture "ShadowProjector"
+		},
+		struct "ProjectorParameters" {
+			boolean "UseProjector",
+			color texture "Projector"
+		},
+		struct "AtmosphericShadows" {
+			boolean "AtmospheresCastShadows",
+			scalar  "ShadowOpacity",
+			scalar  "ShadowAmount"
+		},
+		struct "LightIncludeExclude" {
+			array boolean "exclusionList"
+		}
+	 )
+	 version 2
+	 apply light
+
+	gui "gui_max_SpotLight" {
+        control "Global" "Global" (
+            "hidden"
+        )
+		control "ShadowParameters" "struct" {
+            control "ShadowProjector" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+		control "ProjectorParameters" "struct" {
+            control "Projector" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+        }
+    }
+
+end declare
+
+declare shader 
+    "max_PhotometricPointLight" (
+    
+        # General Parameters
+        boolean "on",
+        boolean "shadowOn",
+
+        # Intensity/Color/Distribution
+        integer "distribution",
+        color "lightColor",
+        color "filterColor",
+        scalar "intensity",
+        scalar "cutoff_start_farattenuation" default 0,
+        scalar "cutoff_end_farattenuation" default 0,
+
+        # Shadow Parameters
+        color "shadowCol",
+        scalar "shadowDensity",
+        boolean "useShadowColMap",
+        color texture "shadowColMap",
+        boolean "lightAffectShadowCol",
+        boolean "atmosShadowOn",
+        scalar "atmosShadowOpacity",
+        scalar "atmosShadowColAmnt",
+
+        #Advanced Parameters
+        scalar "contrast",
+        scalar "softDiffEdges",
+        boolean "diffuse",
+        boolean "specular",
+        boolean "ambientOnly",
+        boolean "projMapOn",
+        color texture "projMap",
+        integer "traceTransparent" default 1,
+        scalar "visibleBrightness" default 1.0,
+
+        # Spotlight parameters (for spot distributions only)
+        scalar "hotSpot",       # in radians
+        scalar "fallOff",       # in radians
+
+        # Web parameters (for web distributions only)
+        lightprofile "lightProfile",
+        transform "webTransform",   # rotation transform for the web
+
+        # Global parameters
+        scalar "physicalScale",
+        scalar "meterScale",
+        
+        # Extended parameters
+        boolean "webHasSymmetry",
+        
+        # Eclusion list
+        array boolean "exclusionList"        
+    )
+    version 3
+    apply light
+
+    gui "gui_max_PhotometricPointLight" {
+        control "Global" "Global" (
+            "hidden"
+        )
+        control "shadowColMap" "color texture" (
+            "textureInfo" "max_texmap"
+        )
+        control "projMap" "color texture" (
+            "textureInfo" "max_texmap"
+        )
+        control "traceTransparent" "integer" (
+            "value" 1,
+            "hidden"
+        )
+        control "visibleBrightness" "scalar" (
+            "value" 1.0,
+            "hidden"
+        )
+    }
+end declare
+
+declare shader 
+    "max_PhysicalSun" (
+		boolean "useLight",
+		color "color",
+		integer "shadow",
+		scalar "intensity",
+		scalar "contrast",
+		scalar "diffuseSoft",
+		scalar "shadMult",
+		boolean "atmosShadows",
+		scalar "atmosOpacity",
+		scalar "atmosColAmt",
+		boolean "affectDiffuse",
+		boolean "affectSpecular",
+		vector "sceneBBox_Min",
+		vector "sceneBBox_Max",
+			        
+        # Eclusion list
+        array boolean "exclusionList"  	
+    )
+    version 2
+    apply light
+
+    gui "gui_max_PhysicalSun" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+end declare
+
+#-------------------------------------------- volume shaders
+
+declare shader
+	"max_Fog" (
+		struct "Parameters" {
+			color "Color",
+			boolean "UseMap",
+			boolean "UseOpacity",
+			boolean "FogBackground",
+			integer "Type",
+			scalar "Near",
+			scalar "Far",
+			scalar "LayerTop",
+			scalar "LayerBottom",
+			scalar "LayerDensity",
+			integer "LayerFalloff",
+			integer "HNoise",
+			scalar "NoiseScale",
+			scalar "NoiseAngle",
+			scalar "NoisePhase",
+			integer "NoiseExponential"
+		},
+		struct "ExtraParameters" {
+			boolean "Active",
+			color texture "Map",
+			scalar texture "Opacity"
+		}
+	)
+	version 1
+	apply volume
+
+	gui "gui_max_Fog" {
+        control "Global" "Global" (
+            "hidden",
+            "uiName" "Fog",
+			"category" "Volume"
+        )
+		control "ExtraParameters" "struct" {
+            control "Map" "color texture" (
+                "textureInfo" "max_texmap"
+            )
+            control "Opacity" "scalar texture" (
+                "typeOverride" "scalar texture",
+                "textureInfo" "max_texmap"
+            )
+        }
+    }
+
+end declare
+
+declare shader
+	"max_VolumeFog" (
+		struct "Parameters" {
+			color "Color",
+			scalar "Scale",
+			scalar "Density",
+			scalar "Shift",
+			scalar "Phase",
+			scalar "StepSize",
+			integer "MaximumSteps",
+			integer "WindDirection",
+			scalar "WindStrength",
+			integer "Exponential",
+			integer "NoiseType",
+			boolean "Invert",
+			scalar "Levels",
+			scalar "MinimumThreshold",
+			scalar "MaximumThreshold",
+			scalar "Taper",
+			boolean "FogBackground"
+		},
+		struct "ExtraParameters" {
+			boolean "Active",
+			array data "Gizmos"
+		}
+	)
+	version 1
+	apply volume
+	gui "gui_max_VolumeFog" {
+        control "Global" "Global" (
+            "hidden",
+            "uiName" "Volume Fog",
+			"category" "Volume"
+        )
+    }
+end declare
+
+declare shader
+	"max_FireEffect" (
+		struct "Parameters" {
+			color "Color1",
+			color "Color2",
+			color "Color3",
+			integer "Type",
+			scalar "Stretch",
+			scalar "Regularity",
+			scalar "Scale",
+			scalar "Levels",
+			scalar "Density",
+			integer "Samples",
+			scalar "Phase",
+			scalar "Drift",
+			boolean "Explode",
+			boolean "Smoke",
+			scalar "Fury"
+		},
+		struct "ExtraParameters" {
+			boolean "Active",
+			array data "Gizmos"
+		}
+	)
+	version 1
+	apply volume
+	gui "gui_max_FireEffect" {
+        control "Global" "Global" (
+            "hidden",
+            "uiName" "Fire Effect",
+			"category" "Volume"
+        )
+    }
+end declare
+
+declare shader
+	"max_VolumeLight" (
+		struct "Parameters" {
+			color   "Color",
+			scalar  "Density",
+			scalar  "Maximum",
+			scalar  "Minimum",
+			scalar  "Scale",
+			scalar  "Shift",
+			boolean "Noise",
+			scalar  "Start",
+			scalar  "End",
+			integer "Filter",
+			scalar  "NoiseAmount",
+			integer "WindDirection",
+			scalar  "WindStrength",
+			scalar  "Phase",
+			integer "Samples",
+			boolean "AutoSample",
+			integer "Exponential",
+			integer "NoiseType",
+			boolean "Invert",
+			scalar  "Levels",
+			scalar  "MinimumThreshold",
+			scalar  "MaximumThreshold",
+			boolean "UseLightSpace",
+			color   "AttenuationColor",
+			boolean "UseAttenuation",
+			scalar  "AttenuationMultiplier"
+		},
+		struct "ExtraParameters" {
+			boolean "Animated",
+			boolean "Active",
+			array light "LightNodes"
+		}
+	)
+	version 1
+	apply volume
+	gui "gui_max_VolumeLight" {
+        control "Global" "Global" (
+            "hidden",
+            "uiName" "Volume Light",
+			"category" "Volume"
+        )
+    }
+end declare
+
+#-------- Utility shaders
+
+# This shader is used to emulate shader lists, without the inconvenients of a shader list
+# (which are that a shader instance can't be used in two different shader lists).
+declare shader
+    "max_ShaderList" (
+        array shader "shaderList"
+    )
+    version 1
+
+    gui "gui_max_ShaderList" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+end declare
+
+# This shader takes a single material parameter. The material CANNOT be a phenomenon (they
+# are not supported and generate an error). The shader will evaluate the appropriate material
+# sub-shader. For example, if this shader is applied to the photon slot of a material, then
+# it will call the photon shader of its material parameter.
+declare shader
+    "max_MaterialToShader" (
+        material "material"
+    )
+    version 1
+
+    apply material, shadow, environment, volume, texture, photon, displace, photonvol, lightmap
+
+    gui "gui_max_MaterialToShader" {
+        control "Global" "Global" (
+            "uiName" "Material to Shader",
+            "category" "Utility"
+        )
+    }
+
+end declare
+
+
+#-------- Material phenomena
+
+# This is just a dummy phenomenon used by the translator to create a mental ray material
+declare phenomenon
+    material "max_default_mtl_phen" (
+        boolean "opaque",
+        shader "surface",
+        shader "displace",
+        shader "shadow",
+        shader "volume",
+        shader "environment",
+        shader "contour",
+        shader "photon",
+        shader "photonvol",
+        shader "lightmap",
+        boolean "shadow_shader_supports_caustics"
+    )
+
+    material "theMtl"
+        opaque
+        "max_dummy" ()
+    end material
+
+    root material "theMtl"
+
+    gui "gui_max_default_mtl_phen" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+end declare
+
+
+#-------- Sample phenomena
+
+declare phenomenon
+	color "MyBricks" (
+	    color "brickColor",
+		color "mortarColor"
+	)
+
+	shader "UVGen" "max_base_UVGenerator" (
+		"MapSlotType" 0, 
+		"EnvType" 4, 
+		"MapChannel" 1, 
+		"UVWSource" 0, 
+		"ShowMapOnBack" on, 
+		"UOffset" 0, 
+		"UScale" 1, 
+		"UWrap" on, 
+		"UMirror" off, 
+		"VOffset" 0, 
+		"VScale" 1, 
+		"VWrap" on, 
+		"VMirror" off, 
+		"UAngle" 0, 
+		"VAngle" 0, 
+		"WAngle" 0, 
+		"UVAxis" 0, 
+		"Clip" on, 
+		"Blur" 1, 
+		"BlurOffset" 0, 
+		"Noise" off, 
+		"Animate" off, 
+		"Amount" 1, 
+		"Size" 1, 
+		"Level" 1, 
+		"Phase" 0,
+		"RealWorldMapSize" off)
+
+		shader "brick" "max_Bricks" (
+			"Parameters" {
+#				"MortarColor" 0.83 0.77 0.72 1, 
+#				"BrickColor" 0.65 0.3 0.2 1, 
+				"MortarColor" = interface "brickColor",
+				"BrickColor" = interface "mortarColor", 
+				"HorizontalCount" 3, 
+				"VerticalCount" 8, 
+				"ColorVariance" 0.4, 
+				"VerticalGap" 1, 
+				"HorizontalGap" 1, 
+				"LineShift" 0, 
+				"RandomShift" 0, 
+				"Holes" 0, 
+				"RandomSeed" 21996, 
+				"LockGapSymmetry" 1, 
+				"FadeVariance" 0.2, 
+				"EdgeRoughness" 0, 
+				"ShowTextureSwatches" on, 
+				"UseRowEdit" off, 
+				"UseColumnEdit" off, 
+				"ChangeRow" 1, 
+				"ChangeColumn" 1, 
+				"PerColumn" 2, 
+				"PerRow" 2, 
+				"BrickType" 1, 
+				"Coords" "UVGen", 
+				"MortarMapEnabled" off, 
+				"BrickMapEnabled" off	}, 
+			"ExtraParameters" {
+				"GBufferID" 0	})
+
+	root = "brick"
+
+    gui "gui_MyBricks" {
+        control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+            "uiName" "MyBricks",
+			"category" "Sample Phenomenon",
+			"hidden"
+        )
+			control "brickColor" "color" (
+			"value" 0.83 0.77 0.72
+		)
+		control "mortarColor" "color" (
+			"value" 0.65 0.3 0.2
+		)
+    }  
+
+end declare
+
+declare phenomenon
+    material "MyBricksPhenomenon" (
+        color "brickColor",
+        color "mortarColor"
+    )
+
+	shader "UVGen" "max_base_UVGenerator" (
+		"MapSlotType" 0, 
+		"EnvType" 4, 
+		"MapChannel" 1, 
+		"UVWSource" 0, 
+		"ShowMapOnBack" on, 
+		"UOffset" 0, 
+		"UScale" 1, 
+		"UWrap" on, 
+		"UMirror" off, 
+		"VOffset" 0, 
+		"VScale" 1, 
+		"VWrap" on, 
+		"VMirror" off, 
+		"UAngle" 0, 
+		"VAngle" 0, 
+		"WAngle" 0, 
+		"UVAxis" 0, 
+		"Clip" on, 
+		"Blur" 1, 
+		"BlurOffset" 0, 
+		"Noise" off, 
+		"Animate" off, 
+		"Amount" 1, 
+		"Size" 1, 
+		"Level" 1, 
+		"Phase" 0,
+		"RealWorldMapSize" off
+    )
+
+	shader "brick" "max_Bricks" (
+		"Parameters" {
+#			"MortarColor" 0.83 0.77 0.72 1, 
+#			"BrickColor" 0.65 0.3 0.2 1, 
+			"MortarColor" = interface "brickColor",
+			"BrickColor" = interface "mortarColor", 
+			"HorizontalCount" 3, 
+			"VerticalCount" 8, 
+			"ColorVariance" 0.4, 
+			"VerticalGap" 1, 
+			"HorizontalGap" 1, 
+			"LineShift" 0, 
+			"RandomShift" 0, 
+			"Holes" 0, 
+			"RandomSeed" 21996, 
+			"LockGapSymmetry" 1, 
+			"FadeVariance" 0.2, 
+			"EdgeRoughness" 0, 
+			"ShowTextureSwatches" on, 
+			"UseRowEdit" off, 
+			"UseColumnEdit" off, 
+			"ChangeRow" 1, 
+			"ChangeColumn" 1, 
+			"PerColumn" 2, 
+			"PerRow" 2, 
+			"BrickType" 1, 
+			"Coords" "UVGen", 
+			"MortarMapEnabled" off, 
+			"BrickMapEnabled" off	
+        }, 
+		"ExtraParameters" {
+			"GBufferID" 0	
+        }
+    )
+
+    material "myMtl"
+        opaque
+         = "brick"
+    end material
+
+    root material "myMtl"
+
+    gui "gui_MyBricksPhenomenon" {
+        control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+            "uiName" "MyBricksPhenomenon",
+			"category" "Sample Phenomenon",
+			"hidden"
+        )
+		control "brickColor" "color" (
+			"value" 0.83 0.77 0.72
+		)
+		control "mortarColor" "color" (
+			"value" 0.65 0.3 0.2
+		)
+    }
+
+end declare
+
+declare shader "max_CameraMap" (
+		transform		"worldToCameraTM",
+		scalar			"cameraFOV",
+		vector			"cameraPos",
+		integer			"map_channel",
+		shader			"textureShader",
+		boolean			"backface",
+		boolean			"useZBuffer",
+		array scalar	"zbuffer",
+		integer			"zbufferWidth",
+		integer			"zbufferHeight",
+		scalar			"zfudge",
+		scalar			"angleThreshold",
+		shader			"maskShader",
+		boolean			"useMask",
+		boolean			"maskUsesProjection",
+		boolean			"affectBehindCam" default off
+	)
+	
+	version 2
+	apply texture
+	
+	gui "gui_max_CameraMap" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+end declare
+
+declare shader "max_GNormal" (
+		scalar "multiplier",
+		scalar "bumpMultiplier",
+		boolean "flip_red",
+		boolean "flip_green",
+		boolean "swap_rg",
+		boolean "normalMapOn",
+		shader "normalMapShader",
+		boolean "bumpMapOn",
+		shader "bumpMapShader",
+		integer "method",
+		color "grey",
+		integer "normalMap_MapChannel",
+		integer "gbufID"
+	)
+	
+	version 1
+	apply texture
+	
+	gui "gui_max_GNormal" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+end declare
+
+#-------------------------------------------- displacement shaders
+
+declare shader
+    scalar "max_Displacement" (
+        boolean         "objectIndependent",
+        scalar          "fullDisplaceLength",
+        scalar          "mapAmount",
+        color texture   "map",
+        scalar          "directionStrength",
+        color texture   "direction"
+    )
+
+    version 1
+    apply displace
+
+    gui "gui_max_Displacement" {
+        control "Global" "Global" (
+			"helpCHM" "max/max help.chm",
+            "uiName" "3D Displacement",
+            "category" "Displacement"
+        )
+		control "objectIndependent" "boolean" (
+			"uiName" "Object Independent",
+	            "nonConnectable",
+        	    "value" 1.0
+		)        
+		control "fullDisplaceLength" "scalar" (
+			"uiName" "Displacement Length",
+			"units" "world",
+           	 "nonConnectable",
+            	"value" 1.0
+		)        
+        control "mapAmount" "scalar" (
+            "uiName"    "Extrusion Strength",
+            "value"     1.0
+        )
+        control "map" "color texture" (
+            "uiName"        "Extrusion Map",
+            "textureInfo"   "max_texmap"
+        )
+        control "directionStrength" "scalar" (
+            "uiName"    "Direction Strength",
+            "value"     0.0
+        )
+        control "direction" "color texture" (
+            "uiName"        "Direction Map",
+            "textureInfo"   "max_texmap"
+        )
+    }
+end declare
+
+declare shader
+    scalar "max_HeightMapDisplacement" (
+		boolean			"mapIsInObjectSpace",
+		scalar			"minHeight",
+		scalar			"maxHeight",
+		scalar texture	"heightMap"		
+    )
+
+    version 1
+    apply displace
+
+    gui "gui_max_HeightMapDisplacement" {
+        control "Global" "Global" (
+            "uiName" "Height Map Displacement",
+            "category" "Displacement"
+        )
+		control "mapIsInObjectSpace" "boolean" (
+			"uiName" "Height Map Values are in Object Space",
+	            "nonConnectable",
+        	    "value" 0,
+        	    "hidden"
+		)
+		control "minHeight" "scalar" (
+			"uiName" "Minimum Height",
+			"units" "world",
+           	"nonConnectable",
+            "value" -10.0
+		)        
+        control "maxHeight" "scalar" (
+			"uiName" "Maximum Height",
+			"units" "world",
+           	"nonConnectable",
+            "value" 10.0
+		)      
+        control "heightMap" "scalar texture" (
+            "uiName"        "Height Map",
+            "textureInfo"   "max_texmap"
+        )
+    }
+end declare
+
+#-------------------------------------------- tone operators
+
+declare shader "max_ToneOpLog" ( 
+		struct "LightscapeExposureControlParamsBlock" {
+			boolean "active",
+			scalar "physicalScale",
+			boolean "chromaticAdaptation",
+			boolean "colorDifferentiation",
+			color "whiteColor",
+			boolean "processBG",
+			scalar "brightness",
+			scalar "contrast",
+			scalar "midTones",
+			boolean "daylight",
+			boolean "exterior",
+			boolean "useLegacyAlgorithm"
+		}
+		) 
+	version 2
+	apply lens
+
+    gui "gui_max_ToneOpLog" {
+        control "Global" "Global" (
+            "uiName"  "Logarithmic Camera Exposure",
+            "category"  "Texture",
+            "hidden"
+        )
+		control "LightscapeExposureControlParamsBlock" "struct" {
+			control "brightness" "float" (
+				"uiName" "Brightness",
+				"value" 65
+			)
+			control "contrast" "float" (
+				"uiName" "Contrast",
+				"value" 50
+			)
+			control "brightness" "float" (
+				"uiName" "Mid Tones",
+				"value" 1.0
+			)
+			control "daylight" "boolean" (
+				"uiName" "Daylight",
+				"value" 0
+			)
+			control "exterior" "boolean" (
+				"uiName" "Exterior",
+				"value" 0
+			)
+		}
+    }
+end declare
+
+
+declare shader "max_ToneOpPseudo" ( 
+		struct "Pseudo color Radiance Map Parameters" {
+			scalar "minimum",
+			scalar "maximum",
+			integer "quantity",
+			integer "display",
+			scalar "physicalscale",
+			boolean "automatic",
+			integer "scalefunction",
+			integer "unitsystemused",
+			boolean "active",
+			boolean "processBG",
+			integer "nbcolors"
+		}
+		) 
+	version 1
+	apply lens
+
+
+    gui "gui_max_ToneOpPseudo" {
+        control "Global" "Global" (
+            "uiName"  "Pseudo Color Camera Exposure",
+            "category"  "Texture",
+            "hidden"
+        )
+		control "Pseudo color Radiance Map Parameters" "struct" {
+			control "minimum" "scalar" (
+				"uiName" "Minimum",
+				"value" 0
+			)
+			control "maximum" "scalar" (
+				"uiName" "Maximum",
+				"value" 50
+			)
+			control "quantity" "integer" (
+				"uiName" "Quantity",
+				"value" 0
+			)
+			control "display" "integer" (
+				"uiName" "Display",
+				"value" 0
+			)
+			control "scalefunction" "integer" (
+				"uiName" "Scale Function",
+				"value" 0
+			)
+			control "unitsystemused" "integer" (
+				"uiName" "Unit System",
+				"value" 0
+			)
+			control "active" "boolean" (
+				"uiName" "Active",
+				"value" 1
+			)
+			control "automatic" "boolean" (
+				"uiName" "Automatic",
+				"value" 0
+			)
+			control "processBG" "boolean" (
+				"uiName" "Process Background",
+				"value" 1
+			)
+			control "physicalscale" "scalar" (
+				"uiName" "Physical Scale",
+				"value" 1500
+			)
+			control "nbcolors" "integer" (
+				"uiName" "Number of colors",
+				"value" 100
+			)
+		}
+	}	
+end declare
+
+
+declare shader "contour_contrast_light_levels" ( 
+		struct "Pseudo color Radiance Map Parameters" {
+			scalar "minimum",
+			scalar "maximum",
+			integer "quantity",
+			integer "display",
+			scalar "physicalscale",
+			boolean "automatic",
+			integer "scalefunction",
+			integer "unitsystemused",
+			boolean "active",
+			boolean "processBG",
+			integer "nbcolors"
+		}
+		) 
+	version 1
+	apply lens
+
+
+    gui "gui_contour_contrast_light_levels" {
+        control "Global" "Global" (
+            "uiName"  "Pseudo Color Camera Exposure",
+            "category"  "Contour Contrast",
+			"addApply" "contour_contrast",
+			"hidden"
+        )
+		control "Pseudo color Radiance Map Parameters" "struct" {
+			control "minimum" "scalar" (
+				"uiName" "Minimum",
+				"value" 0
+			)
+			control "maximum" "scalar" (
+				"uiName" "Maximum",
+				"value" 50
+			)
+			control "quantity" "integer" (
+				"uiName" "Quantity",
+				"value" 0
+			)
+			control "display" "integer" (
+				"uiName" "Display",
+				"value" 0
+			)
+			control "scalefunction" "integer" (
+				"uiName" "Scale Function",
+				"value" 0
+			)
+			control "unitsystemused" "integer" (
+				"uiName" "Unit System",
+				"value" 0
+			)
+			control "active" "boolean" (
+				"uiName" "Active",
+				"value" 1
+			)
+			control "automatic" "boolean" (
+				"uiName" "Automatic",
+				"value" 0
+			)
+			control "processBG" "boolean" (
+				"uiName" "Process Background",
+				"value" 1
+			)
+			control "physicalscale" "scalar" (
+				"uiName" "Physical Scale",
+				"value" 1500
+			)
+			control "nbcolors" "integer" (
+				"uiName" "Number of colors",
+				"value" 100
+			)
+		}
+	}
+end declare
+
+
+
+declare shader
+    "contour_shader_lightlines" (
+	scalar "width"         # contour width
+    )
+    version 1
+
+	gui "gui_contour_shader_lightlines" {
+		control "Global" "Global" (
+			"addApply" "contour_shader",
+			"uiName" "Light lines",
+			"category" "Contour",
+			"hidden"
+		)
+		control "width" "scalar" (
+			"uiName" "Width",
+			"value" 1.0
+		)
+	}
+
+end declare
+declare shader 
+    struct {
+        vector 	 "point",
+	vector   "normal",
+	color    "color",
+	material "material",
+	integer  "level",
+	integer  "label",
+	integer  "index",
+	vector   "normal_geom",
+	color	 "pseudo",
+	integer  "i"
+    } "contour_store_light" ()
+    version 2
+
+	gui "gui_contour_store_light" {
+		control "Global" "Global" (
+			"addApply" "contour_store",
+			"uiName" "Store Ligth Levels",
+			"category" "Contour Store",
+			"hidden"
+		)
+	}
+
+end declare
+
+
+#-------------------------------------------- render elements
+
+declare shader
+	color "max_RenderElementHandler" (
+		array shader "renderElementShaders",
+		array boolean "renderElementCurrentlyActive",
+		array boolean "renderElementIsUnshadowed",
+		array boolean "renderElementAtmosphereApplied",
+		array integer "renderElementFBTypes",
+		array boolean "renderElementRevertsToBeautyPass",
+		boolean       "doBeautyPass",
+		boolean       "applyToneOpToElements",
+	)
+	
+	gui "gui_max_RenderElementHandler" {
+		control "Global" "Global" (
+			"hidden"
+		)
+        control "doBeautyPass" "boolean" (
+			"value" 1
+        )  		
+        control "applyToneOpToElements" "boolean" (
+			"value" 1
+        )  		
+        control "renderElementShaders" "array shader" (
+			"referenceTarget"           
+        )  		
+	}
+	
+	apply lens
+	version 3
+end declare	
+
+declare shader
+	color "max_StdRenderElements" (
+		integer "mode",
+		struct "DiffuseParams" {
+			boolean "lighting"
+		},
+		struct "BlendParams" {
+			boolean "ambient",
+			boolean "diffuse",
+			boolean "specular",
+			boolean "selfIllum",
+			boolean "reflection",
+			boolean "refraction",
+			boolean "paint",
+			boolean "ink"	
+		},
+		struct "LightingParams" {
+			boolean "directLightOn",
+			boolean "indirectLightOn"
+		},
+		struct "ZParams" {
+			scalar "zmin",
+			scalar "zmax",
+			integer "zminUpdate",
+         integer "zmaxUpdate",
+         integer "zminUpdateHi64",
+         integer "zmaxUpdateHi64"
+		},
+		struct "MatteParams" {
+			boolean "mtlIDFilterApplied",
+			integer "mtlID",
+			boolean "gbufIDFilterApplied",
+			integer "gbufID",
+			boolean "includeListApplied",
+			boolean "isIncludeList",		# if true, list is include list, else list is exclude list
+			array geometry "exclList"
+		},
+		struct "MotionParams" {
+			scalar "velocityMax",
+			integer "velocityUpdate",
+			integer "velocityUpdateHi64"
+		},
+		struct "ObjectIDParams" {
+			integer "colorMode"
+		},
+		struct "LuminanceIlluminanceParams" {
+			scalar "scaleFactorMult",
+			boolean "scaleToRGB"
+		},
+		struct "LightingAnalysisParams" {
+			scalar "scaleFactorMult"
+		}
+	)
+	
+	gui "gui_max_StdRenderElements" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 7
+end declare
+
+declare shader 
+	color "max_mia_material_renderelements" (
+		shader "mia_material",
+		integer "GBufferID"
+	)
+	
+	gui "gui_max_mia_material_renderelements" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 1
+end declare
+
+declare shader
+    color "max_mrRenderElement" (
+        integer "mode",
+        scalar  "multiplier",
+        color   "arbitrary",
+        string  "label"
+    )
+    
+    gui "gui_max_mrRenderElement" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+    
+    version 2
+end declare
+
+#
+# -- store a single element. 
+#    For end-user use
+#
+declare shader
+    color "max_mrStoreElement" (
+        color   "input",
+        string  "label"
+    )
+    
+    gui "gui_max_mrStoreElement" {
+        control "Global" "Global" (
+            "uiName" "mr Labeled Element"
+        )
+        control "input" "color" (
+            "uiName" "Shader/Map to Store (Passthrough):"
+        )
+        control "label" "string" (
+            "uiName" "Label:"
+        )
+    }
+
+    apply material, texture
+    version 3
+end declare
+
+
+#
+# -- store multiple elements. 
+#    For building phenomena
+#
+declare shader
+    color "max_mrStoreElements" (
+        color   "main_input",
+        string  "main_label",
+        
+        boolean "apply_render_elements",
+        array struct "inputs" {
+            color   "input",
+            string  "label",
+            integer "mr_element",
+            integer "max_element"
+        } 
+    )
+    
+    gui "gui_max_mrStoreElements" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+    
+    apply material, texture
+    
+    version 3
+end declare
+
+
+#-------------------------------------------- bake render elements
+
+declare shader
+	color "max_DiffuseBakeElement" (
+		boolean "applyAtmosphere",
+		boolean "applyShadows",
+		boolean "applyLighting"
+	)
+	
+	gui "gui_max_DiffuseBakeElement" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 1
+end declare
+
+declare shader
+	color "max_SpecularBakeElement" (
+		boolean "applyAtmosphere",
+		boolean "applyShadows",
+		boolean "applyLighting"
+	)
+	
+	gui "gui_max_SpecularBakeElement" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 1
+end declare
+
+declare shader
+	color "max_LightBakeElement" (
+		boolean "applyAtmosphere",
+		boolean "applyShadows",
+		boolean "isDirectOn",
+		boolean "isIndirectOn"
+	)
+	
+	gui "gui_max_LightBakeElement" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 1
+end declare
+
+declare shader
+	color "max_ReflectRefractBakeElement" (
+		boolean "applyAtmosphere",
+		boolean "applyShadows"
+	)
+	
+	gui "gui_max_ReflectRefractBakeElement" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 1
+end declare
+
+declare shader
+	color "max_ShadowBakeElement" (
+		boolean "applyAtmosphere",
+		boolean "applyShadows"
+	)
+	
+	gui "gui_max_ShadowBakeElement" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 1
+end declare
+
+declare shader
+	color "max_NormalsBakeElement" (
+		boolean "applyAtmosphere",
+		boolean "applyShadows"
+	)
+	
+	gui "gui_max_NormalsBakeElement" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 1
+end declare
+
+declare shader
+	color "max_CompleteBakeElement" (
+		boolean "applyAtmosphere",
+		boolean "applyShadows"
+	)
+	
+	gui "gui_max_CompleteBakeElement" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 1
+end declare
+
+declare shader
+	color "max_BlendBakeElement" (
+		boolean "applyAtmosphere",
+		boolean "applyShadows",
+		boolean "applyLight",
+		boolean "diffuseOn",
+		boolean "ambientOn",
+		boolean "emissionOn",
+		boolean "specularOn",
+		boolean "reflectionOn",
+		boolean "refractionOn"
+	)
+	
+	gui "gui_max_BlendBakeElement" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 1
+end declare
+
+declare shader
+	color "max_AlphaBakeElement" (
+		boolean "applyAtmosphere",
+		boolean "applyShadows"
+	)
+	
+	gui "gui_max_AlphaBakeElement" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 1
+end declare
+
+declare shader
+	color "max_HeightBakeElement" (
+		boolean "applyAtmosphere",
+		boolean "applyShadows"
+	)
+	
+	gui "gui_max_HeightBakeElement" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 1
+end declare
+
+# A generic bake render element. This shader assigned RGBA(0,0,0,0) to all background samples,
+# and calls the sub-shader for all non-background samples.
+declare shader
+	color "max_GenericBakeElement" (
+		shader "subShader"
+	)
+	
+	gui "gui_max_GenericBakeElement" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	version 1
+end declare
+
+#-------------------------------------------- modified MI shaders
+
+declare shader
+	color "max2_dgs_material" (
+		color		"diffuse",
+		color           "glossy",
+		color		"specular",
+		scalar		"shiny",
+		scalar		"shiny_u",
+		scalar		"shiny_v",
+		scalar		"transp",
+		scalar		"ior",
+		array light	"lights"
+	)
+	version 2
+	apply material, photon
+	derivative 1
+	gui "gui_max2_dgs_material" {									#	20 aout 2003 - pfbreton, defaults settings work
+		control "Global" "Global" (
+			"helpCHM" "MI_Shaders/mr help.chm",
+			"helpLink" "/shd-2_3Materials.html#dgsmaterial",
+			"uiName" "DGS Material",
+			"category" "Illumination",
+			"hidden"
+		)
+		control "diffuse" "color" (
+			"uiName" "Diffuse",
+			"value" .3 .3 .3
+		)
+		control "glossy" "color" (
+			"uiName" "Glossy Highlights",
+			"value" .3 .3 .3
+		)
+		control "specular" "color" (
+			"uiName" "Specular",
+			"value" 0 0 0
+		)
+		control "shiny" "scalar" (
+			"uiName" "Shiny",
+			"value" 30,
+			"range" 0.0 100.0
+		)
+		control "shiny_u" "scalar" (
+			"uiName" "Shiny U",
+			"hidden"
+		)
+		control "shiny_v" "scalar" (
+			"uiName" "Shiny V",
+			"hidden"
+		)
+		control "transp" "scalar" (
+			"uiName" "Transparency",
+			"value" 0.0,
+			"range" 0.0 1.0
+		)
+		control "ior" "scalar" (
+			"uiName" "Index Of Refraction",
+			"value" 1.5,
+			"range" 1.0 2.5
+		)
+		control "lights" "array light" (
+			"uiName" "Lights"
+		)
+	}
+end declare
+
+declare shader
+	"max2_dgs_material_photon" (
+		color		"diffuse",
+		color           "glossy",
+		color		"specular",
+		scalar		"shiny",
+		scalar		"shiny_u",
+		scalar		"shiny_v",
+		scalar		"transp",
+		scalar		"ior",
+		array light	"lights"
+	)
+	version 2
+	apply photon
+	gui "gui_max2_dgs_material_photon" {
+		control "Global" "Global" (
+			"helpCHM" "MI_Shaders/mr help.chm",
+			"helpLink" "/shd-2_4Photon_Tracing.html#dgsmaterialphoton",
+			"uiName" "DGS Material Photon",
+			"category" "Photon",
+			"hidden"
+		)
+		control "diffuse" "color" (
+			"uiName" "Diffuse",
+			"value" .3 .3 .3
+		)
+		control "glossy" "color" (
+			"uiName" "Glossy Highlights",
+			"value" .3 .3 .3
+		)
+		control "specular" "color" (
+			"uiName" "Specular",
+			"value" 0 0 0
+		)
+		control "shiny" "scalar" (
+			"uiName" "Shiny",
+			"value" 30,
+			"range" 0.0 100.0
+		)
+		control "shiny_u" "scalar" (
+			"uiName" "Shiny U",
+			"hidden"
+		)
+		control "shiny_v" "scalar" (
+			"uiName" "Shiny V",
+			"hidden"
+		)
+		control "transp" "scalar" (
+			"uiName" "Transparency",
+			"value" 0.0,
+			"range" 0.0 1.0
+		)
+		control "ior" "scalar" (
+			"uiName" "Index Of Refraction",
+			"value" 1.5,
+			"range" 1.0 2.5
+		)
+		control "lights" "array light" (
+			"uiName" "Lights",
+			"hidden"
+		)	
+	}
+	derivative 1
+end declare
+
+
+declare shader
+	color "max2_dielectric_material" (
+		color "col",        # Inside (light absorption per "distance")
+		scalar "ior",       # Inside (index of refract = 1.5 for glass)
+		color "col_out",    # Outside (light absorption per "distance")
+		scalar "ior_out",   # Outside (index of refraction)
+		scalar "distance",  # Distance (light absorption per "this distance")
+		boolean "ignore_normals", # Ignore normals
+		boolean "opaque_alpha",		# Return opaque alpha (alpha = 1.0)
+		scalar "phong_coef", # Phong fake high light
+		array light "lights" # Lights giving rise to Phong highlights
+				     # if none then *all* lights are used!
+	)
+	version 2
+	apply material, photon
+	gui "gui_max2_dielectric_material" {
+		control "Global" "Global" (
+			"helpCHM" "MI_Shaders/mr help.chm",
+			"helpLink" "/shd-2_3Materials.html#dielectricmaterial",
+			"uiName" "Dielectric Material",
+			"category" "Illumination",
+			"hidden"
+		)
+		control "col" "vector" (
+			"uiName" "Light Persistence",
+			"value" 1 1 1,
+			"nonConnectable"
+		)
+		control "ior" "scalar" (
+			"uiName" "Index Of Refraction",
+			"value" 1.5,
+            "nonConnectable"
+		)
+		control "col_out" "vector" (
+			"uiName" "Outside Light Persistence",
+			"nonConnectable"
+		)
+		control "ior_out" "scalar" (
+			"uiName" "Index Of Refraction(out)",
+            "nonConnectable"
+		)
+		control "distance" "scalar" (
+			"uiName" "Persistence Distance",
+			"units" "world",
+            "nonConnectable",
+            "value" 1.0
+		)
+		control "ignore_normals" "boolean" (
+			"uiName" "Ignore Normals",
+            "nonConnectable"
+		)
+		control "opaque_alpha" "boolean" (
+			"uiName" "Opaque Alpha",
+			"nonConnectable"
+		)	
+		control "phong_coef" "scalar" (
+			"uiName" "Phong Coefficient",
+            "nonConnectable"
+		)
+		control "lights" "array light" (
+			"uiName" "Lights",
+			"hidden",
+            "nonConnectable"
+		)
+	}
+end declare
+
+declare shader
+	"max2_dielectric_material_photon" (
+		color "col",        # Inside (light absorption per "distance")
+		scalar "ior",       # Inside (index of refract = 1.5 for glass)
+		color "col_out",    # Outside (light absorption per "distance")
+		scalar "ior_out",   # Outside (index of refraction)
+		scalar "distance",  # Distance (light absorption per "this distance")
+		boolean "ignore_normals", # Ignore normals
+		boolean "opaque_alpha",		# Return opaque alpha (alpha = 1.0)
+		scalar "phong_coef", # unused, but necessary for db
+		array light "lights" # unused, "
+				     
+	)
+	version 2
+	apply photon
+	gui "gui_max2_dielectric_material_photon" {
+		control "Global" "Global" (
+			"helpCHM" "MI_Shaders/mr help.chm",
+			"helpLink" "/shd-2_4Photon_Tracing.html#dielectricmaterialphoton",
+			"uiName" "Dielectric Material Photon",
+			"category" "Photon",
+			"hidden"
+		)
+		control "col" "color" (
+			"uiName" "Light Persistence",
+			"value" 1 1 1,
+            "nonConnectable"
+		)
+		control "ior" "scalar" (
+			"uiName" "Index Of Refraction",
+			"value" 1.5,
+            "nonConnectable"
+		)
+		control "col_out" "color" (
+			"uiName" "Outside Light Persistence",
+            "nonConnectable"
+		)
+		control "ior_out" "scalar" (
+			"uiName" "Index Of Refraction(out)",
+            "nonConnectable"
+		)
+		control "distance" "scalar" (
+			"uiName" "Persistence Distance",
+			"units" "world",
+            "nonConnectable",
+            "value" 1.0
+		)		
+		control "ignore_normals" "boolean" (
+			"uiName" "Ignore Normals",
+            "nonConnectable"
+		)
+		control "opaque_alpha" "boolean" (
+			"uiName" "Opaque Alpha",
+			"nonConnectable"
+		)
+		control "phong_coef" "scalar" (
+			"uiName" "Phong Coefficient",
+            "nonConnectable"
+		)
+		control "lights" "array light" (
+			"uiName" "Lights",
+			"hidden",
+            "nonConnectable"
+		)	
+	}
+end declare
+
+
+# ----- Volume shaders for participating media -----
+# This shader uses the height with the Z axis while the original shader looks at y
+declare shader 
+	color "max2_parti_volume" (
+		integer "mode",		# mode: 0 or 1
+		color 	"scatter",	# volume color
+		scalar 	"extinction",	# extinction coefficient
+		scalar	"r",		# blending parameter between lobes
+		scalar	"g1",		# eccentricity for first lobe
+		scalar	"g2",		# eccentricity for second lobe
+		scalar  "nonuniform", 	# nonhomogeneous ("cloudiness")
+		scalar  "height", 	# mode 1:upper height ("roof of smoke")
+		scalar  "min_step_len", # minimum step length for ray marcher
+		scalar  "max_step_len", # maximum step length for ray marcher
+		scalar  "light_dist",   # distance for fast light sampling
+		integer "min_level",    # ignored
+		boolean "no_globil_where_direct", # for optimization
+		array light  "lights"   # light sources
+	)
+	version 3
+	apply volume
+	gui "gui_max2_parti_volume" {
+		control "Global" "Global" (
+			"helpCHM" "MI_Shaders/mr help.chm",
+			"helpLink" "/shd-2_5Participating_Media.html#partivolume",
+			"uiName" "Parti Volume",
+			"category" "Volume"
+		)
+		control "mode" "integer" 
+		(
+			"uiName" "Mode",
+			"enum", "nonConnectable", 
+			"value" "0 Fills Entire Volume,1 Fills Only Below Height",
+			"range" 0 1
+		)
+		control "scatter" "color" (
+			"uiName" "Scatter color",
+			"value" 0.5 0.5 0.5
+
+		)
+		control "extinction" "scalar" (
+			"uiName" "Extinction",
+			"value" 0.001
+		)
+		control "r" "scalar" (
+			"uiName" "r"
+		)
+		control "g1" "scalar" (
+			"uiName" "g1"
+		)
+		control "g2" "scalar" (
+			"uiName" "g2"
+		)
+		control "nonuniform" "scalar" (
+			"uiName" "Non Uniform"
+		)
+		control "height" "scalar" (
+			"uiName" "Height",
+			"units" "world"
+		)
+		control "max_step_len" "scalar" (
+			"uiName" "Maximum Step Length",
+			"value" 5,
+			"units" "world"
+		)
+		control "min_step_len" "scalar" (
+			"uiName" "Mininum Step Length",
+			"value" 0.1,
+			"units" "world"
+		)
+		control "light_dist" "scalar" (
+			"uiName" "Light Distance",
+			"units" "world"
+		)
+		control "min_level" "integer" (
+			"uiName" "--ignore--",
+			"hidden"
+		)
+		control "no_globil_where_direct" "boolean" (
+			"uiName" "No GI where direct"
+		)
+		control "lights" "array light" (
+			"uiName" "Lights"
+		)
+	}
+end declare
+
+# This shader uses the height with the Z axis while the original shader looks at y
+declare shader
+	color "max2_parti_volume_photon" (
+		integer "mode",		# mode: 0 or 1
+		color 	"scatter",	# volume color
+		scalar 	"extinction",	# extinction coefficient
+		scalar	"r",		# blending parameter between lobes
+		scalar	"g1",		# eccentricity for first lobe
+		scalar	"g2",		# eccentricity for second lobe
+		scalar  "nonuniform", 	# nonhomogeneous ("cloudiness")
+		scalar  "height", 	# mode 1:upper height ("roof of smoke")
+		scalar  "min_step_len", # minimum step length for ray marcher
+		scalar  "max_step_len", # maximum step length for ray marcher
+		scalar  "light_dist",   # ignored
+		integer "min_level",    # photons only stored from min refr.lvl
+		boolean "no_globil_where_direct", # ignored
+		array light  "lights"   # ignored
+	)
+	version 3
+	apply photonvol
+	gui "gui_max2_parti_volume_photon" {
+		control "Global" "Global" (
+			"helpCHM" "MI_Shaders/mr help.chm",
+			"helpLink" "/shd-2_6Photon_Tracing_in_Partic.html#partivolumephoton",
+			"uiName" "Parti Volume Photon",
+			"category" "Photon Volume"
+		)
+		control "mode" "integer" 
+		(
+			"uiName" "Mode",
+			"enum", "nonConnectable", 
+			"value" "0 Fills Entire Volume,1 Fills Only Below Height",
+			"range" 0 1
+		)
+		control "scatter" "color" (
+			"uiName" "Scatter color",
+			"value" 0.5 0.5 0.5
+		)
+		control "extinction" "scalar" (
+			"uiName" "Extinction",
+			"value" 0.001
+		)
+		control "r" "scalar" (
+			"uiName" "r"
+		)
+		control "g1" "scalar" (
+			"uiName" "g1"
+		)
+		control "g2" "scalar" (
+			"uiName" "g2"
+		)
+		control "nonuniform" "scalar" (
+			"uiName" "Non Uniform"
+		)
+		control "height" "scalar" (
+			"uiName" "Height",
+			"units" "world"
+		)
+		control "max_step_len" "scalar" (
+			"uiName" "Maximum Step Length",
+			"value" 5,
+			"units" "world"
+		)
+		control "min_step_len" "scalar" (
+			"uiName" "Mininum Step Length",
+			"value" 0.1,
+			"units" "world"
+		)
+		control "light_dist" "scalar" (
+			"uiName" "Light Distance",
+			"units" "world"
+		)
+		control "min_level" "integer" (
+			"uiName" "Min Level"
+		)
+		control "no_globil_where_direct" "boolean" (
+			"uiName" "No GI where direct"
+		)
+		control "lights" "array light" (
+			"uiName" "Lights"
+		)
+	}
+end declare
+
+
+#-------------------------------------------- Lightmap / render to texture
+
+declare shader
+	"max_rtt_lens" (
+		geometry "targetInstance",
+		integer "mapChannel",
+		boolean "doProjection",
+		data "projCageDataTag",
+		scalar "projNoCageRayOffset",
+		array geometry "projInstances",
+		boolean "projIncludeWorkingModel",
+		data "projSOSelectionDataTag",
+		data "projTriSelectionDataTag",
+		color "projMissColor",
+		boolean "projMatchMtlID",
+		boolean "projHitFurthest",
+		integer "projNormalRenderSpace",
+		boolean "projNormalRender_TangentXLeft",
+		boolean "projNormalRender_TangentYDown",
+		scalar "projHeightMapMin",
+		scalar "projHeightMapMax",
+		array geometry "allTargetInstances",
+		array geometry "allProjInstances"
+	)
+	version 1
+	scanline off
+	trace on
+	apply lens
+	gui "gui_max_rtt_lens" {	
+		control "Global" "Global" (
+		    "hidden"
+		)
+	}
+end declare
+
+declare shader
+	"max_rtt_output" (
+		array color "frameBufferBackgroundColor"
+	)
+	version 3
+	apply output
+    gui "gui_max_rtt_output" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+end declare
+
+
+#-------------------------------------------- Ambient Occlusion / render to texture
+
+declare shader
+	color "max_amb_occlusion" (
+		integer "samples"      default 16,
+		color   "bright"       default 1 1 1 1,
+		color   "dark"         default 0 0 0 0,
+		scalar  "spread"       default 0.8,
+		scalar  "max_distance" default 0,
+		boolean "reflective"   default off,
+		integer "output_mode"  default 0,
+        boolean "occlusion_in_alpha" default off,
+        # Version 2 parameters
+        scalar  "falloff"      default 1.0,
+        integer "id_inclexcl"  default 0,
+        integer "id_nonself"   default 0
+	)
+	version 3
+	apply texture, light
+    gui "gui_max_amb_occlusion" {
+		control "Global" "Global" (
+            "uiName" "Ambient/Reflective Occlusion",
+            "category" "Texture"
+        )
+        control "samples" "integer" (
+            "uiName" "Samples",
+            "range" 0 10000,
+            "value" 16
+        )
+        control "bright" "color" (
+            "uiName" "Bright",
+            "value" 1 1 1 1
+        )
+        control "dark" "color" (
+            "uiName" "Dark",
+            "value" 0 0 0 1
+        )
+        control "spread" "scalar" (
+            "uiName" "Spread",
+            "value" 0.75,
+        )
+        control "max_distance" "scalar" (
+            "uiName" "Max distance",
+            "units" "world",
+            "value" 0.0,
+            "range" 0 10000000,
+        )
+        control "reflective" "boolean" (
+            "uiName" "Reflective",
+            "value" 0
+        )
+		control "output_mode" "integer"	(
+			"enum",
+			"nonConnectable", 
+			"uiName" "Type",
+			"value" "0 Occlusion,5 Inverted Occluson,1 Environment,2 Bent Normals (world),3 Bent Normals (camera),4 Bent Normals (object)",
+			"range" 0 5
+		)          
+        control "occlusion_in_alpha" "boolean" (
+            "uiName" "Return occlusion in alpha",
+            "value" 0
+        )
+        control "falloff" "scalar" (
+            "uiName" "Falloff",
+            "value" 1.0,
+            "range" 0 1000000
+        )      
+        control "id_inclexcl" "integer" (
+            "uiName" "Incl./Excl. Object ID (Neg. = Exclude)",
+            "value" 0
+		)
+        control "id_nonself" "integer" (
+            "uiName" "Non-Self-Occluding Object ID",
+            "range" 0 10000,
+            "value" 0
+        )		
+	}
+end declare
+
+
+#lightmeter shaders
+
+declare shader
+	"max_LightMeterMaterial" (
+		struct "Parameters" {
+			boolean "pseudoColor",
+                        scalar  "scaleFactor",
+                        boolean "localFG"
+		}
+
+	)
+	version 1
+	apply material
+
+    gui "gui_max_LightMeterMaterial" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+end declare
+
+declare shader
+	"max_LightMeterLightMap" (
+		color texture 	"texture",	#output texture
+		integer	        "quality",
+        scalar  "scaleFactor",
+        integer "nodeHandle"
+	)
+	version 2
+	apply lightmap
+	gui "gui_max_LightMeterLightMap" {	
+		control "Global" "Global" (
+		    "uiName" "Max LightMap Lightmeter Shader",
+		    "category" "Light Map",
+			"autobrowse" "texture",
+                    "hidden"
+		)
+        control "texture" "color texture" (
+			"uiName" "Texture",
+            "writableTexture"
+        )
+        control "quality" "integer" (
+            "value" 3,
+            "range" 1 100
+        )
+    
+	}
+end declare
+
+#
+# This shader implements 3ds Max "node level" visibility.
+# It can be used in phenomena etc (or, if unhidden, directly in the UI)
+# To affect parameters of both type "opacity" (the default) or "transparency"
+# in such a way that it will obey the node visibility. The shader has an "input"
+# which by default is passed through as is, and multiplied with the node
+# visibility.
+#
+declare shader "max_NodeVisibility" (
+        color    "input"   default 1 1 1,
+        integer  "mode"
+   )
+   version 1
+   apply texture, material
+   
+    gui "gui_max_NodeVisibility" {
+        control "Global" "Global" (
+            "uiName"    "Node Visibility",
+            "category" "Texture",
+            # By default used internally and in phenomena only. 
+            # Can be unhidden for wiring 3ds Max "node visibility" into
+            # other shade trees.
+            "hidden"
+        )
+        control "input" "color" (
+            "uiName" "Input", 
+            "value" 1 1 1,
+            "helpText" "Opacity/Transparency input"
+        )
+        control "mode" "integer" (
+            "enum", 
+            "nonConnectable", 
+            "uiName" "Mode:", 
+            "value" "0 Opacity, 1 Transparency",
+            "range" 0 1,
+            "helpText" "Defines it input/output is 'opacity' or 'transparency'"
+        )
+    }
+   
+end declare
+
+#
+# A Multi/Sub map shader
+#
+declare shader "max_MultiSubMap" (
+        integer  "mode",
+        integer  "base_id",
+        color    "id_out_of_range_color",
+        integer  "num_colors",
+        boolean  "repeat",
+        color    "id_0_color", 
+        color    "id_1_color", 
+        color    "id_2_color", 
+        color    "id_3_color", 
+        color    "id_4_color", 
+        color    "id_5_color", 
+        color    "id_6_color", 
+        color    "id_7_color", 
+        color    "id_8_color", 
+        color    "id_9_color",
+        color    "id_10_color",
+        color    "id_11_color",
+        color    "id_12_color",
+        color    "id_13_color",
+        color    "id_14_color",
+        color    "id_15_color",
+        color    "id_16_color",
+        color    "id_17_color",
+        color    "id_18_color",
+        color    "id_19_color"
+   )
+   version 2
+   apply texture, material
+   
+    gui "gui_max_MultiSubMap" {
+        control "Global" "Global" (
+            "uiName" "Multi/Sub-Map",
+            "category" "Texture"
+        )
+        
+        control "mode" "integer" (
+            "enum", 
+            "nonConnectable", 
+            "uiName" "Switch Color/Map based on:", 
+            "value" "0 Object ID, 1 Material ID, 2 Smoothing Group, 3 Random",
+            "range" 0 3,
+            "helpText" "Defines the source of the value used to switch the Color/Map."
+        )
+
+        control "base_id" "integer" (
+            "nonConnectable", 
+            "uiName" "     Base ID", 
+            "value" 0,
+            "range" 0 32768,
+            "helpText" "Defines the start ID.",
+            "hidden"
+        )
+       
+        control "repeat" "boolean" (
+            "nonConnectable", 
+            "uiName" "Repeat:", 
+            "value" off,
+            "helpText" "Repeat the Colors/Maps in a cycle"
+        )
+
+        control "id_out_of_range_color" "color" (
+            "uiName" "Default/Out-of-range Color", 
+            "value" 0.75 0 0,
+            "helpText" "This Color/Map is used when outside the range of IDs."
+        )
+
+        control "num_colors" "integer" (
+            "nonConnectable", 
+            "uiName" "Number of Colors/Maps to Use", 
+            "value" 20,
+            "range" 1 20,
+            "helpText" "How many of the below Colors/Maps are active."
+        )
+        
+        control "id_0_color" "color" (
+            "uiName" "     Color/Map #1", 
+            "value" 0.6 0.4 0.4
+        )
+        control "id_1_color" "color" (
+            "uiName" "     Color/Map #2", 
+            "value" 0.6 0.6 0.4
+        )
+        control "id_2_color" "color" (
+            "uiName" "     Color/Map #3", 
+            "value" 0.4 0.6 0.4
+        )
+        control "id_3_color" "color" (
+            "uiName" "     Color/Map #4", 
+            "value" 0.4 0.6 0.6
+        )
+        control "id_4_color" "color" (
+            "uiName" "     Color/Map #5", 
+            "value" 0.4 0.4 0.6
+        )
+        control "id_5_color" "color" (
+            "uiName" "     Color/Map #6", 
+            "value" 0.6 0.4 0.6
+        )
+        control "id_6_color" "color" (
+            "uiName" "     Color/Map #7", 
+            "value" 0.6 0.6 0.6
+        )
+        control "id_7_color" "color" (
+            "uiName" "     Color/Map #8", 
+            "value" 0.4 0.4 0.4
+        )
+        control "id_8_color" "color" (
+            "uiName" "     Color/Map #9", 
+            "value" 0.2 0.2 0.2
+        )
+        control "id_9_color" "color" (
+            "uiName" "     Color/Map #10", 
+            "value" 0 0 0
+        )
+        control "id_10_color" "color" (
+            "uiName" "     Color/Map #11", 
+            "value" 0 0 0
+        )
+        control "id_11_color" "color" (
+            "uiName" "     Color/Map #12", 
+            "value" 0 0 0
+        )
+        control "id_12_color" "color" (
+            "uiName" "     Color/Map #13", 
+            "value" 0 0 0
+        )
+        control "id_13_color" "color" (
+            "uiName" "     Color/Map #14", 
+            "value" 0 0 0
+        )
+        control "id_14_color" "color" (
+            "uiName" "     Color/Map #15", 
+            "value" 0 0 0
+        )
+        control "id_15_color" "color" (
+            "uiName" "     Color/Map #16", 
+            "value" 0 0 0
+        )
+        control "id_16_color" "color" (
+            "uiName" "     Color/Map #17", 
+            "value" 0 0 0
+        )
+        control "id_17_color" "color" (
+            "uiName" "     Color/Map #18", 
+            "value" 0 0 0
+        )
+        control "id_18_color" "color" (
+            "uiName" "     Color/Map #19", 
+            "value" 0 0 0
+        )
+        control "id_19_color" "color" (
+            "uiName" "     Color/Map #20", 
+            "value" 0 0 0
+        )
+    }
+   
+end declare
+
+
+
+declare shader "max_WireColor" (
+        integer  "mode",
+        color    "white",
+        color    "black"
+   )
+   version 1
+   apply texture, material
+   
+    gui "gui_max_WireColor" {
+        control "Global" "Global" (
+            "uiName" "Object Color",
+            "category" "Texture"
+        )
+        
+        control "mode" "integer" (
+            "enum", 
+            "nonConnectable", 
+            "uiName" "Use Channel(s):", 
+            "value" "0 RGB, 1 Red, 2 Green, 3 Blue",
+            "range" 0 3,
+            "helpText" "Color channel to extract"
+        )
+        control "white" "color" (
+            "uiName" "White", 
+            "value" 1 1 1,
+            "helpText" "White Object Color (Wireframe Color) will return this color"
+        )
+        control "black" "color" (
+            "uiName" "Black", 
+            "value" 0 0 0,
+            "helpText" "Black Object Color (Wireframe Color) will return this color"
+        )
+    }
+   
+end declare
+
+# This redefines the photographic tone mapper shader for Max
+#
+# 3ds max specific: Wrapper for mia_exposure_photographic
+# to act as a max "mr Photographic Exposure Control"
+#
+
+declare shader "max_ToneOpPhoto" (
+		struct "p" {
+			scalar "shutter_speed"     default 100.0,
+			scalar "f_stop"           default 16.0,
+			scalar "film_iso"           default 100,
+			
+			scalar "burn_highlights"    default 0.0,
+			scalar "gamma"              default 2.2,
+			scalar "shadows"      default 0.25,
+			
+			scalar "saturation"         default 1.0,
+			color "whitepoint"         default 1 1 1,
+			scalar "vignetting"         default  1.0,
+			
+			scalar "cm2_factor"         default 1.0,
+			
+			boolean "processBG"         default false,
+			boolean "active"            default true
+		}
+	)
+
+    version 1
+
+    apply lens, output
+    
+    gui "gui_max_ToneOpPhoto" {
+       control "Global"  "Global" (
+           "hidden"
+       )
+    }
+    
+end declare
+
+
+declare shader color
+	"max_vdm" 
+	(
+		shader "vector_map",
+		scalar "scale"			default 1.0,
+		integer "vector_type"	default 0,
+		integer "space_type"	default 1
+	)
+	version 1
+	apply displace
+	derivative 1
+	
+	gui "gui_max_vdm"
+	{
+		control "Global"  "Global" (
+		   "hidden"
+		)
+	}
+end declare
+
+#
+#  Underlying Kelvin-to-Color shader. Exposed to the end user via the 
+#  adsk_Kelvin_2_Color phenomenon. This is the whitepoint-adjusted
+#  blackbody shader with a chromatic adaption matrix to match a 6500K
+#  whitepoint to the whitepoint of the Rec. 709/sRGB color space.
+#
+declare shader color
+	"adsk_KelvinToColor" 
+	(
+		scalar "temperature"    default 6500.0,
+		scalar "intensity"      default 1.0
+	)
+	version 1
+	apply texture
+	
+	gui "gui_adsk_KelvinToColor"
+	{
+		control "Global"  "Global" (
+		   "hidden"
+		)
+	}
+end declare
+
+
+
+#------------------------------------------------------------------------------------------------
+# 3ds Max specific phenomena
+#------------------------------------------------------------------------------------------------
+
+#------------------------------------------------------------------------
+# Kelvin Temperature To Color Map based on mib_blackbody shader
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Kelvin_2_Color" 
+  (
+      #-------------------------------------
+	# Main parameters
+	#-------------------------------------
+      struct "m" 
+      {
+      	scalar "KelvinTemperature",
+      	scalar "Intensity"
+      },
+      integer "mode",
+      array light "lights"
+      	
+   )#end phenomenon
+
+
+#------------------------------------------------------------------------
+# adsk_KelvinToColor shader
+#------------------------------------------------------------------------
+
+shader "Map_mib_blackbody|Texmap|Shader" "adsk_KelvinToColor" 
+	(
+			"temperature" = interface "m.KelvinTemperature", 
+			"intensity" = interface "m.Intensity" 
+	)#end shader
+
+#------------------------------------------------------------------------
+#  Connections
+#------------------------------------------------------------------------
+root = "Map_mib_blackbody|Texmap|Shader"
+apply texture
+
+#------------------------------------------------------------------------
+# UI
+#------------------------------------------------------------------------
+
+	gui "gui_adsk_Kelvin_2_Color"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "Kelvin Temperature Color", "category" "Texture" )
+	
+		#-------------------------------------
+		#  Map Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Kelvin Temperature Color Parameters")
+		{
+			#----------------------------------
+			control "KelvinTemperature" "float" ("nonConnectable","uiName" "Kelvin Temperature", "value" 6500, "range" 1000 100000,"helpText" "To obtain pure white, set the Kelvin Temperature to the same value as it is in the mr Photographic Exposure Control.")
+			control "Intensity" "float" ("uiName" "Intensity", "value" 1.0, "range" 0.0 100000,"helpText" "A default value of 1.0 indicates that the color ouput will not go beyond 1.0.")
+     
+		}#end control
+		
+	  #----------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+
+	}#end gui
+
+end declare #end declare phenomenon
+
+# This shader allows supportin the shadow exclusion
+# Wrap it around any other mental ray shadow shader
+# And that shadow shader is called only when the object
+# is set to cast shadow for the current light, otherwise
+# the shadow shader is skipped and the material behaves
+# as if it was completely transparent.
+
+declare shader color
+	"max_ShadowWrapper" 
+	(
+		shader "shader"
+	)
+	version 1
+	apply shadow
+	
+	gui "gui_max_ShadowWrapper"
+	{
+		control "Global"  "Global" (
+		   "hidden"
+		)
+	}
+end declare

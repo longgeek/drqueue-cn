@@ -1,0 +1,568 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="Author" content="mental images GmbH">
+<meta name="Company" content="mental images">
+<meta name="Creator" content="hyperdoc">
+<meta name="CreatorVersion" content="1.1">
+<meta name="CreationDate" content="31 May 2006">
+<meta name="version" content="3.8.0.1" />
+<meta name="date" content="August 17 2009" />
+<link rel="stylesheet" type="text/css" href="mental.css" media="screen">
+<link href="mailto:office@mentalimages.com" rev="made" />
+<title>
+mental ray Paint Shaders</title>
+</head>
+
+<body>
+
+<h1 class="title">mental ray Paint Shaders</h1>
+<p><b>Version 3.8</b></p>
+<div class="detail">
+<p><b>Version 3.8.0.1<br>
+August 17 2009</b></p>
+</div>
+
+<div class="pic">
+<img alt="" src="images/carpaint-collage.jpg" usemap="#closeups"/>
+<br/><i>Mental ray car paint shader</i>
+</div>
+
+<map name="closeups">
+<area shape="rect" coords="0,0,320,180" href="images/carpaint-backyard-slk-2.jpg" />
+<area shape="rect" coords="320,0,640,160" href="images/carpaint-dakar-dirt-wr.jpg" />
+<area shape="rect" coords="0,180,320,380" href="images/carpaint-showroom-slk-2.jpg" />
+<area shape="rect" coords="320,160,640,380" href="images/carpaint-backyard-slk-1.jpg" />
+<area shape="rect" coords="0,380,320,650" href="images/carpaint-dakar-car-3.jpg" />
+<area shape="rect" coords="320,380,640,650" href="images/carpaint-showroom-car-2.jpg" />
+</map>
+  
+<h1>Contents</h1>
+
+<ul class="toc">
+<li class="toc"><a href="#car_paint_phen">Car Paint Phenomenon</a>
+<ul>
+<li><a href="#phen_diffuse">Diffuse Parameters</a>
+<li><a href="#phen_spec">Specular Parameters</a>
+<li><a href="#phen_flake">Flake Parameters</a>
+<li><a href="#phen_reflect">Reflection Parameters</a>
+<li><a href="#phen_dirt">Dirt Parameters</a>
+<li><a href="#phen_adv">Advanced Parameters</a>
+</ul>
+<li class="toc"><a href="#mi_metallic_paint">Metallic Paint Shader</a>
+<ul>
+<li><a href="#metal_diffuse">Diffuse Parameters</a>
+<li><a href="#metal_spec">Specular Parameters</a>
+<li><a href="#metal_flake">Flake Parameters</a>
+<li><a href="#metal_add">Additional Parameters</a>
+</ul>
+<li class="toc"><a href="#mi_bump_flakes">Flake Bump Shader</a>
+</ul>
+
+<h1>Paint Shaders</h1>
+<p>
+The paint related shaders comes from the <b>paint</b> library. The declaration
+of the shaders and Phenomena can be found in the file <i>paint.mi</i>. To use
+the shaders, the declaration file must be inluded and the library linked:</p>
+<pre>
+link "paint.so"
+$include "paint.mi"
+</pre>
+<p>
+Car paint has several peculiar characteristics. On top of the
+cars bodywork is a thin layer of pigment. The properties of 
+this layer is such that the actual perceived color <em>shifts</em> 
+depending on the viewing angle as well as the incident angle of 
+the incoming light.</p>
+
+<p>Within this layer tiny metal flakes are suspended. The  
+flakes reflect light and can be seen glittering on a sunny day, due 
+to individual flakes reflecting sunlight directly at the observer.</p>
+
+<p>On top of this is a clearcoat layer, which can be more or less
+reflective and more or less glossy, depending on the quality of the
+layer and any added wax coating. Most notably, this layer tends
+to exhibit a pronounced <em>Fresnel effect</em>, reflecting more
+light at glancing angles.</p>
+
+<div class="pic">
+<img alt="" src="images/glossy_carpaint_light.jpg" />
+<br/><i>Structure of car paint</i>
+</div>
+
+<p>
+<h2 id="car_paint_phen">Car paint Phenomenon</h2>
+
+<p>The <em>mi_car_paint_phen</em> should be applied as a surface
+shader in a material. The shader supports:</p>
+<ul>
+<li> Diffuse reflection in the pigmentation layer, with selectable 
+color shift due to observer as well as incident light angle.
+<li> Specular highlights from lightsources in the metallic flakes
+<li> Optional ray traced reflections in the metallic flakes
+<li> Specular highlights from lightsources in the clearcoat (with
+optional "glazing" mode)
+<li> Includes a clearcoat layer with selectable mirror or glossy reflections 
+and specular highlights with an optional "glazing" mode.
+<li> Includes a lambertian dirt layer, for that "unwashed" look.
+</ul>
+
+<h5 class="anchor" id="mi_shader__mi_car_paint_phen">mi_car_paint_phen</h5>
+<pre>
+declare phenomenon "mi_car_paint_phen" 
+(
+    color       "ambient",
+    color       "base_color",
+    color       "edge_color",
+    scalar      "edge_color_bias",
+    color       "lit_color",
+    scalar      "lit_color_bias",
+    scalar      "diffuse_weight",
+    scalar      "diffuse_bias",
+    color       "flake_color",
+    scalar      "flake_weight",
+    scalar      "flake_reflect",
+    scalar      "flake_exp",
+    scalar      "flake_density",
+    scalar      "flake_decay",
+    scalar      "flake_strength",
+    scalar      "flake_scale",
+    color       "spec",         
+    scalar      "spec_weight",      
+    scalar      "spec_exp",         
+    color       "spec_sec",
+    scalar      "spec_sec_weight",  
+    scalar      "spec_sec_exp",     
+    boolean     "spec_glazing",
+    color       "reflection_color",
+    scalar      "edge_factor",    
+    scalar      "reflection_edge_weight",
+    scalar      "reflection_base_weight",
+    integer     "samples",
+    scalar      "glossy_spread",
+    scalar      "max_distance",
+    boolean     "single_env_sample",
+    color       "dirt_color",
+    scalar      "dirt_weight",
+    scalar      "irradiance_weight",
+    scalar      "global_weight",
+    integer     "mode",
+    array light "lights"
+)
+</pre>
+
+<h3 id="phen_diffuse">Diffuse Parameters</h3>
+
+<dl>
+<dt>ambient<dd> is the ambient light component. Note that this parameter 
+is treated differently to the ambient/ambience parameter pair of many 
+other base shaders in that it is influenced by the other diffuse color 
+parameters following, and hence represents incoming light, rather than
+the objects "ambient color".</p>
+
+<dt>base_color<dd> is the base diffuse color of the material.
+
+<dt>edge_color<dd> is the color seen at glancing angles (i.e. edges) which
+tend to appear much <em>darker</em>. For really deep metallic paints seen on 
+sports cars it tends to be almost black.
+
+<dt>edge_color_bias<dd> defines the falloff rate of the color towards the
+edge. The useful range is 0.0 to approximately 10.0, where the value 0.0 turns 
+the effect off. Higher values makes the edge region narrower, lower values makes
+it wider.
+
+<div class="pic">
+<img alt="" src="images/carpaint-edge-color-shift.jpg" />
+<br/><i>Color shift due to view angle, shifting between a red <b>base_color</b>
+and a blue <b>edge_color</b> <br/>
+(atypical colors chosen for demonstration purposes only) with varying <b>edge_bias</b></i>
+</div>
+
+<dt>lit_color<dd> is the color seen in the area facing the lightsource.
+
+<dt>lit_color_bias<dd> defines the falloff rate of the color towards the
+light. The useful range is 0.0 to approximately 10.0, where the value 0.0 turns 
+the effect off. Higher values makes the colored region facing the light 
+smaller/narrower, lower values makes it larger/wider.
+
+<div class="pic">
+<img alt="" src="images/carpaint-lit-color-shift.jpg" />
+<br/><i>Color shift due to view angle, shifting between a red <b>base_color</b>
+and a green <b>lit_color</b> <br/>
+(atypical colors chosen for demonstration purposes only) with varying <b>lit_bias</b></i>
+</div>
+
+<dt>diffuse_weight<dd> controls the overall level of the diffuse parameters.
+
+<dt>diffuse_bias<dd> modifies the falloff of the diffuse shading. The
+useful range is approximately 0.5 to 2.0, where 1.0 represent standard
+lambertian shading, higher values pushes the diffuse peak towards the light
+source, and lower values flattens the diffuse peak.
+
+<dt>irradiance_weight<dd> sets the influence of indirect light (photons
+and final gathering) on the surface. It is internally divided by PI, i.e.
+a value of 1.0 means the standard 1.0/PI weight.
+</dl>
+
+<h3 id="phen_spec">Specular Parameters</h3>
+
+<dl>
+<dt>spec<dd> is the color of the primary specular highlight.
+<dt>spec_weight<dd> is a scalar multiplier.
+<dt>spec_exp<dd> is the Phong exponent.
+
+<dt>spec_sec<dd> is the color of the secondary specular highlight.
+<dt>spec_sec_weight<dd> is a scalar multiplier.
+<dt>spec_sec_exp<dd> is the Phong exponent.
+
+<dt>spec_glazing<dd> enables a special mode on the primary
+specular highlight called <em>glazing</em>. By threasholding the specular
+highlight, it makes the surface appear more polished and shiny. For nice
+sportscars with a lot of wax, turn glazing on. For beat up cars in the
+junkyard, turn it off.
+
+<div class="pic">
+<img alt="" src="images/carpaint-specularities.jpg" />
+<br/><i>Left to right: Flake specularity only, standard specularity, 
+"glazing" mode enabled, and finally; "glazing" mode specularity with flakes</i>
+</div>
+
+</dl>
+
+<h3 id="phen_flake">Flake Parameters</h3>
+
+<dl>
+<dt>flake_color<dd> is the color (reflectivity) of the flakes, which is
+generally white.
+
+<dt>flake_weight<dd> is a scalar multiplier for the above color.
+
+<dt>flake_reflect<dd> defines the amount of ray traced reflection in the
+flakes, which allows glittery reflections of e.g. an HDRI environment.  
+The value of 0.0 turns the effect off. The effect should generally be very
+subtle and a value of 0.1 is often enough. The final intensity of 
+reflections also depends on <b>flake_color</b> and 
+<b>flake_weight</b>.
+
+<dt>flake_exp<dd> is the Phong specular exponent for the flakes.
+
+<dt>flake_density<dd> sets the density of the flakes. The useful range 
+is from 0.1 to approximately 10.0, where lower values indicate less dense
+flakes and higher values indicates denser flakes.
+
+<dd>Since flakes are inherently small, they can easily introduce rendering 
+artifacts if their visual density becomes significantly smaller than a 
+pixel. If the oversampling of the rendering is set high, small flakes may
+also potentially trigger massive oversampling and hence very long render 
+times needlessly, since the averaging caused by the oversampling will 
+essentially cancel out the flake effect. To avoid this the parameter
+<b>flake_decay</b> exists.
+
+<dt>flake_decay<dd> sets a distance at which the influence of flakes
+fade out. A value of 0.0 disables fading. Any positive value causes the
+<b>flake_weight</b> to be modulated such that is reaches zero at this
+distance.
+
+<div class="pic">
+<img alt="" src="images/carpaint-flake-decay-off.jpg" />
+<br /><i>Flakes at different distances with no flake decay. The furthest flakes
+may potentially cause flicker in animations,
+<br/> or trigger unnecessary oversampling and long render times (here rendered
+with low oversampling for illustrative purposes).</i>
+
+<img alt="" src="images/carpaint-flake-decay-on.jpg" />
+<br /><i>Using flake decay. The flake strength diminishes by distance. The same
+   intentionally low oversampling as in the previous image has been used.</i>
+</div>
+
+<dt>flake_strength<dd> sets the difference between the orientation of the
+flakes. The useful range is 0.0 to 1.0 where 0.0 means that all flakes are 
+parallel to the surface and higher values means the orientation of flakes 
+are more and more varied.
+
+<dt>flake_scale<dd> is the size of the flakes. The procedural texture
+is calculated in object space, and will hence follow the object. Keep
+in mind that the scale is therefore influenced by any scale transformation 
+on the object instance.
+</dl>
+
+<h3 id="phen_reflect">Reflection Parameters</h3>
+
+<dl>
+<dt>reflection_color<dd> sets the color of the reflections in the 
+clearcoat layer, generally white.
+</dl>
+
+<p>Clearcoat tends to reflect more at glancing angles (edges).
+</p>
+
+<dl>
+<dt>edge_factor<dd> defines the "narrowness" of this edge.
+<dt>reflection_edge_weight<dd> controls the reflective strength at the
+edge (generally 1.0).
+<dt>reflection_base_weight<dd> defines the reflective strength at
+facing angles (generally low, 0.1 - 0.3).
+</dl>
+
+<p>Optionally, clearcoat layers may be glossy.</p>
+<dl>
+<b>samples</b> parameter sets the bumber of glossy reflection rays traced.
+The value of 0 disables glossiness.
+<dt>glossy_spread<dd> sets the amount of glossiness. Cars are generally
+near-mirrors so this value should be kept small.
+</dl>
+
+<p>The glossy reflections are created with the help of the shader
+<a href="../node8.html#mi_shader__mib_glossy_reflection">mib_glossy_reflection</a>.
+Therefore, the parameters <b>max_distance</b> (limiting the reach of
+reflective rays) and <b>single_env_sample</b> (optimizing lookup of
+environment maps) are exposed parameters of that shader.
+Only a subset of the parameters are exposed. If more are required,
+one can either build a custom shading graph or create ones own
+variation of the <b>mi_car_paint_phen</b> Phenomenon.
+</p>
+
+<h3 id="phen_dirt">Dirt Parameters</h3>
+
+<div class="pic">
+<a href="images/carpaint-dakar-dirt-wr.jpg"><img alt="" src="images/carpaint-dakar-car-resize.jpg" /></a>
+<br /><i>Real cars are rarely clean. Here showing the dirt layer (hand
+painted dirt placement map), including a bump map applied in the dirty regions.</i>
+</div>
+
+<p>A simple lambertian dirt layer covers the underlaying paint and clearcoat 
+layers.</p>
+<dl>
+<dt>dirt_color<dd> is the color of said dirt.
+<dt>dirt_weight<dd> the amount of dirt, which would probably be connected
+to a texture shader to get variations in the dirt across the surface. If
+<b>dirt_weight</b> is 0.0 no dirt is added.
+</dl>
+
+<h3 id="phen_adv">Advanced Parameters</h3>
+
+<dl>
+<dt>irradiance_weight<dd> sets the influence of indirect light (photons
+and final gathering) on the surface. It is internally divided by PI, i.e.
+a value of 1.0 means the standard 1.0/PI weight.
+
+<dt>global_weight<dd> is a global tuning parameter affecting the entire
+diffuse, flake and specular subsystems. It does not affect reflections
+or dirt.
+
+<dt>mode<dd> is the light mode.
+<dt>lights<dd> the light list.
+</dl>
+
+<h1 id="mi_metallic_paint">Metallic Paint</h1>
+
+<p>The <em>mi_metallic_paint</em> is shader is used to facilitate the
+rendering of metallic paint.
+However, it only takes care of the pigmentation and the flakes, not 
+the very important clearcoat reflections. 
+To accomplish the <em>full effect</em>, it needs to be combined with a reflection 
+shader (i.e. connecting it to the <b>base_material</b> parameter of 
+<em><a href="../node8.html#mi_shader__mib_glossy_reflection">mib_glossy_reflection</a></em>). 
+It also needs a bump shader for the flakes (generally
+<a href="#mi_shader__mi_bump_flakes"><em>mi_bump_flakes</em></a>).</p>
+
+<p>To get all these connections made automatically one can use the ready-made
+Phenomenon <a href="#mi_shader__mi_car_paint_phen"><em>mi_car_paint_phen</em></a>,
+which also supports a dirt layer. See the above documentation, which has
+slightly more detailed documentation of the parameters with example images.</p>
+
+<p>The shader supports:</p>
+
+<ul>
+<li> Diffuse reflection in the pigmentation layer, with selectable 
+color shift due to observer as well as incident light angle.
+<li> Specular highlights from lightsources in the metallic flakes
+<li> Specular highlights from lightsources in the clearcoat (with
+optional "glazing" mode)
+<li> Optional ray traced reflections in the metallic flakes
+</ul>
+
+<h5 class="anchor" id="mi_shader__mi_metallic_paint">mi_metallic_paint</h5>
+<pre>
+declare shader
+color "mi_metallic_paint" (
+    color       "ambient"           default 0 0 0 1,
+    color       "base_color"        default 0.8 0.1 0.0 1,
+    color       "edge_color"        default 0.0 0.0 0.0,
+    scalar      "edge_color_bias"   default 1.0,
+    color       "lit_color"         default 0.6 0.0 0.2,
+    scalar      "lit_color_bias"    default 8.0,
+    scalar      "diffuse_weight"    default 1.0,
+    scalar      "diffuse_bias"      default 1.5,
+    scalar      "irradiance_weight" default 1.0,
+    color       "spec"              default 1 1 1 1,
+    scalar      "spec_weight"       default 0.2,
+    scalar      "spec_exp"          default 60.0,
+    color       "spec_sec"          default 1 1 1 1,
+    scalar      "spec_sec_weight"   default 0.3,
+    scalar      "spec_sec_exp"      default 25.0,
+    boolean     "spec_glazing"      default on,
+    color       "flake_color"       default 1.0 1.0 1.0 1,
+    scalar      "flake_weight"      default 1.0,
+    scalar      "flake_reflect"     default 0.0,
+    scalar      "flake_exp"         default 45.0,
+    scalar      "flake_decay"       default 0.0,
+    shader      "flake_bump",
+    scalar      "global_weight"     default 1.0,
+    integer     "mode"              default 3,
+    array light "lights"        
+)
+version 2
+apply material
+end declare 
+</pre>
+
+<h3 id="metal_diffuse">Diffuse Parameters</h3>
+
+<dl>
+<dt>ambient<dd> is the ambient light component. Note that this parameter 
+is treated differently to the ambient/ambience parameter pair of many 
+other base shaders in that it is influenced by the other diffuse color 
+parameters following, and hence represents incoming light, rather than
+the objects "ambient color".
+
+<dt>base_color<dd> is the base diffuse color of the material.
+
+<dt>edge_color<dd> is the color seen at glancing angles (i.e. edges) which
+tend to appear much <em>darker</em>. For really deep metallic paints seen on 
+sports cars it tends to be almost black.
+
+<dt>edge_color_bias<dd> defines the falloff rate of the color towards the
+edge. The useful range is 0.0 to approximately 10.0, where the value 0.0 turns 
+the effect off. Higher values makes the edge region narrower, lower values makes
+it wider.
+
+<dt>lit_color<dd> is the color seen in the area facing the lightsource.
+
+<dt>lit_color_bias<dd> defines the falloff rate of the color towards the
+light. The useful range is 0.0 to approximately 10.0, where the value 0.0 turns 
+the effect off. Higher values makes the colored region facing the light 
+smaller/narrower, lower values makes it larger/wider.
+
+<dt>diffuse_weight<dd> allows to tune the overall level of the diffuse
+parameters.
+
+<dt>diffuse_bias<dd> modifies the falloff of the diffuse shading. The
+useful range is approximately 0.5 to 2.0, where 1.0 represent standard
+lambertian shading, higher values pushes the diffuse peak towards the light
+source, and lower values flattens the diffuse peak.
+
+<dt>irradiance_weight<dd> sets the influence of indirect light (photons
+and final gathering) on the surface. It is internally divided by PI, i.e.
+a value of 1.0 means the standard 1.0/PI weight.
+</dl>
+
+<h3 id="metal_spec">Specular Parameters</h3>
+
+<dl>
+<dt>spec<dd> is the color of the primary specular highlight.
+<dt>spec_weight<dd> is a scalar multiplier.
+<dt>spec_exp<dd> is the Phong exponent.
+
+<dt>spec_sec<dd> is the color of the secondary specular highlight.
+<dt>spec_sec_weight<dd> is a scalar multiplier.
+<dt>spec_sec_exp<dd> is the Phong exponent.
+
+<dt>spec_glazing<dd> enables a special mode on the primary specular
+highlight called <em>glazing</em>. By threasholding the specular
+highlight, it makes the surface appear more polished and shiny. For nice
+sportscars with a lot of wax, turn glazing on. For beat up cars in the
+junkyard, turn it off.
+</dl>
+
+<h3 id="metal_flake">Flake Parameters</h3>
+
+<dl>
+<dt>flake_color<dd> is the color (reflectivity) of the flakes, which is
+generally white.
+
+<dt>flake_weight<dd> is a scalar multiplier for the above color.
+
+<dt>flake_reflect<dd> defines the amount of ray traced reflection in the
+flakes, which allows glittery reflections of e.g. an HDRI environment.  
+The value of 0.0 turns the effect off. The effect should generally be very
+subtle and a value of 0.1 is often enough. The final intensity of 
+reflections also depends on <b>flake_color</b> and 
+<b>flake_weight</b>.
+
+<dt>flake_exp<dd> is the Phong specular exponent for the flakes.
+
+<dt>flake_bump<dd> is the actual flake bump shader used. The shader
+<a href="#mi_shader__mi_bump_flakes"><em>mi_bump_flakes</em></a> exists
+for this purpose, but any shader that modifies the normal vector (e.g.
+<a href="../node4.html#mi_shader__mib_passthrough_bump_map"><em>mib_passthrough_bump_map</em></a>)
+can be used.
+
+<dd>The shader put in the <b>flake_bump</b> may also return a color, which 
+will be the color (intensity) of the flake, or it may leave the color 
+unmodified.
+</dl>
+
+<p>Since flakes are inherently small, they can easily introduce rendering 
+artifacts if their visual density becomes significantly smaller than a 
+pixel. To avoid this the parameter <b>flake_decay</b> exists. It sets
+a distance at which the influence of flakes fade out. A value of 0.0
+disables fading. Any positive value causes the <b>flake_weight</b> to
+be modulated such that it reaches zero at this distance.</p>
+
+<h3 id="metal_add">Additional Parameters</h3>
+
+<dl>
+<dt>global_weight<dd> is a global tuning parameter that is a global 
+multiplier to the output of the shader.
+
+<dt>mode<dd> is the light mode.
+<dt>lights<dd> the light list.
+</dl>
+
+<h1 id="mi_bump_flakes">Flake Bump Shader</h1>
+
+<p>This shader is designed to create a bump map with the appearance
+of small individual flakes at slightly different orientations.  It does
+so by slightly modifying the current normal vector based on a procedurally
+generated flake texture. 
+It also returns a color that indicates the "intensity" for that flake.</p>
+
+<h5 class="anchor" id="mi_shader__mi_bump_flakes">mi_bump_flakes</h5>
+<pre>
+declare shader "mi_bump_flakes" (
+    scalar      "flake_density"     default 0.5,
+    scalar      "flake_strength"    default 0.8,
+    scalar      "flake_scale"       default 0.2,
+)
+version 1
+apply texture
+end declare
+</pre>
+
+<dl>
+<dt>flake_density<dd> only affects the returned color, not the 
+amount of change to the normal vector. The useful range is from 
+0.1 to approximately 10.0, where lower values indicate less dense
+flakes (more flakes are given low color values near black) and
+higher values indicates denser flakes.
+
+<dt>flake_strength<dd> indicates the amount of normal vector
+perturbations. Useful range is 0.0 (which disables the effect) to
+1.0. For low values, flakes are nearly parallell, for higher values,
+the difference between each flakes orientation is larger.
+
+<dt>flake_scale<dd> is the size of the flakes. The procedural texture
+is calculated in object space, and will hence follow the object. Keep
+in mind that the scale is therefore influenced by any scale transformation 
+on the object instance.
+</dl>
+<br />
+
+<p><hr>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href= "http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Boxes</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node203.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node205.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION202"></a>
+
+<h3>Boxes</h3>
+
+<p><a id="newbox"></a></p>
+
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_NBOX</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miBox</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td></td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls</td>
+</tr>
+</table>
+<pre>
+typedef struct miBox {
+        miCBoolean      mtl_is_label;
+        miUchar         sharp;
+        miUchar         spare[2];
+        miUint          spare2;
+
+        miVector        bbox_min;       /* bounding box: low corner */
+        miVector        bbox_max;       /* bounding box: high corner */
+        miUint          no_primlists;   /* number of lists of prims,
+                                           excluding border primlists */
+        miUint          no_prims;       /* total number of primitives
+                                           contained in all primitive lists,
+                                           excluding border prims */
+        miUint          no_border_primlists; /* number of border primlists */
+        miUint          no_border_prims;/* number of primitives contained */
+                                        /* in all border primlists */
+        miUint          primdata_size;  /* prim data: size per primitive */
+        miUint          pdata_size;     /* prim data: total size (there could
+                                           be extra data after primlist data */
+        miTag           topology;       /* adjacency information for all
+                                           primitives (region+border) */
+
+        miUint          prim_offset;    /* byte offset: primitives */
+        miUint          mtl_offset;     /* byte offset: materials */
+        miUint          dim_offset;     /* byte offset: tex/usr offset table*/
+        miUint          pdata_offset;   /* byte offset: prim data */
+        miVertex_info   vertex_info;    /* vertex specification */
+        miScalar        data[1];        /* vertex lines begin, more follow */
+} miBox;
+</pre>
+<p>In mental ray 3.4, <i>miBox</i> was introduced to improve efficiency.
+<i>miBox</i> optimizes memory coherence.</p>
+<p>A translator should not change the fields in an <i>miBox</i>
+directly; the api functions <i>mi_api_primlist_begin</i>,
+<i>mi_api_primlist_border</i>, <i>mi_api_primlist_dimensions</i>,
+<i>mi_api_primlist_approx</i>, <i>mi_api_primlist_topology</i>,
+<i>mi_api_primlist_end</i> should be used. Writing boxes directly
+makes rendering faster because no tessellation is involved, but it
+does make the code more susceptible to changes in mental ray. miBox
+is an internal data structure that changes in incompatible ways
+periodically, unlike miObjects.</p>
+<p><b>mtl_is_label</b> is a flag that informs the renderer that the
+<i>material</i> field in the primitives does not hold a material
+but an integer label. The renderer must ignore the material in this
+case and use the inherited material. This flag is set for
+<i>tagged</i> objects in the mi2 language.</p>
+<p><b>sharp</b> stores the tessellation sharpness: 0 means
+interpolated and 255 means faceted. mental ray 3.2 also allows
+intermediate values in the range 1..254.</p>
+<p><b>bbox_min</b> and <b>bbox_max</b> are the low and high corners
+respectively of the bounding box around the vextex positions.
+<b>no_prims</b> is the total number of primitives (triangles, strip
+faces, quads etc) contained in all primitive lists, excluding
+border primitives.</p>
+<p><b>no_primlists</b> is the total number of primitive lists
+contained in the box. Each primitive list consists of prims,
+excluding border primitives.</p>
+<p><b>no_border_prims</b> is the total number of primitives in all
+border primitive lists.</p>
+<p><b>no_border_primlists</b> is the number of primitive lists
+defining the border.</p>
+<p><b>primdata_size</b> specifies the number of 32-bit integers
+which are assigned to each primitive from the pdata_offset array.
+For example <code>primdata_size = 1</code> means that for
+subsequent primitives one integer from <i>pdata_offset</i> can be
+used as user data.</p>
+<p><b>pdata_size</b> specifies the size of the whole pdata section.
+There may be extra space after primlist data, for individual
+needs.</p>
+<p><b>prim_offset</b> is the offset to an array of integers
+defining multiple primitive lists. Each primitive list begins with
+a primitive type combined with a count into a single 32-bit value:
+type is stored in bits 28-31, count in bits 0-27. The primitive
+vertex integers follow, referring to the vertex lines.</p>
+<p><b>mtl_offset</b> is the offset to an array of integers defining
+materials.</p>
+<p><b>dim_offset</b> is the offset to the array of scalar offsets
+within a vertex line for all texture and user spaces. The
+<i>dim_offset</i> array has at least one entry for texture spaces
+and one for user data spaces, which are identical to
+<i>no_textures</i> or <i>no_users</i>. If <i>no_textures</i> or
+<i>no_users</i> is greater than zero, additional entries are
+present with values of at least three (defined after position in
+the vertex line).</p>
+<p><b>pdata_offset</b> is the offset to the user data, swapped as
+integers. Interpretation is up to the application.</p>
+<p><b>data[1]</b> is the beginning of the vertex line storage.</p>
+<p><b>vertex_info</b> defines a primitive vertex. Vertex data is
+stored as an interleaved array of lines of scalars in the box. A
+line contains a 3-d vertex position and may contain, for example, a
+normal (3 scalars), first derivatives (6 scalars), second
+derivatives (9 scalars), textures, and user data.
+<i>miVertex_info</i> describes the layout of the lines.</p>
+<p><a id="vertinfo"></a></p>
+<pre>
+typedef struct miVertex_info {
+        miUint2         line_size;      /* vertex line size in #scalars */
+        miUchar         normal_offset;  /* when 0, not present */
+        miUchar         derivs_offset;  /* surf derivs, when 0, not present */
+        miUchar         derivs2_offset; /* surf 2nd derivs, when 0, not pr. */
+        miUchar         bump_offset;    /* bump basis vectors if non null */
+        miUchar         no_bumps;       /* number of bump vectors */
+        miUchar         motion_offset;  /* when 0, not present */
+        miUchar         no_motions;     /* number of motion vectors */
+        miUchar         texture_offset; /* when 0, not present */
+        miUchar         no_textures;    /* number of textures */
+        miUchar         user_offset;    /* when 0, not present */
+        miUchar         no_users;       /* number of user vectors */
+        miUchar         spare[3]}       /* not used */
+} miVertex_info}
+</pre>
+<p><b>line_size</b> is the number of scalars in a line of vertex
+data. <b>normal_offset</b> is the to the normal vector.</p>
+<p><b>derivs_offset</b> is the offset to the first partial
+derivatives.</p>
+<p><b>derivs2_offset</b> is the offset to the second partial
+derivatives.</p>
+<p><b>bump_offset</b> is the offset to the bump vectors.
+<b>no_bumps</b> is the number of bump vectors. <b>motion_offset</b>
+is the offset to the motion vectors.</p>
+<p><b>no_motions</b> is the number of motion vectors.
+<b>texture_offset</b> is the offset to the texture vectors.</p>
+<p><b>no_textures</b> is the number of texture spaces.
+<b>user_offset</b> is the offset to the user vectors.
+<b>no_users</b> is the number of user spaces.</p>
+<p>A number of macros exist to provide access to <i>miBox</i>
+contents.</p>
+<ul>
+<li><b>Access within a section</b>
+<p><b>miBOX_VERTEX_LINES(box)</b> returns the address of the first
+vertex line.</p>
+<p><b>miBOX_VERTEX_LINE(box, idx)</b> returns the address of a
+certain vertex line.</p>
+<p><b>miBOX_PRIMS(box)</b> returns the address of the first
+primitive list.</p>
+<p><b>miBOX_MATERIALS(box)</b> returns the address of the first
+material tag/integer.</p>
+<p><b>miBOX_TEX_OFFSET(box)</b> returns the address of the first
+texture space <i>dim_offset</i> entry.</p>
+<p><b>miBOX_USER_OFFSET(box)</b> returns the address of the first
+user space <i>dim_offset</i> entry.</p>
+<p><b>miBOX_PRIMDATA(box)</b> returns the address of the first
+32-bit data for primitives.</p>
+</li>
+<li><b>Access within a line</b>
+<p><b>miVL_POS(box, line)</b> returns the vertex position.</p>
+<p><b>miVL_NORMAL(box, line)</b> returns the vertex normal.</p>
+<p><b>miVL_DERIVS1(box, line)</b> returns the partial derivative u
+vector, v at subsequent address.</p>
+<p><b>miVL_DERIVS2(box, line)</b> returns the second derivatives
+(three vectors in total).</p>
+<p><b>miVL_BUMP(box, line)</b> returns the first bump basis
+vector.</p>
+<p><b>miVL_MOTION(box, line)</b> returns the first motion
+vector.</p>
+<p><b>miVL_TEXTURE(box, line)</b> returns the first texture
+scalar.</p>
+<p><b>miVL_TEXTURE_D(box, line, offs</b> returns the address of a
+certain texture space. <i>offs</i> is an entry from the
+<i>dim_offset</i> array, i.e. a scalar offset within the line.</p>
+<p><b>miVL_USER(box, line)</b> returns the first user vertex
+data.</p>
+<p><b>miVL_USER_D(box, line, offs)</b> returns the address of a
+certain user data space. <i>offs</i> is an entry from the
+<i>dim_offset</i> array, i.e a scalar offset within the line.</p>
+</li>
+<li><b>Number of items</b>
+<p><b>miBOX_NO_VTXLINES(box)</b> returns the number of vertex
+lines.</p>
+<p><b>miBOX_NO_MATERIALS(box)</b> returns the number of materials
+defined.</p>
+</li>
+<li><b>Primitive data</b>
+<p><b>miBOX_PD(box, idx)</b> return the address of primitive data
+for the primitive with global index <i>idx</i>.</p>
+</li>
+<li><b>Other</b>
+<p><b>miBOX_POS(box, idx)</b> returns the position entry for line
+index <i>idx</i>.</p>
+<p><b>miBOX_MOTION(box, idx, which)</b> returns the motion vector
+<i>which</i> for line index <i>idx</i>.</p>
+<p><b>miBOX_TRI(box, idx)</b> returns vertex triple for a certain
+triangle. Assumes that the box defines one sequential list of
+triangles. Skip the primtype/index count entry (+1).</p>
+<p><b>miBOX_MATERIAL(box, idx)</b> returns material for a certain
+triangle, same assumptions as for miBOX_TRI.</p>
+<p><b>miBOX_SIZE(box)</b> returns the size of the entire miBox.</p>
+</li>
+</ul>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node203.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node205.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

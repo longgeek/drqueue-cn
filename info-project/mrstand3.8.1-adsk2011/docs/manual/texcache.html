@@ -1,0 +1,71 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Texture Caching</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node20.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node21.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION18"></a>
+<a id="fo:texture_caching"></a>
+<h2>Texture Caching</h2>
+<p>mental ray supports caching of textures for some image formats.
+With texture caching only certain parts (tiles) of a texture are loaded into
+memory, reducing the memory consumption during rendering dramatically. These
+tiles and automatically removed or replaced by recently accessed ones.</p>
+<p>
+Texture caching has some advantages compared to memory mapping, especially
+on 32-bit machines where virtual address space is limited. For scenes with
+many large textures not all of them would fit into the virtual memory
+simultaneously. In such cases, mental ray would frequently unmap and re-map
+textures from memory on demand. This is a relatively slow operation. In
+contrast, cached textures occupy just a small fraction of their full size
+in memory. Texture tiles or pages are read from the image file only on demand,
+unused areas of a texture are not kept in memory.
+<p>
+Furthermore, cached textures have no restriction on supported data type,
+number of components or bit depths, and endianess. Data type conversions
+are performed on the fly. Memory mapped textures, on the other hand, need
+to be prepared for specific data types and endianess of the target machine,
+which typically requires to pre-convert texture files to the <tt>.map</tt>
+format.
+<p>
+The disadvantage of texture caching compared to memory mapping is the small
+runtime overhead to handle the cache, which applies even in cases where the
+full scene would fit into the virtual memory.
+<p>
+Caching is enabled only for textures defined as <code class="mi">local</code>.
+<p>
+Texture caching is generally supported for the Autodesk Maya <tt>iff</tt>,
+OpenEXR <tt>.exr</tt> (in tiled format), mental images <tt>.map</tt> (in remap
+format) and <tt>BMP</tt> <a href="node19.html">image file types</a>. If
+filtering is requested for a texture in mental ray then further requirements
+apply: the pyramid level images need to be provided in the image file, they
+are not computed dynamically by mental ray. This is currently possible for the
+OpenEXR mipmap or ripmap pyramids and for the filtered <tt>.map</tt> images.
+Support for further image file formats may be added in the future versions.
+<p>
+During rendering mental ray reports info and progress messages when texture
+caching has been used. Texture cache detail messages can be enabled on the
+<a href="node245.html#cli:message">command line</a>.
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node20.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node21.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

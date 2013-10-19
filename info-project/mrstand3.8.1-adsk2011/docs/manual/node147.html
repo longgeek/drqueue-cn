@@ -1,0 +1,273 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>KD-Tree Functions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node146.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node148.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION145"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_kdtree_create">mi_kdtree_create</a></li>
+<li><a href="#api:mi_kdtree_edit">mi_kdtree_edit</a></li>
+<li><a href="#api:mi_kdtree_add">mi_kdtree_add</a></li>
+<li><a href="#api:mi_kdtree_unpin">mi_kdtree_unpin</a></li>
+<li><a href="#api:mi_kdtree_access">mi_kdtree_access</a></li>
+<li><a href="#api:mi_kdtree_lookup">mi_kdtree_lookup</a></li>
+<li><a href="#api:mi_kdtree_iterate">mi_kdtree_iterate</a></li>
+<li><a href="#api:mi_kdtree_delete">mi_kdtree_delete</a></li>
+</ul>
+
+<h3>KD-Tree Functions</h3>
+<p>KD trees are acceleration structures that store 3D points in a
+<i>k</i>-dimensional space. They provide fast lookup of elements
+that are close to a given location. Stored elements consist of two
+parts: the location vector and associated arbitrary data. All data
+stored in a KD tree must have the same size, but different trees
+may have different sizes. Sizes over about 100-200 bytes are not
+recommended though, to keep memory usage low and lookups fast; if
+more data is needed pointers to the data should be stored instead
+of the data itself.</p>
+<p>KD trees are implemented as mental ray database elements.
+However, access and edit functions are slightly different. The main
+difference is that, when a KD tree is accessed or edited, a pointer
+to a "handle" is returned, not just the pointer in to DB element
+memory. This pointer (always called <i>tree</i> below) is only
+valid in the thread that has opened it - it is not possible to
+access a KD tree and keeping the pointer for multiple rendered
+rectangles because different rectangles are rendered simultaneously
+in different threads. For example, it is legal to access a KD tree
+in a shader state function in <i>state init</i> mode and unpinning
+it in <i>state exit</i> mode, but it is not legal to do the same in
+shader init or exit functions because shaders may stay initialized
+and in use in multiple threads until rendering finishes.
+<i>mi_shaderstate_set</i> is a good way to pass open KD tree
+pointers to other shaders.</p>
+<p>Like all other data structures under shader control, KD trees
+cannot be used across a network of machines. Every host can create
+and access its own KD trees, but it cannot access or edit trees on
+other hosts. Although KD trees are scene elements that are
+identified by tags, which might indicate that they are
+network-transparent, they are not - there is no mechanism that
+synchronizes multiple writes. Any attempt to do so may overwrite
+some changes with others, or fail to propagate changes across the
+network at the right time.</p>
+<p><a id="INDEX709"></a></p>
+<h5 class="anchor" id="api:mi_kdtree_create">mi_kdtree_create</h5>
+<pre>
+    miTag mi_kdtree_create(
+        miKdtree_type    type,
+        miUint           datasize)
+</pre>
+<p>The <i>type</i> argument must have the value
+<tt>miKDTREE_3D</tt>, which specifies that the tree works with 3D
+points in space. Future versions may allow different lookup
+dimensions or methods. The <i>datasize</i> argument is the size of
+the data not including the size of location coordinates, fixed for
+all elements of the new KD tree. The returned tag identifies the
+new KD tree for future accesses and edits.</p>
+<p><a id="INDEX710"></a></p>
+<h5 class="anchor" id="api:mi_kdtree_edit">mi_kdtree_edit</h5>
+<pre>
+    struct miKdtree *mi_kdtree_edit(
+        miTag            tag,
+        const void       *shared_data,
+        miUint           shared_data_size)
+</pre>
+<p>This opens a tree for adding new elements. The
+<i>shared_data</i> argument may point to a data structure that is
+stored while the KD tree is open for editing. mental ray will not
+use this data in any way, but pass it to the insert callback later
+when the tree is rebalanced (see below). The
+<i>shared_data_size</i> is the size of the structure that
+<i>shared_data</i> points to. The caller should release
+<i>shared_data</i> after <i><a href="node147.html#INDEX710">mi_kdtree_edit</a></i>
+returns, if it was
+allocated, because mental ray makes a copy of the data and keeps it
+until the next rebalancing operation (see below). Multiple
+simultaneous edits are allowed, mental ray resolves any conflicts
+automatically. However, the same tree may not be open for reading
+(<i><a href="node147.html#INDEX713">mi_kdtree_access</a></i>) an
+writing (<i><a href="node147.html#INDEX710">mi_kdtree_edit</a></i>)
+simultaneously, even if the conflicting access and edit happen in
+different threads.</p>
+<p><a id="INDEX711"></a></p>
+<h5 class="anchor" id="api:mi_kdtree_add">mi_kdtree_add</h5>
+<pre>
+    miBoolean mi_kdtree_add(
+        struct miKdtree  *tree,
+        const void       *data,
+        const miScalar   point[])
+</pre>
+<p>Add a new element to the KD tree. The <i>tree</i> pointer must
+have been obtained from a previous call to
+<i><a href="node147.html#INDEX710">mi_kdtree_edit</a></i>. The size of the
+stored <i>data</i> must agree with the <i>data_size</i> specified
+when the tree was created. The <i>point</i> is the 3D position
+where the data will be stored. This function is fast, the element
+is added to the buffer of elements scheduled for adding. The
+function returns <tt>miFALSE</tt> on failure, for example if
+<i>tree</i> comes from <i><a href="node147.html#INDEX713">mi_kdtree_access</a></i>
+instead of
+<i><a href="node147.html#INDEX710">mi_kdtree_edit</a></i>.</p>
+<p>Since <i><a href="node147.html#INDEX711">mi_kdtree_add</a></i>
+is much faster than <i><a href="node147.html#INDEX710">mi_kdtree_edit</a></i>,
+it is a good idea
+to add as many points as possible inside an edit/unpin bracket. Do
+not edit, add, unpin for every point.</p>
+<p><a id="INDEX712"></a></p>
+<h5 class="anchor" id="api:mi_kdtree_unpin">mi_kdtree_unpin</h5>
+<pre>
+    miBoolean mi_kdtree_unpin(
+        struct miKdtree  *tree)
+</pre>
+<p>This function ends accessing or editing. Every call to
+<i><a href="node147.html#INDEX713">mi_kdtree_access</a></i> and
+<i><a href="node147.html#INDEX710">mi_kdtree_edit</a></i> should
+have a corresponding <i><a href="node147.html#INDEX712">mi_kdtree_unpin</a></i>.
+The <i>tree</i>
+pointer, which must have been obtained from an access or edit,
+becomes invalid. However, if the KD tree is not unpinned until the
+end of the job (ie. a photon bundle or a rendered rectangle), this
+is done automatically. This automatic unpinning should be used with
+care; while keeping the tree accessed or edited for a long time is
+efficient because the add function is faster than the access and
+edit functions, it does not protect the called from simultaneous
+access and edit, which is illegal. The function returns
+<tt>miTRUE</tt>; there are currently no failure modes.</p>
+<p><a id="INDEX713"></a></p>
+<h5 class="anchor" id="api:mi_kdtree_access">mi_kdtree_access</h5>
+<pre>
+    typedef miBoolean ((miKdtree_insert_callback)
+        (void                    *callback_data,
+         void                    *data,
+         miScalar                point[],
+         const void              *shared_data));
+
+    struct miKdtree *mi_kdtree_access(
+        miTag                    tag,
+        miKdtree_insert_callback *callback,
+        void                     *callback_data)
+</pre>
+<p>Opens a KD tree for read-only lookups or iteration over all
+elements. Simultaneous access calls for different KD trees,
+identified by different <i>tag</i>s, are legal. The returned
+<i>tree</i> pointer identifies the accessed KD tree until the the
+access is terminated with a call to
+<i><a href="node147.html#INDEX712">mi_kdtree_unpin</a></i>.</p>
+<p>After a tree was edited and points were added, it requires a
+processing phase called <i>rebalancing</i>. Rebalancing is an
+expensive operation, and mental ray tries to defer it as long as
+possible, in case another point gets added later. However,
+accessing the tree for lookup requires a rebalanced tree, so the
+rebalancing phase occurs when
+<i><a href="node147.html#INDEX713">mi_kdtree_access</a></i> is called.</p>
+<p>Rebalancing integrates each point previously stored with
+<i><a href="node147.html#INDEX711">mi_kdtree_add</a></i>, and not
+yet integrated by a previous rebalance, into the KD tree. If a
+nonzero <i>callback</i> argument is specified, this callback will
+be called for each point to integrate. The callback may modify the
+<i>point</i> and <i>data</i> fields of the point, which were both
+specified with <i><a href="node147.html#INDEX711">mi_kdtree_add</a></i>.
+The callback also
+receives the <i>shared_data</i> structure specify in the last
+<i><a href="node147.html#INDEX710">mi_kdtree_edit</a></i> call.
+Finally, the callback receives the opaque <i>callback_data</i>
+pointer from <i><a href="node147.html#INDEX713">mi_kdtree_access</a></i>;
+this can be used
+to pass a C++ <i>this</i> pointer to provide context. If the
+callback returns <tt>miFALSE</tt>, the point is rejected and not
+added.</p>
+<p>For example, the callback may be used for energy
+renormalization. Light sources may cast photons into the scene, and
+store each photon into a single KD tree where it hits a surface.
+However, the light sources do not know how many photons will
+eventually be cast, so they cast each one with the light energy.
+When all photons have been cast, it is necessary to divide the
+energy of each photon in the KD tree by the number of photons for
+the originating light source. This would be done by the callback;
+the photon energy would be stored in the point <i>data</i> by
+<i><a href="node147.html#INDEX711">mi_kdtree_add</a></i>, and
+information about the light emitter (which is important to find the
+number of photons to divide by) would be stored in the
+<i>shared_data</i> by <i><a href="node147.html#INDEX710">mi_kdtree_edit</a></i>.
+It would be
+inefficient to store the light emitter identifier with each added
+photon.</p>
+<p><a id="INDEX714"></a></p>
+<h5 class="anchor" id="api:mi_kdtree_lookup">mi_kdtree_lookup</h5>
+<pre>
+    typedef miBoolean ((miKdtree_lookup_callback)
+        (void                    *callback_data,
+         const void              *data,
+         const miScalar          point[]));
+
+    miUint mi_kdtree_lookup(
+        struct miKdtree          *tree,
+        const miScalar           point[],
+        miUint                   max_n,
+        miScalar                 max_dist,
+        miScalar                 *max_dist_used,
+        miKdtree_lookup_callback *callback,
+        void                     *callback_data)
+</pre>
+<p>This function returns points near <i>point</i> in the KD tree
+<i>tree</i>, which must have been opened with
+<i><a href="node147.html#INDEX713">mi_kdtree_access</a></i>. It finds the
+<i>max_n</i> closest elements, which are closer than
+<i>max_dist</i>. The distance to the most distant element found is
+stored in * <i>max_dist_used</i>, if this pointer is nonzero. The
+number of elements found is returned. The <i>callback</i> is called
+on each element found, with the opaque <i>callback_data</i>
+pointer. If the callback returns <tt>miFALSE</tt>,
+<i><a href="node147.html#INDEX714">mi_kdtree_lookup</a></i> returns
+immediately. For example, if the KD tree is used for storing
+photons, a simple callback could just sum the energy of all
+photons.</p>
+<p><a id="INDEX715"></a></p>
+<h5 class="anchor" id="api:mi_kdtree_iterate">mi_kdtree_iterate</h5>
+<pre>
+    miBoolean mi_kdtree_iterate(
+        struct miKdtree          *tree,
+        miKdtree_lookup_callback *callback,
+        void                     *callback_data)
+</pre>
+<p>This function is similar to a lookup, but it returns all points
+in the KD tree, instead of just those that are close to a given
+point. Again, the iteration stops if the callback returns
+<tt>miFALSE</tt>. <i><a href="node147.html#INDEX715">mi_kdtree_iterate</a></i> returns
+<tt>miFALSE</tt> on failure, for example if <i>tree</i> comes from
+<i><a href="node147.html#INDEX710">mi_kdtree_edit</a></i> instead
+of <i><a href="node147.html#INDEX713">mi_kdtree_access</a></i>.</p>
+<p><a id="INDEX716"></a></p>
+<h5 class="anchor" id="api:mi_kdtree_delete">mi_kdtree_delete</h5>
+<pre>
+    miBoolean mi_kdtree_delete(
+        miTag                    tag)
+</pre>
+<p>Deletes the KD tree from the database. All KD tree handles must
+be closed by calling <i><a href="node147.html#INDEX712">mi_kdtree_unpin</a></i>
+before calling this
+function. The function returns <tt>miTRUE</tt>; there are currently
+no failure modes.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node146.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node148.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

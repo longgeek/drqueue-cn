@@ -1,0 +1,61 @@
+#*****************************************************************************
+# Copyright 2008 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	Maximilian Tarpini
+# Purpose:	Color Map class for protein V2
+#
+# History:
+#
+# 2009 June, 15 - t_tarpm, initial implementation
+# 
+#****************************************************************************/
+
+min version "3.7.1"
+
+#------------------------------------------------------------------------
+# Phenomenon
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Map_Simple_Color_V2" 
+	(
+		#-------------------------------------
+		# Main parameters
+		#-------------------------------------
+		struct "m" 
+		{
+			color "color_input"	
+		}     	
+	)
+
+	apply texture
+	
+	
+	shader "color_instance" "adsk_Utility_ColorState" ( "the_color" = interface "m.color_input" )
+
+	#------------------------------------------------------------------------
+	#  Connections
+	#------------------------------------------------------------------------
+	root = "color_instance"
+
+
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Map_Simple_Color_V2"
+	{
+		#----------------------------------
+		control "Global" "Global" 
+		(
+			"uiName" "Simple Color Map (adsk)", "category" "Texture", "hidden" 
+		)
+	
+		#-------------------------------------
+		#  Map Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Simple Color Map Parameters")
+		{
+			#----------------------------------
+			control "color_input" "color" ("nonConnectable", "uiName" "Color")
+		}
+	}
+end declare

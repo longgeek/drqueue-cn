@@ -1,0 +1,288 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Upgrading from mental ray 3.7 to 3.8</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="upgrading.html">&laquo;&nbsp;prev</a></li>
+<li><a href="upgrading37.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<div class="toc">
+<dl>
+<dt>Upgrading from mental ray 3.7 to 3.8</dt>
+<dd>
+<dl>
+<dt><a href="#whatsnew">What's new in Version 3.8</a></dt>
+<dt><a href="#mi">Scene Description Language</a></dt>
+<dt><a href="#shader">Shader Writing and Integration</a></dt>
+<dt><a href="#incompatible">Incompatible Changes</a></dt>
+<dt><a href="limitations.html">Known Limitations</a></dt>
+</dl>
+</dd>
+</dl>
+</div>
+
+<h3 id="whatsnew">What's new in Version 3.8</h3>
+
+<p>Here is a summary of some of the new features and feature
+improvements in version 3.8 of mental ray. Please refer to the
+<a href="../relnotes/relnotes.html">release notes</a> for more
+details and for other changes which are not mentioned here.</p>
+
+<h4 id="iray">iray Rendering Mode on Graphics Hardware</h4>
+<p>
+This version offers a new rendering mode which generates photo-real
+imagery using ray tracing technology to also capture global illumination
+without introducing rendering algorithm specific artifacts and without
+requiring the use of renderer specific parametrization. When coupled
+with highly parallel processing platforms, like CUDA-capable hardware,
+mental ray can deliver these results in a progressive manner, at
+interactive frame rates. This mode is called the
+<a href="iray.html#fo:iray">iray rendering mode</a>. It will be enabled
+with a <a href="#mi:iray">string option</a>.
+See also <a href="limitations.html#iray">Known Limitations</a>.</p>
+
+<h4 id="metasl">MetaSL 1.1 Features Support</h4>
+<p>
+This version of mental ray adds runtime support for the features listed
+in the MetaSL language specification version 1.1, as published on the
+<a href="http://www.mentalimages.com/metasl">mental images website</a>.
+This includes handling of newly introduced material descriptions and BRDF
+properties, as well as support for scene data access from within MetaSL
+shaders, for example. See also <a href="limitations.html#metasl">Known
+Limitations</a>.</p>
+
+<h4 id="deploy">MetaSL Unified Automatic Shader Deployment</h4>
+<p>
+The MetaSL back-end technology for automatic compilation and execution of
+shader delivered as source code has been improved and extended. In addition
+to the existing <a href="node99.html#sh:metaslc++">C++ back-end</a> a new
+<a href="node99.html#sh:metaslllvm">LLVM back-end</a> is available. It provides
+a platform independent way of deployment and shader execution without the
+need for external compiler or framework installations. Furthermore, a newly
+added mechanism for shader caching allows to support incremental MetaSL
+shader editing workflows within mental ray.
+See also <a href="limitations.html#metasl">Known Limitations</a>.</p>
+
+<h4 id="stereo">Stereoscopic Rendering</h4>
+<p>
+mental ray supports <a href="node28.html#fo:stereo">stereoscopic rendering</a>
+in a single run with optimal performance. It will generate the two images
+for the left and the right eye automatically. Only the primary rendering
+algorithms like rasterizer and ray tracing (of eye rays) are effected by
+the slight offset of the eye. Secondary effects with view dependency like
+tessellation or final gathering are not affected but use the "center" eye
+as usual. The stereo rendering should not influence existing shaders. The
+mental ray display protocol has been extended to send stereoscopic information
+across the connection, and the image tools have been updated accordingly to
+cope with stereo image files and to display images life when rendering in
+stereo. The stereo rendering is enabled with a <a href="#mi:stereo">camera
+setting</a>.</p>
+
+<h4 id="raydiff">Dynamic Texture Filtering</h4>
+<p>
+Shaders are able to implement better texture filtering with the help of
+so-called <em>ray differentials</em> that are natively supported by mental
+ray. It allows to take advantage of dynamic filter sizes to reduce artifacts,
+especially in secondary effects like reflections and refractions. Additional
+<a href="#shader_texfilter">texture lookup shader API functions</a> allow to
+improve existing texture filtering implementations with little effort.</p>
+
+<h4 id="ipfg">Importance-based Final Gathering</h4>
+<p>
+The <a href="node52.html#fo:finalgather">final gathering</a> (FG) algorithm
+can now be used together with
+<a href="importons.html#fo:importons">Importons</a>, or even with
+<a href="irradparticles.html#fo:ip">Irradiance Particles</a> (IP), to benefit
+from importance-based computations of those techniques. These combinations
+are enabled simply by activating both FG and Importons, or FG and IP, which
+were rejected in previous versions. During rendering, after Importons or IP
+passes have been finished, the FG points are placed in the scene. If the FG
+rays have to be shot around, they are not shot in a uniform way, but in the
+importance-driven way dictated by the Importons, or the IP map (which is used
+to compute in which directions to shoot more rays and in which ones less).
+The general outcome of enabling FG with importance-based techniques is better
+final quality coupled with lower rendering times.</p>
+
+<h4 id="bsp25">Ray Tracing Performance</h4>
+<p>
+The ray tracing acceleration algorithm BSP2 in mental ray has been revised
+both in terms of memory usage and speed. It has been optimized especially for
+handling dynamic scene content with on-demand loaded scene parts provided as
+assemblies. In the case of motion blur with ray tracing, the memory consumption
+has been reduced noticeably, with a positive impact on overall performance.</p>
+
+<h4 id="hair">Hair Rendering Performance</h4>
+<p>
+A new acceleration technique for ray tracing hair has been implemented. It
+leads to noticeable performance improvements both in terms of execution time
+and memory consumption, especially in the presence of assemblies. When hair
+is used with the rasterizer, a new mechanism can be enabled with a
+<a href="#mi:rasthair">string option</a> which will decrease memory usage to
+a fraction compared to previous versions, with the effect of rendering faster
+by minimizing or even completely avoiding any flushing during rendering.
+In addition, the default automatic splitting of long hair and large hair
+counts has been re-designed and greatly improved, so that artifacts of
+missing hair segments are gone, and tessellation behavior is more adaptive,
+and memory efficient.</p>
+
+<h4>Interactive Ray Tracing Support</h4>
+<p>
+The <a href="">progressive rendering</a> and <a href="ibl.html#fo:ibl">IBL</a>
+algorithms have been improved and extended with capabilities to trade speed
+for quality. This includes the introduction of a specialized
+<a href="#mi:progress">occlusion cache</a> to pre-compute shadowing, as well
+as support for <a href="#mi:iblapprox">approximations</a> of controllable
+quality for the lighting contribution from the IBL environment. A new
+integration interface has been designed for the implementation of interactive
+rendering solutions, which allows to apply changes to the model while
+receiving and displaying the rendered full resolution images at interactive
+frame rates.</p>
+
+<h4 id="maps">Map Container Features and Performance</h4>
+<p>
+The Map primitive adds support for attachment of <a href="">global data</a>.
+This global data is made up of fields similar to the regular per-element
+data, but there values are considered identical for all elements. The
+runtime for handling Maps in mental ray has been extended with a caching
+system to be able to operate on large Maps which can exceed the size of the
+physical memory installed on a machine. The performance of Map accesses
+has been improved noticeably.</p>
+
+<h4>Advanced Unified Image Display</h4>
+<p>
+The image display tool <code>imf_disp</code> has been re-implemented based
+on a unified user interface that looks identical on all supported platforms.
+It provides identical workflow and interactions independent of the system.
+It adds new features like exposure control (in addition to gamma control),
+zoom display in and out, playback of animation sequences from a selection
+of files, and anaglyph color viewing of stereo images. Furthermore, the
+tools have been extended to report, display, and save separate layers in
+multi-layer image files in OpenEXR format.</p>
+
+<h3 id="mi">Scene Description Language</h3>
+
+<p>
+The following changes were made in the .mi scene description syntax:</p>
+<ul>
+<li id="mi:iray">The iray rendering mode can be enabled with a string option:
+<pre>
+"iray" on<dfn>|</dfn>off
+</pre>
+The default is <code>off</code>.
+
+<li id="mi:stereo">New interface for stereoscopic rendering. The camera definition
+can be extended with the <code>stereo</code> statement:
+<pre>
+camera "<var>camera_name</var>"
+   <dfn>...</dfn>
+   stereo <var>method</var> <var>eyedistance</var>
+end camera
+</pre>
+The <var>method</var> is one of <code>off</code>, <code>toein</code>,
+<code>offset</code>, or <code>offaxis</code>. The <var>eyedistance</var>
+is the distance between the two eyes. See the camera parameter
+<a href="node77.html#mi:stereo">stereo</a> for details.
+
+<li id="mi:rasthair">
+The improved rasterizer hair memory handling can be enabled with the
+string option:
+<pre>
+"rast hair disposable" on
+</pre>
+The default is <code>off</code>.
+
+<li>
+The progressive IBL enhancements provide the following new options for
+performance tuning towards specific use cases and models. They are
+active only if the IBL <a href="node76.html#mi:ibl">lighting mode</a>
+is set to <code>"approximate"</code>.
+<pre>
+"environment lighting approximate split" <dfn>num<sub>int</sub></dfn>
+</pre>
+Reduce color noise by drawing more samples internally from the environment
+at the cost of bias if the value specified is > 1. The default is 4.
+<pre>
+"environment lighting approximate split vis" <dfn>num<sub>int</sub></dfn>
+</pre>
+Specify the number of visibility rays to be shoot per internal sample.
+Reduces the visibility noise at he cost of increased ray tracing overhead.
+The default is 2.
+<pre id="mi:progress">
+"progressive occlusion cache points" <dfn>num<sub>int</sub></dfn>
+</pre>
+Specify the number of points in the cache, 0 disables the cache.
+The default is no cache.
+<pre>
+"progressive occlusion cache rays" <dfn>num<sub>int</sub></dfn>
+</pre>
+Specify the number of occlusion rays to shoot per point. Higher numbers
+increase precomputation time. The default is 128.
+<pre>
+"progressive occlusion cache max frame" <dfn>num<sub>int</sub></dfn>
+</pre>
+Last frame that shall use the cache, later frames will blend in the regular
+IBL. The default is 32.
+<pre>
+"progressive occlusion cache exclude" <dfn>num<sub>int</sub></dfn>
+</pre>
+Allows to exclude an object with the given label from being included in
+the cache. The default is not exclude anything.
+
+</ul>
+
+<h3 id="shader">Shader Writing and Integration</h3>
+<ul>
+<li>
+The <code>miCamera</code> structure has been extended with the new fields
+<code>miCamera_stereo</code> and <code>eye_separation</code> for
+stereoscopic rendering.
+<li>
+For stereoscopic rendering, image file names are automatically prefixed with
+"lft_" and "rgt_", respectively. This implies that stereo buffers are currently
+always written to separate files.
+<li id="shader_texfilter">
+For texture filtering with dynamic filter scale, and texture filtering on demand
+the new functions <code>
+<a href="node150.html#api:mi_lookup_color_texture_x">mi_lookup_color_texture_x</a>
+</code>,<code>
+<a href="node150.html#api:mi_lookup_filter_color_texture_x">mi_lookup_filter_color_texture_x</a>
+</code>, and<code>
+<a href="node150.html#api:mi_lookup_scalar_texture_x">mi_lookup_scalar_texture_x</a>
+</code>
+have been added.
+<li>
+For new dynamic texture filtering based on ray differentials, the new C++ class
+<code>mi::shader_v3::Mip_remap</code> has been added.
+</ul>
+
+<h3 id="incompatible">Incompatible Changes</h3>
+<ul>
+<li>
+Due to changes in the handling of shader parameter connections and adjustments
+in the implementation of the related <code>mi_eval</code> macros in mental ray,
+existing shader packages for earlier versions of mental ray are not binary
+compatible and need to be re-compiled. On the other hand, no source code
+changes are required if just public interface functions have been used.
+</ul>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="upgrading.html">&laquo;&nbsp;prev</a></li>
+<li><a href="upgrading37.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Contour Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node132.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node134.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION131"></a>
+<h3>Contour Shaders</h3>
+<p>The <b><a id="INDEX499"></a>contour shader</b>s
+compute contour color and width (and optionally object label,
+material tag, motion, and normal). Their input is two contour
+information blocks for two adjacent samples on each side of a
+contour (as stored by the contour store shader), the state, and
+shader parameters. Each material can have a separate contour
+shader. If no contour shader is specified for a material, that
+material does not get a contour.</p>
+<p>The contour shader to call is selected based on which object is
+in front. If the difference in depth is small, the selection is
+based on which object faces the camera the most. (This is necessary
+to avoid "randomly" mixing contours along an edge between two
+different materials.)</p>
+<p>As an example, consider the following very simple contour
+shader. It makes the contours white and half a percent (of the
+image X resolution) wide:</p>
+<pre>
+    miBoolean my_first_contour_shader(
+        miContour_endpoint  *result,
+        MyInfo              *info_near,
+        MyInfo              *info_far,
+        miState             *state,
+        void                *paras)
+    {
+        result-&gt;color.r = result-&gt;color.g =
+        result-&gt;color.b = result-&gt;color.a = 1.0;
+        result-&gt;width = 0.5;
+        return(miTRUE);
+    }
+</pre>
+<p>The type of the result is</p>
+<pre>
+    typedef struct {
+        miVector  point;
+        miColor   color;
+        float     width;
+        miVector  motion;
+        miVector  normal;
+        miTag     material;
+        int       label;
+    } miContour_endpoint;
+</pre>
+<p>The <tt>point</tt> is automatically filled in, the contour
+shader does not have to do that. <tt>point.x</tt> and
+<tt>point.y</tt> are in screen coordinates, while <tt>point.z</tt>
+is in camera coordinates.</p>
+<p>An example of a slightly more complex shader, where the contour
+color is a factor of the material color and the width is a
+parameter, is</p>
+<pre>
+    miBoolean my_colordependent_contour_shader(
+        miContour_endpoint      *result,
+        MyInfo                  *info_near,
+        MyInfo                  *info_far,
+        miState                 *state,
+        Factorcolor_Parameters  *paras)
+    {
+        /*
+         * Set contour color to a factor times material color.
+         * The opacity color-&gt;a is set to 1.0, otherwise the
+         * material will shine through the contour.
+         */
+        float f = paras-&gt;factor;
+        result-&gt;color.r = f * info_near-&gt;color.r;
+        result-&gt;color.g = f * info_near-&gt;color.g;
+        result-&gt;color.b = f * info_near-&gt;color.b;
+        result-&gt;color.a = 1.0;
+
+        /*
+         * Contour width given by a parameter
+         */
+        result-&gt;width = paras-&gt;width;
+
+        return(miTRUE);
+    }
+</pre>
+<p>An appropriate data type must be defined for a contour shader.
+In this case, the data type of the parameters,
+<tt>Factorcolor_Parameters</tt>, contains the fields
+<tt>factor</tt> and <tt>width</tt>.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node132.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node134.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

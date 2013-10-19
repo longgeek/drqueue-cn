@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Finalgather Map Copy: fg_copy</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node253.html">&laquo;&nbsp;prev</a></li>
+<li><a href="configuration.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION252"></a>
+<h2>Finalgather Map Copy: fg_copy</h2>
+<p><a id="INDEX1091"></a> The finalgather map
+copying and merging utility <tt>fg_copy</tt> is started as</p>
+<p>&nbsp;&nbsp; <tt>fg_copy</tt> [<i>options</i>] <i>infile1</i> 
+<!-- unknown command: \ldots --> <i>infileN</i> <i>outfile</i></p>
+<p>It reads finalgather map files <i>infile</i>* created with
+<tt>finalgather file</tt> statements in the options block in the
+.mi scene file, and merges them into a single finalgather file
+<i>outfile</i>. Each file is a collection of finalgather points
+that represent the irradiance at a specific 3D coordinate.</p>
+<p>Optionally, only points in a given region are considered and
+written. Points that are very close and have similar orientation
+can optionally be merged to eliminate redundancy and reduce the
+size of the generated map.</p>
+<p>This tool is helpful when rendering animations. Flickering is
+reduced with moderate computational effort if several key frames
+are rendered with final gathering saved to files. The
+<tt>-finalgather only</tt> command-line of mental ray option allows
+rendering these files quickly without rendering color images. When
+all the finalgather map files for the key frames are finished, the
+<i>fg_copy</i> tool can combine them into a single finalgather map
+file that can be used for beauty-rendering the entire animation.
+(This does not work for <a href="node80.html#INDEX264">detail
+shadowmap</a>s files.)</p>
+<p>This method works well with render farms, where different hosts
+create finalgather maps for different frames simultaneously.</p>
+<p>If the same file is specified several times as an input file,
+its points appear multiple times in the output map. If point
+merging is enabled, the points are not duplicated but their
+importance weights are adjusted.</p>
+<p>The following options are supported:</p>
+<p><tt>-h</tt></p>
+<p>Print a brief option summary.</p>
+<p><tt>-f</tt> <i>F</i></p>
+<p>Merge finalgather points with similar normals within distance
+<i>F</i> into a single one. The value of <i>F</i> is related to the
+minimum radius of the <tt>finalgather accuracy</tt> statement in
+the .mi scene file. All finalgather points are tested against all
+other finalgather points regardless of which file they came from.
+In particular, <i>fg_copy</i> can be used to reduce the redundancy
+and size of a single input file.</p>
+<p><tt>-b</tt> <i>xmin ymin zmin xmax ymax zmax</i></p>
+<p>Select and copy finalgather points within the specified voxel
+only. This may be used for reducing the finalgather map size if
+only a part of the scene is required.</p>
+<p><tt>-B</tt> <i>xmin ymin zmin xmax ymax
+zmax</i><sup>3.5</sup></p>
+<p>Select and copy finalgather points outside of the specified
+voxel only. Using fg_copy utility twice with <tt>-B</tt> and
+<tt>-b</tt> options allows splitting a finalgather file.</p>
+<p><tt>-v</tt></p>
+<p>Verbose output prints messages showing what <tt>fg_copy</tt> is
+doing, and a version banner.</p>
+<p>Note that the <tt>finalgather file</tt> statement in the options
+block of the .mi scene file also allows specifying multiple
+finalgather map files, enclosed in angle brackets, which will be
+merged at render time. Using <i>fg_copy</i> to precompute a merged
+map for a list of keyframes for the entire animation is more
+efficient.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node253.html">&laquo;&nbsp;prev</a></li>
+<li><a href="configuration.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

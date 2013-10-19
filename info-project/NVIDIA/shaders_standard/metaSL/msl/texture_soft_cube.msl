@@ -1,0 +1,140 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+ shader Texture_lookup_2d_soft_cube
+ {
+	input:
+		enum Projection_space { 
+			Object = 0, 
+			World = 1
+		};
+		
+		Texture2d texture = "CliffRock.dds"
+		{
+			display_name("Texture");
+			description("Texture that will be applied." );
+		};
+		
+		Projection_space projection_space = Object
+		{			
+			display_name("Projection Space");
+			description("Space that will be used for projection." );
+		};
+		float projection_softness = 0.5
+		{
+			display_name("Projection Softness");
+			soft_range(0, 2);
+			hard_range(0.0, 1.0);
+			description("Sets blending so that projections overlap softly." );
+		};
+		float scale_projection = 1.0
+		{
+			display_name("Scale Texture");
+			soft_range(0.0, 4.0);
+			description("Scales the texture to the appropriate size." );
+		};
+		float shift_projection = 0.0
+		{
+			display_name("Offset Texture");
+			hard_range(0.0, 1.0);
+			description("Offsets the texture." );
+		};
+		float view_projection_overlay = 0.0
+		{
+			display_name("View Overlap");
+			hard_range(0.0, 1.0);
+			description("Shows overlap regions of the texture." );
+		};
+	output:
+		Color result;
+		
+	
+	float mix_diff2(float val, float cmp_a, float cmp_b, float delta)
+	{
+		float lower = cmp_a - delta;
+		float upper = cmp_a + delta;
+		float diff_1 = 1-smoothstep(lower, upper, val);
+		lower = cmp_b - delta;
+		upper = cmp_b + delta;
+		float diff_2 = 1-smoothstep(lower, upper, val);
+		return max(diff_1, diff_2);
+	}	
+
+	void main()
+	{
+		float3 blend_edges = float3(0.0, 0.0, 0.0);
+		float3 project_vect;
+		Color lookup_xy, lookup_yz, lookup_xz;
+		float3 normal_ = normal;
+		float3 lookup_coord = position.xyz;
+		
+		if(projection_space == Object)
+		{
+			lookup_coord = transform_point("internal", "object", lookup_coord);
+			normal_		= transform_vector("internal", "object", normal_);
+		}
+		lookup_coord = lookup_coord*scale_projection+shift_projection;
+		
+		project_vect.x = abs(dot(normal_, float3(1.0, 0.0, 0.0)));  
+		project_vect.y = abs(dot(normal_, float3(0.0, 1.0, 0.0))); 
+		project_vect.z = abs(dot(normal_, float3(0.0, 0.0, 1.0))); 
+		
+		
+	 	if(mix_diff2(project_vect.x, project_vect.y,
+						project_vect.z, projection_softness)>= 1.0)
+		{
+			blend_edges.x = 0.0;
+		}
+		else
+			blend_edges.x = 1-mix_diff2(project_vect.x,
+								project_vect.y,
+								project_vect.z,
+								projection_softness);
+										
+		//-----------------------------------
+		if(mix_diff2(project_vect.y, project_vect.x,
+						project_vect.z, projection_softness) >= 1.0)
+		{
+			blend_edges.y = 0.0;
+		}
+		else
+			blend_edges.y = 1-mix_diff2(project_vect.y,
+								project_vect.x,
+								project_vect.z,
+								projection_softness);
+		//--------------------------------------
+		if(mix_diff2(project_vect.z, project_vect.x,
+						project_vect.y, projection_softness) >= 1.0)
+		{
+			blend_edges.z = 0.0;
+		}
+		else
+			blend_edges.z = 1-mix_diff2(project_vect.z,
+								project_vect.x,
+								project_vect.y,
+								projection_softness);
+			
+		// there's only a need for a projection lookup when a component of
+		// 'blend_edges'is != 0 (which means that a texture will be projected)
+		// In the best case we only have to make one lookup, in the worst case
+		// 3 lookups
+		if(blend_edges.x != 0)
+			lookup_yz = tex2D(texture, lookup_coord.yz);
+		if(blend_edges.y != 0)
+			lookup_xz = tex2D(texture, lookup_coord.xz);
+		if(blend_edges.z != 0)
+			lookup_xy = tex2D(texture, lookup_coord.xy);
+			
+		result = lookup_xy*blend_edges.z + 
+				 lookup_yz*blend_edges.x + 
+				 lookup_xz*blend_edges.y;
+				 
+		// normalize, since weights can sum up to > 1 which is not desired
+		result /= (blend_edges.x + blend_edges.y + blend_edges.z);
+		result = result * (1-view_projection_overlay);
+		result.xyz += blend_edges * view_projection_overlay;
+		result.w = 1.0;
+	}			
+};

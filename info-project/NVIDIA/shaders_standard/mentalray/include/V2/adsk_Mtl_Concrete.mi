@@ -1,0 +1,1109 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	mtarpini
+# Purpose:	Concrete Material
+#
+# ---------------------------------------------
+# Exports:
+#
+# - adsk_Tex_Concrete_SmoothBumpTex_V2		(sub-phen, hidden)
+# - adsk_Shd_Concrete_V2					(hidden)
+# - adsk_Mtl_Concrete_V2
+#
+#
+# Imports:
+#
+# - 3dsmax9
+# - adsk_Mtl_Spider
+# - adsk_Utility_shaders
+#
+# ---------------------------------------------
+# Description:
+#
+# Basically the workflow for the phen class implementation looks like this:
+#
+#   - a first low level phen, the appearance shader.
+#
+#   - a controller shader that takes the UI specs and outputs values to drive
+#     the exposed parameters in the appearance shader.
+#
+#   - the actual material class phen which encapsulates the above shaders.
+#
+#
+# ---------------------------------------------
+# History:
+#
+#	Feb 02, 2007 - mtarpini, only max shaders.
+#	Feb 12, 2007 - mtarpini, only custom shaders.
+#	Mar 03, 2007 - mtarpini, mixed environment.
+#	Mar 10, 2007 - mtarpini, revisited to implement 3dsmax bump properly.
+#	Mar 13, 2007 - mtarpini, instead of a single 'shader', color+shader+enable combo.
+#	Mar 19, 2007 - mtarpini, formalized fixed texture paths.
+#   May 28, 2007 - mtarpini, implementing unit scale handles
+#	Jul 18, 2007 - mtarpini, added custom bump for stamped finish
+#	Sept 7, 2007 - jschrag, removed aggregate choice
+#	Nov 14, 2007 - mtarpini, mia_mat_x, removed bumpcombiners, added rcorners and ao checkboxes
+#	Nov 15, 2007 - mtarpini, bump_amount slot and UI for Custom SurfaceFinish, removed combo bitmap+enable
+#	Nov 19, 2007 - mtarpini, 'appearance' phen has now a 'struct' output, this to work with mia_material and photon slot
+#   Feb 06, 2008 - laperrr, Updated UI name and Tooltips
+#   Jan 02, 2009 - mtarpini, nodevisibility support
+#
+#****************************************************************************/
+
+min version "3.6"
+
+
+
+
+
+#------------------------------------------------------------------------
+# adsk_Tex_Concrete_SmoothBumpTex_V2
+#------------------------------------------------------------------------
+declare phenomenon
+	color "adsk_Tex_Concrete_SmoothBumpTex_V2"
+	(
+		vector "tiling"
+	)
+	apply texture
+	version 1
+	
+	
+	shader "max_base_XYZGen__instance" "adsk_Utility_XYZGenerator" 
+	(
+		"CoordinateSystem" 0,
+		"MapChannel" 1,
+		"Offset" 0 0 0,
+		"Tiling" = interface "tiling",
+		"Angle" 0 0 0,
+		"Blur" 0.01,
+		"BlurOffset" 0
+	)
+
+	shader "max_base_Output__instance" "adsk_Utility_Output" 
+	(
+		"RGBAmount" 1, 
+		"RGBOffset" 0, 
+		"OutputAmount" 1, 
+		"BumpAmount" 1, 
+		"Invert" off, 
+		"Clamp" off, 
+		"AlphaFromRGB" off, 
+		"UseColorMap" off, 
+		"UseRGBCurve" off
+	)	
+
+	shader "max_Cellular__instance" "adsk_Tex_Cellular" 
+	(
+		"Parameters" {
+			"CellColor" 0 0 0 1, 
+			"DivColor1" 0 0 0 1, 
+			"DivColor2" 1 1 1 1, 
+			"Map1Enabled" on, 
+			"Map2Enabled" on, 
+			"Map3Enabled" on, 
+			"Variation" 0, 
+			"Size" 0.35, 
+			"Spread" 0.55, 
+			"LowThresh" 0, 
+			"MidThresh" 0.5, 
+			"HighThresh" 1, 
+			"type" 0, 
+			"Fractal" off, 
+			"Iteration" 3, 
+			"Roughness" 0, 
+			"Smooth" 0.1, 
+			"Adaptive" on, 
+			"Coords" "max_base_XYZGen__instance", 
+			"Output" "max_base_Output__instance"	}, 
+		"ExtraParameters" {
+			"GBufferID" 0	}
+	)
+
+	shader "max_Noise__instance" "adsk_Utility_Noise" 
+	(
+		"Parameters" {
+			"Color1" 0 0 0 1, 
+			"Color2" 1 1 1 1, 
+			"Map2" "max_Cellular__instance", 
+			"Map1Enabled" on, 
+			"Map2Enabled" on, 
+			"Size" 0.25, 
+			"Phase" 0, 
+			"Levels" 3, 
+			"ThresholdLow" 0, 
+			"ThresholdHigh" 1, 
+			"Type" 1, 
+			"Coords" "max_base_XYZGen__instance", 
+			"Output" "max_base_Output__instance"	}, 
+		"ExtraParameters" {
+			"GBufferID" 0	}
+	)
+
+	shader "Concrete_SmoothBumpTex" "adsk_Utility_Mix2Color"
+	(
+		"color1" 0.501961 0.501961 0.501961 1,
+		"color2" = "max_Noise__instance",
+		"mixing_mode" 2,
+		"mixing_factor" 1
+	)
+	
+	root = "Concrete_SmoothBumpTex"
+	
+	
+	#------------------------------------------------------------------------
+	# GUI
+	#------------------------------------------------------------------------	
+	gui "gui_adsk_Tex_Concrete_SmoothBumpTex_V2" {	
+		control "Global" "Global" (
+				"hidden"
+			)
+	}
+end declare	
+
+
+
+
+#----------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
+# adsk_Shd_Concrete_V2 (Appearence Shader)
+#----------------------------------------------------------------------------------------
+declare phenomenon
+	struct {
+		#-------------------------------------
+        color   "result"        
+    }
+    "adsk_Shd_Concrete_V2"
+	(
+		#-------------------------------------
+		# Main Parameters
+		#-------------------------------------
+		struct "m"
+		{
+			#----------------------------------
+			color "diffuse_color",
+
+			#----------------------------------
+			scalar "brightvar_enable",
+			integer "brightmode_switcher",
+			shader "bright_custom",
+
+			#----------------------------------
+			scalar "diffuse_roughness",
+
+			#----------------------------------
+			color "reflectivity_noiseCol1",
+			color "reflectivity_noiseCol2",
+			scalar "reflectivity_noiseSize",
+			boolean "refl_hl_only",
+			
+			#----------------------------------
+			color "refl_gloss_noiseCol1",
+			color "refl_gloss_noiseCol2",
+			scalar "refl_gloss_noiseSize",
+			
+			#----------------------------------
+			scalar "brdf_0_degree_refl",
+			scalar "brdf_90_degree_refl",
+			scalar "brdf_curve",
+			
+			#----------------------------------
+			scalar "bump_amount",
+			integer "bump_switcher",
+			shader "bump_map"
+		},
+		
+		#-------------------------------------
+		# Ambient Occlusion 
+		#-------------------------------------
+		struct "o"
+		{
+			#----------------------------------
+			boolean  "ao_on",
+			integer  "ao_samples",
+			scalar   "ao_distance",
+			integer  "ao_do_details"
+		},
+		
+		#-------------------------------------
+	    # Round Corners
+	    #-------------------------------------
+  		struct "r"
+  		{
+  			#----------------------------------
+  			scalar  "roundcorners_radius",
+  			boolean "roundcorners_allow_different_materials"	      	
+		},
+
+		#-------------------------------------
+		# Performance Tuning Parameters
+		#-------------------------------------
+		struct "p"
+		{
+			#----------------------------------
+	      	integer "reflection_glossy_samples",
+	      	integer "refl_depth"
+		},
+
+		#-------------------------------------
+		# Texture Parameters (for 'fixed' textures)
+		#-------------------------------------
+		struct "t"
+		{
+			#----------------------------------			
+			color texture	"broomstraight_tex",
+			color texture	"broomcurved_tex"
+		},
+
+		#-------------------------------------
+		# Unit Scalable Parameters
+		#-------------------------------------
+		struct "k"
+		{
+			#----------------------------------
+	      	vector  "brightauto_tiling",
+	      	vector  "noisereflect_tiling",
+	      	vector  "noiseglossy_tiling",
+	      	vector  "concretesmooth_tiling",
+	      	vector  "polished_tex_tiling",
+	    
+			#----------------------------------
+			scalar	"oceanbump_largest",
+			scalar	"oceanbump_smallest",
+			scalar	"oceanbump_size"
+		},
+
+		#-------------------------------------
+		# UV Coords Parameters
+		#-------------------------------------
+		struct "u"
+		{
+		#----------------------------------
+			integer "uv_channel",
+	      	scalar  "u_scale",
+	      	scalar  "v_scale",
+	      	scalar	"btex_rw_scale"
+		},
+		
+		#----------------------------------
+		# Lights and Mode Parameters
+		#----------------------------------
+		integer		"mode",
+		array light "lights"
+	)
+	apply material, photon, shadow
+	version 1
+
+
+
+
+	#------------------------------------------------------------------------
+	# -> begin diffuse_plus_brightness variation ############################
+	#------------------------------------------------------------------------
+	# max_Noise, to add a prebuild, auto, slight bright variation to diffuse color
+	#------------------------------------------------------------------------
+	shader "bright_auto__instance" "adsk_Utility_Noise_Tweakable"
+	(
+				"noise_size" 1.5,
+				"noise_color1" 1 1 1 1,
+				"noise_color2" 0.588235 0.588235 0.588235 1,
+				"low" 0,
+				"high" 1,
+				"tiling" = interface "k.brightauto_tiling",
+				"angle" 0 0 0
+	)
+	#------------------------------------------------------------------------
+	# Switcher, switch over auto and custom brightness variations
+	#------------------------------------------------------------------------
+	shader "brightness_variation__instance" "adsk_Utility_Switch8Shader"
+	(
+				"switcher" = interface "m.brightmode_switcher",
+				"type" 0,
+				"shader_1" "bright_auto__instance",
+				"shader_2" = interface "m.bright_custom"
+	)
+	#------------------------------------------------------------------------
+	# Mixer,  multiply colormap by bright map
+	#------------------------------------------------------------------------
+	shader "diffcolor_plus_brightvar" "adsk_Utility_Mix2Color"
+	(
+				"color1" = interface "m.diffuse_color",
+				"color2" = "brightness_variation__instance",
+				"mixing_mode" 2,
+				"mixing_factor" = interface "m.brightvar_enable"
+	)
+	#------------------------------------------------------------------------
+	# <- end diffuse_plus_brightness variation ##############################
+	#------------------------------------------------------------------------	
+
+	#------------------------------------------------------------------------
+	# -> begin other color shaders definition ###############################
+	#------------------------------------------------------------------------
+	# max_Noise, for refl_color slot
+	#------------------------------------------------------------------------
+	shader "noise_reflect" "adsk_Utility_Noise_Tweakable"
+	(
+		"noise_size" = interface "m.reflectivity_noiseSize",
+		"noise_color1" = interface "m.reflectivity_noiseCol1",
+		"noise_color2" = interface "m.reflectivity_noiseCol2",
+
+		"low" 0,
+		"high" 1,
+
+		"tiling" = interface "k.noisereflect_tiling",
+		"angle" 0 0 0
+	)
+
+	#------------------------------------------------------------------------
+	# max_Noise, for refl_gloss slot
+	#------------------------------------------------------------------------
+	shader "noise_glossy" "adsk_Utility_Noise_Tweakable"
+	(
+		"noise_size" = interface "m.refl_gloss_noiseSize", 
+		"noise_color1" = interface "m.refl_gloss_noiseCol1",
+		"noise_color2" = interface "m.refl_gloss_noiseCol2",
+
+		"low" 0,
+		"high" 1,
+
+		"tiling" = interface "k.noiseglossy_tiling",
+		"angle" 0 0 0
+	)	
+	shader "noise_glossy__instance" "adsk_Utility_Color_to_Float" ( "the_color" = "noise_glossy" )
+	#------------------------------------------------------------------------	
+	# <- end color shaders ##################################################
+	#------------------------------------------------------------------------
+
+
+	#------------------------------------------------------------------------
+	# -> begin bump #########################################################	
+	#------------------------------------------------------------------------
+	# Bitmap Texture, for the broom straight finish
+	#------------------------------------------------------------------------
+	shader "broomstraight_tex__instance" "adsk_Utility_Bitmap_Tweak"
+	(
+		"color_texture" = interface "t.broomstraight_tex",
+		"RGBAmount" 1,
+		"RGBOffset" 0,
+		"OutputAmount" 1,
+		"Uscale" = interface "u.btex_rw_scale",
+		"Vscale" = interface "u.btex_rw_scale",
+		"UVchannel" = interface "u.uv_channel"
+	)
+	#------------------------------------------------------------------------
+	# Bitmap Texture, for the broom curved finish
+	#------------------------------------------------------------------------
+	shader "broomcurved_tex__instance" "adsk_Utility_Bitmap_Tweak"
+	(
+		"color_texture" = interface "t.broomcurved_tex",
+		"RGBAmount" 1,
+		"RGBOffset" 0,		
+		"OutputAmount" 1,
+		"Uscale" = interface "u.btex_rw_scale",
+		"Vscale" = interface "u.btex_rw_scale",
+		"UVchannel" = interface "u.uv_channel"
+	)
+
+	#------------------------------------------------------------------------
+	# SmoothBumpTex phen, for the smooth finish
+	#------------------------------------------------------------------------
+	shader "smooth_tex__instance" "adsk_Tex_Concrete_SmoothBumpTex_V2"
+	(
+		"tiling" = interface "k.concretesmooth_tiling"
+	)
+
+	#------------------------------------------------------------------------
+	# Generic Noise phen, for polished finish
+	#------------------------------------------------------------------------
+	shader "polished_tex__instance" "adsk_Utility_Noise_Tweakable"
+	(
+			"noise_size" 0.2,
+			"noise_color1" 0.5 0.5 0.5 1.0,
+			"noise_color2" 1.0 1.0 1.0 1.0,
+
+			"low" 0,
+			"high" 1,
+
+			"tiling" = interface "k.polished_tex_tiling",
+			"angle" 0 0 0
+	)
+
+	#------------------------------------------------------------------------
+	# Bump Shader Switcher, all the bumps for the various finishes are attached here
+	#------------------------------------------------------------------------		
+	shader "bump_switcher__instance" "adsk_Utility_Switch8Shader"
+	(
+		"switcher" = interface "m.bump_switcher",
+		"type" 2,
+		"shader_1" "broomstraight_tex__instance",
+		"shader_2" "broomcurved_tex__instance",
+		"shader_3" "smooth_tex__instance",
+		"shader_4" "polished_tex__instance",
+		"shader_5" = interface "m.bump_map"    # for stamped/custom
+	)
+
+	#------------------------------------------------------------------------
+	# Bump shader
+	#------------------------------------------------------------------------
+	shader "bump__instance" "adsk_Utility_Mix3Bump"
+	(
+		"bump_1" "bump_switcher__instance",
+		"factor_1" = interface "m.bump_amount", 
+	)
+	#------------------------------------------------------------------------	
+	# Bump vector
+	#------------------------------------------------------------------------	
+	shader "bump_vector__instance" "adsk_Utility_Color_to_Float3"
+	(
+		"the_color" = "bump__instance"
+	)
+	#------------------------------------------------------------------------	
+	# <- end bump ###########################################################
+	#------------------------------------------------------------------------
+
+	
+	
+	#------------------------------------------------------------------------
+	# -> begin Overall Bump (and RoundCorners) ##############################
+	#------------------------------------------------------------------------
+	#------------------------------------------------------------------------	
+	# Global 'Wavy' effect
+	#------------------------------------------------------------------------	
+	shader "ocean__instance" "Ocean"
+	(
+		"Largest" = interface "k.oceanbump_largest",
+		"Smallest" = interface "k.oceanbump_smallest",
+		"Quantity" 3,
+		"Steepness" 0.35,
+		"Relative to World" off,
+		"Relative to Object" on,
+		"Base Plane Normal" 0 0 1,
+		"Base Plane Distance" 0,
+		"Directed" off,
+		"Direction Angle" 0,
+		"Wave Speed" 0,
+		"Loop Animation" off,
+		"Loop Frames" 100,
+		"Flats" off,
+		"Size" = interface "k.oceanbump_size",
+		"Variation" 5,
+		"Bump" on
+	)
+	#------------------------------------------------------------------------	
+	# Round Corners
+	#------------------------------------------------------------------------	
+	shader "roundcorners__instance" "mia_roundcorners"
+	(
+		"radius" = interface "r.roundcorners_radius",
+		"allow_different_materials" = interface "r.roundcorners_allow_different_materials"
+	)
+	#------------------------------------------------------------------------	
+	# Bump Shader (from color to vector)
+	#------------------------------------------------------------------------	
+	shader "mix2bump__instance" "adsk_Utility_Mix3Bump"
+	(
+		"bump_1" "ocean__instance",
+		"factor_1" 1.0, 
+		
+		"bump_2" "roundcorners__instance",
+		"factor_2" 1.0
+	)
+	shader "overall_bump_vector__instance" "adsk_Utility_Color_to_Float3"
+	(
+		"the_color" = "mix2bump__instance"
+	)
+	#------------------------------------------------------------------------
+	# <- end Overall Bump ###################################################
+	#------------------------------------------------------------------------
+    
+    #------------------------------------------------------------------------
+    # Visibility Track Support
+    #------------------------------------------------------------------------
+	shader "node_visibility__instance" "adsk_Utility_NodeVisibility" 
+	(
+		"input" 1 1 1 1, 		#this is controlled internally
+		"mode" 0
+	)
+	
+	shader "mia_optimizer" "adsk_Mia_Optimizer"
+	(
+		"material_type"         3, # Concrete (see enum in the optimizer shader code)
+		"reflectivity"          0.6,
+		"brdf_0_degree_refl"  = interface "m.brdf_0_degree_refl",
+		"brdf_90_degree_refl" = interface "m.brdf_90_degree_refl",
+		"transparency"          0,
+		"refl_gloss"          = "noise_glossy__instance",
+		"refr_gloss"            1,
+		"refl_gloss_samples"  = interface "p.reflection_glossy_samples",
+		"refr_gloss_samples"    8,
+		"refl_depth"          = interface "p.refl_depth",
+		"refr_depth"            5
+	)
+
+	#------------------------------------------------------------------------		
+	#------------------------------------------------------------------------
+	# Arch & Design Shader
+	#------------------------------------------------------------------------ 
+	shader "concrete_appearence" "mia_material_x"
+	(
+		#----------------------------------
+		"diffuse_weight" 0.9,
+		"diffuse" = "diffcolor_plus_brightvar",
+		"diffuse_roughness" = interface "m.diffuse_roughness",
+
+		#----------------------------------
+		"reflectivity" 0.6,
+		"refl_color" = "noise_reflect",
+		"refl_gloss" = "noise_glossy__instance",
+        "refl_gloss_samples" = "mia_optimizer.refl_gloss_samples",
+		"refl_interpolate"   = "mia_optimizer.refl_interpolate",
+		"refl_hl_only"        = interface "m.refl_hl_only",
+		"refl_is_metal" off,
+
+		#----------------------------------
+		"transparency" 0.0,
+		"refr_color" 1 1 1 0,
+		"refr_gloss" 1,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" = "mia_optimizer.refr_gloss_samples",
+		"refr_interpolate"   = "mia_optimizer.refr_interpolate",
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.6 0.5 0,
+		"refr_trans_weight" 0.5,
+
+		#----------------------------------
+		"anisotropy" 1,
+		"anisotropy_rotation" 0.0,
+		"anisotropy_channel" -1,
+
+		#----------------------------------
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" = interface "m.brdf_0_degree_refl",
+		"brdf_90_degree_refl" = interface "m.brdf_90_degree_refl",
+		"brdf_curve" = interface "m.brdf_curve",
+		"brdf_conserve_energy" on,
+
+		#----------------------------------
+		"intr_grid_density"  = "mia_optimizer.intr_grid_density",
+		"intr_refl_samples"  = "mia_optimizer.intr_refl_samples",
+		"intr_refl_ddist_on" = "mia_optimizer.intr_refl_ddist_on",
+		"intr_refl_ddist"    = "mia_optimizer.intr_refl_ddist",
+		"intr_refr_samples"  = "mia_optimizer.intr_refr_samples",
+		"single_env_sample"  = "mia_optimizer.single_env_sample",
+
+		#----------------------------------
+		"refl_falloff_on"        = "mia_optimizer.refl_falloff_on",
+		"refl_falloff_dist"      = "mia_optimizer.refl_falloff_dist",
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.0 0.0 0.0,
+		"refl_depth"             = "mia_optimizer.refl_depth",
+		"refl_cutoff"            = "mia_optimizer.refl_cutoff",
+		"refr_falloff_on"        = "mia_optimizer.refr_falloff_on",
+		"refr_falloff_dist"      = "mia_optimizer.refr_falloff_dist",
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.0 0.0 0.0,
+		"refr_depth"             = "mia_optimizer.refr_depth",
+		"refr_cutoff"            = "mia_optimizer.refr_cutoff",
+
+		#----------------------------------
+		"indirect_multiplier"    = "mia_optimizer.indirect_multiplier",
+		"fg_quality"             = "mia_optimizer.fg_quality",
+		"fg_quality_w"           = "mia_optimizer.fg_quality_w",
+
+		#----------------------------------
+		"ao_on"  = interface "o.ao_on",
+		"ao_samples"  = interface "o.ao_samples",
+		"ao_distance"  = interface "o.ao_distance",
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0 0 0,
+		"ao_do_details"  = interface "o.ao_do_details",
+
+		#----------------------------------
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" on,
+		"hl_vs_refl_balance" 1,
+        "cutout_opacity" = "node_visibility__instance",			#nodevisibility hook
+		"additional_color" 0.0 0.0 0.0,
+
+		#----------------------------------
+		"mode" = interface "mode",
+		"lights" = interface "lights",
+
+		#----------------------------------
+        "bump_mode" 1, 
+        "overall_bump" = "overall_bump_vector__instance",
+        "standard_bump" = "bump_vector__instance",
+        
+        #----------------------------------
+        "multiple_outputs" off
+
+	)#end shader
+
+
+	
+	#------------------------------------------------------------------------
+	# Phenomenon Root
+	#------------------------------------------------------------------------
+	root = "concrete_appearence"
+
+
+
+	#------------------------------------------------------------------------
+	# GUI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Concrete_V2" {	
+		control "Global" "Global" (
+			"uiName" "adsk_Shd_Concrete_V2",
+			"category" "Material"
+			, "hidden"
+			)
+	}
+end declare
+
+
+
+
+
+
+#----------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
+# Concrete Material Class
+#----------------------------------------------------------------------------------------
+declare phenomenon
+ 	material "adsk_Mtl_Concrete_V2"
+	(
+		#-------------------------------------
+		# Main Parameters
+		#-------------------------------------
+		struct "m"
+		{
+			#----------------------------------
+			boolean			"color_by_object",
+			color 			"diffuse_color",
+			
+			#----------------------------------
+			integer			"type",
+			shader			"bump_map",
+			scalar			"bump_amount",
+
+			#----------------------------------
+			integer			"application",
+
+			#----------------------------------
+			integer			"brightness_var",
+			shader			"brightness_var_map",
+		    #----------------------------------
+		    boolean		"tint_enable" default off,
+		    color		"tint_color" default 1.0 1.0 1.0  
+		},
+
+		#-------------------------------------
+		# Special Effects
+		#-------------------------------------
+		struct "o"
+		{
+			#----------------------------------
+			boolean  		"ao_on",
+			integer  		"ao_samples",
+			scalar   		"ao_distance",
+			boolean  		"ao_do_details",	
+
+  		#----------------------------------
+  			boolean			"roundcorners_on",
+  		scalar "roundcorners_radius",
+  		boolean "roundcorners_allow_different_materials"	      	
+		},
+	     						
+		#-------------------------------------
+		# Performance Tuning Parameters
+		#-------------------------------------
+		struct "p"
+		{
+			#----------------------------------
+	      	integer "reflection_glossy_samples",
+	      	integer "refl_depth"
+		},
+
+		#-------------------------------------
+		# Unit Scalable Parameters
+		#-------------------------------------
+		struct "u"
+		{
+			#----------------------------------
+			integer "uv_channel",
+	      	scalar  "scale"
+		},
+		
+		#-------------------------------------
+		# Texture Parameters
+		#-------------------------------------
+		struct "t"
+		{			
+			#----------------------------------			
+			color texture	"broomstraight_tex",
+			color texture	"broomcurved_tex"
+		},
+							    	
+		#-------------------------------------
+		# Internals
+		#-------------------------------------
+		struct "x"
+		{
+			#----------------------------------
+	      	integer "gbuffer_id"
+		},
+							    	
+		#----------------------------------
+		# Lights Parameters
+		#----------------------------------
+		integer "mode",
+		array light "lights"
+
+	)#end material
+	
+	
+	
+	#------------------------------------------------------------------------
+	# Spider
+	#------------------------------------------------------------------------
+	shader "spider_instance" "adsk_Shd_Concrete_spider"
+	(
+		"surfacefinish" = interface "m.type",
+		"sealant" = interface "m.application",
+		"brightness_variation" = interface "m.brightness_var",
+		
+		"roundcorners_on" = interface "o.roundcorners_on",
+		"roundcorners_radius_i" = interface "o.roundcorners_radius",
+		
+		"ao_do_details_i" = interface "o.ao_do_details",
+		"bump_amount_i" = interface "m.bump_amount",
+		
+		"uv_x_tile" = interface "u.scale"
+	)
+	
+    #------------------------------------------------------------------------
+    # Reflection Blur Multiplication
+    #------------------------------------------------------------------------
+    shader "refl_gloss_sample_global" "adsk_blurred_reflection_multiplier"
+    (
+        "blurred_reflection_value" = interface "p.reflection_glossy_samples"
+    )
+
+    #------------------------------------------------------------------------
+    # Switches between "by object color" or "diffuse_color", depending on the "color_by_object" property
+    #------------------------------------------------------------------------
+    shader "simplemixer_colorbyobjectswitcher_instance" "adsk_Utility_ColorByObject_Switch"
+    (
+        "color_by_object" = interface "m.color_by_object",
+        "material_color" = interface "m.diffuse_color"
+    )
+	
+	#------------------------------------------------------------------------
+	# adsk_Shd_Concrete
+	#------------------------------------------------------------------------	
+	shader "adsk_Mtl_Concrete_instance" "adsk_Shd_Concrete_V2"
+	(
+	
+		#-------------------------------------
+		# Main Parameters
+		#-------------------------------------
+		"m"
+		{
+			#----------------------------------
+			"diffuse_color" = "simplemixer_colorbyobjectswitcher_instance",
+			
+			#----------------------------------
+			"brightvar_enable" = "spider_instance.brightvar_enable",
+			"brightmode_switcher" = "spider_instance.brightmode_switcher",
+			"bright_custom" = interface "m.brightness_var_map",
+					
+			#----------------------------------
+			"diffuse_roughness" = "spider_instance.diffuse_roughness",
+						
+			#----------------------------------
+			"reflectivity_noiseCol1" = "spider_instance.reflectivity_noiseCol1",
+			"reflectivity_noiseCol2" = "spider_instance.reflectivity_noiseCol2",
+			"reflectivity_noiseSize" = "spider_instance.reflectivity_noiseSize",
+			"refl_hl_only" = "spider_instance.refl_hl_only",
+			
+			#----------------------------------
+			"refl_gloss_noiseCol1" = "spider_instance.refl_gloss_noiseCol1",
+			"refl_gloss_noiseCol2" = "spider_instance.refl_gloss_noiseCol2",
+			"refl_gloss_noiseSize" = "spider_instance.refl_gloss_noiseSize",
+			
+			#----------------------------------
+			"brdf_0_degree_refl" = "spider_instance.brdf_0_degree_refl",
+			"brdf_90_degree_refl" = "spider_instance.brdf_90_degree_refl",			
+			"brdf_curve" = "spider_instance.brdf_curve",								
+			
+			#----------------------------------
+			"bump_amount" = "spider_instance.bump_amount",				
+			"bump_switcher" = "spider_instance.bump_switcher",
+			"bump_map" = interface "m.bump_map"
+		},
+		
+		#-------------------------------------
+		# Ambient Occlusion Parameters
+		#-------------------------------------
+		"o"
+		{
+			#----------------------------------
+			"ao_on"  = interface "o.ao_on",
+			"ao_samples"  = interface "o.ao_samples",
+			"ao_distance" = interface "o.ao_distance",
+			"ao_do_details"  = "spider_instance.ao_do_details"
+		},
+		
+		#-------------------------------------
+		# Round Corners Parameters
+		#-------------------------------------
+		"r"
+		{
+			#----------------------------------
+	      	"roundcorners_radius" = "spider_instance.roundcorners_radius",
+	      	"roundcorners_allow_different_materials" = interface "o.roundcorners_allow_different_materials"
+		},
+
+		#-------------------------------------
+		# Performance Tuning Parameters
+		#-------------------------------------
+		"p"
+		{
+			#----------------------------------
+	      	"reflection_glossy_samples" = "refl_gloss_sample_global",
+	      	"refl_depth" = interface "p.refl_depth"
+		},
+
+		#-------------------------------------
+		# Texture Parameters
+		#-------------------------------------
+		"t"
+		{
+			#----------------------------------			
+			"broomstraight_tex" = interface "t.broomstraight_tex",
+			"broomcurved_tex" = interface "t.broomcurved_tex"
+		},
+
+		#-------------------------------------
+		# Unit Scalable Parameters
+		#-------------------------------------
+		"k"
+		{
+			#----------------------------------
+	      	"brightauto_tiling" = "spider_instance.brightauto_tiling",
+	      	"noisereflect_tiling" = "spider_instance.noisereflect_tiling",
+	      	"noiseglossy_tiling" = "spider_instance.noiseglossy_tiling",
+	      	"concretesmooth_tiling" = "spider_instance.concretesmooth_tiling",
+	      	"polished_tex_tiling" = "spider_instance.polished_tex_tiling",
+	    
+			#----------------------------------
+			"oceanbump_largest" = "spider_instance.oceanbump_largest",
+			"oceanbump_smallest" = "spider_instance.oceanbump_smallest",
+			"oceanbump_size" = "spider_instance.oceanbump_size"
+		},
+
+		#-------------------------------------
+		# UV Coords Parameters
+		#-------------------------------------
+		"u"
+		{
+		#----------------------------------
+			"uv_channel" = interface "u.uv_channel",
+	      	"u_scale" = interface "u.scale",
+	      	"v_scale" = interface "u.scale",
+	      	"btex_rw_scale" = "spider_instance.uv_tile"      	
+	      	
+		},
+		
+		#----------------------------------
+		# Lights Parameters
+		#----------------------------------
+		"mode" = interface "mode",
+		"lights" = interface "lights"	
+	)
+
+	#------------------------------------------------------------------------
+	# Render Elements support
+	#------------------------------------------------------------------------	
+	shader "max_mia_mat_renderelem__instance" "adsk_Utility_MiaDecomposer" 
+	(
+		"mia_material" "adsk_Mtl_Concrete_instance", 
+		"GBufferID" = interface "x.gbuffer_id"
+	)
+
+	shader "Tint Enable|Shader" "adsk_Utility_Bool_to_Int"
+    (
+        "bool_in" = interface "m.tint_enable"   
+    )
+
+    shader "Tint Multiply|Shader" "mib_color_mix" 
+    (
+        "num" = "Tint Enable|Shader",  
+		"mode_0" 4, 
+		"mode_1" 0, 
+		"mode_2" 0, 
+		"mode_3" 0, 
+		"mode_4" 0, 
+		"mode_5" 0, 
+		"mode_6" 0, 
+		"mode_7" 0, 
+		"weight_0" 1, 
+		"weight_1" 0, 
+		"weight_2" 0, 
+		"weight_3" 0, 
+		"weight_4" 0, 
+		"weight_5" 0, 
+		"weight_6" 0, 
+		"weight_7" 0, 
+		"color_0"  = interface "m.tint_color", 
+		"color_1" 0 0 0 1, 
+		"color_2" 0 0 0 1, 
+		"color_3" 0 0 0 1, 
+		"color_4" 0 0 0 1, 
+		"color_5" 0 0 0 1, 
+		"color_6" 0 0 0 1, 
+		"color_7" 0 0 0 1, 
+		"color_base"  = "max_mia_mat_renderelem__instance"
+	)
+
+	#------------------------------------------------------------------------
+	#------------------------------------------------------------------------
+	# Material Connections
+	#------------------------------------------------------------------------
+	material "mat"
+				= "Tint Multiply|Shader"
+		photon	= "adsk_Mtl_Concrete_instance"
+		shadow	= "adsk_Mtl_Concrete_instance"
+	end material
+	root material "mat"
+	
+	
+	
+	#------------------------------------------------------------------------	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Mtl_Concrete_V2"
+	{
+		#----------------------------------
+		control "Global" "Global" 
+		(
+			"uiName" "ProMaterials: Concrete V2", "category" "Material",          
+			"viewport_diffuse" "m.diffuse_color",
+			"viewport_specular" 1.0 1.0 1.0,
+			"viewport_shininess" 1,
+			"hidden"
+		)
+	
+		#-------------------------------------
+		#  Material Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Concrete Material Parameters", "openstate" "true")
+		{		
+				
+			control "color_by_object" "boolean" ("hidden")
+
+			control "diffuse_color" "color" ("uiName" "Color (Reflectance)", "value" 0.7 0.7 0.7)
+
+			control "type" "integer" ("enum", "nonConnectable", 
+				"uiName" "Surface Finish", "value" "0 Straight Broom, 1 Curved Broom, 2 Smooth, 3 Polished, 4 Custom", 
+				"range" 0 4, "helpText" "Broom surface finish")
+
+			control "bump_map" "shader" ("uiName" "-> Custom Map",
+							"helpText" "Use when 'Surface Finish: Custom' is selected")							
+			control "bump_amount" "scalar" ("nonConnectable", "uiName" "-> Amount", "value" 0.3,  "range" -10.0 10.0,
+							"helpText" "Bump amount of custom map")
+
+			control "application" "integer" ("enum", "nonConnectable", 
+				"uiName" "Sealant", "value" "0 None, 1 Epoxy, 2 Acrylic", "range" 0 2,
+							"helpText" "Reflective coating")
+
+			control "brightness_var" "integer" ("enum", "nonConnectable", "uiName" "Brightness Variations", "value" "0 None, 1 Automatic, 2 Custom", "range" 0 2,
+							"helpText" "Creates slight variations on Color (Reflectance) brightness")
+			control "brightness_var_map" "shader" ("uiName" "-> Custom Map",
+							"helpText" "Use when 'Brightness Variations: Custom' is selected")
+		}
+
+		#-------------------------------------
+		#  Special Effects
+		#-------------------------------------
+		control "o" "struct" ("uiName" "Special Effects", "openstate" "false")
+		{
+			#----------------------------------
+			control "ao_on" "boolean" ("uiName" "Ambient Occlusion", "value" 0, "nonConnectable", "enables" "ao_samples, ao_distance, ao_do_details",
+												"helpText" "Enables Ambient Occlusion. Emulates the look of true global illumination by using shaders to calculate the extent that an area is occluded or prevented from receiving incoming light. Use this effect with indirect light.")	
+			control "ao_samples"  "integer" ("uiName"  "-> Samples", "value" 16, "range" 2 256, "nonConnectable",
+												"helpText" "Ambient occlusion quality (High= Smoother/Slower; Low= Grainier/Faster)")
+			control "ao_distance"  "scalar" ("uiName"  "-> Max Distance", "value" 4, "units" "world", "nonConnectable",
+												"helpText" "Defines the ambient occlusion radius (High= Large coverage area/Slower; Low= Small coverage area/Faster)")
+			control "ao_do_details" "boolean" (enum, "uiName" "-> Use Color From Other Mats (Exact AO)", "value" off, "nonConnectable",
+												"helpText" "Enables a more complex mode of Ambient Occlusion that takes object color into account. Note: This improves excessive 'corner darkening' and solves the creation of 'dark rims' by AO around self-illuminating objects.")
+			
+			#----------------------------------
+			control "roundcorners_on" "boolean" ("uiName"  "Round Corners", "value" 0, "nonConnectable", "enables" "roundcorners_radius, roundcorners_allow_different_materials",
+												"helpText" "Enables simulated round corners. Note: This is only a shading effect, similar to a bump map, whereby no actual geometric changes occur. This effect only works properly on straight edges.")
+			control "roundcorners_radius"  "scalar" ("uiName"  "-> Fillet Radius", "value" 0.25, "units" "world",
+												"helpText" "Adjusts the radius of the round corner effect")
+			control "roundcorners_allow_different_materials"  "boolean" ("uiName"  "-> Blend with Other Materials", "nonConnectable",
+												"helpText" "Activate to apply corner rounding effects to any material. Disable to apply corner rounding effects to the surface of the current material only.")
+		}
+
+ 		#-------------------------------------
+		# Performance Tuning Parameters
+ 		#-------------------------------------
+		control "p" "struct" ("uiName" "Performance Tuning Parameters", "openstate" "false")
+		{
+			#----------------------------------
+			#quality controls...
+			control "reflection_glossy_samples"  "integer" ("nonConnectable", "uiName"  "Reflection Glossy Samples", "value" 8, "range" 0 128,
+												"helpText" "Defines the maximum number of samples (rays) that mental ray computes to create glossy reflections")
+			#must be visible in applications like 3ds max but hidden in applications like Revit
+			control "refl_depth"  "integer" ("nonConnectable", "uiName"  "Reflection Max Trace Depth", "value" 0, "range" 0 20,
+												"helpText" "Number of times each ray is reflected. When set to zero, global render settings take precedence.")
+		}
+
+ 		#-------------------------------------
+		#  UV options
+		#-------------------------------------
+		control "u" "struct" ("uiName" "(Texture) Coordinates For Built-In Textures", "openstate" "false")
+		{
+			#----------------------------------
+			control "uv_channel"  "integer" ("nonConnectable", "uiName"  "UV Channel", "value" 1, "range" 1 64, "helpText" "UV Map Channel assignment for built-in texture")	
+			control "scale"  "scalar" ("nonConnectable", "uiName"  "Tiling", "value" 1, "range" 0.001 256, "helpText" "Tiling amount")
+		}
+		
+ 		#-------------------------------------
+		# Texture parameters
+ 		#-------------------------------------
+		control "t" "struct" ("uiName" "Texture Parameters (Internal)", "openstate" "false")
+		{
+			#----------------------------------
+			control "broomstraight_tex" "color texture" ("hidden", "nonConnectable", "uiName"  "Fixed Tex for Broom Straight finish"
+				, "value" "Simple_Concrete_Mtl_BroomStraight_pattern.jpg")
+			control "broomcurved_tex" "color texture" ("hidden", "nonConnectable", "uiName"  "Fixed Tex for Broom Curved finish"
+				, "value" "Simple_Concrete_Mtl_BroomCurved_pattern.jpg")
+		}
+		
+ 		#-------------------------------------
+		# Internal
+ 		#-------------------------------------
+		control "x" "struct" ("uiName" "Internals", "openstate" "false")
+		{
+			#----------------------------------
+			control "gbuffer_id"  "integer" (hidden, "nonConnectable", "uiName"  "Translator must link here to pass a different ID", "value" 2)
+		}
+
+		#-------------------------------------
+		# Lights and Mode Parameters
+		#-------------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+
+	}#end gui		
+end declare

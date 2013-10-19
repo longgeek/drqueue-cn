@@ -1,0 +1,40 @@
+/*****************************************************************************
+ * Copyright 1986-2008 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+
+
+shader max_Color_gamma
+{
+  input:
+	Color color   = Color(0,0,0,1)
+	{
+		default_value(Color(0,0,0,1));
+		display_name("Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The unfiltered value." );
+	};
+	Color gamma = Color(1,1,1,1)
+   	{
+		default_value(Color(1,1,1,1));
+		display_name("Gamma");
+		soft_range(Color(0.1,0.1,0.1,0.1),Color(4,4,4,4));
+		description( "The gamma power that will be applied to each of the "
+					 "color's channels." );
+	};
+	
+  output:
+	Color result;
+	
+	void main()
+	{
+		result = pow(max(Color(0.0), color), Color(1.0)/gamma);
+	}
+}
+{
+	description( "Uses a gamma operation to change the contrast of each "
+	             "input channel by a specified value." );
+}
+;
+

@@ -1,0 +1,220 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product BSDF for simple glossy model
+ *****************************************************************************/
+#include <mcp_lib.msl>
+
+
+#define DO_SAMPLE
+#define DO_EVAL
+
+bsdf Mcp_simple_glossy_bsdf {
+    
+  input:	
+    Scattering_mode  scattering_mode = mode_reflect;
+    float            roughness = .3;
+    float            anisotropy = 0.; // in [0,1],
+    float            anisotropy_rotation = 0.; // in [0,1], where 1 equals 2 Pi
+    float3   bump = normal;
+
+
+  member:
+    float3 tangent_u,tangent_v;
+    varying Mcp_simple_glossy_bsdf()
+    {
+        normal = bump;
+        tangent_u = texture_tangent_u[0];
+        tangent_v = texture_tangent_v[0];
+        if (anisotropy_rotation != 0.0)
+        {
+            float angle = 2. * PI * anisotropy_rotation;
+            float cos_angle = cos(angle);
+            float sin_angle = sin(angle);
+            tangent_u = cos_angle * texture_tangent_u[0] + sin_angle * texture_tangent_v[0];
+            tangent_v = -sin_angle * texture_tangent_u[0] + cos_angle * texture_tangent_v[0];
+        }
+    }
+
+    //the worst case of active attributes for this bsdf, independent of what actual input parameters are.
+    Bsdf_attributes get_attributes()
+    {
+        return Bsdf_attributes{geometry_dependent};
+    }
+    //the list of all possible bsdf components computed by this bsdf
+    Bsdf_components get_components()
+    {
+        return Bsdf_components{reflect_glossy,transmit_glossy};
+    }
+    //the list of active attributes, given the actual input parameters. 
+    //For this bsdf it equals the worst case described by get_attributes(), so we do not need to implement this
+    Bsdf_attributes get_active_attributes() 
+    {
+        return get_attributes();
+    }
+    Bsdf_components get_active_components() 
+    {
+        switch(scattering_mode)
+        {
+            case mode_reflect:
+            return Bsdf_components{reflect_glossy};
+            case mode_transmit:
+            return Bsdf_components{transmit_glossy};
+            case mode_reflect_transmit:
+            default:
+            return Bsdf_components{reflect_glossy,transmit_glossy};
+        }
+    }
+
+    Spectrum eval( float3 fixed_direction, 
+                   float3 sampled_direction, 
+                   Bsdf_components allowed_components, 
+                   bool transport_source){
+       // Check if fixed_direction and sampled_direction cross the geometric plane
+        // to avoid light leaks.
+        allowed_components = bsdf_check_type(
+                geometry_normal,fixed_direction,sampled_direction,allowed_components);
+        if (Bsdf_components{reflect_glossy} in allowed_components) {
+#ifndef DO_EVAL		
+            return Spectrum(0.);
+#endif
+            // anisotropic phong distribution
+            float3 h = normalize(fixed_direction + sampled_direction);
+            float nh  = dot(h,bump);
+            if (nh <= 0.0f)
+                return Spectrum(0.);
+            float ht  = dot(h,tangent_u);
+            float hb  = dot(h,tangent_v);
+
+            float k = 2.0f / (roughness * roughness);
+            float iso = 1.0f - anisotropy;
+            float k2 =  k * iso * iso;
+            
+            float exp = (k * ht * ht + k2 * hb * hb) / (1.0f - nh * nh);
+            Spectrum value = Spectrum(sqrt((k + 1.0f) * (k2 + 1.0f)) * (0.5/PI)
+               * pow(nh, exp));
+
+           if (transport_source == light) {
+                return value * abs(dot(fixed_direction,bump)
+                              / (dot(fixed_direction,geometry_normal) * PI));
+            }
+            else {
+                return value/PI ;
+            }
+        }
+        else
+            return Spectrum(0.);
+    }
+#ifdef DO_SAMPLE	
+    float pdf(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        void(transport_source);
+        allowed_components = bsdf_check_type(
+            geometry_normal, fixed_direction, sampled_direction, allowed_components);
+        if (Bsdf_components{reflect_glossy} in allowed_components) 
+        {
+            // anisotropic phong distribution
+            float3 h = normalize(fixed_direction + sampled_direction);
+            float nh  = dot(h,bump);
+            if (nh <= 0.0f)
+                return 0.;
+            float ht  = dot(h,tangent_u);
+            float hb  = dot(h,tangent_v);
+
+            float k = 2.0f / (roughness * roughness);
+            float iso = 1.0f - anisotropy;
+            float k2 =  k * iso * iso;
+            
+            float exp = (k * ht * ht + k2 * hb * hb) / (1.0f - nh * nh);
+            return sqrt((k + 1.0f) * (k2 + 1.0f)) * (0.5/PI) * pow(nh, exp)/PI;
+        }
+        else
+            return 0.0;
+    }
+
+    Bsdf_components sample(
+        in float3           fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        if (Bsdf_components{reflect_glossy} in allowed_components)
+        {
+
+        // Mapping to four quadrants and sampling there
+            float sy4 = float(primary_sample.polar*4.0f);
+            float cosupper = cos((sy4 - floor(sy4))*PI);
+
+            float k = 2.0f / (roughness * roughness);
+            float iso = 1.0f - anisotropy;
+            float k2 =  k * iso * iso;
+
+            float2 e = float2(k + 1.0f, k2 + 1.0f);
+
+            float eu1mcu = e.x*(1.0f-cosupper);
+            float ev1pcu = e.y*(1.0f+cosupper);
+            float t      = eu1mcu+ev1pcu;
+
+            float tt   = (pow(1.0f-primary_sample.azimuthal, -t/(e.x*e.y)) - 1.0f) / t;
+            float tttv = sqrt(ev1pcu*tt);
+            float tttu = sqrt(eu1mcu*tt);
+
+            // Transform to world coordinates
+            if((primary_sample.polar < 0.75f) && (primary_sample.polar >= 0.25f)) 
+                tttv = - tttv;
+            if(primary_sample.polar >= 0.5f)
+                tttu = - tttu;
+            float3 sampled_normal = normalize(tangent_u * tttv 
+              + tangent_v *  tttu
+              + bump);
+            float k1h = dot(fixed_direction,sampled_normal);
+            // transform to direction
+            sampled_direction = -fixed_direction + sampled_normal * (k1h + k1h);
+            
+            allowed_components = bsdf_check_type(
+                 geometry_normal, fixed_direction, sampled_direction, allowed_components);
+            if (Bsdf_components{reflect_glossy} in allowed_components) 
+            {
+                float3 h = normalize(fixed_direction + sampled_direction);
+                float nh  = dot(h,bump);
+                if (nh <= 0.0f)
+                {
+                    return bsdf_invalid_sample(sampled_direction, sample_weight);
+                }
+                float ht  = dot(h,tangent_u);
+                float hb  = dot(h,tangent_v);
+                float exp = (k * ht * ht + k2 * hb * hb) / (1.0f - nh * nh);
+                float s =sqrt((k + 1.0f) * (k2 + 1.0f)) * (0.5/PI) * pow(nh, exp);
+                sample_probability= s/ (4.0f * k1h * abs(dot(fixed_direction,normal)));
+
+//			    Spectrum value = Spectrum(s);
+
+                if (transport_source == light) {
+                    sample_weight = Spectrum(1.) * abs(dot(fixed_direction,normal)
+                                  / (dot(fixed_direction,geometry_normal))) ;
+                }
+                else {
+                    sample_weight =  Spectrum(1.);
+                }
+                return Bsdf_components{reflect_glossy};
+            }
+            else
+                return bsdf_invalid_sample(sampled_direction, sample_weight);
+        }
+        else
+            return bsdf_invalid_sample(sampled_direction, sample_weight);
+
+    }
+#endif
+    
+};

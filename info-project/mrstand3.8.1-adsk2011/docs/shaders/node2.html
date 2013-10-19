@@ -1,0 +1,175 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Base Shaders</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="index.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node4.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION0"></a>
+  <a id="shaders:base"></a>
+
+  <h1>Base Shaders</h1>
+
+  <p id="app:base">The mental ray Base Shader Library
+  <a id="INDEX1"></a> is a set of simple shaders designed to form the
+  standard building blocks of Phenomenon&trade; scene elements. They perform
+  functions useful in many different contexts, and are not tied to specific
+  types of shaders. A base shader is not inherently a material or light
+  shader but can be used to build a Phenomenon used in place of a material
+  or light shader. This means that base shaders must be as generic as possible.
+  They avoid interdependencies that would limit their applicability.</p>
+
+  <p>The shaders are designed to form groups, such as the group of geometry base
+  shaders or BRDF functions. Members of a group have similar parameters to make
+  it easy to replace one base shader with another one of the same group. The
+  replacement may have shader-specific extra parameters, but those it shares with
+  other similar base shaders of the same group have the same names and types and
+  the same layout. In general, common parameters come first.</p>
+
+  <p>Before any shader in the base shader library can be used, it must be loaded
+  into the mental ray rendering software. A .mi scene file may use the statements
+  </p>
+<pre>
+        link "base.so"
+        $include &lt;base.mi&gt;
+</pre>
+  <p>All shader names begin with "mib", for "mental images base". Their
+  declarations are given in mi format of mental ray. Here is a summary:</p>
+
+<ul class="toc">
+<li class="toc">Texture Space Mapping
+<ul>
+<li><a href="node4.html#mi_shader__mib_texture_vector">mib_texture_vector</a>
+<li><a href="node4.html#mi_shader__mib_texture_remap">mib_texture_remap</a>
+<li><a href="node4.html#mi_shader__mib_texture_rotate">mib_texture_rotate</a>
+<li><a href="node4.html#mi_shader__mib_bump_basis">mib_bump_basis</a>
+<li><a href="node4.html#mi_shader__mib_bump_map">mib_bump_map</a>
+<li><a href="node4.html#mi_shader__mib_passthrough_bump_map">mib_passthrough_bump_map</a>
+<li><a href="node4.html#mi_shader__mib_bump_map2">mib_bump_map2</a>
+</ul>
+<li class="toc">Environments
+<ul>
+<li><a href="node5.html#mi_shader__mib_lookup_spherical">mib_lookup_spherical</a>
+<li><a href="node5.html#mi_shader__mib_lookup_cube1">mib_lookup_cube1</a>
+<li><a href="node5.html#mi_shader__mib_lookup_cube6">mib_lookup_cube6</a>
+<li><a href="node5.html#mi_shader__mib_lookup_cylindrical">mib_lookup_cylindrical</a>
+<li><a href="node5.html#mi_shader__mib_lookup_background">mib_lookup_background</a>
+</ul>
+<li class="toc">Textures
+<ul>
+<li><a href="node6.html#mi_shader__mib_texture_lookup">mib_texture_lookup</a>
+<li><a href="node6.html#mi_shader__mib_texture_lookup2">mib_texture_lookup2</a>
+<li><a href="node6.html#mi_shader__mib_texture_filter_lookup">mib_texture_filter_lookup</a>
+<li><a href="node6.html#mi_shader__mib_texture_checkerboard">mib_texture_checkerboard</a>
+<li><a href="node6.html#mi_shader__mib_texture_polkadot">mib_texture_polkadot</a>
+<li><a href="node6.html#mi_shader__mib_texture_polkasphere">mib_texture_polkasphere</a>
+<li><a href="node6.html#mi_shader__mib_texture_turbulence">mib_texture_turbulence</a>
+<li><a href="node6.html#mi_shader__mib_texture_wave">mib_texture_wave</a>
+</ul>
+<li class="toc">Illumination
+<ul>
+<li><a href="node8.html#mi_shader__mib_illum_lambert">mib_illum_lambert</a>
+<li><a href="node8.html#mi_shader__mib_illum_phong">mib_illum_phong</a>
+<li><a href="node8.html#mi_shader__mib_illum_ward">mib_illum_ward</a>
+<li><a href="node8.html#mi_shader__mib_illum_ward_deriv">mib_illum_ward_deriv</a>
+<li><a href="node8.html#mi_shader__mib_illum_cooktorr">mib_illum_cooktorr</a>
+<li><a href="node8.html#mi_shader__mib_illum_blinn">mib_illum_blinn</a>
+<li><a href="node8.html#mi_shader__mib_illum_hair">mib_illum_hair</a>
+</ul>
+<li class="toc">Ray Tracing
+<ul>
+<li><a href="node7.html#mi_shader__mib_reflect">mib_reflect</a>
+<li><a href="node7.html#mi_shader__mib_refract">mib_refract</a>
+<li><a href="node7.html#mi_shader__mib_transparency">mib_transparency</a>
+<li><a href="node7.html#mi_shader__mib_opacity">mib_opacity</a>
+<li><a href="node7.html#mi_shader__mib_continue">mib_continue</a>
+<li><a href="node7.html#mi_shader__mib_dielectric">mib_dielectric</a>
+<li><a href="node7.html#mi_shader__mib_volume">mib_volume</a>
+<li><a href="node7.html#mi_shader__mib_ray_marcher">mib_ray_marcher</a>
+<li><a href="node7.html#mi_shader__mib_twosided">mib_twosided</a>
+<li><a href="node7.html#mi_shader__mib_refraction_index">mib_refraction_index</a>
+<li><a href="node7.html#mi_shader__mib_glossy_reflection">mib_glossy_reflection</a>
+<li><a href="node7.html#mi_shader__mib_glossy_refraction">mib_glossy_refraction</a>
+</ul>
+<li class="toc">Occlusion
+<ul>
+<li><a href="occlusion.html#mi_shader__mib_amb_occlusion">mib_amb_occlusion</a>
+<li><a href="occlusion.html#mi_shader__mib_fast_occlusion">mib_fast_occlusion</a>
+<li><a href="occlusion.html#mi_shader__mib_fg_occlusion">mib_fg_occlusion</a>
+<li><a href="occlusion.html#mi_shader__mib_bent_normal_env">mib_bent_normal_env</a>
+</ul>
+<li class="toc">Data Conversion
+<ul>
+<li><a href="node9.html#mi_shader__mib_color_alpha">mib_color_alpha</a>
+<li><a href="node9.html#mi_shader__mib_color_average">mib_color_average</a>
+<li><a href="node9.html#mi_shader__mib_color_intensity">mib_color_intensity</a>
+<li><a href="node9.html#mi_shader__mib_color_interpolate">mib_color_interpolate</a>
+<li><a href="node9.html#mi_shader__mib_color_mix">mib_color_mix</a>
+<li><a href="node9.html#mi_shader__mib_color_spread">mib_color_spread</a>
+</ul>
+<li class="toc">Geometry
+<ul>
+<li><a href="node10.html#mi_shader__mib_geo_cube">mib_geo_cube</a>
+<li><a href="node10.html#mi_shader__mib_geo_sphere">mib_geo_sphere</a>
+<li><a href="node10.html#mi_shader__mib_geo_cone">mib_geo_cone</a>
+<li><a href="node10.html#mi_shader__mib_geo_cylinder">mib_geo_cylinder</a>
+<li><a href="node10.html#mi_shader__mib_geo_torus">mib_geo_torus</a>
+<li><a href="node10.html#mi_shader__mib_geo_square">mib_geo_square</a>
+<li><a href="node10.html#mi_shader__mib_geo_instance">mib_geo_instance</a>
+<li><a href="node10.html#mi_shader__mib_geo_instance_mlist">mib_geo_instance_mlist</a>
+<li><a href="node10.html#mi_shader__mib_geo_add_uv_texsurf">mib_geo_add_uv_texsurf</a>
+</ul>
+
+<li class="toc">Photon
+<ul>
+<li><a href="node11.html#mi_shader__mib_photon_basic">mib_photon_basic</a>
+</ul>
+<li class="toc">Light
+<ul>
+<li><a href="node12.html#mi_shader__mib_light_point">mib_light_point</a>
+<li><a href="node12.html#mi_shader__mib_light_spot">mib_light_spot</a>
+<li><a href="node12.html#mi_shader__mib_light_infinite">mib_light_infinite</a>
+<li><a href="node12.html#mi_shader__mib_light_photometric">mib_light_photometric</a>
+<li><a href="node13.html#mi_shader__mib_cie_d">mib_cie_d</a>
+<li><a href="node13.html#mi_shader__mib_blackbody">mib_blackbody</a>
+</ul>
+<li class="toc">Shadow
+<ul>
+<li><a href="node14.html#mi_shader__mib_shadow_transparency">mib_shadow_transparency</a>
+</ul>
+<li class="toc">Light Mapping
+<ul>
+<li><a href="node15.html#mi_shader__mib_lightmap_sample">mib_lightmap_sample</a>
+<li><a href="node15.html#mi_shader__mib_lightmap_write">mib_lightmap_write</a>
+</ul>
+<li class="toc">Lens
+<ul>
+<li><a href="node16.html#mi_shader__mib_lens_stencil">mib_lens_stencil</a>
+<li><a href="node16.html#mi_shader__mib_lens_clamp">mib_lens_clamp</a>
+</ul>
+</ul>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="index.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node4.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

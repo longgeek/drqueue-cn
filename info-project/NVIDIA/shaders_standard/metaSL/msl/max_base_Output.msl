@@ -1,0 +1,147 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+shader max_base_Output {
+  struct mrCurve_EXTRAS {
+    int	   indx;
+    int	   flags;
+    float  location;
+    float  xmin;
+    float  xmax;
+    float  ymin;
+    float  ymax;
+    bool   useLookupTable;
+ };
+
+ input:
+  float RGBAmount = 1.0 { 
+  };
+  float RGBOffset = 0.0 {
+  };
+  float OutputAmount = 1.0 {
+  };
+  float BumpAmount = 1.0 {
+  };
+  const bool Invert = false {
+  };
+  const bool Clamp = false {
+  };
+  const bool AlphaFromRGB = false {
+  };
+  const bool UseColorMap = false {
+  };
+  const bool UseRGBCurve = false {
+  };
+  Shader RGBCurve;
+  Shader IntensityCurve;
+
+  // Additional Parameters
+  Color  inputColor;         // The color to be modified
+  bool evalNormal = false;   // Is this for Bump?
+ output:
+  Color result;
+
+  void main() {
+
+    result = inputColor;
+
+    // Bump only does this:
+    if (evalNormal)
+    {
+        result.rgb *= BumpAmount;
+        return;
+    }
+
+    if ( UseColorMap )
+    {
+        if ( UseRGBCurve )
+        {
+            // TODO: if ( RGBCurvce  )
+            {
+                mrCurve_EXTRAS xtra;
+
+                xtra.useLookupTable = true;
+                xtra.indx = 0;
+                xtra.location = result.r;
+                
+                RGBCurve.call("input", "xtra_useLookupTable", xtra.useLookupTable,
+                              "input", "xtra_indx",           xtra.indx,
+                              "input", "xtra_location",       xtra.location,
+                              "output","outputValue",         result.r);
+            
+                xtra.indx = 1;
+                xtra.location = result.g;
+                
+                RGBCurve.call("input", "xtra_useLookupTable", xtra.useLookupTable,
+                              "input", "xtra_indx",           xtra.indx,
+                              "input", "xtra_location",       xtra.location,
+                              "output","outputValue",         result.g);
+
+                xtra.indx = 2;
+                xtra.location = result.b;
+                RGBCurve.call("input", "xtra_useLookupTable", xtra.useLookupTable,
+                              "input", "xtra_indx",           xtra.indx,
+                              "input", "xtra_location",       xtra.location,
+                              "output","outputValue",         result.b);
+            }
+        }
+        else
+        {
+            // TODO: if ( IntensityCurve )
+            {
+                mrCurve_EXTRAS			xtra;
+
+                xtra.useLookupTable = true;
+                xtra.indx = 0;
+                xtra.location = result.r;
+                IntensityCurve.call(
+                        "input", "xtra_useLookupTable", xtra.useLookupTable,
+                        "input", "xtra_indx",           xtra.indx,
+                        "input", "xtra_location",       xtra.location,
+                        "output","outputValue",         result.r);
+                xtra.location = result.g;
+                IntensityCurve.call(
+                        "input", "xtra_useLookupTable", xtra.useLookupTable,
+                        "input", "xtra_indx",           xtra.indx,
+                        "input", "xtra_location",       xtra.location,
+                        "output","outputValue",         result.g);
+                xtra.location = result.b;
+                IntensityCurve.call(
+                        "input", "xtra_useLookupTable", xtra.useLookupTable,
+                        "input", "xtra_indx",           xtra.indx,
+                        "input", "xtra_location",       xtra.location,
+                        "output","outputValue",         result.b);
+            }
+        }
+    }
+
+    if ( RGBAmount != 1.0f )
+    {
+        result.rgb *= RGBAmount;
+    }
+    if ( RGBOffset != 0.0f )
+    {
+        result.rgb += RGBOffset * result.a;
+    }
+    if ( OutputAmount != 1.0f )
+    {
+        result.rgba *= OutputAmount;
+    }
+    if ( Invert )
+    {
+        result.rgb = 1.0f - result.rgb;
+    }
+    if ( Clamp )
+    {
+        result = saturate(result);
+    }
+    if ( AlphaFromRGB )
+    {
+        result.a = (result.r + result.g + result.b) / 3.0f;
+    }
+  } // main
+};

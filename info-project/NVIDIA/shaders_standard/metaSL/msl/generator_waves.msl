@@ -1,0 +1,100 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+shader Generator_sine_wave
+{
+	input:
+		float frequency = 1.0
+		{			
+			display_name("Frequency");
+			soft_range(float(0),float(1000));
+			description( "The frequency of the generated pattern." );
+		};
+
+	output:
+		float result;
+
+	void main()
+	{
+		result = (sin(animation_time*frequency)+1.0)*0.5;
+	}    
+}
+{
+	description( "An operation that will generate a sine wave pattern." );
+}
+;
+
+shader Generator_saw_tooth
+{
+	input:
+		float frequency = 1.0
+		{		
+			display_name("Frequency");
+			soft_range(float(0),float(1000));
+			description( "The frequency of the generated pattern." );
+		};
+
+	output:
+		float result;
+
+	void main()
+	{
+		result = fmod(animation_time*frequency, 1.0);    
+	}
+}
+{
+	description( "An operation that will generate a saw-tooth wave pattern." );
+}
+;
+
+shader Generator_square_wave
+{
+	input:
+		float frequency = 1.0
+		{		
+			display_name("Frequency");
+			soft_range(float(0),float(1000));
+			description( "The frequency of the generated pattern." );
+		};
+
+	output:
+		float result;
+
+	void main()
+	{
+		result = abs(fmod(animation_time*frequency, 1.0)) > 0.5 ? 1.0 : 0.0;
+	}
+}
+{
+	description( "An operation that will generate a square wave pattern." );
+}
+;
+
+shader Generator_noise_wave
+{
+	input:
+		Texture2d noise_tex = "filtered_noise.dds"
+		{
+			display_name("Noise Texture");
+			description("Texture the noise data will be read from");
+		};
+		float frequency = 0.03
+		{		
+			display_name("Frequency");
+			soft_range(0.0,0.5);
+			description( "The frequency of the generated pattern." );
+		};
+
+	output:
+		float result;
+
+	void main()
+	{
+		result = tex2D(noise_tex, float2(0.0, animation_time*frequency)).x;
+	}
+}
+{
+	description( "An operation that will generate a cyclic noise pattern." );
+}
+;

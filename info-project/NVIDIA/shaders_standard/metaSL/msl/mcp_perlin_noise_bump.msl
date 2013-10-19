@@ -1,0 +1,148 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product shader summed perlin style noise
+ *****************************************************************************/
+//#define IRAY_PIXELPERFECT
+#include <mcp_lib.msl>
+
+shader Mcp_perlin_noise_bump{
+  input:
+    const float  noise_phase = 0.0
+    {
+        description( "Fourth dimension of the noise function, useful for animating the noise.");
+    };
+    const float  noise_levels = 1.0
+    {
+        description( "Number of noise iterations to compose on top of each other. "
+                     "Use with fractal and turbulence noise" );
+        soft_range( 1.0, 10.0 );
+    };
+    Color  noise_distortion = Color( 0.0, 0.0, 0.0, 1.0 )
+    {
+        description( "Additional classical Perlin style turbulence." );
+    };
+    float  noise_threshold_high = 1.0
+    {
+        description( "Noise values higher than this value are mapped to noise_color2." );
+    };
+    float  noise_threshold_low = 0.0
+    {
+        description( "Noise values lower than this value are mapped to noise_color1." );
+    };
+    const float  noise_bands = 1.0
+    {
+        description( "The noise function is split into this number of bands, "
+                     "useful for effects like wood rings. ");
+        soft_range( 1.0, 10.0 );
+    };
+    const bool absolute_noise = false
+    {
+        description( "Controlls how noise octaves are summed.");
+    };
+
+#ifdef IRAY_PIXELPERFECT	
+    Texture2d permtex = "Mcp_noise_permutation_rgba.png"
+    {
+        disable_filtering();
+//		hidden();
+        description("Input for MetaSL preview purposes only. Iray does not use this texture but has the data defined in the code. Constant register limitations for traditional GPU languages make it necessary to bake this into a texture");
+    };
+#else
+    texture1D noise_perm_texture      = "noise_perm.dds"
+    {
+        display_name("Noise Permutation Texture");
+        description("The texture containing a table of 256 permutated numbers which "
+            "are used when generating the noise.");
+        disable_filtering();
+        texture_coord_u("clamp");
+    };
+    texture1D noise_grad_texture      = "noise_grad_4d.dds"
+    {
+        display_name("Noise Gradient Texture");
+        description("The texture containing a table of 16 gradient values used when "
+                    "generating the noise.");
+        disable_filtering();
+        texture_coord_u("clamp");
+    };
+
+#endif	
+      //special bump parameters
+    float factor = 1.0f
+    {
+            description( "Determines the degree of bumpiness." );
+    };
+      //the coordinates, normaly come from Mcp_coordinate_source or Mcp_coordinate_transform 	
+    Mcp_coordinate uvw = Mcp_coordinate(
+                texture_coordinate[0].xyz,
+                ddx(texture_coordinate[0]).xyz,
+                ddy(texture_coordinate[0]).xyz,
+                float3(1.,0.,0.),
+                float3(0.,1.,0.)
+            )
+    {
+    };
+
+  output:
+    float3 result;
+
+    void main(){
+        float3 texcoord = uvw.position;
+//		float3 mydu,mydv;
+//		dduv_from_ddxy(mydu,mydv,uvw.ddx,uvw.ddy);
+        float3 texcoord_u = texcoord+ uvw.du * .01; //todo: estimate on levels/ddx
+        float3 texcoord_v = texcoord+ uvw.dv * .01;
+
+
+#ifdef IRAY_PIXELPERFECT	
+        float sn = Mcp_summed_perlin_noise( uvw.position, noise_phase, int(noise_levels), float4(noise_distortion.rgb,0.0f), absolute_noise, permtex);
+#else
+        float sn = simple_summed_perlin_noise( uvw.position, noise_phase, int(noise_levels), float4(noise_distortion.rgb,0.0f), absolute_noise, noise_perm_texture,noise_grad_texture);
+#endif
+        sn = sn*0.5f+0.5f;
+        // Create banding/stripes by using the fraction component only
+        sn *= noise_bands;
+        sn -= floor(sn);
+        float noise_value = (noise_threshold_high > noise_threshold_low) ?
+            saturate((sn - noise_threshold_low) / (noise_threshold_high - noise_threshold_low)) :
+            sn;
+
+#ifdef IRAY_PIXELPERFECT	
+         sn = Mcp_summed_perlin_noise( texcoord_u, noise_phase, int(noise_levels), float4(noise_distortion.rgb,0.0f), absolute_noise, permtex);
+#else
+         sn = simple_summed_perlin_noise( texcoord_u, noise_phase, int(noise_levels), float4(noise_distortion.rgb,0.0f), absolute_noise, noise_perm_texture,noise_grad_texture);
+#endif
+        sn = sn*0.5f+0.5f;
+        // Create banding/stripes by using the fraction component only
+        sn *= noise_bands;
+        sn -= floor(sn);
+        float noise_value_u = (noise_threshold_high > noise_threshold_low) ?
+            saturate((sn - noise_threshold_low) / (noise_threshold_high - noise_threshold_low)) :
+            sn;
+        noise_value_u-=noise_value;
+
+#ifdef IRAY_PIXELPERFECT	
+         sn = Mcp_summed_perlin_noise( texcoord_v, noise_phase, int(noise_levels), float4(noise_distortion.rgb,0.0f), absolute_noise, permtex);
+#else
+         sn = simple_summed_perlin_noise( texcoord_v, noise_phase, int(noise_levels), float4(noise_distortion.rgb,0.0f), absolute_noise, noise_perm_texture,noise_grad_texture);
+#endif
+        sn = sn*0.5f+0.5f;
+        // Create banding/stripes by using the fraction component only
+        sn *= noise_bands;
+        sn -= floor(sn);
+        float noise_value_v = (noise_threshold_high > noise_threshold_low) ?
+            saturate((sn - noise_threshold_low) / (noise_threshold_high - noise_threshold_low)) :
+            sn;
+        noise_value_v-=noise_value;
+
+        result = normal - factor * (texture_tangent_u[0] * noise_value_u +
+                                   texture_tangent_v[0] * noise_value_v);
+        result = normalize(result);
+            
+
+    }
+};
+

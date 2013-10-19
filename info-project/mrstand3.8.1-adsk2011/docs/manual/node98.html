@@ -1,0 +1,128 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Scene Example</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node97.html">&laquo;&nbsp;prev</a></li>
+<li><a href="chapter3.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION96"></a>
+<h2>Scene Example</h2>
+<p>This example creates two images of a cube, each with a different
+camera and light:</p>
+<pre>
+    verbose on
+    link "base.so"
+    $include &lt;base.mi&gt;
+
+    options "opt"
+        samples      -1 1
+        contrast     .1 .1 .1 .1
+        trace depth  2 2
+    end options
+
+    camera "cam1"
+        frame        1
+        output       "rgb" "x.rgb"
+        focal        100
+        aperture     144.724029
+        aspect       1.179245
+        resolution   500 424
+    end camera
+
+    instance "caminst1" "cam1" end instance
+
+    light "light1"
+        "mib_light_point" (
+            "color"  1 1 1,
+            "shadow" on,
+            "factor" 1
+        )
+        origin       141.375732 83.116005 35.619434
+    end light
+
+    instance "lightinst1" "light1" end instance
+
+    material "mtl" opaque
+        "mib_illum_phong" (
+            "ambience"  .3 .3 .3,
+            "ambient"   .5 .5 .5,
+            "diffuse"   .7 .7 .7,
+            "specular"  1 1 1,
+            "exponent"  50,
+            "mode"      4
+        )
+    end material
+
+    object "obj1"
+        visible on
+        shadow 3
+        transparency 3
+        reflection 3
+        refraction 3
+        finalgather 3
+        group "mesh"
+                -7.068787   -4.155799   -22.885710
+                -0.179573   -7.973234   -16.724060
+                -7.068787    4.344949   -17.619093
+                -0.179573    0.527515   -11.457443
+                 0.179573   -0.527514   -28.742058
+                 7.068787   -4.344948   -22.580408
+                 0.179573    7.973235   -23.475441
+                 7.068787    4.155800   -17.313791
+
+                v 0   v 1   v 2   v 3   v 4   v 5   v 6   v 7
+
+                c "mtl"  0 1 3 2
+                c        1 5 7 3
+                c        5 4 6 7
+                c        4 0 2 6
+                c        4 5 1 0
+                c        2 3 7 6
+        end group
+    end object
+
+    instance "inst1" "obj1"
+        light [ "lightinst1" ]
+    end instance
+
+    instgroup "world"
+        "caminst1" "lightinst1" "inst1"
+    end instgroup
+
+    render "world" "caminst1" "opt"         # render frame 1
+
+    incremental camera "cam1"
+        frame 2
+        output       "rgb" "y.rgb"
+        aperture 100
+    end camera
+
+    incremental light "light1"
+        "mib_light_point" (
+            "color"  1 0 1
+        )
+    end light
+
+    render "world" "caminst1" "opt"         # render frame 2
+</pre>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node97.html">&laquo;&nbsp;prev</a></li>
+<li><a href="chapter3.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

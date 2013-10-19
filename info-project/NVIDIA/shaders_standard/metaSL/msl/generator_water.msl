@@ -1,0 +1,165 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Generator_water 
+{
+	input:
+		Texture2d noise_texture      = "unfiltered_noise_normal.dds"
+		{
+			display_name("Waves Normal Texture");			
+			description("The normal map which defines the shape of the "
+			            "waves." );
+		};
+		Texture2d sea_height_texture = "sea_floor_height.dds"
+		{
+			display_name("Sea Height Texture");
+			description("Grayscale texture that stores the depth of the sea");
+		};
+		Texture2d sea_floor_texture  = "sea_floor.dds"
+		{
+			display_name("Sea Floor Texture");
+			description("The texture used for the sea floor");
+		};
+		Color water_color            = Color(0.16, 0.29, 0.36, 1.0)
+		{			
+			display_name("Water Color");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The base color of the water." );
+		};
+		float depth_scale           = 0.3
+		{		
+			display_name("Depth Scale");
+			soft_range(float(0),float(1));
+			description( "A scale factor applied to the depth texture "
+						 "values." );
+		};
+		float wave_speed            = 0.02
+		{		
+			display_name("Wave Speed");
+			soft_range(float(0),float(1));
+			description( "The velocity of the waves relative to the "
+						 "surface." );
+		};
+    
+	output:
+		Color result;
+		
+		void main()
+		{
+			// texture coords for water - rotate second set 90 degrees
+			float2 uv1 = texture_coordinate[0].xy;
+			float2 uv2 = float2(uv1.y, -uv1.x);
+
+			// animate waves
+			float anim = animation_time*wave_speed;
+			uv1.x += anim;
+			uv2.x += anim;
+			
+			// lookup wave values in noise texture
+			Color wave1 = tex2D(noise_texture, uv1); 
+			Color wave2 = tex2D(noise_texture, uv2); 	
+
+			// extract normal vectors
+			float3 n1 = ((wave1 - 0.5)*2.0).xyz;
+			float3 n2 = ((wave2 - 0.5)*2.0).xyz;
+
+			// combine normals and transform into tangent space
+			normal = normalize((n1+n2) * tangent_space[0]);	
+					    
+			// depth of water
+			float depth = tex2D(sea_height_texture,
+				texture_coordinate[0].xy).x;                
+			
+			// add wave height to depth
+			float wave_height = wave1.a - wave2.a;
+			depth += smoothstep(0.0, 0.3, depth) * wave_height * 0.1;
+			
+			// parallax offset
+			float offset = -depth*depth_scale;
+			
+			// The view direction in tangent space. 
+			float3 vdir = direction;
+			float3 vtan = tangent_space[0]*vdir;
+			
+			// compute texture coords for sea floor with parallax offset
+			float2 floor_uv = texture_coordinate[1].xy;
+			floor_uv.x -= vtan.x*offset;
+			floor_uv.y -= vtan.y*offset;
+			
+			// lookup sea floor color
+			Color sea_floor = tex2D(sea_floor_texture, floor_uv);
+			    
+			// compute a fresnel falloff    		
+			float falloff = saturate(dot(-vdir, normal));
+			falloff = 1.0 - pow(falloff, 0.7);
+
+			// mix reflection with water color
+			Trace_options topt;
+			topt.set_ray_type("reflect");
+			Ray ray(position, reflect(direction, normal));
+			Ray ray_dxy( float3(0.0), float3(0.0));
+			Color refl(0);
+			if ( !trace(ray, ray_dxy, ray_dxy, topt, "result", refl)) {
+                            topt.set_ray_type("environment");
+                            trace(ray, ray_dxy, ray_dxy, topt, "result", refl);
+			}
+			Color water  = water_color + refl * falloff;
+
+			// mix sea floor and water based on depth
+			result = lerp(sea_floor, water, saturate(depth-0.1));
+			}
+		}    
+{
+	description( "An operation that will generate a water pattern." );
+}
+;
+
+shader Generator_water_normal
+{
+	input:
+		Texture2d noise_texture      = "unfiltered_noise_normal.dds"
+		{
+			display_name("Waves Normal Texture");			
+			description("The normal map which defines the shape of the "
+			            "waves." );
+		};
+		float wave_speed            = 0.02
+		{
+			display_name("Wave Speed");
+			soft_range(0,0.5);
+			description("Velocity of the waves relative to the surface." );
+		};
+    
+	output:
+		float3 result;
+
+		void main()
+		{
+			// texture coords for water - rotate second set 90 degrees
+			float2 uv1 = texture_coordinate[0].xy;
+			float2 uv2 = float2(uv1.y, -uv1.x);
+
+			// animate waves
+			float anim = animation_time*wave_speed;
+			uv1.x += anim;
+			uv2.x += anim;
+
+			// lookup wave values in noise texture
+			Color wave1 = tex2D(noise_texture, uv1); 
+			Color wave2 = tex2D(noise_texture, uv2); 	
+
+			// extract normal vectors
+			float3 n1 = ((wave1 - 0.5)*2.0).xyz;
+			float3 n2 = ((wave2 - 0.5)*2.0).xyz;
+
+			// combine normals and transform into tangent space
+			result = normalize((n1+n2) * tangent_space[0]);
+		}
+}
+{
+	description("Generates the normal vector for a water surface." );
+};
+
+

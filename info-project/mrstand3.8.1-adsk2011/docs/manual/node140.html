@@ -1,0 +1,985 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Rendering Functions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<meta  content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node139.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node141.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION138"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_trace_eye">mi_trace_eye</a></li>
+<li><a href="#api:mi_trace_reflection">mi_trace_reflection</a></li>
+<li><a href="#api:mi_trace_refraction">mi_trace_refraction</a></li>
+<li><a href="#api:mi_trace_transparent">mi_trace_transparent</a></li>
+<li><a href="#api:mi_trace_continue">mi_trace_continue</a></li>
+<li><a href="#api:mi_trace_environment">mi_trace_environment</a></li>
+<li><a href="#api:mi_trace_probe">mi_trace_probe</a></li>
+<li><a href="#api:mi_sample_light">mi_sample_light</a></li>
+<li><a href="#api:mi_trace_light">mi_trace_light</a></li>
+<li><a href="#api:mi_trace_shadow">mi_trace_shadow</a></li>
+<li><a href="#api:mi_trace_shadow_seg">mi_trace_shadow_seg</a></li>
+<li><a href="#api:mi_continue_shadow_seg">mi_continue_shadow_seg</a></li>
+<li><a href="#api:mi_ray_offset">mi_ray_offset</a></li>
+<li><a href="#api:mi_ray_falloff">mi_ray_falloff</a></li>
+<li><a href="#api:mi_inclusive_lightlist">mi_inclusive_lightlist</a></li>
+<li><a href="#api:mi_exclusive_lightlist">mi_exclusive_lightlist</a></li>
+<li><a href="#api:mi_instance_lightlist">mi_instance_lightlist</a></li>
+<li><a href="#api:mi_lightprofile_value">mi_lightprofile_value</a></li>
+<li><a href="#api:mi_lightprofile_sample">mi_lightprofile_sample</a></li>
+<li><a href="#api:mi_compute_irradiance">mi_compute_irradiance</a></li>
+<li><a href="#api:mi_compute_irradiance_backside">mi_compute_irradiance_backside</a></li>
+<li><a href="#api:mi_compute_avg_radiance">mi_compute_avg_radiance</a></li>
+<li><a href="#api:mi_compute_volume_irradiance">mi_compute_volume_irradiance</a></li>
+<li><a href="#api:mi_compute_directional_irradiance">mi_compute_directional_irradiance</a></li>
+<li><a href="#api:mi_finalgather_store">mi_finalgather_store</a></li>
+<li><a href="#api:mi_ambient_occlusion">mi_ambient_occlusion</a></li>
+</ul>
+
+<h3 id="api:rendering">Rendering Functions</h3>
+
+<p>These are the functions supplied by the render modules of mental
+ray, called RC*. All following <a href="node165.html#INDEX842">trace
+function</a>s return <code>miTRUE</code> if any subsequent call of
+a shader returned <code>miTRUE</code> to indicate presence of
+<a href="node15.html#INDEX17">illumination</a>. Otherwise no
+illumination is present and <code>miFALSE</code> is
+returned.<a id="INDEX545"></a> All trace functions
+derive the state of the ray to be cast from the given state of the
+parent ray. This state becomes the "<b><a id="INDEX546"></a>child state</b>"
+that is passed to subsequent
+shaders that are called by the trace function. The state is always
+copied, and the given state is not modified except for the state
+fields <i>label</i>, <i>point</i>, <i>normal</i>, <i>dist</i> and
+<i>motion</i>. These fields are copied from the child state so that
+the lens shader can access them in the state modified by
+<i><a href="node140.html#INDEX547">mi_trace_eye</a></i>. After the
+trace function returns, the caller may examine the child state (but
+not the grandchild, which is gone if it ever existed). Volume
+shaders get the same state as the previous (material) shader. Note
+that all point and direction vectors passed as arguments to tracing
+functions must be in <a href="node101.html#INDEX367">internal space</a>.</p>
+
+<a id="INDEX547"></a>
+<h5 class="anchor" id="api:mi_trace_eye">mi_trace_eye</h5>
+<pre>
+    miBoolean mi_trace_eye(
+        miColor         *result,
+        miState         *state,
+        miVector        *origin,
+        miVector        *direction)
+</pre>
+<p>casts an eye ray from <i>origin</i> in <i>direction</i>, or
+calls the next lens shader. If <a href="node76.html#INDEX202">scanline
+rendering</a> is turned on and
+<code>state&rarr;scanline</code> is not zero, <i>origin</i> and
+<i>direction</i> must be the same as in the initial call of
+<i><a href="node140.html#INDEX547">mi_trace_eye</a></i>, and the
+lens shader may not modify them. Lens shaders that depend on
+modifying ray origin and direction should be declared with the
+<code>trace on</code> option. Origin and direction must be given in
+internal space. This function may be used only in lens shaders.
+Note that <i><a href="node140.html#INDEX547">mi_trace_eye</a></i>
+stores <i>origin</i> and <i>direction</i> in
+<code>state&rarr;org</code> and <code>state&rarr;dir</code>,
+respectively, overwriting the previous values.</p>
+
+<a id="INDEX549"></a>
+<h5 class="anchor" id="api:mi_trace_reflection">mi_trace_reflection</h5>
+<pre>
+    miBoolean mi_trace_reflection(
+        miColor         *result,
+        miState         *state,
+        miVector        *direction)
+</pre>
+<p>casts a reflection ray from <code>state&rarr;point</code> to
+<i>direction</i>. It returns <code>miFALSE</code> if the trace
+depth has been exhausted or if the hit object has disabled
+reflection receiving. If no intersection is found, the optional
+environment shader is called. The direction must be given in
+internal space. This function may be used only in shaders called
+during image rendering, but not in displacement, geometry, photon,
+or output shaders.</p>
+
+<a id="INDEX550"></a>
+<h5 class="anchor" id="api:mi_trace_refraction">mi_trace_refraction</h5>
+<pre>
+    miBoolean mi_trace_refraction(
+        miColor         *result,
+        miState         *state,
+        miVector        *direction)
+</pre>
+<p>casts a refraction ray from <code>state&rarr;point</code> to
+<i>direction</i>. It returns <code>miFALSE</code> if the
+<a href="node76.html#INDEX196">trace depth</a> has been exhausted or if the
+hit object has disabled refraction receiving. If no intersection is
+found, the optional <a href="node119.html#INDEX468">environment
+shader</a> is called. Before this functions casts the refraction
+ray, after copying the state, it copies
+<code>state&rarr;refraction_volume</code> to
+<code>state&rarr;volume</code> because the ray is now assumed to be
+"inside" the object, so the <a href="node117.html#INDEX460">volume
+shader</a> that describes the inside should be used to modify the
+ray while traveling inside the object. It is the caller's
+responsibility to set <code>state&rarr;refraction_volume</code> to
+the camera's volume shader
+<code>state&rarr;camera&rarr;volume</code> or some other volume
+shader if it determines that the ray is now leaving the object. The
+direction must be given in internal space.</p>
+<p>If <a href="node102.html#INDEX390">ray tracing</a> has been
+disabled, <i><a href="node140.html#INDEX550">mi_trace_refraction</a></i>
+cannot modify the ray direction and operates like
+<i><a href="node140.html#INDEX551">mi_trace_transparent</a></i>. This function
+may be used only in shaders called during image rendering, but not
+in displacement, geometry, photon, or output shaders.</p>
+<p>For rendering with the rasterizer, please see the discussion in
+the <a href="node34.html">rasterizer</a> section.</p>
+
+<a id="INDEX551"></a>
+<h5 class="anchor" id="api:mi_trace_transparent">mi_trace_transparent</h5>
+<pre>
+    miBoolean mi_trace_transparent(
+        miColor         *result,
+        miState         *state)
+</pre>
+<p>Does the same as <i><a href="node140.html#INDEX550">mi_trace_refraction</a></i>
+with <code>dir == state&rarr;dir</code> (that is, no change in the ray direction)
+but may be executed faster if the parent ray is an eye ray. It also
+works when <a href="node102.html#INDEX390">ray tracing</a> is
+turned off, and considers <code>visible</code> as well as
+<code>trace</code> objects. If the ray direction does not change
+(because no <a href="node76.html#INDEX201">index of refraction</a>
+or similar modification is applied), it is more efficient to cast a
+transparency ray than a refraction ray. Like
+<i><a href="node140.html#INDEX550">mi_trace_refraction</a></i>, this function
+copies the refraction <a href="node117.html#INDEX460">volume
+shader</a> to the volume shader because the ray is now assumed to
+be inside the object. This function may be used only in shaders
+called during image rendering, but not in displacement, geometry,
+photon, or output shaders. The function returns
+<code>miFALSE</code> and a transparent black color if the hit
+object has disabled transparency receiving.</p>
+<p>In <a href="node34.html#INDEX67">rasterizer</a> mode
+<i><a href="node140.html#INDEX551">mi_trace_transparent</a></i> always
+returns <code>miFALSE</code> and a transparent black color if no ray
+has been traced yet. Since the rasterizer separates shading from
+compositing, there is no object <em>behind</em> the current surface
+at the time the material shader is called. The object <em>behind</em>
+will be shaded at some other time, and both results are composited
+long after the material shaders have returned. As long as the shader
+uses standard linear composition for
+<i><a href="node140.html#INDEX551">mi_trace_transparent</a></i> results,
+returning black gives exactly the same result regardless of whether
+rasterizer mode is in effect or not, the composition just happens
+later. However, if the shader performs non-standard compositing, or
+evaluates environments if
+<i><a href="node140.html#INDEX551">mi_trace_transparent</a></i> returns
+false, it must be modified to work properly with the rasterizer.
+Shaders can detect if the rasterizer is enabled by testing
+<code>state&rarr;options&rarr;scanline == miRENDER_FH_RAST</code> (or
+<code>state&rarr;options&rarr;scanline == 'r'</code> which is identical).
+In case rasterizer and ray tracing are both turned on,
+<code>state&rarr;scanline</code> may be checked to determine if the current
+intersection was found by the rasterizer (<code>state&rarr;scanline != 0</code>)
+or ray tracing (<code>state&rarr;scanline == 0</code>).</p>
+
+<a id="INDEX552"></a>
+<h5 class="anchor" id="api:mi_trace_continue">mi_trace_continue</h5>
+<pre>
+    miBoolean mi_trace_continue(
+        miColor * const result,
+        miState * const state)
+</pre>
+<p>Continues to trace the current ray in the same direction. Unlike
+other trace calls, <code>state&rarr;origin</code> is not set to
+<code>state&rarr;point</code> but remains unchanged,
+<code>state&rarr;type</code> remains unchanged, and no new state is
+created. There are no trace depth checks. Effectively, this call
+pretends to the next intersection that the current intersection
+never happened, although the shader that calls
+<i><a href="node140.html#INDEX552">mi_trace_continue</a></i> does have the
+option to manipulate the state and returned color. Care should be
+taken because the state is not copied, so the next intersection
+will have operated on <var>state</var> instead of
+<code>state&rarr;child</code>, <code>state&rarr;child</code> is
+left undefined. This function can be used to control object
+visibility based on more complex criteria than the object
+<i>visible</i> flag.</p>
+<p>Unlike <i><a href="node140.html#INDEX551">mi_trace_transparent</a></i>,
+which will
+ignore the intersections happening very close to the origin of the
+transparency ray, <i><a href="node140.html#INDEX552">mi_trace_continue</a></i> 
+guarantees that
+if there is another triangle coplanar to the hit triangle, then the
+other triangle will also be hit. The order with which the multiple
+coplanar triangles are hit is undefined.</p>
+
+<a id="INDEX553"></a>
+<h5 class="anchor" id="api:mi_trace_environment">mi_trace_environment</h5>
+<pre>
+    miBoolean mi_trace_environment(
+        miColor         *result,
+        miState         *state,
+        miVector        *direction)
+</pre>
+<p>casts a ray into the environment. The trace depth is not
+incremented or checked. The <a href="node119.html#INDEX468">environment
+shader</a> in the state is
+called to compute the color to be returned. The direction must be
+given in internal space.</p>
+
+<a id="INDEX554"></a>
+<h5 class="anchor" id="api:mi_trace_probe">mi_trace_probe</h5>
+<pre>
+    miBoolean mi_trace_probe(
+        miState         *state,
+        miVector        *direction,
+        miVector        *org)
+</pre>
+<p>casts a ray into the scene, starting at <i>org</i> with the
+direction <i>direction</i>, both in internal space coordinates. If
+nothing is hit, <code>miFALSE</code> is returned. If the ray hits
+another object, <code>miTRUE</code> is returned and
+<code>state&rarr;child</code> is set to the state that the material
+shader of the hit object would have seen. However, unlike all other
+<i>mi_trace_*</i> functions, no shader is called. Note that the
+state <code>state&rarr;child</code> does not itself have a state,
+so it cannot be used to call a material shader at the hit object
+directly. This requires setting up an artificial "grandchild"
+state:</p>
+<pre>
+          if (mi_trace_probe(state, &amp;dir, &amp;org)) {
+                  miState grandchild;
+                  state-&gt;child-&gt;child = &amp;grandchild;
+		  /* no texture, bump, or derivative vectors ! */
+                  if (mi_call_material(&amp;result, state-&gt;child))
+                          /* use the result */
+          }
+</pre>
+<p>This sequence works roughly like
+<i><a href="node140.html#INDEX549">mi_trace_reflection</a></i>, except that no
+ray levels are tested, no environment is sampled, and no volume
+shaders are called. Note that
+<i><a href="node140.html#INDEX554">mi_trace_probe</a></i> will always return
+<code>miFALSE</code> if <a href="node102.html#INDEX390">ray
+tracing</a> is disabled.</p>
+<p>If the start point of the ray is changed by modifying
+<code>state&rarr;origin</code> before calling
+<i><a href="node140.html#INDEX554">mi_trace_probe</a></i>, then
+<code>state&rarr;pri</code> should be set to 0, and restored after
+<i><a href="node140.html#INDEX554">mi_trace_probe</a></i> returns.
+<code>state&rarr;pri</code> is used to prevent self-intersections,
+which is not useful if the start point was modified and/or the
+probe ray begins in empty space.</p>
+<p>Note, that the <code>state&rarr;child</code> data returned from
+<i><a href="node140.html#INDEX554">mi_trace_probe</a></i> may be incomplete,
+it does not contain any interpolated vectors for <code>tex_list</code>,
+<code>bump_x_list</code>, <code>bump_y_list</code>, and <code>derivs</code>.
+<p>Note, that probe rays hit only objects that have any of the
+trace flags set. The reason for this is that visible-only objects
+don't need to be put into the <a href="node102.html#INDEX390">ray
+tracing</a> acceleration structures (like the BSP tree), which
+supports the model of separating high-resolution visible geometry
+from low-resolution trace geometry. This model is also supported by
+<a href="node90.html#INDEX347">approximation flags</a> and
+<a href="node140.html#INDEX562">ray offset</a>s.</p>
+
+<a id="INDEX555"></a>
+<h5 class="anchor" id="api:mi_sample_light">mi_sample_light</h5>
+<pre>
+    miBoolean mi_sample_light(
+        miColor         *result,
+        miVector        *dir,
+        miScalar        *dot_nl,
+        miState         *state,
+        miTag           light_inst,
+        miInteger       *samples)
+</pre>
+<p>This function casts a <a href="node117.html#INDEX463">light
+ray</a> from the <a href="node80.html#INDEX250">light source</a> to
+the intersection point, causing the light source's
+<a href="node120.html#INDEX471">light shader</a> to be called.
+The <a href="node120.html#INDEX471">light shader</a> may then calculate
+<a href="node76.html#INDEX197">shadow</a>s by casting a
+<a href="node120.html#INDEX472">shadow ray</a> to the intersection point.
+This may cause <a href="node121.html#INDEX481">shadow shader</a>s
+of occluding objects to be called, and will also cause the
+<a href="node117.html#INDEX460">volume shader</a> of the state to be
+called, if there is one. Before the light is sampled, the direction
+from the current intersection point in the state to the light and
+the dot product of this direction and the normal in the state are
+calculated and returned in <var>dir</var> and <var>dot_nl</var> if
+these pointers are nonzero. The direction is returned in internal
+space. The light instance to sample must be given in
+<var>light_inst</var>. <var>samples</var> must point to an integer
+that is initialized to 0. <i><a href="node140.html#INDEX555">mi_sample_light</a></i>
+must be called in a
+loop until it returns <code>miFALSE</code>. <var>*samples</var>
+will then contain the total number of light samples taken; it may
+be larger than 1 for <a href="node80.html#INDEX255">area light
+source</a>s.</p>
+<p>For every call in the loop, a different <var>dir</var> and
+<var>dot_nl</var> is returned because the rays go to different
+points on the area light source. The caller is expected to use
+these variables, the returned color, and other variables such as
+diffuse and specular colors from the shader parameters to compute a
+color. These colors are accumulated until
+<i><a href="node140.html#INDEX555">mi_sample_light</a></i> returns
+<code>miFALSE</code> and the loop terminates (leaving
+<var>dir</var> and <var>dot_nl</var> undefined when returning
+miFALSE). The caller then divides the accumulated color by the
+number of samples ( <code>*samples</code>) if it is greater than 0,
+effectively averaging all the intermediate results. See page
+<a href="node113.html#mtlshaderex">mtlshaderex</a> for an example
+of a shader using <i><a href="node140.html#INDEX555">mi_sample_light</a></i>.</p>
+<p>When casting <a href="node117.html#INDEX463">light ray</a>s with
+<i><a href="node140.html#INDEX555">mi_sample_light</a></i>, mental
+ray may check whether the primitive's normal is pointing away from
+the light and ignore the light in this case. For this reason some
+shaders, such as <b><a id="INDEX556"></a>ray
+marching</b> volume shaders, should assign 0 to
+<code>state&rarr;pri</code> first, and restore it before returning.
+All <i><a href="miquery.html#api:mi_query">mi_query</a></i> modes that
+return information on the intersected surface, such as
+<code>miQ_PRI_BBOX_MIN/MAX</code>, <code>miQ_NUM_TEXTURES</code>,
+<code>miQ_GEO_LABEL</code>, and <code>miQ_GEO_DATA</code>, do not
+work if <var>pri</var> has been modified. Shaders that operate on a
+surface such as material shaders may clear
+<code>state&rarr;normal</code> instead, which disables the backside
+light test but preserves the information on the current surface for
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> and
+self-shadowing tests. (<code>state&rarr;pri</code> is an identifier
+for the intersected "primitive" of the surface.)</p>
+<p>Light instance tags to call this function with can be found
+either in shader parameters of type <code>light</code> or
+<code>array light</code>, or in the instance light list retrieved
+with <i><a href="#INDEXmi_instance_lightlist">mi_instance_lightlist</a></i>,
+or in the global light list obtained from
+<i><a href="miquery.html#api:mi_query">mi_query</a></i>.</p>
+<p>This function works with <a href="node112.html#INDEX424">light
+group</a>s.</p>
+
+<a id="INDEX557"></a>
+<h5 class="anchor" id="api:mi_trace_light">mi_trace_light</h5>
+<pre>
+    miBoolean mi_trace_light(
+        miColor         *result,
+        miVector        *dir,
+        miScalar        *dot_nl,
+        miState         *state,
+        miTag           light_inst)
+</pre>
+<p>This function is a simpler variation of
+<i><a href="node140.html#INDEX555">mi_sample_light</a></i> that does not keep
+a sample counter, and is not called in a loop. It is equivalent to
+<i><a href="node140.html#INDEX555">mi_sample_light</a></i> except
+for area light sources. Area light sources must be sampled multiple
+times with different directions, which is not supported accurately
+by this function because it can only return a single direction and
+<var>dot_nl</var>. This function is provided for backwards
+compatibility with previous versions of mental ray, and should not
+be used for new projects.</p>
+
+<a id="INDEX558"></a>
+<h5 class="anchor" id="api:mi_trace_shadow">mi_trace_shadow</h5>
+<pre>
+    miBoolean mi_trace_shadow(
+        miColor * const result,
+        miState * const state)
+</pre>
+<p>This function computes shadows for the given
+<a href="node117.html#INDEX463">light ray</a> by casting
+<a href="node120.html#INDEX472">shadow ray</a>s. It is normally called from
+a <a href="node120.html#INDEX471">light shader</a> to take
+occluding objects that prevent some or all of the light emitted by
+the light source to reach the illuminated point (whose
+<a href="node115.html#INDEX440">material shader</a> has probably called the
+light shader). The <var>result</var> color is modified by the
+<a href="node121.html#INDEX481">shadow shader</a>s that are called
+if occluding objects are found. Note that
+<a href="node120.html#INDEX471">light shader</a>s can improve performance
+by tracing shadow rays only if the contribution from the light is
+greater than some threshold, for example because distance or angle
+attenuation has left so little of the light color (less than
+1&nbsp;&frasl;&nbsp;256, for example) that applying shadow
+occlusion to this value is not going to make any difference. This
+function returns <code>miFALSE</code> if full occlusion is
+detected, that is, <var>result</var> is black or if the hit object
+has shadow receiving disabled.</p>
+
+<a id="INDEX559"></a>
+<h5 class="anchor" id="api:mi_trace_shadow_seg">mi_trace_shadow_seg</h5>
+<pre>
+    miBoolean mi_trace_shadow_seg(
+        miColor * const result,
+        miState * const state)
+</pre>
+<p>recursively calls the <a href="node121.html#INDEX481">shadow
+shader</a> for the next shadow segment and returns its result, or
+the result of the <a href="node120.html#INDEX471">light shader</a>
+if there is no more shadow intersection. It does nothing if shadow
+segments are turned off. It is used by shadow shaders only; light
+shaders always use <i><a href="node140.html#INDEX558">mi_trace_shadow</a></i>.
+See the introduction to shader types and the shadow shader explanation for
+details on shadow modes. This function returns <code>miFALSE</code>
+if full occlusion is detected, that is, <var>result</var> is
+black.</p>
+
+<a id="INDEX560"></a>
+<h5 class="anchor" id="api:mi_continue_shadow_seg">mi_continue_shadow_seg</h5>
+<pre>
+    miBoolean mi_continue_shadow_seg(
+        miColor * const result,
+        miState * const state)
+</pre>
+<p>This function allows a <a href="node121.html#INDEX481">shadow
+shader</a> to continue tracing the exact same shadow segment that
+triggered this shadow shader, which is effectively ignoring the
+corresponding occluder. In other words, it allows to ignore
+occluders on a per shadow segment basis. The next
+<a href="node121.html#INDEX481">shadow shader</a> will be called as if the
+previous intersection never existed.
+<i><a href="node140.html#INDEX560">mi_continue_shadow_seg</a></i> leaves the
+state unchanged from the perspective of the next shadow shader.
+Like <i><a href="node140.html#INDEX559">mi_trace_shadow_seg</a></i>, this function
+must be called by shadow shaders only. It returns
+<code>miFALSE</code> if full occlusion is detected, that is,
+<var>result</var> is black.</p>
+
+<a id="INDEX561"></a><a id="INDEX562"></a>
+<h5 class="anchor" id="api:mi_ray_offset">mi_ray_offset</h5>
+<pre>
+    miBoolean mi_ray_offset(
+        miState   *state,
+        double    *offset)
+</pre>
+<p>All rays cast from this point on will begin a little distance
+away from <code>state&rarr;point</code>, defined by
+<var>*offset</var>. Objects closer than this distance will not be
+hit by the ray. This is useful if there are low-resolution shadow
+or trace standins (possibly created by
+<a href="node90.html#INDEX347">approximation flags</a>) that are some
+distance away: if the rays ignore very nearby other objects, they
+cannot hit the low-resolution version, which avoids self-shadowing
+or self-reflection, especially self-reflection caused by final
+gathering. The old <var>*offset</var> value is returned, and should
+be restored before the shader returns; it should be used to bracket
+functions like <i><a href="node140.html#INDEX549">mi_trace_reflection</a></i>
+or <i><a href="node140.html#INDEX571">mi_compute_irradiance</a></i>.</p>
+
+<a id="INDEX563"></a><a id="INDEX564"></a>
+<h5 class="anchor" id="api:mi_ray_falloff">mi_ray_falloff</h5>
+<pre>
+    miBoolean mi_ray_falloff(
+        miState   *state,
+        double    *start,
+        double    *stop)
+</pre>
+<p>All rays and photons cast within this shader call from now on
+will reach a maximum distance of <var>*stop</var>, measured from
+<code>state&rarr;point</code> when the ray or photon tracing
+function or <i><a href="node140.html#INDEX571">mi_compute_irradiance</a></i>
+is called.
+The maximum distance is applied to every single ray or photon
+segment; lengths are not accumulated. Objects farther away will not
+be hit; instead, the environment will be returned (unless cleared
+in the state by the shader). The <var>*start</var> parameter
+defines a falloff distance; objects at a distance between
+<var>*start</var> and <var>*stop</var> will fade from the object
+color to the environment color (or black if none), to avoid hard
+edges in animations. This function is useful to limit the reach of
+rays, especially finalgather rays, to keep computation local and
+not fill the geometry cache with distant objects that do not matter
+much anyway. The old start and stop values are returned, and should
+be restored before the shader returns. This function takes
+precedence over falloffs in the options and objects.</p>
+
+<a id="INDEX565"></a>
+<h5 class="anchor" id="api:mi_inclusive_lightlist">mi_inclusive_lightlist</h5>
+<pre>
+    miBoolean mi_inclusive_lightlist(
+        int       *n_lights,
+        miTag     **lights,
+        miState   *state)
+</pre>
+<p>This function accepts a list of <a href="node80.html#INDEX250">light
+source</a> instances or <a href="node112.html#INDEX424">light group</a>s,
+and returns a modified
+list that includes all other instances of the instanced lights as
+well. If a light is instanced three times in the scene, and one (or
+more) of them appears in <var>*lights</var>, then
+<var>*lights</var> will contain all three after this call. Light
+groups are expanded to return the individual instances.
+<var>n_lights</var> points to an integer containing the original
+list size, and <var>lights</var> points to a pointer to the
+original list. After the function returns, the integer holds the
+new list length, and the pointer points to a new list. Both the
+integer and the pointer should be on the stack and should be
+initialized from the shader parameters using
+<i><a href="node138.html#INDEX522">mi_eval</a></i> to avoid overwriting the
+actual shader parameters, which should remain intact for the next
+shader call. The returned list should not be written to by the
+shader.</p>
+<p>The new list is a copy of the global light list (see
+<i><a href="miquery.html#api:mi_query">mi_query</a></i>) with only those lights
+that match the passed original list included. The returned list
+remains valid until the next call to
+<i><a href="node140.html#INDEX565">mi_inclusive_lightlist</a></i> or
+<i><a href="node140.html#INDEX566">mi_exclusive_lightlist</a></i>.
+Note that this function involves a loop over all lights, and may be
+a good candidate for calling once in the <a href="node159.html#INDEX835">init
+shader</a> instead of once every time
+the shader is called, if <var>*lights</var> is known to be constant
+during the frame.</p>
+
+<a id="INDEX566"></a>
+<h5 class="anchor" id="api:mi_exclusive_lightlist">mi_exclusive_lightlist</h5>
+<pre>
+    miBoolean mi_exclusive_lightlist(
+        int       *n_lights,
+        miTag     **lights,
+        miState   *state)
+</pre>
+<p>This function is similar to the previous, but returns all global
+light instances <em>except</em> those whose instanced light match a
+light instanced in the given list, or is contained in a given
+<a href="node112.html#INDEX424">light group</a>. Both functions
+return mutually exclusive lists when called with the same argument
+list. <var>n_lights</var> points to an integer containing the
+original list size, and <var>lights</var> points to a pointer to
+the original list. After the function returns, the integer holds
+the new list length, and the pointer points to a new list. Both the
+integer and the pointer should be on the stack and should be
+initialized from the shader parameters using
+<i><a href="node138.html#INDEX522">mi_eval</a></i> to avoid overwriting the
+actual shader parameters, which should remain intact for the next
+shader call.</p>
+<p>The new list is a copy of the global light list (see
+<i><a href="miquery.html#api:mi_query">mi_query</a></i>) with the matches with the
+original list removed. This function is slightly slower than the
+previous. The returned list remains valid until the next call to
+<i><a href="node140.html#INDEX565">mi_inclusive_lightlist</a></i>
+or <i><a href="node140.html#INDEX566">mi_exclusive_lightlist</a></i>.</p>
+
+<a id="INDEXmi_instance_lightlist"></a>
+<h5 class="anchor" id="api:mi_instance_lightlist">mi_instance_lightlist</h5>
+<pre>
+    miBoolean mi_instance_lightlist(
+        int       *n_lights,
+        miTag     **lights,
+        miState   *state)
+</pre>
+<p>This function returns the expanded instance lights for the
+current geometry instance <code>state&rarr;instance</code> as
+specified in the scene description (see Instance Light List). This
+function does not expect any input lights, both <i>n_lights</i> and
+<i>lights</i> are <b>out</b> parameters. The integer
+<i>n_lights</i> points to will contain the array size of the
+returned light list, and <i>lights</i> will point to the array
+content. If the state instance has not inherited a light list, this
+functions fills the returned array with all lights present in the
+scene. In plain-C shaders this function can be used as an
+alternative to light iterators, and enables sharing of the same
+shader even on objects with different light sets.</p>
+
+<a id="INDEX567"></a>
+<h5 class="anchor" id="api:mi_lightprofile_value">mi_lightprofile_value</h5>
+<pre>
+    miScalar mi_lightprofile_value(
+        void      *vlp,     /* opaque pointer to light profile */
+        miScalar  phi,      /* horizontal angle */
+        miScalar  costheta, /* cos of vertical angle */
+        miVector  *pos,     /* sampling position on light */
+        miBoolean rel)      /* return pure or relative value */
+</pre>
+<p>This function supports direct access to light profile data for
+<b><a id="INDEX568"></a>photon emitter shader</b>s.
+For a given light profile, identified by the opaque pointer
+<var>vlp</var> and obtained by
+<i><a href="node139.html#INDEX540">mi_db_access</a></i>ing the tag from the
+lightprofile parameter, this routine returns a light intensity.
+This intensity is either relative (normalized to a factor in the
+range 0&hellip;1) if <var>rel</var> is <code>miTRUE</code>, or the
+raw values from the vendor-supplied profile file (Candelas in the
+case of IES and Candelas per 1000 Lumen flux in the case of
+Eulumdat) if <i>rel</i> is <code>miFALSE</code>. The <i>phi</i> and
+<var>costheta</var> arguments define the horizontal angle and the
+cosine of the vertical angle, respectively, as defined by the light
+profile. This function is intended for light <b><a id="INDEX569"></a>emitter
+shader</b>s that operate directly with angles; light shaders should use
+<i><a href="node140.html#INDEX570">mi_lightprofile_sample</a></i>.</p>
+
+<a id="INDEX570"></a>
+<h5 class="anchor" id="api:mi_lightprofile_sample">mi_lightprofile_sample</h5>
+<pre>
+    miScalar mi_lightprofile_sample(
+        miState   *state,
+        miTag     light_profile,
+        miBoolean rel)
+</pre>
+<p>This is a variant of
+<i><a href="node140.html#INDEX567">mi_lightprofile_value</a></i> with a
+simplified interface suitable for <a href="node120.html#INDEX471">light
+shader</a>s. The <var>vlp</var>
+pointer is derived from accessing <var>light_profile</var>, and
+<var>phi</var>, <var>costheta</var>, and <var>pos</var> are derived
+from the direction and point variables of <var>state</var>. The
+<var>rel</var> flag is passed through.</p>
+
+<a id="INDEX571"></a>
+<h5 class="anchor" id="api:mi_compute_irradiance">mi_compute_irradiance</h5>
+<pre>
+    miBoolean mi_compute_irradiance(
+        miColor   *result,
+        miState   *state)
+</pre>
+<p>This function computes the <a href="node48.html#INDEX97">irradiance</a>
+corresponding to indirect
+diffuse illumination at the intersection point given in
+<code>state&rarr;point</code>. It is used in
+<a href="node115.html#INDEX440">material shader</a>s to add
+<a href="node80.html#INDEX259">indirect illumination</a> such as
+<a href="node41.html#INDEX86">caustics</a> or
+<a href="node83.html#INDEX281">color bleeding</a>. If
+<code>state&rarr;pri</code> is zero, <code>miFALSE</code> is
+returned. The <i><a href="node140.html#INDEX571">mi_compute_irradiance</a></i>
+function, if
+called to evaluate irradiance from final gathering, will return the
+average of all alphas from finalgather rays. This allows a simple
+form of ambient occlusion mapping. The final gather receive mode
+must be enabled in order to compute final gather contributions with
+this function.</p>
+
+<a id="INDEX572"></a>
+<h5 class="anchor" id="api:mi_compute_irradiance_backside">mi_compute_irradiance_backside</h5>
+<pre>
+    miBoolean mi_compute_irradiance_backside(
+        miColor   *result,
+        miState   *state)
+</pre>
+<p>This function is equivalent to
+<i><a href="node140.html#INDEX571">mi_compute_irradiance</a></i>, except that
+it computes the <a href="node48.html#INDEX97">irradiance</a> on the
+back side of the surface, as defined by the surface normal.</p>
+
+<a id="INDEX573"></a>
+<h5 class="anchor" id="api:mi_compute_avg_radiance">mi_compute_avg_radiance</h5>
+<pre>
+    typedef struct miIrrad_options {
+        int        size;                  /* size of the structure */
+                                          /* finalgather part... */
+        int        finalgather_rays;      /* no. rays in final gather */
+        miScalar   finalgather_maxradius; /* maxdist for finalgather */
+        miScalar   finalgather_minradius; /* mindist for finalgather */
+        miCBoolean finalgather_view;      /* radii in raster pixels? */
+        miUchar    finalgather_filter;    /* finalgather ray filter */
+        miUchar    padding1[2];           /* padding */
+                                          /* globillum part... */
+        int        globillum_accuracy;    /* no. GI photons in estimation */
+        miScalar   globillum_radius;      /* maxdist for GI photons */
+					  /* caustics part... */
+        int        caustic_accuracy;      /* no. caustic photons in est. */
+        miScalar   caustic_radius;        /* maxdist for caustic photons */
+                                          /* extensions... */
+        miUint     finalgather_points;    /* #fg points for interpolation */
+        miScalar   importance;            /* importance factor */ 
+        /* this structure may be extended in the future */
+    } miIrrad_options;
+
+
+    miBoolean mi_compute_avg_radiance(
+        miColor                *result,
+        miState                *state,
+        miUchar                 face,           /* 'f' front, 'b' back  */
+        struct miIrrad_options *irrad_options); /* options to overwrite */
+</pre>
+<p>This function is a generalization of the
+<i><a href="node140.html#INDEX571">mi_compute_irradiance</a></i> and
+<i><a href="node140.html#INDEX572">mi_compute_irradiance_backside</a></i>
+functions with a common interface. Additionally, it allows to override
+quality parameters for final gathering and photons on a per-call basis.</p>
+<p>The function<br />
+<i><a href="node140.html#INDEX573">mi_compute_avg_radiance</a></i>
+<code>(result,&nbsp;state,&nbsp;'f',&nbsp;NULL)</code> returns the
+same result as<br />
+<i><a href="node140.html#INDEX571">mi_compute_irradiance</a></i>
+<code>(result,&nbsp;state)</code> divided by <span class="math">&pi;</span>.<br />
+In other words, the color result of
+<i><a href="node140.html#INDEX571">mi_compute_irradiance</a></i> is exactly
+<span class="math">&pi;</span> times brighter than that of
+<i><a href="node140.html#INDEX573">mi_compute_avg_radiance</a></i>.<br />
+There is a similar relationship between<br />
+<i><a href="node140.html#INDEX573">mi_compute_avg_radiance</a></i>
+<code>(result,&nbsp;state,&nbsp;'b',&nbsp;NULL)</code> and<br />
+<i><a href="node140.html#INDEX572">mi_compute_irradiance_backside</a></i>
+<code>(result,&nbsp;state)</code>.</p>
+<p>For overriding finalgather and/or photon quality settings, a
+non-NULL pointer to a properly setup <code>miIrrad_options</code>
+struct must be passed in as fourth argument. All fields must be
+initialized before this struct is passed to
+<i><a href="node140.html#INDEX573">mi_compute_avg_radiance</a></i>. A macro
+<code>miIRRAD_DEFAULT</code> may be used to initialize the
+structure with defaults from <code>state&rarr;options</code>, and a
+subset of the structure fields can be modified explicitly after
+that.</p>
+<p>The <code>importance</code> factor may be used by a shader to
+hint mental ray kernel to use more of fewer finalgather rays for a
+specific finalgather point. For example, a shader may pass the
+intensity of the diffuse component to make mental ray trace more
+finalgather rays in the bright part of the scene and less in the
+dark part. For a semi-transparent glass, a shader may use the
+transparency as importance in order to reduce the number
+finalgather rays used for computing finalgather points behind the
+glass. If importance is not set, mental ray computes the default
+one based on the current reflection and refraction level.</p>
+<p>Note that <code>miIrrad_options</code> may be extended in the
+future versions, but explicitly given <var>size</var> fields
+allows two-way compatibility.</p>
+
+<a id="INDEX574"></a>
+<h5 class="anchor" id="api:mi_compute_volume_irradiance">mi_compute_volume_irradiance</h5>
+<pre>
+    miBoolean mi_compute_volume_irradiance(
+        miColor   *result,
+        miState   *state)
+</pre>
+<p>This function computes the <a href="node48.html#INDEX97">irradiance</a>
+corresponding to indirect
+diffuse illumination at the point given in state
+<code>state&rarr;point</code>. It is used in
+<a href="node117.html#INDEX460">volume shader</a>s to add
+<a href="node80.html#INDEX259">indirect illumination</a> such as multiply
+scattered light or <a href="node76.html#INDEX208">volume
+caustics</a>.</p>
+
+<a id="INDEX575"></a>
+<h5 class="anchor" id="api:mi_compute_directional_irradiance">mi_compute_directional_irradiance</h5>
+<pre>
+    miBoolean mi_compute_directional_irradiance(
+        miColor   *result,
+        miState   *state,
+        miScalar  r,
+        miScalar  g1,
+        miScalar  g2)
+</pre>
+<p>This function is a generalization of
+<i><a href="node140.html#INDEX574">mi_compute_volume_irradiance</a></i> that
+calculates the volume <a href="node48.html#INDEX97">irradiance</a>
+obtained when the forward or backward scattering directions
+(measured with respect to the <a href="node117.html#INDEX463">light
+ray</a> direction) are preferred over sideways scattering. The
+parameters <var>g1</var> and <var>g2</var> are used to quantify two
+independent instances of these. Values between <code>0</code> and
+<code>1</code> specify forward scattering, while values between
+<code>-1</code> and <code>0</code> specify backward scattering. A
+value of <code>0</code> indicates no preference, that is, diffuse
+scattering. The blending parameter <var>r</var> specifies to what
+extent the two choices should be (linearly) superimposed. For
+<var>r = 0</var> only the choice with preferences specified by
+<var>g2</var> contributes, while for <var>r = 1</var> only the
+choice with preferences specified by <var>g1</var> contributes.
+Commonly a positive choice for <var>g1</var> is combined with a
+negative <var>g2</var> and vice versa. Purely diffuse volume
+scattering may be computed more efficiently with
+<i><a href="node140.html#INDEX574">mi_compute_volume_irradiance</a></i>. An
+example polar diagram of <a href="node48.html#INDEX97">irradiance</a>
+dependent on the angle between
+scattering direction and light direction for values
+<span class="math">g1&nbsp;=&nbsp;&minus;g2&nbsp;=&nbsp;0.5</span> is given in
+the figure below for <span class="math">r&nbsp;=&nbsp;1.0,
+0.0,</span> and <span class="math">0.5</span>.</p>
+
+<div class="pic">
+<img style="width:50%" src="images/rayleigh.jpg" />
+</div>
+
+<a id="INDEX576"></a>
+<h5 class="anchor" id="api:mi_finalgather_store">mi_finalgather_store</h5>
+<pre>
+    typedef enum miFinalgather_store_mode {
+        miFG_STORE_COMPUTE  = 1,
+        miFG_STORE_SET      = 2
+    } miFinalgather_store_mode;
+
+
+    miBoolean mi_finalgather_store(
+        miColor   *color,
+        miState   *state,
+        int       mode)
+</pre>
+<p>Creates a new finalgather point with the
+<a href="node48.html#INDEX97">irradiance</a> value <var>color</var>.
+Normally final gather points are created automatically based on
+accuracy settings, either during preprocessing, or during rendering
+when an irradiance is computed for a point with no nearby
+preexisting finalgather points. This function stores a point energy
+<var>color</var> explicitly, regardless of accuracy settings. The
+<var>color</var> value is either computed by
+<i><a href="node140.html#INDEX576">mi_finalgather_store</a></i> if
+<var>mode</var> is <code>miFG_STORE_COMPUTE</code>, using a
+procedure similar to <i><a href="node140.html#INDEX571">mi_compute_irradiance</a></i>,
+or the value
+specified by the caller is used directly if <var>mode</var> is
+<code>miFG_STORE_SET</code>.</p>
+<p>If the <var>mode</var> is <code>miFG_STORE_SET</code>, then
+<code>state&rarr;point</code>, <code>state&rarr;normal</code>, and
+<code>state&rarr;dist</code> must be initialized before calling
+<i><a href="node140.html#INDEX576">mi_finalgather_store</a></i>.
+For best quality, <code>state&rarr;dist</code> should contain the
+distance to the closest object, but if this is not known or too
+expensive to probe, it may be left unchanged in the state.</p>
+<p>This function is useful for setting finalgather points in places
+where they would not normally be seen by preprocessing, such as the
+back sides of objects. This is especially useful for
+<a href="node135.html#INDEX501">lightmap shader</a>s because
+<a href="node25.html#INDEX49">light map</a>s that compute
+<a href="node48.html#INDEX97">irradiance</a>s would otherwise look better
+on parts of the object seen by the camera. For example, the
+<a href="node25.html#INDEX49">light map</a> shader might use
+<i><a href="node140.html#INDEX576">mi_finalgather_store</a></i> in
+compute mode to place finalgather points on vertices, for later
+lookup in output mode.</p>
+
+<h5 class="anchor" id="api:mi_ambient_occlusion">mi_ambient_occlusion</h5>
+<pre>
+    typedef struct miAmboccl_options {
+        int           size;           /* size of the structure            */
+                                      /* ao compute quality...            */
+        int           rays;           /* number of rays to shoot          */
+        miVector      axis;           /* the axis for the cone            */
+        miScalar      spread;         /* cosine of the spread angle       */
+        miScalar      spread_exp;     /* the exponent of the cosine distr */
+        miScalar      mindist;        /* near clipping distance           */
+        miScalar      maxdist;        /* far clipping distance            */
+                                      /* ao lookup quality...             */
+        int           cache_points;   /* number of ao points for lookup   */
+    } miAmboccl_options;
+
+
+    miScalar mi_ambient_occlusion(
+        miState                       *state,
+	struct miAmboccl_options      *amboccl_options,
+	miVector                      *bent_normal);   /* opt. bent normal */
+</pre>
+<p>
+This function computes the amount of occlusion by surrounding objects
+at the intersection point <code>state&rarr;point</code> if ambient occlusion
+is enabled in mental ray, which is the default. This is typically a faster and
+less expensive method to simulate the effects of global illumination.
+The return value is the extent to which the area above a point is covered by
+geometry, ranging from <code>0</code> for <q>no&nbsp;coverage</q> to
+<code>1</code> for <q>fully&nbsp;covered</q>. It may be used in material shaders
+to scale the contribution from ambient lighting, or create effects like contact
+shadows.
+<p>The occlusion value is computed by tracing a number of rays into the hemisphere
+above the surface point and testing to what extent this region is blocked. No
+material shaders are called during these trace calls, hence no shading effects
+are considered for occlusion (in contrast to final gathering, for example).</p>
+<p>The ambient occlusion algorithm supports a <b>caching mechanism</b> similar
+to final gathering, where occlusion values are pre-computed for distinct points
+only and stored in a 3d map data structure, for fast look-up and interpolation
+during final rendering. By default the cache is disabled in mental ray, which
+results in ambient occlusion calculations performed only on demand from shaders
+without any caching. The caching can be enabled with a
+<a href="node76.html#ambient_occlusion">scene option</a> or on the mental ray
+<a href="node245.html#ambient_occlusion">command line</a>. This will trigger
+computations for ambient occlusion before rendering starts, and independent
+of actual calls to this function in shaders.
+</p>
+<p>The function supports additional parameters to control the ambient
+occlusion computation for the particular call. Passing a <code>NULL</code>
+pointer for the <code>amboccl_options</code> will enforce to use the
+<a href="node76.html#ambient_occlusion">ambient occlusion options</a> and
+defaults set in the scene or from the mental ray
+<a href="node245.html#cli:ao">command line</a>.
+Passing a valid pointer to a <code>miAmboccl_options</code> structure, on the
+other hand, requires to initialize <em>all</em> fields before this structure
+is provided to the funtion
+<i><a href="node140.html#api:mi_ambient_occlusion">mi_ambient_occlusion</a></i>.
+The macro <code>miAMBOCCL_DEFAULT</code> should be used to fill the structure
+with reasonable values first, and then individual fields may be modified
+explicitly. Note, the macro needs to be called for every shading point, since
+it refers to state variables. The fields have the following meanings:
+<dl>
+<dt><code>size</code><dd>the size of the structure for the current version of
+mental ray, supporting future extensions without breaking binary compatibility.
+This value should never be changed.
+<dt><code>rays</code><dd>the number of probe rays to cast when computing the
+ambient occlusion value at the current shading point. If set to <code>0</code>
+or a negative value then mental ray will use the global scene setting provided
+with the options or on the command line, or the default <code>256</code>
+otherwise. The <code>miAMBOCCL_DEFAULT</code> macro sets the value of this
+field to <code>-1</code>, hence refers to the scene setting or default.
+<dt><code>axis</code><dd>the center direction of the sampling cone in world
+space, around which the rays are shot to compute the ambient occlusion value.
+It may be set to any world space direction, for instance to the normal before
+bump mapping. The <code>miAMBOCCL_DEFAULT</code> macro sets the value of this
+field to the current <code>state&rarr;normal</code>.
+<dt><code>spread</code><dd>the cosine of the angle between the axis and the
+extension of the cone within the rays are shot. A value of <code>0.0</code>
+means an angle of 90 degrees (the maximum spread, or hemisphere), values
+approaching <code>1.0</code> cause narrower angle, and <code>1.0</code>
+corresponds to 0 degrees. The <code>miAMBOCCL_DEFAULT</code> macro sets the
+value of this field to a negative out-of-range value, forcing mental ray to
+use the default <code>0.0</code> (full coverage).
+<dt><code>spread_exp</code><dd>exponent to be used for the weighting of the
+samples. A value of <code>1</code> causes Lambertian distribution, which is
+the default. The <code>miAMBOCCL_DEFAULT</code> macro sets the value to
+<code>1</code>.<br />
+<em>This is currently not fully implemented, values other than the default
+have no effect.</em>
+<dt><code>min_dist</code>
+<br><code>max_dist</code><dd>set near and far distances. This can be used to
+exclude contribution from geometry residing outside a given distance range,
+to localize the effect and accelerate the computation. By default no limiting
+range is active. Using a finite maximum distance also enables linear fading of
+the occlusion value between the minimum and the maximum distance. With infinite
+maximum distance no fading can be performed. The <code>miAMBOCCL_DEFAULT</code>
+macro sets the value of these fields to <code>-1</code>, disabling any distance
+limitations (distance range: 0.0 to infinity).
+<dt><code>cache_points</code><dd>the number of ambient occlusion cache points
+that should be used for interpolation if the cache was enabled (see above),
+ignored otherwise. If set to a negative out-of-range value then mental ray
+will use the scene setting provided with the options or on the command line,
+or the default <code>64</code> otherwise. If set to <code>0</code>, then mental
+ray will ignore the cache if present. The <code>miAMBOCCL_DEFAULT</code> macro
+sets the value of this field to <code>-1</code>.
+</dl>
+<p>The <code>bent_normal</code> parameter will return an additional direction
+vector if a valid pointer is given. It provides the direction into the
+unoccluded part of the hemisphere. This may be used for special shading effects
+or acceleration purposes. It is determined as follows: during casting of the
+rays, the directions of unoccluded probe rays are accumulated to produce an
+average at the end, called the <dfn>bent normal</dfn>. If the current surface
+point is completely unoccluded, this average vector is coincidental with the
+original axis (or normal in the default case). If it's partially occluded, then
+the resulting vector can be regarded as a bending of the normal into the average
+direction of the unoccluded part of the hemisphere. This may be used in shaders
+to produce a specular highlight, or to concentrate sampling of the environment
+around the bent normal instead of the normal. The mental ray base shader
+<var>mib_fast_occlusion</var> provides an example implementation.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node139.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node141.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

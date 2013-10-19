@@ -1,0 +1,87 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+#import  <mi_msl_shared.msl>
+
+shader Component_cook_torrance
+{
+  input:    
+    float roughness = 0.18
+    {		
+	display_name("Specular Roughness");
+	soft_range(float(0),float(2));
+	description( "The width of specular highlights along the across the "
+	"surface." );
+    };
+    float iorR = 80
+    {		
+	display_name("Red Index of Refraction");
+	soft_range(float(0),float(128));
+	hard_range(float(0),float(256));
+	description( "Effect of red on the color of specular "
+	"reflections across the surface." );
+
+    };
+    float iorG = 80
+    {	
+	display_name("Green Index of Refraction");
+	soft_range(float(0),float(128));
+	hard_range(float(0),float(256));
+	description( "Effect of green on the color of specular "
+	"reflections across the surface." );
+    };
+    float iorB = 80
+    {	
+	display_name("Blue Index of Refraction");
+	soft_range(float(0),float(128));
+	hard_range(float(0),float(256));
+	description( "Effect of blue on the color of specular "
+	"reflections across the surface." );
+    };
+
+  output:
+    Color diffuse;
+    Color specular;
+
+    void main() 
+    {        
+	diffuse  = Color(0,0,0,0);
+	specular = Color(0,0,0,0);
+
+	float3 vdir = direction;
+	Color  ior = Color(iorR, iorG, iorB, 1.0);
+
+	// enumerate lights
+	Light_iterator light;
+	foreach (light)
+	{
+	    float cos = saturate(light.dot_nl);
+	    if (cos > 0.0) {
+		diffuse += (cos / PI) * light.contribution;
+
+		Color s = mi_cooktorr_specular(
+			vdir, 
+			light.direction, 
+			normal,
+			roughness,
+			ior);
+
+		specular += (s * cos) * light.contribution;
+	    }
+	}
+
+	// irradiance term
+	Irradiance_options irradiance_options;
+	irradiance_options.set_importance(1.0);
+	diffuse += (1.0/PI) * irradiance(irradiance_options);
+
+	diffuse.a = 1.0;
+	specular.a = 1.0;
+    }
+}
+{
+    description( "An illumination model for rough, shiny "
+    "surfaces, such as metals." );
+}
+;

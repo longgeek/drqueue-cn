@@ -1,0 +1,452 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Conversion_float_to_color
+{
+	input:
+		float scalar = 1.0
+		{			
+			display_name("Float");
+			soft_range(float(0),float(1));
+			description( "A single scalar value." );
+		};
+
+	output:
+		Color color;
+
+	void main()
+	{
+		color = Color(scalar, scalar, scalar, 1.0);
+	}
+}
+{
+	description( "Converts the input scalar the color value." );
+}
+;
+
+shader Conversion_color_to_float
+{
+	input:
+		Color color   = Color(1,1,1,1)
+		{		
+			display_name("Color");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The unfiltered value." );
+		};
+
+	output:
+		float scalar;
+
+
+	void main()
+	{
+		scalar = (color.r + color.g + color.b)/3.0;
+	}
+}
+{
+	description( "Converts the input color the a single scalar value." );
+}
+;
+
+shader Conversion_float_to_int
+{
+	input:
+		float scalar = 1.0
+		{		
+			display_name("Float");
+			soft_range(float(0),float(1));
+			description( "A scalar value." );
+		};
+
+	output:
+		int integer;
+
+	void main()
+	{
+		integer = int(scalar);
+	}
+}
+{
+	description( "Converts the input scalar to an integer." );
+}
+;
+
+shader Conversion_int_to_float
+{
+	input:
+		int integer = 1
+		{		
+			display_name("Integer");
+			soft_range(int(0),int(1));
+			description( "An integer value." );
+		};
+
+	output:
+		float scalar;
+
+	void main()
+	{
+		scalar = float(integer);
+	}
+}
+{
+	description( "Converts the input integer to a scalar." );
+}
+;
+
+shader Conversion_color_to_floats
+{
+	input:
+		Color color   = Color(1,1,1,1)
+		{		
+			display_name("Color");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The unfiltered value." );
+		};
+
+	output:
+		float r;
+		float g;
+		float b;
+		float a;
+
+	void main()
+	{
+		r = color.r;
+		g = color.g;
+		b = color.b;
+		a = color.a;
+	}
+}
+{
+	description( "Converts the input color the a set of 4 scalar values." );
+}
+;
+
+shader Conversion_color_to_float3
+{
+	input:
+		Color color   = Color(1,1,1,1)
+		{		
+			display_name("Color");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The unfiltered value." );
+		};
+
+	output:
+		float3 vector;
+
+	void main()
+	{
+		vector.x = color.r;
+		vector.y = color.g;
+		vector.z = color.b;
+	}
+}
+{
+	description( "Converts the input color to a float3, alpha is ignored." );
+}
+;
+
+shader Conversion_float3_to_floats
+{
+	input:
+		float3 vector = float3(1,1,1)
+		{		
+			display_name("Vector");
+			soft_range(float3(0,0,0),float3(1,1,1));
+			description( "The unfiltered value." );
+		};
+
+	output:
+		float x;
+		float y;
+		float z;
+
+	void main()
+	{
+		x = vector.x;
+		y = vector.y;
+		z = vector.z;
+	}
+}
+{
+	description( "Converts the input vector3 the a set of 3 scalar values." );
+}
+;
+
+shader Conversion_float3_to_color
+{
+	input:
+		float3 vector = float3(1., 1., 1.)
+		{		
+			display_name("Vector");
+			soft_range(float3(0,0,0),float3(1,1,1));
+			description( "The unfiltered value." );
+		};
+
+	output:
+		Color result;
+
+	void main()
+	{
+		result.x = vector.x;
+		result.y = vector.y;
+		result.z = vector.z;
+		result.w = 1.0;
+	}
+}
+{
+	description( "Converts the input vector3 the a color." );
+}
+;
+
+shader Conversion_float4_to_floats
+{
+	input:
+		float4 vector = float4(1., 1., 1., 1.)
+		{		
+			display_name("Vector");
+			soft_range(float4(0,0,0,0),float4(1,1,1,1));
+			description( "The unfiltered value." );
+		};
+
+	output:
+		float x;
+		float y;
+		float z;
+		float w;
+
+	void main()
+	{
+		x = vector.x;
+		y = vector.y;
+		z = vector.z;
+		w = vector.w;
+	}
+}
+{
+	description( "Converts the input vector4 the a set of 4 scalar values." );
+}
+;
+
+shader Conversion_float2_to_floats
+{
+	input:
+		float2 vector = float2(1.0, 1.0)
+		{		
+			display_name("Vector");
+			soft_range(float2(0,0),float2(1,1));
+			description( "The unfiltered value." );
+		};
+
+	output:
+		float x;
+		float y;
+
+	void main()
+	{
+		x = vector.x;
+		y = vector.y;
+	}
+}
+{
+	description( "Converts the input vector2 the a set of 2 scalar values." );
+}
+;
+
+shader Conversion_floats_to_color
+{
+	input:
+		float r = 1.0
+		{		
+			display_name("Red");
+			soft_range(float(0),float(1));
+			description( "The R channel's value." );
+		};
+		float g = 1.0
+		{		
+			display_name("Green");
+			soft_range(float(0),float(1));
+			description( "The G channel's value." );
+		};
+		float b = 1.0
+		{		
+			display_name("Blue");
+			soft_range(float(0),float(1));
+			description( "The B channel's value." );
+		};
+		float a = 1.0
+		{		
+			display_name("Alpha");
+			soft_range(float(0),float(1));
+			description( "The A channel's value." );
+		};
+
+	output:
+		Color result;
+
+	void main()
+	{
+		result = Color(r,g,b,a);
+	}
+}
+{
+	description( "Converts the input scalars to a Color." );
+}
+;
+
+shader Conversion_floats_to_float3
+{
+	input:
+		float x = 1.0
+		{		
+			display_name("X");
+			soft_range(float(0),float(1));
+			description( "The X channel's value." );
+		};
+		float y = 1.0
+		{		
+			display_name("Y");
+			soft_range(float(0),float(1));
+			description( "The Y channel's value." );
+		};
+		float z = 1.0
+		{		
+			display_name("Z");
+			soft_range(float(0),float(1));
+			description( "The Z channel's value." );
+		};
+
+	output:
+		float3 result;
+
+	void main()
+	{
+		result = float3(x,y,z);
+	}
+}
+{
+	description( "Converts the input scalars to a vector3." );
+}
+;
+
+shader Conversion_floats_to_float4
+{
+	input:
+		float x = 1.0
+		{		
+			display_name("X");
+			soft_range(float(0),float(1));
+			description( "The X channel's value." );
+		};
+		float y = 1.0
+		{		
+			display_name("Y");
+			soft_range(float(0),float(1));
+			description( "The Y channel's value." );
+		};
+		float z = 1.0
+		{		
+			display_name("Z");
+			soft_range(float(0),float(1));
+			description( "The Z channel's value." );
+		};
+		float w = 1.0
+		{		
+			display_name("W");
+			soft_range(float(0),float(1));
+			description( "The W channel's value." );
+		};
+
+	output:
+		float4 result;
+
+	void main()
+	{
+		result = float4(x,y,z,w);
+	}
+}
+{
+	description( "Converts the input scalars to a vector3." );
+}
+;
+
+shader Conversion_floats_to_float2
+{
+	input:
+		float x = 1.0
+		{		
+			display_name("X");
+			soft_range(float(0),float(1));
+			description( "The X channel's value." );
+		};
+		float y = 1.0
+		{		
+			display_name("Y");
+			soft_range(float(0),float(1));
+			description( "The Y channel's value." );
+		};
+
+	output:
+		float2 result;
+
+	void main()
+	{
+		result = float2(x,y);
+	}
+}
+{
+	description( "Converts the input scalars to a vector2." );
+}
+;
+
+shader Conversion_bool_to_int
+{
+	input:
+		bool boolean = true
+		{		
+			display_name("Boolean");
+			description( "A boolean value." );
+		};
+
+	output:
+		int integer;
+
+	void main()
+	{
+		if( boolean )
+			integer = 1;
+		else
+			integer = 0;
+	}
+}
+{
+	description( "Converts the input boolean to an integer." );
+}
+;
+
+shader Conversion_int_to_bool
+{
+	input:
+		int integer = 1
+		{		
+			display_name("Integer");
+			soft_range(int(0),int(1));
+			description( "An integer value." );
+		};
+
+	output:
+		bool boolean;
+
+	void main()
+	{
+		boolean = (integer != 0);
+	}
+}
+{
+	description( "Converts the input integer to a scalar." );
+}
+;

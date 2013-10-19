@@ -1,0 +1,560 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+#import <mi_msl_shared.msl>
+
+#define TRANSP_SUB		0
+#define TRANSP_ADD		1
+#define TRANSP_FILTER	2
+
+#define HLSL_OPTIMIZE
+
+#ifdef HLSL_OPTIMIZE
+struct Parameters_s {
+  Color Ambient;
+  Color Diffuse;
+  Color Specular;
+  bool ADTextureLock;
+  bool ADLock;
+  bool DSLock;
+  bool UseSelfIllumColor;
+  float SelfIllumAmount;
+  Color SelfIllumColor;
+  float SpecularLevel;
+  float Glossiness;
+  float Soften;
+}; // Parameters
+
+// Max structs and macros
+
+
+struct mrIllumParams {
+  Color ambIllumOut;
+  Color diffIllumOut;
+  Color specIllumOut;
+  Color selfIllumOut;
+  Color reflIllumOut;
+  Color transIllumOut;         /* This is really for storing refraction*/
+  Color realTransIllumOut;	 /* This is for storing the real transparency 
+				    (non-additive)*/
+  Color additiveTransIllumOut; /* This is for storing additive transparency, 
+				  which is handled differently*/
+  Color irradianceIllumOut;
+  float diffIllumIntens;
+  float finalOpac;
+  float finalAttenuation;
+  Color finalC;
+  Color finalT;                /* This is the final transparency color of 
+				  all the layers composited together */
+  Color localT;                /* This is the transparency color of the 
+				  current layer/material only */
+};
+
+#endif
+
+
+shader max_base_BlinnIllumination {
+ input:
+
+#ifndef HLSL_OPTIMIZE
+  struct Parameters_s {
+    Color Ambient;
+    Color Diffuse;
+    Color Specular;
+    bool ADTextureLock;
+    bool ADLock;
+    bool DSLock;
+    bool UseSelfIllumColor;
+    float SelfIllumAmount;
+    Color SelfIllumColor;
+    float SpecularLevel;
+    float Glossiness;
+    float Soften;
+  }; // Parameters
+#endif
+
+  Parameters_s Parameters = 
+    Parameters_s(Color(0.588235, 0.588235, 0.588235, 1),
+		 Color(0.588235, 0.588235, 0.588235, 1),
+		 Color(0.9, 0.9, 0.9, 1.0),
+		 true,
+		 true,
+		 false,
+		 false,
+		 0.0,
+		 Color(0),
+		 0.0,
+		 0.1,
+		 0.1);
+
+
+  // Special inputs
+  int    call_type = 0;
+  bool   passed_enables[24] = {false,false,false,false,
+			       false,false,false,false,
+			       false,false,false,false,
+			       false,false,false,false,
+			       false,false,false,false,
+			       false,false,false,false};
+  Color  passed_maps[24] = {Color(0),Color(0),Color(0),Color(0),
+			    Color(0),Color(0),Color(0),Color(0),
+			    Color(0),Color(0),Color(0),Color(0),
+			    Color(0),Color(0),Color(0),Color(0),
+			    Color(0),Color(0),Color(0),Color(0),
+			    Color(0),Color(0),Color(0),Color(0)};
+  float passed_amounts[24] = {1.0, 1.0, 1.0, 1.0,
+			      1.0, 1.0, 1.0, 1.0,
+			      0.3, 1.0, 0.0, 1.0,
+			      0.0, 0.0, 0.0, 0.0,
+			      1.0, 1.0, 1.0, 1.0,
+			      1.0, 1.0, 1.0, 1.0};
+
+  //parameters from standard material.
+  float opacity = 1.0;
+  int opacity_type = 0;
+  bool apply_reflection_dimming = false;
+  float dim_level = 0.0;
+  float reflection_level = 3.0;
+  Color irradiance = Color(0);
+
+ output:
+  Color result;
+  // Special output
+  int   illuminator_id;
+
+#define LIMIT0_1(x) if (x < 0.0f) x = 0.0f; else if (x > 1.0f) x = 1.0f;
+#define LIMITMINMAX(x, min, max) if (x < min) x = min; else if (x > max) x = max;
+#define ColorMax(c)   ((c.r > c.g) ? ((c.r > c.b) ? c.r : c.b) :	\
+		       ((c.g > c.b) ? c.g : c.b))
+#define maxMAX3(a,b,c) ((a)>(b)?((a)>(c)?(a):(c)):((b)>(c)?(b):(c)))
+#define maxMIN3(a,b,c) ((a)<(b)?((a)<(c)?(a):(c)):((b)<(c)?(b):(c)))
+
+#ifndef HLSL_OPTIMIZE
+  // Max structs and macros
+  struct mrIllumParams {
+    Color ambIllumOut;
+    Color diffIllumOut;
+    Color specIllumOut;
+    Color selfIllumOut;
+    Color reflIllumOut;
+    Color transIllumOut;         /* This is really for storing refraction*/
+    Color realTransIllumOut;	 /* This is for storing the real transparency
+				    (non-additive)*/
+    Color additiveTransIllumOut; /* This is for storing additive transparency,
+				    which is handled differently*/
+    Color irradianceIllumOut;
+    float diffIllumIntens;
+    float finalOpac;
+    float finalAttenuation;
+    Color finalC;
+    Color finalT;                /* This is the final transparency color of
+				    all the layers composited together */
+    Color localT;                /* This is the transparency color of the
+				    current layer/material only */
+  };
+#endif
+
+#define maxSoften(r)	((r) * ( 2.0f - (r)))
+
+  /* does not use weight for r,g, b */
+  float maxIntensity(Color c)
+  {
+    float f = (c.r + c.g + c.b)*0.333333333f;
+    return f;
+  }
+
+  Color max_transpColor(in int type, in float opac, in Color filt, in Color diff)
+  {
+    Color fc = Color(0);
+    if(type == TRANSP_ADD)
+      {
+	fc = Color(1.0 - opac);
+      }
+    else if(type == TRANSP_FILTER)
+      {
+	if(opac > 0.5)
+	  {
+	    /* darken as opac goes ( 0.5--> 1.0)
+	    ** so that max component reaches 0.0f when opac reaches 1.0
+	    ** find max component of filt
+	    */
+	    float m = maxMAX3(filt.r, filt.g, filt.b);
+	    float d = 2.0 * (opac - 0.5) * m;
+	    fc = filt - d;
+	    fc = saturate(fc);
+	    fc.a = 0.0;
+	    
+	    
+	  }
+	else
+	  {
+	    /* lighten as opac goes ( 0.5--> 0.0)
+	    ** so that min component reaches 1.0f when opac reaches 1.0
+	    ** find min component of filt
+	    */
+	    float m = maxMIN3(filt.r, filt.g, filt.b);
+	    float d = (1.0 - 2.0 * opac) * (1.0 - m);
+	    fc = filt + d;
+	    fc = saturate(fc);
+	    fc.a = 0.0;
+	    
+
+	  }
+      }
+    else
+      {
+	Color f = 1.0 - diff;
+	fc = (1.0 - opac) * f;
+	fc.a = 0.0;
+
+      }
+    return fc;
+
+  }
+
+  void max_ShadeReflection(inout mrIllumParams param_ip, 
+			   in Color param_reflection, 
+			   in float param_amount,
+			   in Color param_specular,
+			   in bool param_dim_reflection,
+			   in float param_dim_intensity,
+			   in float param_dim_multiplier)
+  {
+
+    //blinn2_AffectReflection
+    param_reflection *= param_specular;
+    if(param_dim_reflection)
+      {
+	float dim_factor = (1.0 - param_dim_intensity) * param_ip.diffIllumIntens 
+	  * param_dim_multiplier + param_dim_intensity;
+	param_amount *= dim_factor;
+      }
+    param_ip.reflIllumOut = param_reflection * param_amount;
+  }
+
+  void max_ShadeTransmission(inout mrIllumParams param_ip, 
+			     in Color param_refraction, 
+			     in float param_amount,
+			     in float param_opacity,
+			     in int param_tr_type,
+			     in Color param_filter,
+			     in Color param_diffuse)
+  {
+
+    if(param_tr_type == 0)
+      param_tr_type = TRANSP_FILTER;
+    else if(param_tr_type == 2)
+      param_tr_type = TRANSP_ADD;
+    else 
+      param_tr_type = TRANSP_SUB;
+
+    if(any(param_refraction))
+      {
+	float max, newOpac;
+	Color transpColor;
+
+	/* Set up attenuation opacity for Refraction map. dim diffuse &
+	   spec by this */
+	param_ip.finalAttenuation = param_opacity * (1.0f - param_amount);
+
+	/* Make more opaque when specular hilite occurs */
+	max = ColorMax(param_ip.specIllumOut);
+	if(max > 1.0)
+	  max = 1.0;
+	newOpac = param_opacity + max - param_opacity * max;
+
+	/* Evaluate refraction map, filtered by filter color */
+	
+	transpColor = max_transpColor(param_tr_type, newOpac, 
+				      param_filter,  param_diffuse);
+	param_ip.transIllumOut += param_refraction * transpColor;
+	
+	/* no transparency when doing refraction */
+	param_ip.finalT = Color(0);
+
+      }
+    else
+      {
+	if(param_opacity != 1.0)
+	  {
+	    float max, newOpac;
+	    Color t_ray_col = Color(0);
+	    Color tCol = Color(0);
+
+	    param_ip.finalAttenuation = param_opacity;
+	    /* Make more opaque where specular hilite occurs, 
+	       so you can still see the hilite */
+	    max = maxMAX3(param_ip.specIllumOut.r, 
+			  param_ip.specIllumOut.g, 
+			  param_ip.specIllumOut.b);
+	    if ( max > 1.0f ) 
+	      max = 1.0f;
+
+	    newOpac = param_opacity + max - param_opacity * max;
+
+	    /* Compute the color of the transparent filter color */
+	    
+	    tCol = max_transpColor( param_tr_type, newOpac, 
+				    param_filter, 
+				    param_diffuse);
+	    param_ip.localT = param_ip.finalT = tCol;
+
+	    //trace a transparent ray
+	    Trace_options to;
+	    to.set_ray_type("transparent");
+
+	    Ray ray = Ray(position, direction);
+	    Ray dx;
+	    Ray dy;
+	    trace(ray, dx, dy, to, "result", t_ray_col);
+
+	    switch(param_tr_type)
+	      {
+	      case TRANSP_ADD:
+		param_ip.additiveTransIllumOut.rgb = t_ray_col.rgb;
+		break;
+	      default:
+	      case TRANSP_SUB:
+	      case TRANSP_FILTER:
+		param_ip.realTransIllumOut.rgb = tCol.rgb * t_ray_col.rgb;
+		break;
+	      }//end switch
+	    param_ip.finalT.rgb *= (1.0 - t_ray_col.a);
+	  }
+	else
+	  {
+	    param_ip.finalT = Color(0);
+	    param_ip.finalAttenuation = 1.0;
+	  }
+
+      }
+  }
+
+  void max_CombineComponentsAdd ( inout mrIllumParams ip )
+  {
+    ip.finalC = ( ip.ambIllumOut + ip.diffIllumOut +
+		  ip.selfIllumOut + ip.irradianceIllumOut ) * ip.finalAttenuation +
+      ip.specIllumOut + ip.reflIllumOut +
+      ip.transIllumOut + ip.realTransIllumOut +
+      ip.additiveTransIllumOut;
+  }
+
+
+  // Macros used to evaluate a given texture in the illumination shader
+
+#define lerpColorMap(map, variable) if (passed_amounts[map] > 0)	\
+    {									\
+      float a = passed_amounts[map];					\
+      Color c = passed_maps[map];					\
+      a *= c.a;								\
+      variable = (variable * (1.0 - a)) + (c * a);			\
+    }
+
+#define lerpMonoMap(map, variable) if (passed_amounts[map] > 0) \
+    {								\
+      float a = passed_amounts[map];				\
+      Color c = passed_maps[map];				\
+      variable = (variable * (1.0 - a)) + (c.r * a);		\
+    }
+
+  // The original code has complicated remapping tables, but for
+  // efficiency these are hardcoded for the MetaSL conversion,
+  // since they never change. Here is the texture map order for:
+  //    Blinn
+  //      0 = Ambient Color
+  //      1 = Diffuse Color
+  //      2 = Specular Color
+  //      3 = Specular Level
+  //      4 = Glossiness
+  //      5 = Self-Illumination
+  //      6 = Opacity
+  //      7 = Filter Color
+  //      8 = Bump
+  //      9 = Reflection
+  //     10 = Refraction
+  //     11 = Displacement
+
+  void main()
+  {
+
+    result = Color(0);
+    // Call to get the illuminator ID only?
+    if (call_type == 1)
+      {
+	illuminator_id = 0;
+	return;
+      }
+
+    // Optimized code destilling the "essence" from
+    // max_base_BlinnIllumination() function with the callback
+    // functions unrolled and map channel remappings resolved
+
+    Color	ambient		= (Parameters.ADLock?
+                                   Parameters.Diffuse:Parameters.Ambient);
+    Color	diffuse		= Parameters.Diffuse;
+    Color	specular	= (Parameters.DSLock?
+                                   Parameters.Diffuse:Parameters.Specular);
+    Color	selfIllumClr	= Parameters.SelfIllumColor;
+    float	selfIllum	= Parameters.SelfIllumAmount;
+    float	specularLevel	= Parameters.SpecularLevel;
+    float	glossiness	= Parameters.Glossiness;
+    float	softThresh	= Parameters.Soften;
+
+    LIMIT0_1 ( glossiness );
+    LIMITMINMAX ( specularLevel, 0.0f, 9.99f );
+    LIMIT0_1 ( selfIllum );
+    LIMIT0_1 ( softThresh );
+
+    if (!Parameters.UseSelfIllumColor)
+      selfIllumClr = Color(selfIllum, selfIllum, selfIllum, 1.0);
+
+    lerpColorMap(0, ambient);
+    lerpColorMap(1, diffuse);
+    lerpColorMap(2, specular);
+    lerpMonoMap (3, specularLevel);
+    lerpMonoMap (4, glossiness);
+    lerpColorMap(5, selfIllumClr);
+
+    Vector3 vdir = direction;
+
+    // Optimized code destilling the "essence" from
+    // the blinn2_illum() and maxBlinn2_IllumAccumulator callback functions
+
+    // Convert to a phong exponent
+    float ph_exp = pow(2.0, glossiness * 10.0) * 4.0;
+
+
+    mrIllumParams ip = mrIllumParams(Color(0),
+				     Color(0),
+				     Color(0),
+				     Color(0),
+				     Color(0),
+				     Color(0),
+				     Color(0),
+				     Color(0),
+				     Color(0),
+				     0,
+				     0,
+				     0,
+				     Color(0),
+				     Color(0),
+				     Color(0));
+    
+    ip.irradianceIllumOut = irradiance;
+
+
+    // The light loop: enumerate lights (see maxBlinn2_IllumAccumulator)
+
+    Light_iterator light;
+    foreach (light)
+    {
+      bool ambient_only = false;
+      float diff_amt = 1.0, spec_amt = 1.0, diffuseCoef = -1;
+      // Is this an "ambient" light?
+      light.get_light_parameter("ambient_only",    ambient_only);
+      // Are specular on or off?
+      light.get_light_parameter("affect_diffuse",  diff_amt);
+      light.get_light_parameter("affect_specular", spec_amt);
+      // Diffuse Coefficient (== custom dot_nl)
+      light.get_light_parameter("diffuseCoef",     diffuseCoef);
+
+      if (false == ambient_only)
+	{
+	  
+
+	  // Supports the 3ds Max "diffuseCoefficient" return allowing a light
+	  // shader to return a custom "dot_nl" value other than the actual dot_nl
+	  if (diffuseCoef < 0)
+	    diffuseCoef = light.dot_nl;
+
+
+	  // If the (possibly adjusted above) dot_nl < 0, do nuttin'
+	  if (diffuseCoef >= 0)
+	    {
+
+	      // Diffuse
+	      if (diff_amt > 0)
+		ip.diffIllumOut += light.contribution * diffuseCoef * diff_amt;
+
+	      if (spec_amt > 0)
+		{
+		  // Start w. a standard phong:
+		  float c = mi_phong_specular(light.direction,
+					      vdir, normal, ph_exp);
+
+		  if (c > 0)
+		    {
+		      // Do the "edge softening"
+		      if (softThresh > 0.0 && diffuseCoef < softThresh)
+			{
+			  float r = diffuseCoef / softThresh;
+			  c *= maxSoften(r);
+			}
+
+		      float c_sh_str = c * specularLevel;
+		      ip.specIllumOut += c_sh_str * light.contribution * spec_amt;
+		    }
+		}
+	    }
+	}
+      else
+	{
+	  ip.ambIllumOut += light.contribution;
+	}
+    }
+
+    // End of code from maxBlinn2_IllumAccumulator, back in code from blinn2_illum()
+
+    if (!Parameters.UseSelfIllumColor)
+      {
+	/* lerp between diffuse & white */
+	float si = maxIntensity ( selfIllumClr );
+
+	if ( si > 0.0f )
+	  {
+	    si = saturate ( si );
+	    ip.selfIllumOut = si * diffuse;
+	    ip.diffIllumOut *= (1.0f-si);
+	    ip.ambIllumOut *= 1.0f-si;
+	  }
+      }
+    else
+      {
+	ip.selfIllumOut = selfIllumClr;
+      }
+
+    ip.ambIllumOut  *= ambient;
+    ip.diffIllumOut *= diffuse;
+    ip.specIllumOut *= specular;
+
+    // ShadeReflection callback evaluates to max_ShadeReflection
+    // And our reflection map (already evaluated) is 9
+    max_ShadeReflection(ip, 
+			passed_maps[9], 
+			passed_amounts[9],
+			specular,
+			apply_reflection_dimming,
+			dim_level,
+			reflection_level
+			);
+    // ShadeTransmission callback evaluates to max_ShadeTransmission
+    // And our refraction map (already evaluated) is 10
+    max_ShadeTransmission(ip, 
+			  passed_maps[10], 
+			  passed_amounts[10],
+			  opacity,
+			  opacity_type,
+			  passed_maps[7],
+			  diffuse);
+    // combineComponents callback evaluates to max_CombineComponentsAdd
+    max_CombineComponentsAdd(ip);
+
+    // Return final color
+    result.rgb = ip.finalC.rgb;
+    result.a = 1.0 - maxIntensity(ip.finalT);
+  }
+};

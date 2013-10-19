@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shader Versioning</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node113.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node115.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION112"></a>
+<h2>Shader Versioning</h2>
+<p><a id="versioning"></a><a id="INDEX439"></a>
+The parameter set of a shader must always be
+correctly described by its declaration in the .mi scene file. It is
+a common source of errors to have a mismatch between the .mi and
+the .c shader parameters. This can lead to incorrect rendering
+results but can also cause shader crashes, for example if the
+shader mistakes a floating-point number for an array length.</p>
+<p>For this reason it is highly recommended to attach version
+numbers to both the .mi declaration and the shader itself. Version
+numbers are positive integers, and should begin with 1 (0 is the
+default if the version number is missing). For example, the .mi
+declaration of a shader <i>myshader</i> might be defined as:</p>
+<pre>
+    declare shader  
+        color "myshader" ( <i>parameters</i> )  
+        version 42  
+    end declare  
+</pre>
+<p>There are two ways to ensure that the version number is correct.
+The recommended method is writing a pseudo-shader that provides the
+version number:</p>
+<pre>
+     DLLEXPORT int myshader_version(void) {return(42);}
+
+     DLLEXPORT miBoolean myshader(
+        miColor         *result,
+        miState         *state,
+        struct myshader *paras)
+     {
+        ...
+     }
+</pre>
+<p>Before mental ray calls a shader for the first time, just before
+looking for its initialization shader (whose name would be
+<tt>myshader_init</tt>), mental ray checks whether a function
+exists whose name is the shader name followed by <tt>_version</tt>.
+If it does, it is called and the version number is compared with
+the version number in the .mi declaration. If there is a mismatch,
+an error message is printed. If the version shader does not exist,
+a warning message is printed.</p>
+<p>The second method for shader version comparison is an explicit
+comparison in the shader using <i>mi_query</i>:</p>
+<pre>
+     #define MYSHADER_VERSION 42
+
+     DLLEXPORT miBoolean myshader(
+        miColor         *result,
+        miState         *state,
+        struct myshader *paras)
+     {
+        int             version;
+
+        mi_query(miQ_DECL_VERSION, state, 0, &amp;version);
+        if (version != MYSHADER_VERSION)
+            mi_error("myshader: wrong declaration");
+        ...
+     }
+</pre>
+<p>This method can be used to support several versions in a single
+shader implementation, but this is rarely necessary. Note that
+mental ray does not abort on a shader mismatch, which can lead to
+trouble later.</p>
+<p>It is <i>very important</i> to always increment the version
+number every time the shader parameters change. Problems introduced
+by mismatches are hard to find, especially if the shader versions
+on master and slave hosts do not agree. (Slaves always use the
+master's declaration but their local libraries.)</p>
+<p>The following sections discuss the various types of shaders, and
+how to write custom shaders of those types. Basic concepts are
+introduced step by step, including supporting functions and state
+variables supplied by mental ray. All support functions are
+summarized at the end of this chapter.</p>
+<p>Most shader sources shown in this chapter were taken from the
+standard shader libraries, <tt>base.so</tt>, <tt>physics.so</tt>,
+and <tt>contour.so</tt> ( <tt>.dll</tt> on NT).
+Shader source code is available on
+<a href="ftp://ftp.mentalimages.com/pub/">ftp://ftp.mentalimages.com/pub/</a>.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node113.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node115.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

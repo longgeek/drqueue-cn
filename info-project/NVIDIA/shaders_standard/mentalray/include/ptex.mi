@@ -1,0 +1,63 @@
+# ptex lookup shader
+#
+# filename: .ptx file
+#
+# width: scale factor for filter width
+# blur: blur amount to add to filter width [0..1]
+#
+# filter_type:
+#   0 point                 Point-sampled (no filtering)
+#   1 bilinear              Bi-linear interpolation
+#   2 box                   Box filter
+#   3 gaussian              Gaussian filter
+#   4 bicubic               General bi-cubic filter (uses sharpness option)
+#   5 bspline               BSpline (equivalent to bi-cubic w/ sharpness=0)
+#   6 catmullrom            Catmull-Rom (equivalent to bi-cubic w/ sharpness=1)
+#   7 mitchell              Mitchell (equivalent to bi-cubic w/ sharpness=2/3)
+#
+# interpolate_level: Interpolate between mipmap levels
+# filter_sharpness: for general bi-cubic filter only
+#
+# --
+# The shader needs additional information which must be turned on in the
+# renderer, either globally with the registry entry
+# registry "{_MI_REG_CCMESH_PTEX}" value "on" end registry
+# or per object using the "bary" statement (a simple "bary" before the
+# end ccmesh statement).
+#
+# When not used in displacement mode, the shader in addition needs uv
+# differential information. For secondary rays this must be enabled with the
+# string option "ray differentials".
+#
+# face_index is the base face index of the source polygons. If the index is
+# >= 0, the differential and bary parameters must be set (if differentials
+# are not known, they must be zero). The bary parameters must be given for
+# each vertex of the triangle hit, and refer to the barycentric position in
+# the base face of the source polygons.
+#
+# shader result: for 1-dim textures, color rgb are set to the same lookup value
+# and alpha to 1. for 3-dim textures, color is set to lookup value. for 4-dim
+# textures, result rgba is set.
+#
+declare shader color "mib_ptex_lookup" (
+	string		"filename",
+	scalar		"width" default 1.0,
+	scalar		"blur"  default 0.0,
+	integer		"filtertype" default 4,
+	boolean		"interpolate_level" default off,
+	scalar		"filter_sharpness" default 1.0,
+
+	## these parameters are taken if face_index is >= 0
+	scalar		"duv_dx_u"	default 0.0,
+	scalar		"duv_dx_v"	default 0.0,
+	scalar		"duv_dy_u"	default 0.0,
+	scalar		"duv_dy_v"	default 0.0,
+	scalar		"bary_v0x",
+	scalar		"bary_v0y",
+	scalar		"bary_v1x",
+	scalar		"bary_v1y",
+	scalar		"bary_v2x",
+	scalar		"bary_v2y",
+	integer		"face_index"	default -1)
+    version 2
+end declare

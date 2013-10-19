@@ -1,0 +1,528 @@
+<root>
+  <version major="2" minor="0"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Alpha.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_BRDF_Accumulator.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_BRDF_Components.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Bitmap_X.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Converters.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Environment.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Mixers.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_ShaderCallers.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Spiders\adsk_WallPaint_spider.msl"/>
+  <metasl_code file_name="light_point.msl"/>
+
+  <phenomenon name="adsk_Mtl_WallPaint_MSL">
+    <input name="diffuse_color" type="Color" value="0.5 0.5 0.5 1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Color (Reflectance)"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value=""/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="Color" value="0 0 0 0"/>
+        <annotation_member name="param1" type="Color" value="1 1 1 1"/>
+      </annotation>
+    </input>
+    <input name="type" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Surface Finish"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="5"/>
+      </annotation>
+    </input>
+    <input name="application" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Application Method"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="2"/>
+      </annotation>
+    </input>
+    <input name="tometerscale" type="float" value="0.0254">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="INTERNAL: Meter Scale Factor"/>
+      </annotation>
+    </input>
+    <input name="wirecoloralpha" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="INTERNAL: Wire Color Alpha"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="Internal parameter to be hooked by translator to pass wireColor.a property thats actually holding object visibility"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <output name="result" type="Color" display_name="result">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="result"/>
+      </annotation>
+    </output>
+    <output name="transparency" type="float" display_name="transparency">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="transparency"/>
+      </annotation>
+    </output>
+
+    <node name="NodeVisibility" class="adsk_Utility_MSL_NodeVisibility">
+      <input name="input" value="1 1 1 1"/>
+      <input name="reverse" value="true"/>
+      <input name="wireColorAlpha" value="1">
+        <attachment target_name="wirecoloralpha"/>
+      </input>
+      <output name="result">
+        <attachment target_name="transparency"/>
+      </output>
+      <gui_data width="1.78829" height="1.21" open_width="1.78829" open_height="1.21" position="8.46161 5.84915" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\wireColorAlpha" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\input" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\reverse" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="wallpaint_spider" class="adsk_Shd_MSL_WallPaint_spider">
+      <input name="finish" value="0">
+        <attachment target_name="type"/>
+      </input>
+      <input name="application" value="0">
+        <attachment target_name="application"/>
+      </input>
+      <input name="iSceneToMeterScale" value="0">
+        <attachment target_name="tometerscale"/>
+      </input>
+      <output name="diffuse_roughness"/>
+      <output name="reflectivity"/>
+      <output name="refl_gloss"/>
+      <output name="brdf_curve"/>
+      <output name="refl_hl_only"/>
+      <output name="bump_amount"/>
+      <output name="noise_tiling"/>
+      <gui_data width="2.93974" height="2.92545" open_width="2.93974" open_height="2.92545" position="-7.49195 4.92811" view_translation="1.11 6.01" view_scale="1.32529" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\application" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\finish" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\diffuse_roughness" type_name="float" show_preview="false" orbit="0.865398" tilt="-0.194602" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\refl_gloss" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iSceneToMeterScale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\application" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\noise_tiling" type_name="float3" show_preview="false" orbit="0.845398" tilt="1.3854" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\bump_amount" type_name="float" show_preview="false" orbit="0.715398" tilt="0.765398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iSceneToMeterScale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\brdf_curve" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\reflectivity" type_name="float" show_preview="false" orbit="0.805398" tilt="0.735398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\finish" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\refl_hl_only" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="BRDFfactor" class="adsk_Component_MSL_BRDFfactor">
+      <input name="brdf_0_degree_refl" value="0.2"/>
+      <input name="brdf_90_degree_refl" value="1"/>
+      <input name="brdf_curve" value="5">
+        <attachment target_name="brdf_curve" target_node="wallpaint_spider"/>
+      </input>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="result"/>
+      <gui_data width="2.43392" height="1.36" open_width="2.43392" open_height="1.36" position="-4.02559 4.12644" view_translation="0 4.82" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\brdf_90_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\brdf_0_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\brdf_curve" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Reflectivity" class="adsk_Utility_MSL_Mix2Float">
+      <input name="iFloat1" value="0">
+        <attachment target_name="reflectivity" target_node="wallpaint_spider"/>
+      </input>
+      <input name="iFloat2" value="1">
+        <attachment target_name="result" target_node="BRDFfactor"/>
+      </input>
+      <input name="mixing_mode" value="2"/>
+      <input name="mixing_factor" value="1"/>
+      <output name="result"/>
+      <gui_data width="3.30758" height="1.36" open_width="3.30758" open_height="1.36" position="-3.63492 5.71432" view_translation="0 36.74" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iFloat1" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iFloat2" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="EnergyConserve" class="adsk_Component_MSL_EnergyConservation">
+      <input name="diffuse_weight" value="1"/>
+      <input name="diffuse" value="0.5 0.5 0.5 1">
+        <attachment target_name="diffuse_color"/>
+      </input>
+      <input name="reflectivity" value="0.6">
+        <attachment target_name="result" target_node="Reflectivity"/>
+      </input>
+      <input name="refl_color" value="0.6 0.6 0.6 1"/>
+      <input name="refl_balance" value="1"/>
+      <input name="refl_hl_only" value="false">
+        <attachment target_name="refl_hl_only" target_node="wallpaint_spider"/>
+      </input>
+      <input name="transparency" value="0"/>
+      <input name="refr_color" value="1 1 1 1"/>
+      <output name="oDiffuse"/>
+      <output name="oReflect"/>
+      <output name="oRefract"/>
+      <gui_data width="3.39751" height="2.26" open_width="3.39751" open_height="2.26" position="0.729953 4.57905" view_translation="1.71 7.67" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\refl_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\oRefract" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\transparency" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\diffuse" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\oDiffuse" type_name="Color" show_preview="false" orbit="1.0154" tilt="0.785397" zoom="1.25" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\oReflect" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\refr_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\diffuse_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\refl_balance" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\reflectivity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\refl_hl_only" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="ColorState" class="adsk_Utility_MSL_ColorState">
+      <input name="the_color">
+        <attachment target_name="oDiffuse" target_node="EnergyConserve"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="2.29112" height="0.91" open_width="2.29112" open_height="0.91" position="1.22545 6.26278" view_translation="0 5.18" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\the_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="GlossySpecular" class="adsk_Component_MSL_GlossySpecular">
+      <input name="iGlossy" value="1">
+        <attachment target_name="refl_gloss" target_node="wallpaint_spider"/>
+      </input>
+      <input name="iAnisotropy" value="1"/>
+      <input name="iAnisoU" value="0 0 0"/>
+      <input name="iAnisoV" value="0 0 0"/>
+      <input name="iAuxFactor" value="1"/>
+      <input name="iAnotherSpec"/>
+      <input name="iLightDir" value="0 0 0"/>
+      <input name="iEyeDir" value="0 0 0"/>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="result"/>
+      <gui_data width="2.76965" height="2.11" open_width="2.76965" open_height="2.11" position="0.904325 0.577602" view_translation="0 34.22" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iAnisoU" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iAnisoV" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iAuxFactor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iAnotherSpec" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iLightDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iEyeDir" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iGlossy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iAnisotropy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="XYZ_to_UV" class="adsk_Utility_MSL_Float3_to_Floats">
+      <input name="the_vector">
+        <attachment target_name="noise_tiling" target_node="wallpaint_spider"/>
+      </input>
+      <output name="x"/>
+      <output name="y"/>
+      <output name="z"/>
+      <gui_data width="3.97444" height="1.21" open_width="3.97444" open_height="1.21" position="-4.7714 2.55907" view_translation="0 24.98" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\the_vector" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\x" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\y" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\z" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Noise_bitmap" class="adsk_Utility_MSL_Bitmap_X">
+      <input name="bitmap" value="adsk_Bitmap_Noise_Tileable.png"/>
+      <input name="uv_coords"/>
+      <input name="bump_amount" value="0"/>
+      <input name="u_scale" value="120">
+        <attachment target_name="x" target_node="XYZ_to_UV"/>
+      </input>
+      <input name="v_scale" value="72">
+        <attachment target_name="y" target_node="XYZ_to_UV"/>
+      </input>
+      <input name="u_offset" value="0"/>
+      <input name="v_offset" value="0"/>
+      <input name="u_wrap" value="true"/>
+      <input name="v_wrap" value="true"/>
+      <input name="angle" value="0"/>
+      <input name="blur" value="1"/>
+      <input name="blur_offset" value="0.002"/>
+      <input name="map_channel" value="0"/>
+      <input name="realworldmapsize" value="true"/>
+      <input name="rgb_amount" value="1"/>
+      <input name="rgb_invert" value="false"/>
+      <output name="result"/>
+      <output name="result_bump"/>
+      <gui_data width="3.26753" height="5.77402" open_width="3.26753" open_height="5.77402" position="-7.47839 -0.241892" view_translation="0 4.82" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\u_wrap" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\bitmap" type_name="texture2D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\v_scale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\rgb_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\v_wrap" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\map_channel" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\u_scale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\blur_offset" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\realworldmapsize" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\uv_coords" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\angle" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\rgb_invert" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\v_offset" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\blur" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\u_offset" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result" type_name="Color" show_preview="true" orbit="-0.394602" tilt="0.7354" zoom="1.2" pan="3.72529e-009 0.09" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Noise_bump" class="adsk_Utility_MSL_CallShader">
+      <input name="the_shader">
+        <attachment target_name="result" target_node="Noise_bitmap" is_reference="true"/>
+      </input>
+      <input name="bump_amount" value="0.05">
+        <attachment target_name="bump_amount" target_node="wallpaint_spider"/>
+      </input>
+      <output name="result"/>
+      <output name="result_bump"/>
+      <gui_data width="2.60767" height="1.21" open_width="2.60767" open_height="1.21" position="-3.37542 0.520417" view_translation="0 0.98" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result_bump" type_name="float3" show_preview="false" orbit="-0.254602" tilt="1.3954" zoom="1" pan="0 0" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\the_shader" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Bump_Evaluation" class="adsk_Component_MSL_Bump">
+      <input name="standard_bump" value="0 0 0"/>
+      <input name="overall_bump" value="0 0 0">
+        <attachment target_name="result_bump" target_node="Noise_bump"/>
+      </input>
+      <input name="no_diffuse_bump" value="true"/>
+      <output name="bump_global"/>
+      <output name="bump_local"/>
+      <gui_data width="2.05589" height="1.36" open_width="2.05589" open_height="1.36" position="-3.07129 -0.890331" view_translation="0 92.66" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\overall_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\no_diffuse_bump" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\standard_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\overall_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\bump_local" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\standard_bump" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\no_diffuse_bump" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\bump_global" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Refl_factor" class="adsk_Utility_MSL_Color_to_Float">
+      <input name="the_color" value="1 1 0 1">
+        <attachment target_name="oReflect" target_node="EnergyConserve"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="2.16909" height="0.91" open_width="2.16909" open_height="0.91" position="1.09486 2.18349" view_translation="0 13.46" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\the_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="BRDF_Accumulator" class="adsk_Utility_BRDF_Accumulator">
+      <input name="iDiffuse">
+        <attachment target_name="result" target_node="ColorState" is_reference="true"/>
+      </input>
+      <input name="iSpecular">
+        <attachment target_name="result" target_node="GlossySpecular" is_reference="true"/>
+      </input>
+      <input name="iBump">
+        <attachment target_name="bump_global" target_node="Bump_Evaluation" is_reference="true"/>
+      </input>
+      <input name="iSpecFx" value="0">
+        <attachment target_name="result" target_node="Refl_factor"/>
+      </input>
+      <input name="iNormal" value="0 0 0"/>
+      <input name="paint_model"/>
+      <output name="result"/>
+      <output name="oDiffuse"/>
+      <output name="oSpecular"/>
+      <gui_data width="2.85468" height="6.87518" open_width="2.85468" open_height="6.87518" position="4.83122 3.3236" view_translation="1.92 5.99" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name="\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name="\iDiffuse" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iSpecFx" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\paint_model" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iSpecular" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\oDiffuse" type_name="Color" show_preview="false" orbit="-0.084602" tilt="-0.374602" zoom="0.750001" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\oSpecular" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.135397" zoom="0.75" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iBump" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iDiffuse" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iSpecFx" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iSpecular" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iBump" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result" type_name="Color" show_preview="false" orbit="-0.384602" tilt="0.0753983" zoom="0.8" pan="-0.02 0.00999993" preview_object="3" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Reflection" class="adsk_Component_MSL_Reflection">
+      <input name="iRefl_color" value="1 1 1 1">
+        <attachment target_name="oReflect" target_node="EnergyConserve"/>
+      </input>
+      <input name="iRefl_factor" value="1"/>
+      <input name="iPosition" value="0 0 0"/>
+      <input name="iDirection" value="0 0 0"/>
+      <input name="iNormal" value="0 0 0"/>
+      <output name="result"/>
+      <gui_data width="2.84467" height="1.51" open_width="2.84467" open_height="1.51" position="0.969476 -2.13967" view_translation="0 70.34" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iPosition" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iRefl_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iRefl_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iDirection" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Refl_plus_Bump" class="adsk_Component_MSL_BumpCombiner">
+      <input name="iShading">
+        <attachment target_name="result" target_node="Reflection" is_reference="true"/>
+      </input>
+      <input name="iMode" value="0"/>
+      <input name="iNormal" value="0 0 0">
+        <attachment target_name="result_bump" target_node="Noise_bump"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="2.80985" height="3.06072" open_width="2.80985" open_height="3.06072" position="4.85553 -2.09124" view_translation="0 83.9" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iNormal" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iMode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\iShading" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result" type_name="Color" show_preview="false" orbit="0.915398" tilt="0.825398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="BRDF_Compose" class="adsk_Utility_MSL_Mix2Color">
+      <input name="color1">
+        <attachment target_name="result" target_node="BRDF_Accumulator"/>
+      </input>
+      <input name="color2">
+        <attachment target_name="result" target_node="Refl_plus_Bump"/>
+      </input>
+      <input name="mixing_mode" value="1"/>
+      <input name="mixing_factor" value="1"/>
+      <output name="result">
+        <attachment target_name="result"/>
+      </output>
+      <gui_data width="2.94571" height="4.04249" open_width="2.94571" open_height="4.04249" position="8.68274 1.9268" view_translation="0 21.74" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\mixing_factor" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\mixing_mode" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Mtl_WallPaint_MSL\result" type_name="Color" show_preview="false" orbit="-0.994602" tilt="0.855398" zoom="0.7" pan="-0.11 0.045" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+  </phenomenon>
+
+  <node name="light_dummy" class="Light_point">
+    <input name="color" value="1 1 1 1"/>
+    <input name="intensity" value="1"/>
+    <input name="distance_falloff_exponent" value="0"/>
+    <input name="distance_scale" value="1"/>
+    <output name="result"/>
+    <output name="light_shadow"/>
+    <gui_data width="1.6" height="2.6" open_width="1.6" open_height="2.6" position="-1.68871 2.3473" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+      <preview_data>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\intensity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\distance_scale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\distance_falloff_exponent" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\light_shadow" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <node name="environment_fuzzy" class="adsk_Utility_MSL_EnvBall">
+    <input name="env_tex" value="adsk_Textures/adsk_Data_ReflectionDefault.png"/>
+    <input name="intensity" value="1"/>
+    <input name="blur" value="0.5"/>
+    <output name="result"/>
+    <gui_data width="3.11035" height="3.64017" open_width="3.11035" open_height="3.64017" position="-2.46076 -0.880659" view_translation="0 2.54" view_scale="1" open_state="closed" selected_state="false">
+      <preview_data>
+        <preview_data_element name="\blur" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="0.745398" tilt="0.825398" zoom="1.65" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\intensity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\env_tex" type_name="texture2D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <node name="adsk_Mtl_WallPaint_MSL" class="adsk_Mtl_WallPaint_MSL">
+    <input name="diffuse_color" value="0.55 0.2 0.184 1"/>
+    <input name="type" value="5"/>
+    <input name="application" value="0"/>
+    <input name="tometerscale" value="0.01"/>
+    <input name="wirecoloralpha" value="1"/>
+    <output name="result"/>
+    <output name="transparency"/>
+    <gui_data width="3.2235" height="6.41314" open_width="3.2235" open_height="6.41314" position="1.00141 0.531288" view_translation="-0.556587 -2.24971" view_scale="0.0504043" open_state="closed" selected_state="true">
+      <preview_data>
+        <preview_data_element name="\diffuse_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="-7.11453" tilt="-11.6746" zoom="1.75" pan="0.055 0.05" preview_object="5" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\type" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\tometerscale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\transparency" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\application" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\wirecoloralpha" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <render_data>
+    <light_list>
+      <light_instance shader="light_dummy" selected="true" on_off="on" camera_space="true" type="point" position="0 0 0" direction="0 0 -1" spread="45" distance_limit="100"/>
+    </light_list>
+    <environment_shader shader="environment_fuzzy"/>
+    <scene_ambient color="0 0 0 0"/>
+  </render_data>
+</root>

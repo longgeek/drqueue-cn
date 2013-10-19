@@ -1,0 +1,105 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Frame Buffers</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="spectral.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node38.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION35"></a>
+<h2 id="fo:framebuffers">Frame Buffers</h2>
+
+<p><a id="INDEX75"></a>mental ray stores finally
+rendered pixel data in frame buffers. There are up to five main
+frame buffers pre-defined in mental ray: for RGBA color, depth,
+<a href="node83.html#INDEX289">normal vector</a>s, <a href=
+"node32.html#INDEX62">motion vector</a>s, and <b><a name="INDEX76"
+id="INDEX76"></a>label</b>s. The depth, normal vector, motion
+vector, and label frame buffers store the respective values of
+the frontmost object at each sample of the image. If multiple
+samples are taken for a pixel, the frame buffer value for that
+pixel may be either any one sample value, or a blend of all samples.
+The number and type of frame buffers to be rendered is controlled by
+<code class="mi">framebuffer</code> statements.
+Any number of additional user frame buffers of any data type but identical
+resolution to the main frame buffers may be defined. These buffers will not
+be filled by mental ray; their content is controlled by custom shaders only,
+like <a href="node126.html#SECTION124">output shaders</a>. However,
+mental ray will take care of writing the buffer content to image files.
+<p>
+The <a href="node77.html#mi:framebuffer">framebuffer statement</a> allows to
+create 'named' frame buffers in mental ray, together with data type and other
+properties for this specific buffer. The number of frame buffers is not
+limited by mental ray but only dependent on available system resources.
+Storing a frame buffer to an <a href="node38.html#outfiles">output file</a>
+can be activated per buffer. It is possible to store several frame buffers
+in a single file with multiple channels, for capable formats like
+<a href="node19.html#INDEX29">OpenEXR</a>. mental ray will take care of
+performing all required operations like data conversions and compression.
+For backwards compatibility, frame buffer creation may also be controlled
+with <a href="node77.html#INDEX227">output statement</a>s.</p>
+<p>
+The primary purpose of <a href="node77.html#mi:output">output statement</a>s
+is to specify <a href="node126.html#INDEX492">output shader</a>s which
+operate on the frame buffers. For backwards compatibility, deprecated
+<a href="node77.html#mi:fileoutput">output statement</a>s can also specify files
+to write.</p>
+
+<a id="INDEX77"></a>
+<h3 id="fo:framebuffer_files">Frame Buffer Files</h3>
+
+<p>mental ray is able to temporarily store <a href="node144.html#INDEX617">frame
+buffer</a>s in <b>frame buffer file</b>s on disk
+instead of keeping them in memory during rendering, given that sufficient disk
+space is available. This allows to use very large frame buffers, or very large
+numbers of frame buffers, without being limited by available physical memory.
+This feature can be controlled on the mental ray
+<a href="node245.html#cli:framebuffer">command line</a>.
+By default, this disk cache mechanism is using memory mapping techniques for
+performance reasons, which requires that the frame buffers fully fit into the
+virtual memory address space of the process.</p>
+<p>
+The <a id="fo:framebuffer_cache"></a><b>frame buffer cache</b>, on the other hand,
+stores only fragments of frame buffers in the disk files on demand. This feature
+may save significant amount of memory when rendering very high resolution images,
+and is especially useful on 32bit systems with limited memory resources. If enabled,
+only a small fraction of each frame buffer is present in memory, like the currently
+rendered tile, and tiles recently accessed in mental ray by the display callbacks,
+output shaders, or when writing final images to files. This technique is typically
+superior to memory mapped frame buffers which need to be stored and restored as a
+whole, hence more appropriate when rendering many but smaller frame buffers.
+</p>
+<p class="note"><b>Note:</b> Memory mapping large files can occupy
+a significant portion of the application's virtual address space.
+The address space for a single process is limited on 32-bit
+architectures to 4 gigabytes or less, dependent on reserved space
+for system frameworks and libraries. Trying to map a very large
+file or many files might fail since there is not enough room left
+for the process to address it.</p>
+<p>Frame buffer files are stored in the directory specified with the
+<tt>-fb_dir</tt><a href="node245.html#cli:framebuffer">command line option</a>;
+or in the directory specified in the <tt>TMPDIR</tt> or <tt>TEMP</tt>
+<a href="configuration.html#INDEX1085">environment variable</a>s.
+<p>Frame buffer files are removed from disk when rendering has finished.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="spectral.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node38.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

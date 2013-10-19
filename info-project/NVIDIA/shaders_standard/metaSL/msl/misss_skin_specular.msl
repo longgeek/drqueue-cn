@@ -1,0 +1,115 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+shader misss_skin_specular {
+input:
+    float overall_weight = 1.0 {
+    };
+    float edge_factor = 5.0 {
+    };
+    Color primary_spec_color = Color(0.8, 0.9, 1.0, 1.0) {
+    };
+    float primary_weight = 0.2 {
+    };
+    float primary_edge_weight = 1.0 {
+    };
+    float primary_shinyness = 5.0 {
+    };
+    Color secondary_spec_color = Color(0.9, 0.95, 1.0, 1.0) {
+    };
+    float secondary_weight = 0.2 {
+    };
+    float secondary_edge_weight = 0.0 {
+    };
+    float secondary_shinyness = 33.0 {
+    };
+    float reflect_weight = 0.0 {
+    };
+    float reflect_edge_weight = 0.0 {
+    };
+    float reflect_shinyness = 2.0 {
+    };
+    bool reflect_environment_only = false {
+    };
+    int mode = 0 {
+    };
+    // TODO: array light "lights"
+output:
+    Color result;
+
+    void main() {
+        float soften = 0.3;
+		result = Color(0,0,0,1);
+
+        float edgeFactor = edge_factor;
+        if (edgeFactor <= 0.0f) edgeFactor = 1.0f;
+
+        float edgeLevel = pow(1.0 - abs(dot_nd), edge_factor);
+
+        /* Calculate reflection dir */
+        float3 refDir = reflect(direction, normal);
+        float ks;
+
+        Light_iterator light;
+        foreach (light)
+        {
+            float dotLR = dot(light.direction, refDir);
+
+            if (light.dot_nl > 0.0f && dotLR > 0.0f) 
+            {
+                float softenFactor = 1.0;
+
+                /* Soften edge */
+                if (light.dot_nl < soften)
+                {
+                    float factor = light.dot_nl / soften;
+                    softenFactor = factor * (2.0f-factor);
+                }
+
+                ks  = softenFactor * overall_weight * 
+                    (primary_weight + primary_edge_weight * edgeLevel);
+                ks *= pow(dotLR,  primary_shinyness);
+
+                result += light.contribution/PI * secondary_spec_color * ks;
+
+                ks  = softenFactor * overall_weight * 
+                    (secondary_weight + secondary_edge_weight * edgeLevel);
+                ks *= pow(dotLR,  secondary_shinyness);
+
+                result += light.contribution/PI * primary_spec_color * ks;
+            }
+        }
+
+        if (reflect_weight > 0.0f || reflect_edge_weight > 0.0f)
+        {
+            float ks = overall_weight * (reflect_weight + reflect_edge_weight * edgeLevel);
+
+            Ray ray(float3(0), float3(0));
+            Ray ray_dx(float3(0), float3(0));
+            Ray ray_dy(float3(0), float3(0));
+            ray = Ray(position,   refDir);
+            Trace_options tropt;
+
+            if (reflect_environment_only)
+                tropt.set_ray_type("environment");
+            else
+                tropt.set_ray_type("reflect");
+
+            // TODO: Multiple glossy reflection samples, now only does one
+            Color reflection = Color(0,0,0,0), col;
+
+            if (trace(ray, ray_dx, ray_dy, tropt, 
+                "result", col)) 
+            {
+                reflection += col;
+            }
+
+            result += reflection * ks;
+        }
+
+    } // main
+};

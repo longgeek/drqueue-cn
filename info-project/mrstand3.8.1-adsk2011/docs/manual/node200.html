@@ -1,0 +1,319 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Lights</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node199.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node201.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION198"></a>
+<h3>Lights</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_LIGHT</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miLight</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>-</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>as described below</td>
+</tr>
+</table>
+<pre>
+enum miLight_type {
+        miLIGHT_ORIGIN,
+        miLIGHT_DIRECTION,
+        miLIGHT_SPOT
+};
+
+enum miLight_area {
+        miLIGHT_NONE = 0,
+        miLIGHT_RECTANGLE,
+        miLIGHT_DISC,
+        miLIGHT_SPHERE,
+        miLIGHT_CYLINDER,
+        miLIGHT_OBJECT,
+        miLIGHT_USER
+};
+
+typedef struct miLight {
+        enum miLight_type type;               /* light type */
+        enum miLight_area area;               /* area? */
+        miScalar          exponent;           /* global illum. 1/r^(2*exp)*/
+        unsigned int      caustic_store_photons;/*caus.photons to store*/
+        unsigned int      global_store_photons; /*glob. photons to store */
+        miColor           energy;             /* global illum. intensity */
+        miTag             shader;             /* light shader */
+        miTag             emitter;            /* photon emitter shader */
+        miVector          origin;             /* opt. origin */
+        miVector          direction;          /* opt. normalized direction */
+        float             spread;             /* size of spot? (cos angle) */
+        union {
+            struct miLight_rectangle rectangle;
+            struct miLight_disc      disc;
+            struct miLight_sphere    sphere;
+            struct miLight_cylinder  cylinder;
+            struct miLight_object    object;
+        }               primitive;            /* area primitive */
+        short           samples_u;            /* area u samples */
+        short           samples_v;            /* area v samples */
+        short           low_samples_u;        /* low area u samples */
+        short           low_samples_v;        /* low area v samples */
+        short           low_level;            /* switch to low at this lvl */
+        miUint1         shadowmap_flags;      /* indicate shadow map modes */
+        miUint1         dirlight_has_org;     /* infinite light with org? */
+        miBoolean       use_shadow_maps;      /* for this light */
+        miTag           shadowmap_file;       /* the shadow map file */
+        int             shadowmap_resolution; /* resolution */
+        float           shadowmap_softness;   /* sample region size */
+        int             shadowmap_samples;    /* #samples */
+        miBoolean       visible;              /* visible? area lights only */
+        miUint          label;                /* light label */
+        miTag           userdata;             /* optional user data blocks */
+        unsigned int    caustic_emit_photons; /* caus.photons to emit */
+        unsigned int    global_emit_photons;  /* glob. photons to emit */
+        miTag           hardware;             /* hardware light shader */
+        short           shmap_h_min;          /* not used */
+        short           shmap_h_max;          /* not used */
+        short           shmap_v_min;          /* not used */
+        short           shmap_v_max;          /* not used */
+        float           transparent;          /* experimental shmap feature */
+        miScalar        shadowmap_bias;       /* move shmap Z back by bias */
+        struct miLight_shmap shmap;           /* shadowmap data */
+        int             spare2[2];            /* not used */
+} miLight;
+
+struct miLight_shmap {
+        miTag           camera;         /* optional camera for shadow maps */
+        miScalar        accuracy;       /* detail shadow map min sample dist.*/
+        miScalar        filter_u;       /* currently only size 1 supported */
+        miScalar        filter_v;       /* currently only size 1 supported */
+        miSint2         samples;        /* n*n samples per pixel */
+        miUchar         filter;         /* currently only box 'b' supported */
+        miUchar         type;           /* detail shadow map: color or alpha */
+};
+
+struct miLight_rectangle {
+        miVector        edge_u;
+        miVector        edge_v;
+};
+
+struct miLight_disc {
+        miVector        normal;
+        miScalar        radius;
+};
+
+struct miLight_sphere {
+        miScalar        radius;
+};
+
+struct miLight_cylinder {
+        miVector        axis;
+        miScalar        radius;
+};
+
+struct miLight_object {
+        miTag           object;
+};
+</pre>
+<p>A translator must provide: <tt>type</tt>, <tt>shader</tt>,
+<tt>origin</tt> and/or <tt>direction</tt> and <tt>spread</tt>
+depending on <tt>type</tt>, all primitive fields for area light
+sources.<br />
+<br /></p>
+<p><b>type</b> (default <tt>miLIGHT_ORIGIN</tt>) distinguishes
+between point lights (origin only), directional lights (direction
+only), and spot lights (origin, direction, and spread angle).</p>
+<p><b>area</b> (default <tt>miLIGHT_NONE</tt> describes the type of
+area light geometry, and is one of <tt>miLIGHT_NONE</tt>,
+<tt>miLIGHT_RECTANGLE</tt>, <tt>miLIGHT_DISC</tt>,
+<tt>miLIGHT_SPHERE</tt>, <tt>miLIGHT_CYLINDER</tt>,
+<tt>miLIGHT_OBJECT</tt><sup>3.1</sup>, and
+<tt>miLIGHT_USER</tt><sup>3.1</sup>.</p>
+<p><b>exponent</b> (default 2) controls the falloff of the light at
+a given distance. An exponent of 2 is physically correct, but other
+exponents can be chosen to make the light reach farther or less far
+than it should. An exponent of 1 means that the light energy does
+not fall off with distance. Exponents other than 2 disturb the
+energy balance in the scene.</p>
+<p><b>caustic_store_photons</b> is the maximum number of photons
+from this light source to store in the caustic
+<a href="node48.html#INDEX96">photon map</a>. If set to zero, the number of
+photons to emit must be specified, which then controls the number
+of emitted photons no matter how many are stored. (The zero value
+is supported in mental ray 2.1.,37 and later, earlier versions
+require setting it to a very high number.)</p>
+<p><b>caustic_emit_photons</b> is the maximum number of caustic
+photons to emit from this light source. Emission of caustic photons
+from a light stops when either caustic_store_photons or
+caustic_emit_photons has been reached.</p>
+<p><b>global_store_photons</b> is the maximum number of photons
+from this light source to store in the global illumination
+<a href="node48.html#INDEX96">photon map</a>. Again, a value of zero
+disables the store limit in mental ray 2.1.37 and later.</p>
+<p><b>global_emit_photons</b> is the maximum number of global
+illumination photons to emit from this light source. Emission of
+global illumination photons from a light stops when either
+globillum_store_photons (if nonzero) or globillum_emit_photons has
+been reached.</p>
+<p><b>energy</b> is the combined energy of all photons emitted by
+this light source.</p>
+<p><b>shader</b> (default <tt>miNULLTAG</tt>) is the tag of a
+database element of type <tt>miSCENE_FUNCTION</tt> containing the
+light shader, which computes illumination by this light at render
+time.</p>
+<p><b>emitter</b> (default <tt>miNULLTAG</tt>) is the tag of a
+database element of type <tt>miSCENE_FUNCTION</tt> containing the
+light photon <a href="node140.html#INDEX569">emitter shader</a>,
+which emits photons during the global illumination or caustics
+preprocessing phase.</p>
+<p><b>origin</b> (default 0, 0, 0) is the origin of the light in
+object space. It is used only if <i>type</i> is
+<tt>miLIGHT_ORIGIN</tt> or <tt>miLIGHT_SPOT</tt>.</p>
+<p><b>direction</b> (default 0, 0, 0) is the direction of a
+directional light. It is used only if <i>type</i> is
+<tt>miLIGHT_DIRECTION</tt> or <tt>miLIGHT_SPOT</tt>.</p>
+<p><b>spread</b> is used only by spot lights and it specifies the
+size of the outer spotlight cone.</p>
+<p><b>primitive</b> contains the size of the area light source if
+<i>area</i> is not <tt>miLIGHT_NONE</tt>. Depending on
+<tt>area</tt>, the width and height of the rectangle are given in
+<i>rectangle.edge_u</i> and <i>rectangle.edge_v</i>, or the
+orientation and radius of the disc are given in <i>disc.normal</i>
+and <i>disc.radius</i>, or the radius of the sphere is given in
+<i>sphere.radius</i>, or the axis and radius of the cylinder are
+given in <i>cylinder.axis</i> and <i>cylinder.radius</i>. All
+defaults are 0. For <a href="node123.html#INDEX486">geometric area
+light source</a>s<sup>3.1</sup>,
+<code>primitive&rarr;object.object</code> must be an instance that
+references an object (not an <a href="node83.html#mi:group">object
+group</a>).</p>
+<p><b>samples_u</b> (default 3) is the number of samples taken in
+the U direction of the area light source if <i>area</i> is not
+<tt>miLIGHT_NONE</tt>.</p>
+<p><b>samples_v</b> (default 3) is the number of samples taken in
+the V direction of the area light source if <i>area</i> is not
+<tt>miLIGHT_NONE</tt>.</p>
+<p><b>low_samples_u</b> (default 2) is the number of samples taken
+in the U direction of the area light source if <i>area</i> is not
+<tt>miLIGHT_NONE</tt>, when the trace depth specified by
+<i>low_level</i> is reached or exceeded.</p>
+<p><b>low_samples_v</b> (default 2) is the number of samples taken
+in the V direction of the area light source if <i>area</i> is not
+<tt>miLIGHT_NONE</tt>, when the trace depth specified by
+<i>low_level</i> is reached or exceeded.</p>
+<p><b>low_level</b> (default 3) is the sum of the reflection and
+refraction trace depth at which area light sampling switches from
+<i>samples</i> to <i>low_samples</i>. 0 means that no switching
+takes place and <i>samples</i> are always used. Ignored for user
+area lights.</p>
+<p><b>shadowmap_flags</b> is a bitmap containing the following
+settings:</p>
+<ul>
+<li><tt>miSHADOWMAP_MERGE</tt> merge the shadowmap on disk with the
+one being computed. Not available for detail shadowmaps.</li>
+<li><tt>miSHADOWMAP_CAMERA</tt> there is a camera attached to the
+shadowmap.</li>
+<li><tt>miSHADOWMAP_DETAIL</tt> This is a <a href="node80.html#INDEX264">detail
+shadowmap</a>.</li>
+<li><tt>miSHADOWMAP_ONLY</tt> Only create shadowmaps, do not
+render. This is deprecated. Not available for detail
+shadowmaps.</li>
+</ul>
+<p><b>dirlight_has_org</b><sup>3.4</sup> specifies whether the
+light is a directional light with origin or not.</p>
+<p><b>use_shadow_maps</b> specifies whether shadowmaps are used for
+this light source.</p>
+<p><b>shadowmap_file</b> is the tag of a string containing the
+filename for the shadowmap. If the tag is null, no file loading and
+saving will be done. For point lights and regular shadowmaps, six
+files will be generated, each with an identifying number
+(1&hellip;6) appended to the filename. If the file name contains
+the <tt>#</tt> character, it will be expanded to a hexadecimal
+number identifying the particular instance of this light. This
+allows different instances of a light to use different files.</p>
+<p><b>shadowmap_resolution</b> is the resolution of the shadowmap.
+For point lights, the individual images will have a lower
+resolution, so that the total number of pixels rendered will be
+approximately
+<var>shadowmap_resolution&nbsp;&times;&nbsp;shadowmap_resolution</var>.</p>
+<p><a id="INDEX1062"></a>
+<b>shadowmap_softness</b> when non-zero, enables
+<a href="node16.html#INDEX19">soft shadow</a>s. The value given specifies
+the rectangular size of the region in the shadow map's projection
+plane in which samples are placed. If this parameter is 0 only one
+sample will be used, creating sharp shadows. The size is given in
+internal space units on the shadowmap projection plane.</p>
+<p><b>shadowmap_samples</b> is the number of samples taken from the
+shadowmap. When <tt>shadowmap_softness</tt> is zero, this value is
+ignored.</p>
+<p><b>visible</b> is <tt>miTRUE</tt> if the light should be seen in
+the rendering. This only applies to area light sources.</p>
+<p><b>userdata</b> allows attaching a user data block (miUserdata)
+or a chain of user data blocks. Shaders can retrieve the data with
+<i>mi_query</i>.</p>
+<p><b>label</b> is a numeric value assigned by applications.</p>
+<p><b>hardware</b> is the hardware light shader.</p>
+<p><a id="INDEX1063"></a> <b>shadowmap_bias</b> If
+this value is zero, then regular shadowmaps will use Woo's method
+for calculating the depth value for the
+<a href="node80.html#INDEX261">shadow map</a>. This value is calculated as
+an average of the two closest intersections. This amounts to using
+a different bias for each pixel in the shadowmap. If a bias value
+other than zero is specified, then regular shadowmaps will only use
+the depth of the closest intersection. The bias will then be
+subtracted from the ray depth before a shadowmap comparison is
+made. The bias will only be applied to the ray depth, the shadowmap
+will store the original intersection depths. This allows to use the
+same shadowmap in memory or on disk with varying bias values
+without recomputing the underlying shadowmap. Detail shadowmaps
+cannot use Woo's method, they always use a bias. If the bias value
+is set to zero, an internal method is used to compute a local bias.
+The numerical value of the bias is in internal units.</p>
+<p><b>shmap</b> This struct contains shadowmap information relevant
+to shadowmaps. The filter related members of this struct are
+currently not used, but are reserved for future extensions.</p>
+<p><b>shmap.camera</b> An optional camera that may be used for
+shadow map settings. If used, the <tt>miSHADOWMAP_CAMERA</tt> flag
+must be set.</p>
+<p><b>shmap.accuracy</b> Determines how far two depths values
+within a <a href="node80.html#INDEX264">detail shadowmap</a> need
+to be apart to be considered different. A value if zero indicates
+that mental ray should try to determine a reasonable value. The
+numerical value is in the same internal units as
+shadowmap_bias.</p>
+<p><b>shmap.samples</b> determines the number of samples per pixel
+for <a href="node80.html#INDEX264">detail shadowmap</a>s. If
+samples is set to <i>n</i>, then there will be
+<var>n&nbsp;&times;&nbsp;n</var> samples per pixel.</p>
+<p><b>shmap.type</b> selects whether
+<a href="node80.html#INDEX264">detail shadowmap</a>s should use colored
+shadows (value 'c') or shadow intensities (value 'a').</p>
+<p>The remaining fields are reserved and should not be used.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node199.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node201.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Front and Back Surfaces</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node30.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node32.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION29"></a>
+
+  <h3>Front and Back Surfaces</h3>
+
+  <p id="misss:frontback">The words
+  "front" and "back" will be mentioned many times in this
+  chapter. These shaders use specially formatted lightmaps to
+  simulate scattering. The lightmaps are generated in image space,
+  i.e. from the camera's point of view, and they store the diffuse
+  irradiance and z-depth of the front and back side of the
+  object.</p>
+
+  <p>In this context, "front" is defined as the first surface
+  from the camera's point of view (that is facing towards the
+  camera) and "back" as the second surface from the cameras point
+  of view (that is facing away from the camera).</p>
+
+  <p>One can say the front surface is everything seen in the final
+  rendering, and the back surface, the next surface behind it,
+  which, if lit, could potentially scatter light through the
+  object, to illuminate the front surface. In a practical sense,
+  this means that front surface scattering is scattering seen
+  directly, and back surface scattering is any light going through
+  the object.</p>
+
+  <p>This also means that these functions are direction dependent
+  and only work when the final render viewing direction is near or
+  similar to the camera viewing direction, and the view projection
+  is standard perspective or orthogonal. Observe the following:</p>
+
+  <ul>
+    <li>Avoid lens shaders that significantly modify the ray
+    direction to create non-standard camera projections.</li>
+
+    <li>A mirror reflection that reveals an unmapped area (like the
+    back of the object) will contain no scattering</li>
+  </ul>
+
+  <p>Unlike the physical implementation, these shaders do not
+  require photons, global illumination, caustics or even ray
+  tracing to be enabled.</p>
+
+  <p>If any "through" scattering is planned (i.e. light passing
+  through the object from the back to the front) one must think
+  volumetrically when creating the model. While avoiding holes is
+  not a necessity, it is imperative to pay attention to extra
+  interior surfaces, since these will block light. For example, a
+  "T" shape built from ramming two stretched cubes together will
+  look incorrect due to the extra interior surfaces. An object
+  fully contained within another object will, however, appear as a
+  true embedded opaque object and can be useful for things like
+  bones inside fingers for the "hand over flashlight" effect. The
+  contained object must be included in the lightmap to act as a
+  light blocker - any other contained object is simply ignored. The
+  easiest way to do this is to apply the same material to the
+  contained object, since it will never actually be seen or shaded,
+  just block light.</p>
+
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node30.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node32.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

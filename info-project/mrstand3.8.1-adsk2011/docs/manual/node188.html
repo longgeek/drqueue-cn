@@ -1,0 +1,132 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Instances and Instance Groups</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node187.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node189.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION186"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_api_instance_begin">mi_api_instance_begin</a></li>
+<li><a href="#api:mi_api_instance_end">mi_api_instance_end</a></li>
+<li><a href="#api:mi_api_instgroup_begin">mi_api_instgroup_begin</a></li>
+<li><a href="#api:mi_api_instgroup_clear">mi_api_instgroup_clear</a></li>
+<li><a href="#api:mi_api_instgroup_additem">mi_api_instgroup_additem</a></li>
+<li><a href="#api:mi_api_instgroup_delitem">mi_api_instgroup_delitem</a></li>
+<li><a href="#api:mi_api_instgroup_end">mi_api_instgroup_end</a></li>
+</ul>
+
+<h3>Instances and Instance Groups</h3>
+<p>Instances and instance groups are used to construct the
+<a href="node83.html#INDEX286">scene DAG</a> (directed acyclic graph).
+Instance groups are unordered lists of one or more instances.
+Instances are nodes of the DAG, they reference an item to be placed
+into the DAG together with a space transformation, optional
+inheritance parameters, and various flags. Elements that can be
+referenced by instances are geometric objects, cameras, lights, and
+instance groups. If more than one instance references the same
+item, this is called <i>multiple instancing</i>.</p>
+<p><a id="INDEX935"></a></p>
+<h5 class="anchor" id="api:mi_api_instance_begin">mi_api_instance_begin</h5>
+<pre>
+    miInstance *mi_api_instance_begin(
+        char            *name)     /* instance name */
+</pre>
+<p>Begin the definition of an instance with the given <i>name</i>.
+In incremental mode, a pointer to the existing instance is
+returned; otherwise a pointer to a temporary instance is returned.
+It is not necessary to store the various flags and IDs in the
+instance transformation, this is done during preprocessing.</p>
+<p><a id="INDEX936"></a></p>
+<h5 class="anchor" id="api:mi_api_instance_end">mi_api_instance_end</h5>
+<pre>
+    miTag mi_api_instance_end(
+        char            *item,     /* item to instance */
+        miTag           function,  /* geometry shader */
+        miTag           params)    /* transformation func */
+</pre>
+<p>Complete the definition of the instance. If the instanced item
+is not a geometry shader, the item to be instanced is given by
+<i>item</i> and <i>function</i> must be a null tag. If the
+instanced item is a geometry shader, the function list is passed in
+<i>function</i> and <i>item</i> must be a null pointer. It is an
+error if both <i>item</i> and <i>function</i> are requested to be
+instantiated. Incremental changes from regular to geometry shader
+instances and vice versa are possible.</p>
+<p>The <i>params</i> tag is either the null tag (no inheritance
+parameters), the numerical value <tt>-1</tt> (leave parameters
+unchanged during an incremental change), or the tag of a function
+containing inheritance parameters. Only the parameters are used,
+the function is ignored. The function should be deleted after being
+passed to <i>mi_api_instance_end</i>.</p>
+<p>If an error occurs, a null tag is returned; otherwise the tag of
+the new instance element is returned. The type of the returned
+element is <tt>miSCENE_INSTANCE</tt>.</p>
+<p><a id="INDEX937"></a></p>
+<h5 class="anchor" id="api:mi_api_instgroup_begin">mi_api_instgroup_begin</h5>
+<pre>
+    miBoolean mi_api_instgroup_begin(
+        char            *name)     /* group name */
+</pre>
+<p>Begin the definition of an instance group with the given
+<i>name</i>. The list of elements is not cleared even if
+incremental mode is disabled.</p>
+<p><a id="INDEX938"></a></p>
+<h5 class="anchor" id="api:mi_api_instgroup_clear">mi_api_instgroup_clear</h5>
+<pre>
+    miBoolean mi_api_instgroup_clear(void)
+</pre>
+<p>After the instance group definition was begun, all its instances
+references can be cleared with this call, as if
+<i>mi_api_instgroup_delitem</i> had been called for every one of
+them.</p>
+<p><a id="INDEX939"></a></p>
+<h5 class="anchor" id="api:mi_api_instgroup_additem">mi_api_instgroup_additem</h5>
+<pre>
+    miBoolean mi_api_instgroup_additem(
+        char            *name)     /* instance name */
+</pre>
+<p>After the instance group definition was begun, instances can be
+added to it. The order of the instances being added is irrelevant.
+Only instances can be added, never elements such as geometric
+objects directly.</p>
+<p><a id="INDEX940"></a></p>
+<h5 class="anchor" id="api:mi_api_instgroup_delitem">mi_api_instgroup_delitem</h5>
+<pre>
+    miBoolean mi_api_instgroup_delitem(
+        char            *name)     /* instance name */
+</pre>
+<p>After the instance group definition was begun, instances can be
+deleted from it.</p>
+<p><a id="INDEX941"></a></p>
+<h5 class="anchor" id="api:mi_api_instgroup_end">mi_api_instgroup_end</h5>
+<pre>
+    miTag mi_api_instgroup_end(void)
+</pre>
+<p>After all instances have been added to the instance group, this
+call completes the creation of the instance group. If an error
+occurs, a null tag is returned; otherwise the tag of the new
+instance group element is returned. The type of the returned
+element is <tt>miSCENE_GROUP</tt>.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node187.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node189.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

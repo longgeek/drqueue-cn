@@ -1,0 +1,190 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Pass Rendering</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node96.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node98.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h2 id="SECTION95">Pass Rendering</h2>
+<p>
+<a id="INDEX354"></a><a id="INDEX355"></a> <a id="renderpass"></a>
+Pass rendering allows rendering multiple scenes with the same
+<a href="node199.html#INDEX1061">frame number</a>, resolution, oversampling
+parameters, and list of type of frame buffers, but different contents.
+This is useful if a scene is extremely complex, or consists of many
+distinct elements, so that rendering it all at once is impractical
+either because of the size, or because certain elements are expected
+to change and it would be too expensive to re-render the entire scene
+for each small change. Pass rendering allows splitting such a scene
+into sub-scenes (called passes or layers), rendering each sub-scene, and
+putting the results together in a separate step called <i>merging</i>.
+<p>
+Scenes are typically broken into sub-scenes by clustering geometry, for
+example one for each complex character or creature, or props such as
+vehicles, or backgrounds. Elements not present in a sub-scene are either
+omitted completely or replaced by very simple stand-ins that do not appear
+in the rendered pass image, for example simple invisible and nontraceable
+objects that cast shadows. This allows objects of one pass to cast shadows
+on objects in another pass.
+<p>
+Each pass render leaves a pass file in a directory specified by the user,
+using a <tt>pass</tt> statement list in the camera definition. Pass
+statements come in five forms:</p>
+<ul>
+<li><tt>pass write "</tt> <i>filename</i> <tt>"</tt><br />
+<br />
+Save the current set of samples belonging to each rendered
+rectangle to the file <i>filename</i>.</li>
+<li><tt>pass merge read [...] write "</tt> <i>fn</i> <tt>"</tt>
+<i>shader</i><br />
+<br />
+Merge the comma-separated list of pass file names in angle
+brackets, where a null file name ( <tt>""</tt>) stands for the
+current render results, and save the merged pass data. The options
+<i>shader</i> performs the merging. The default performs a depth
+and alpha blending merge.</li>
+<li><tt>pass prep read "</tt> <i>fn</i> <tt>" write "</tt>
+<i>fn</i> <tt>"</tt> <i>shader</i><br />
+<br />
+Preprocess a pass file. The <i>shader</i> has random access to all
+samples.</li>
+<li><tt>pass delete "</tt> <i>fn</i> <tt>"</tt><br />
+<br />
+Delete the file.</li>
+<li><tt>pass null</tt><br />
+<br />
+Delete all pass statements in the camera.</li>
+</ul>
+<p>All pass prep statements are executed in order before rendering.
+During rendering, all pass and pass merge statements are executed
+in order, once for each finished rectangle. After rendering, all
+delete statements are executed. For more information on the syntax,
+see page <a href="node77.html#mpassopt">mpassopt</a>.</p>
+<p>Merging is the operation of combining all samples for a pixel,
+sample by sample, to arrive at the final sample to be filtered into
+the pixel. Merging may simply choose the sample with the lowest
+depth, or also perform alpha blending or other operations based on
+the available frame buffers. Merging can either happen at the end
+of the last pass, or as a separate operation. mental ray will merge
+without rendering if there is no pass statement (of the first type
+above). If merging without rendering, it is still necessary to
+provide some information about the scene that agrees with the
+settings in the pass sub-scenes:</p>
+<ul>
+<li>an options block with a <tt>samples</tt> statement.</li>
+<li>a camera with <tt>pass</tt>, <tt>output</tt>, and
+<tt>resolution</tt> statements.</li>
+<li>a camera instance and root group containing the camera
+instance, and a render statement.</li>
+</ul>
+<p>Note that when using the rasterizer, the <tt>shading
+samples</tt> setting is used in place of the <tt>samples</tt>
+setting.</p>
+<p>The pass statement specifies the current pass number, the number
+of passes, and an optional directory to store the pass files (which
+can become large if there are many samples and many defined frame
+buffers, much larger than image files). Here is an example scene
+for merging only:</p>
+<p><a id="rpassex"></a></p>
+<pre>
+    link "passmerge.so"
+    declare shader "mymerge" () version 1 end declare
+
+    options "opt"
+        samples         -2 1
+    end options
+
+    camera "cam"
+        frame           1
+        pass merge      read [ "pass.0", "pass.1", "pass.2" ] "mymerge" ()
+        output          "rgb" "out.rgb"
+        resolution      150 128
+    end camera 
+
+    instance "cam_inst" "cam" end instance
+    instgroup "rootgrp" "cam_inst" end instgroup
+    render "rootgrp" "cam_inst" "opt"
+</pre>
+<p>Note that the camera specifies no <tt>pass write</tt> statement,
+so no rendering takes place and no geometry needs to be specified
+here. (If it were, it would be ignored.) The
+<a href="node136.html#INDEX507">pass merge shader</a> "mymerge" is
+responsible for putting the render passes together, sample by
+sample. Its implementation is described on page
+<a href="node136.html#passmerge">passmerge</a>. The example there merges
+the scenes by Z depth, and since the merging is based on individual
+samples, any intersections will be properly anti-aliased (which
+they would not if the merging were based on images). If no merge
+shader is specified, mental ray will default to a simple depth
+sorting function with alpha blending.</p>
+<p>Note, however, that each pass is a separate scene with no
+knowledge about other scenes. This means that at points where
+objects in one pass intersect with objects in another pass in the
+final image, mental ray sees no reason to oversample the
+intersection because it does not exist at that time. Although
+mental ray will reconstruct low-sampling areas before merging, it
+may occasionally be necessary to use sampling parameters where the
+minimum number of samples is close to, or in extreme cases (where
+the objects are simple and nearly flat-shaded but highly detailed
+inter-pass intersections take place) even equal to the maximum
+number of samples. It is also recommended to turn jittering off
+because different passes may jitter sample position in different
+ways.</p>
+<p>For the merge example above to work, it is necessary to first
+render the three pass files. This is done by adding pass statements
+to the camera:</p>
+<pre>
+    camera "cam"
+        ...
+        pass write "pass.0"
+        ...
+    end camera
+</pre>
+<p>And similar for passes 1 and 2. These files are otherwise normal
+scene files. As mentioned before, the resolution and sampling
+parameters, and list of frame buffers (as defined by
+<tt>output</tt> and <tt>frame buffer</tt> statements) must agree.
+Pass files from hosts with different byte orders cannot be merged.
+No <tt>pass merge</tt> statements are required, unless merging
+should be done after rendering too. Note that if merging and
+rendering is done in one step, the pass being rendered is
+referenced in the pass merge statement with an empty string (
+<tt>""</tt>). This can be done in any pass - if rendering pass 2 of
+3, for example, the pass merge statement would be</p>
+<pre>
+    pass merge read [ "pass.0", "", "pass.2" ]
+    output "rgb" "rgb.out"
+</pre>
+<p>Note that pass files are not intended for long-term archival.
+Although different versions of mental ray will generally accept the
+same pass merge files, major revisions may alter the file format.
+An informational warning will be printed if the version numbers do
+not agree, but this warning can be ignored. mental ray will detect
+incompatibilities and reject pass files that have the wrong
+version, resolution etc., or the wrong byte order.</p>
+<p>If pass mode is enabled, mental ray will automatically enable the
+depth (Z) frame buffer. This may change in future versions.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node96.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node98.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Color Profiles</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node186.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node188.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION185"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_api_colorprofile_begin">mi_api_colorprofile_begin</a></li>
+<li><a href="#api:mi_api_colorprofile_space">mi_api_colorprofile_space</a></li>
+<li><a href="#api:mi_api_colorprofile_gamma">mi_api_colorprofile_gamma</a></li>
+<li><a href="#api:mi_api_colorprofile_white">mi_api_colorprofile_white</a></li>
+<li><a href="#api:mi_api_colorprofile_custom">mi_api_colorprofile_custom</a></li>
+<li><a href="#api:mi_api_colorprofile_end">mi_api_colorprofile_end</a></li>
+</ul>
+
+<h3>Color Profiles</h3>
+<p id="INDEX926">The following API calls implement the
+<tt>colorprofile ... end colorprofile</tt> blocks in .mi scene
+files, which attach a name to a profile.</p>
+<p><a id="INDEX927"></a></p>
+<h5 class="anchor" id="api:mi_api_colorprofile_begin">mi_api_colorprofile_begin</h5>
+<pre>
+    miColor_profile *mi_api_colorprofile_begin(
+        char            *name)          /* name of color profile */
+</pre>
+<p>Begin the definition of a color profile named
+<i>name</i>, and return a pointer to the new color profile. The
+caller should set the following fields: <i>space</i> describes the
+color space associated with the color profile. Valid color spaces
+are <tt>miCPROF_RGB</tt>, <tt>miCPROF_NTSC</tt>,
+<tt>miCPROF_HDTV</tt>, <tt>miCPROF_SHARP</tt>,
+<tt>miCPROF_CIEXYZ</tt>, <tt>miCPROF_CIEXYY</tt>,
+<tt>miCPROF_LINERGB</tt>, <tt>miCPROF_BOXRGB</tt>,
+<tt>miCPROF_CUSTOM</tt>. For custom color spaces the bit defined by
+<i>miCPROF_CID_NOT_ENOUGH</i> needs also to be set in the
+<i>space</i> field. It is recommended to use the routine
+<i><a href="node187.html#INDEX928">mi_api_colorprofile_space</a></i>
+to set the space field.</p>
+<p>The caller may set the following fields: <i>white_adapt</i>
+should be set to true if a white adaption is requested when
+transforming to other color spaces. If this value is false, then
+the white point intrinsic to the color space is used. <i>white</i>
+contains the CIE XYZ coordinates of the white point assigned to the
+color space. Other fields should only be set through the provided
+interface routines below.</p>
+<p><a id="INDEX928"></a></p>
+<h5 class="anchor" id="api:mi_api_colorprofile_space">mi_api_colorprofile_space</h5>
+<pre>
+    miUint1 mi_api_colorprofile_space(
+        char            *name)          /* name of color space */
+</pre>
+<p>may be used to set the <i>space</i> field of the
+current color profile. The routine parses the <i>name</i> string
+describing the name of a color space and returns the value to be
+used for the <i>space</i> field. The routine will release the
+memory associated with its parameter. Valid argument strings are
+"rgb", "hdtv", "ntsc", "ciexyz", "ciexyy", "linergb", "boxrgb", and
+"sharp". There is no string for sRGB, since this color space
+differs from the HDTV standard only by the gamma correction.</p>
+<p><a id="INDEX929"></a></p>
+<h5 class="anchor" id="api:mi_api_colorprofile_gamma">mi_api_colorprofile_gamma</h5>
+<pre>
+    void mi_api_colorprofile_gamma(
+        miScalar        gamma,      /* gamma corr. exponent */
+        miScalar        offset,     /* below gamma corr. is linear */
+        miBoolean       force)      /* allow values &lt; 1 */
+</pre>
+<p>is used to assign a <a href="node76.html#INDEX215">gamma
+correction</a> to the current color
+profile. The gamma correction mapping associated with color spaces
+like HDTV or sRGB are not just exponentiation, since electronic
+circuits cannot properly deal with infinite slopes at the origin.
+Hence, gamma corrections are often assumed to be linear below a
+certain threshold offset value. This routine takes such models into
+account and will set all gamma parameters in the color profile. If
+the <i>force</i> argument is set to true, then values of the gammma
+exponent below 1.0 will be directly used, else the reciprocal value
+is used for exponents below 1.0.</p>
+<p><a id="INDEX930"></a></p>
+<h5 class="anchor" id="api:mi_api_colorprofile_white">mi_api_colorprofile_white</h5>
+<pre>
+    void mi_api_colorprofile_white(
+        miColor         *white,          /* return white point */
+        int             temperature,     /* color temperature */
+        miScalar        intensity)       /* intensity of white */
+</pre>
+<p>Caculates the CIE XYZ coordinates of a white
+point given by the <b><a id="INDEX931"></a>color
+temperature</b> associated with CIE D illuminant. Valid
+temperatures are between 4000 and 25000 Kelvin. A value of 6500
+Kelvin corresponds to the color temperature of an average overcast
+sky (<b><a id="INDEX932"></a>D65 illuminant</b>).
+The provided temperature is used to calculate an associated color.
+This color may be scaled to the provided intensity.</p>
+<p><a id="INDEX933"></a></p>
+<h5 class="anchor" id="api:mi_api_colorprofile_custom">mi_api_colorprofile_custom</h5>
+<pre>
+    miBoolean mi_api_colorprofile_custom(
+        miColor_profile *cprof,         /* color profile */
+        miMatrix        m)              /* custom transform */
+</pre>
+<p>If the <i>space</i> field is set for a custum
+color profile, then this routine may be called to set the color
+space transformation matrix and its inverse for the passed in color
+profile. The routine will only use the upper 3 by 3 sub-matrix and
+assume that this matrix describes the transform from CIE XYZ space
+to the custom color space. After all fields are defined, call
+<i><a href="node187.html#INDEX934">mi_api_colorprofile_end</a></i>.</p>
+<p><a id="INDEX934"></a></p>
+<h5 class="anchor" id="api:mi_api_colorprofile_end">mi_api_colorprofile_end</h5>
+<pre>
+    miTag mi_api_colorprofile_end()
+</pre>
+<p>Completes the definition of a color profile.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node186.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node188.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

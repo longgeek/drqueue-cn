@@ -1,0 +1,737 @@
+#*****************************************************************************
+# Copyright 1986-2008 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+# Germany. All rights reserved.
+#*****************************************************************************
+# Created:	05.12.2008
+# Module:	max specific paint shader
+# Purpose:	.mi declarations and phenomena for paint shaders
+#
+# 05.12.2008 Ulf - This file was created from paint.mi and contains now max 
+#                  specific changes 
+#
+#****************************************************************************/
+
+# guard against multiple inclusions
+$ifndef "paint_max_mi_included"
+set "paint_max_mi_included" "true"
+
+#  we are using our own phenomenons so we hide the default ones from paint.mi
+	gui "gui_mi_metallic_paint" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	gui "gui_mi_metallic_paint_x" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+	
+	gui "gui_mi_metallic_paint_output_mixer" {
+		control "Global" "Global" (
+			"hidden"
+		)
+	}
+    
+	gui "gui_mi_bump_flakes" {
+		control "Global" "Global" (	
+			"hidden"	
+		)
+	}
+
+    gui "gui_mi_car_paint_phen" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+    gui "gui_mi_car_paint_phen_x" {
+        control "Global" "Global" (
+            "hidden"
+        )
+    }
+
+# mi_car_paint_phen_max is identical to mi_car_paint_phen, 
+# except that it uses structs to put parameters 
+# into 3ds MAX rollups
+
+declare phenomenon "mi_car_paint_phen_max" 
+    (
+        struct "d" {
+            color   "ambient",
+            color   "base_color",
+            color   "edge_color",
+            scalar  "edge_color_bias",
+            color   "lit_color",
+            scalar  "lit_color_bias",
+            scalar  "diffuse_weight",
+            scalar  "diffuse_bias"
+        },
+        struct "f" {
+            color       "flake_color",
+            scalar      "flake_weight",
+            scalar      "flake_reflect",
+            scalar      "flake_exp",
+            scalar      "flake_density",
+            scalar      "flake_decay",
+            scalar      "flake_strength",
+            scalar      "flake_scale"
+        },
+        struct "s" {
+            color       "spec",         
+            scalar      "spec_weight",      
+            scalar      "spec_exp",         
+            color       "spec_sec",
+            scalar      "spec_sec_weight",  
+            scalar      "spec_sec_exp",     
+            boolean     "spec_glazing"
+        },
+        struct "r" {
+            color       "reflection_color",
+            scalar      "edge_factor",    
+            scalar      "reflection_edge_weight",
+            scalar      "reflection_base_weight",
+            integer     "samples",
+            scalar      "glossy_spread",
+            scalar      "max_distance",
+            boolean     "single_env_sample"
+        },
+        struct "m" {
+            color  "dirt_color",
+            scalar "dirt_weight"
+        },
+        struct "a" {
+            scalar "irradiance_weight",
+            scalar "global_weight"
+        },
+        integer "mode",
+        array light "lights"
+    )
+
+    shader "flakes"  "mi_bump_flakes" (
+        "flake_scale"    = interface "f.flake_scale",
+        "flake_strength" = interface "f.flake_strength",
+        "flake_density"  = interface "f.flake_density"        
+    )
+
+    shader "carpaint" "mi_metallic_paint" (
+        "ambient"        = interface "d.ambient",
+        "base_color"     = interface "d.base_color",
+        "edge_color"     = interface "d.edge_color",
+        "edge_color_bias"= interface "d.edge_color_bias",
+        "lit_color"      = interface "d.lit_color",
+        "lit_color_bias" = interface "d.lit_color_bias",
+        "diffuse_weight" = interface "d.diffuse_weight",
+        "diffuse_bias"   = interface "d.diffuse_bias",
+        
+        "flake_color"    = interface "f.flake_color",
+        "flake_weight"   = interface "f.flake_weight",
+        "flake_exp"      = interface "f.flake_exp",
+        "flake_reflect"  = interface "f.flake_reflect",
+        "flake_decay"    = interface "f.flake_decay",
+        "flake_bump"     "flakes",
+
+        "spec"           = interface "s.spec",
+        "spec_weight"    = interface "s.spec_weight",
+        "spec_exp"       = interface "s.spec_exp",
+        "spec_sec"       = interface "s.spec_sec",
+        "spec_sec_weight"= interface "s.spec_sec_weight",
+        "spec_sec_exp"   = interface "s.spec_sec_exp",
+        "spec_glazing"   = interface "s.spec_glazing",                     
+
+        "irradiance_weight" = interface "a.irradiance_weight",
+        "global_weight"     = interface "a.global_weight",
+
+         "mode"           = interface "mode",
+        "lights"          = interface "lights"
+    )
+
+    shader "reflection" "mib_glossy_reflection" (
+        "base_material"     "carpaint",
+        "reflection_color"  = interface "r.reflection_color",
+        "environment_color" = interface "r.reflection_color",
+        "reflection_base_weight" = interface "r.reflection_base_weight",
+        "reflection_edge_weight" = interface "r.reflection_edge_weight",
+        "samples"           = interface "r.samples",
+        "u_spread"          = interface "r.glossy_spread",
+        "v_spread"          = interface "r.glossy_spread",
+        "max_distance"      = interface "r.max_distance",
+        "single_env_sample" = interface "r.single_env_sample"
+    )
+
+    shader "dirtlayer" "mib_illum_lambert" (
+        "diffuse" = interface "m.dirt_color",
+        "mode"    = interface "mode",
+        "lights"  = interface "lights"
+    )
+    
+    shader "dirtmixer" "mib_color_interpolate" (
+        "input"    = interface "m.dirt_weight",
+        "weight_1" 1.0,
+        "color_0"  = "reflection",
+        "color_1"  = "dirtlayer",
+        "num" 2
+    )
+
+    root = "dirtmixer"
+    apply material
+
+    gui "gui_mi_car_paint_phen_max" {
+        control "Global" "Global" (
+            "uiName" "Car Paint",
+            "category" "Material",
+        )
+        control "d" "struct" (
+            "uiName" "Diffuse Coloring"
+        )
+        {           
+            control "ambient" "color" (
+                "uiName" "Ambient / Extra Light",
+                "noAlpha",
+                "value" 0 0 0 0
+            )
+            control "base_color" "color" (
+                "uiName" "Base Color",
+                "noAlpha",
+                "value" .8 .1 0
+            )
+            control "edge_color" "color" (
+                "uiName" "Edge Color",
+                "noAlpha",
+                "value" 0 0 0,
+            )
+            control "edge_color_bias" "scalar" (
+                "uiName" "Edge Bias",
+                "range"  0.1 20.0,
+                "value" 1.0,
+            )
+            control "lit_color" "color" (
+                "uiName" "Light Facing Color",
+                "noAlpha",
+                "value" 0.6 0 0.2,
+            )
+            control "lit_color_bias" "scalar" (
+                "uiName" "Light Facing Color Bias",
+                "range"  0.1 20.0,
+                "value" 8.0,
+            )
+            control "diffuse_weight" "scalar" (
+                "uiName" "Diffuse Weight",
+                "value" 1.0,
+            )
+            control "diffuse_bias" "scalar" (
+                "uiName" "Diffuse Bias",
+                "range"  0.1 20.0,
+                "value" 1.5,
+            )
+        }
+        control "f" "struct" (
+            "uiName" "Flakes"
+        )
+        {        
+            control "flake_color" "color" (
+                "uiName" "Flake Color",
+                "noAlpha",
+                "value" 1 1 1
+            )
+            control "flake_weight" "scalar" (
+                "uiName" "Flake Weight",
+                "value" 1.0
+            )
+            control "flake_reflect" "scalar" (
+                "uiName" "Flake Reflections (Ray-Traced)",
+                "value" 0.0
+            )
+            control "flake_exp" "scalar" (
+                "uiName" "Flake Specular Exponent",
+                "value" 45.0
+            )
+            control "flake_density" "scalar" (
+                "uiName" "Flake Density",
+                "range" 0.1 10.0,
+                "value" 0.5
+            )
+            control "flake_decay" "scalar" (
+                "uiName" "Flake Decay Distance (0 = No Decay)",
+                "value" 0.0
+            )
+            control "flake_strength" "scalar" (
+                "uiName" "Flake Strength",
+                "value" 0.8
+            )
+            control "flake_scale" "scalar" (
+                "uiName" "Flake Scale",
+                "value" 0.12
+            )
+        }
+        control "s" "struct" (
+            "uiName" "Specular Reflections"
+        )
+        {           
+            control "spec" "color" (
+                "uiName" "Specular Color #1",
+                "noAlpha",
+                "value" 1 1 1
+            )
+            control "spec_weight" "scalar" (
+                "uiName" "Specular Weight #1",
+                "value" 0.2
+            )
+            control "spec_exp" "scalar" (
+                "uiName" "Specular Exponent #1",
+                "value" 60.0
+            )
+
+            control "spec_sec" "color" (
+                "uiName" "Specular Color #2",
+                "noAlpha",
+                "value" 1 1 1
+            )
+            control "spec_sec_weight" "scalar" (
+                "uiName" "Specular Weight #2",
+                "value" 0.3
+            )
+            control "spec_sec_exp" "scalar" (
+                "uiName" "Specular Exponent #2",
+                "value" 25.0
+            )
+            control "spec_glazing" "boolean" (
+                "uiName" "Glazed Specularity #1",
+                "value" 1
+            )
+
+        }
+        control "r" "struct" (
+            "uiName" "Reflectivity"
+        )
+        {           
+            control "reflection_color" "color" (
+                "uiName" "Reflection Color",
+                "noAlpha",
+                "value" 1 1 1
+            )
+            control "edge_factor" "scalar" (
+                "uiName" "Edge Factor",
+                "value"  7.0,
+                "range"  0.1 20.0
+            )
+            control "reflection_edge_weight" "scalar" (
+                "uiName" "Edge Reflections Weight",
+                "value" 1.0
+            )
+            control "reflection_base_weight" "scalar" (
+                "uiName" "Facing Reflections Weight",
+                "value" 0.2
+            )
+            control "samples" "integer" (
+                "uiName" "Glossy Reflection Samples (0 = Not Glossy)",
+                "value"  0,
+            )
+            control "glossy_spread" "scalar" (
+                "uiName" "Glossy Reflections Spread",
+                "value" 0.0,
+                "range" 0.0 2.0
+            )
+            control "single_env_sample" "boolean" (
+                "uiName" "Single Environment Sampling",
+                "value" off
+            )        
+            control "max_distance" "scalar" (
+                "uiName" "Max Distance",
+                "value" 0.0
+            )
+        }
+        control "m" "struct" (
+            "uiName" "Dirty Layer (Lambertian)"
+        )
+        {           
+            control "dirt_color" "color" (
+                "uiName" "Dirt Color",
+                "noAlpha",
+                "value" .3 .3 .3
+            )
+            control "dirt_weight" "scalar" (
+                "uiName" "Dirt Weight",
+                "value"  0.0,
+                "range"  0.0 1.0
+            )
+        }
+        control "a" "struct" (
+            "uiName" "Advanced Options"
+        )
+        {           
+            control "irradiance_weight" "scalar" (
+                "uiName" "Irradiance Weight (Indirect Illumination)",
+                "value"  1.0,
+                "range"  0.0 2.0
+            )
+            control "global_weight" "scalar" (
+                "uiName" "Global Weight",
+                "value"  1.0,
+                "range"  0.0 2.0
+            )
+        }
+        control "mode" "integer" (
+            "nonConnectable",
+            "uiName" "Mode",
+            "hidden"
+        )        
+        control "lights" "array light" (
+            "uiName" "Lights",
+            "hidden"
+        )        
+    }
+end declare
+
+
+
+#****************************************************************************
+#   Car paint material Phenomenon - version for 3ds MAX
+#****************************************************************************
+# Car paint Phenomenon using
+# - mi_metallic_paint
+# - mib_glossy_reflections
+# - mi_bump_flakes
+# - mib_color_interpolate
+# - mib_illum_lambert
+#
+# This is identical to mi_car_paint_phen, except that it uses
+# structs to put parameters into 3ds MAX rollups and implements
+# a material phenomenon.
+#
+#****************************************************************************
+declare phenomenon material "mi_car_paint_mtl_phen_max" 
+    (
+        struct "d" {
+            color   "ambient",
+            color   "base_color",
+            color   "edge_color",
+            scalar  "edge_color_bias",
+            color   "lit_color",
+            scalar  "lit_color_bias",
+            scalar  "diffuse_weight",
+            scalar  "diffuse_bias"
+        },
+        struct "f" {
+            color       "flake_color",
+            scalar      "flake_weight",
+            scalar      "flake_reflect",
+            scalar      "flake_exp",
+            scalar      "flake_density",
+            scalar      "flake_decay",
+            scalar      "flake_strength",
+            scalar      "flake_scale"
+        },
+        struct "s" {
+            color       "spec",         
+            scalar      "spec_weight",      
+            scalar      "spec_exp",         
+            color       "spec_sec",
+            scalar      "spec_sec_weight",  
+            scalar      "spec_sec_exp",     
+            boolean     "spec_glazing"
+        },
+        struct "r" {
+            color       "reflection_color",
+            scalar      "edge_factor",    
+            scalar      "reflection_edge_weight",
+            scalar      "reflection_base_weight",
+            integer     "samples",
+            scalar      "glossy_spread",
+            scalar      "max_distance",
+            boolean     "single_env_sample"
+        },
+        struct "m" {
+            color  "dirt_color",
+            scalar "dirt_weight"
+        },
+        struct "a" {
+            scalar "irradiance_weight",
+            scalar "global_weight"
+        },
+        integer "mode",
+        array light "lights"
+    )
+
+    shader "flakes"  "mi_bump_flakes" (
+        "flake_scale"    = interface "f.flake_scale",
+        "flake_strength" = interface "f.flake_strength",
+        "flake_density"  = interface "f.flake_density"        
+    )
+
+    shader "carpaint" "mi_metallic_paint" (
+        "ambient"        = interface "d.ambient",
+        "base_color"     = interface "d.base_color",
+        "edge_color"     = interface "d.edge_color",
+        "edge_color_bias"= interface "d.edge_color_bias",
+        "lit_color"      = interface "d.lit_color",
+        "lit_color_bias" = interface "d.lit_color_bias",
+        "diffuse_weight" = interface "d.diffuse_weight",
+        "diffuse_bias"   = interface "d.diffuse_bias",
+        
+        "flake_color"    = interface "f.flake_color",
+        "flake_weight"   = interface "f.flake_weight",
+        "flake_exp"      = interface "f.flake_exp",
+        "flake_reflect"  = interface "f.flake_reflect",
+        "flake_decay"    = interface "f.flake_decay",
+        "flake_bump"     "flakes",
+
+        "spec"           = interface "s.spec",
+        "spec_weight"    = interface "s.spec_weight",
+        "spec_exp"       = interface "s.spec_exp",
+        "spec_sec"       = interface "s.spec_sec",
+        "spec_sec_weight"= interface "s.spec_sec_weight",
+        "spec_sec_exp"   = interface "s.spec_sec_exp",
+        "spec_glazing"   = interface "s.spec_glazing",                     
+
+        "irradiance_weight" = interface "a.irradiance_weight",
+        "global_weight"     = interface "a.global_weight",
+
+        "mode"           = interface "mode",
+        "lights"         = interface "lights"
+    )
+
+    shader "reflection" "mib_glossy_reflection" (
+        "base_material"     "carpaint",
+        "reflection_color"  = interface "r.reflection_color",
+        "environment_color" = interface "r.reflection_color",
+        "reflection_base_weight" = interface "r.reflection_base_weight",
+        "reflection_edge_weight" = interface "r.reflection_edge_weight",
+        "edge_factor"            = interface "r.edge_factor",
+        "samples"           = interface "r.samples",
+        "u_spread"          = interface "r.glossy_spread",
+        "v_spread"          = interface "r.glossy_spread",
+        "max_distance"      = interface "r.max_distance",
+        "single_env_sample" = interface "r.single_env_sample"
+    )
+
+    shader "dirtlayer" "mib_illum_lambert" (
+        "diffuse" = interface "m.dirt_color",
+        "mode"    = interface "mode",
+        "lights"  = interface "lights"
+    )
+    
+    shader "dirtmixer" "mib_color_interpolate" (
+        "input"    = interface "m.dirt_weight",
+        "weight_1" 1.0,
+        "color_0"  = "reflection",
+        "color_1"  = "dirtlayer",
+        "num" 2
+    )
+
+    material "material" 
+        = "dirtmixer"
+    end material
+
+    root material "material"
+    apply material
+
+    gui "gui_mi_car_paint_mtl_phen_max" {
+        control "Global" "Global" (
+            "uiName" "Car Paint",
+            "category" "Material",
+        )
+        control "d" "struct" (
+            "uiName" "Diffuse Coloring"
+        )
+        {           
+            control "ambient" "color" (
+                "uiName" "Ambient / Extra Light",
+                "noAlpha",
+                "value" 0 0 0 0
+            )
+            control "base_color" "color" (
+                "uiName" "Base Color",
+                "noAlpha",
+                "value" .8 .1 0
+            )
+            control "edge_color" "color" (
+                "uiName" "Edge Color",
+                "noAlpha",
+                "value" 0 0 0,
+            )
+            control "edge_color_bias" "scalar" (
+                "uiName" "Edge Bias",
+                "range"  0.1 20.0,
+                "value" 1.0,
+            )
+            control "lit_color" "color" (
+                "uiName" "Light Facing Color",
+                "noAlpha",
+                "value" 0.6 0 0.2,
+            )
+            control "lit_color_bias" "scalar" (
+                "uiName" "Light Facing Color Bias",
+                "range"  0.1 20.0,
+                "value" 8.0,
+            )
+            control "diffuse_weight" "scalar" (
+                "uiName" "Diffuse Weight",
+                "value" 1.0,
+            )
+            control "diffuse_bias" "scalar" (
+                "uiName" "Diffuse Bias",
+                "range"  0.1 20.0,
+                "value" 1.5,
+            )
+        }
+        control "f" "struct" (
+            "uiName" "Flakes"
+        )
+        {        
+            control "flake_color" "color" (
+                "uiName" "Flake Color",
+                "noAlpha",
+                "value" 1 1 1
+            )
+            control "flake_weight" "scalar" (
+                "uiName" "Flake Weight",
+                "value" 1.0
+            )
+            control "flake_reflect" "scalar" (
+                "uiName" "Flake Reflections (Ray-Traced)",
+                "value" 0.0
+            )
+            control "flake_exp" "scalar" (
+                "uiName" "Flake Specular Exponent",
+                "value" 45.0
+            )
+            control "flake_density" "scalar" (
+                "uiName" "Flake Density",
+                "range" 0.1 10.0,
+                "value" 0.5
+            )
+            control "flake_decay" "scalar" (
+                "uiName" "Flake Decay Distance (0 = No Decay)",
+                "value" 0.0
+            )
+            control "flake_strength" "scalar" (
+                "uiName" "Flake Strength",
+                "value" 0.8
+            )
+            control "flake_scale" "scalar" (
+                "uiName" "Flake Scale",
+                "value" 0.12
+            )
+        }
+        control "s" "struct" (
+            "uiName" "Specular Reflections"
+        )
+        {           
+            control "spec" "color" (
+                "uiName" "Specular Color #1",
+                "noAlpha",
+                "value" 1 1 1
+            )
+            control "spec_weight" "scalar" (
+                "uiName" "Specular Weight #1",
+                "value" 0.2
+            )
+            control "spec_exp" "scalar" (
+                "uiName" "Specular Exponent #1",
+                "value" 60.0
+            )
+
+            control "spec_sec" "color" (
+                "uiName" "Specular Color #2",
+                "noAlpha",
+                "value" 1 1 1
+            )
+            control "spec_sec_weight" "scalar" (
+                "uiName" "Specular Weight #2",
+                "value" 0.3
+            )
+            control "spec_sec_exp" "scalar" (
+                "uiName" "Specular Exponent #2",
+                "value" 25.0
+            )
+            control "spec_glazing" "boolean" (
+                "uiName" "Glazed Specularity #1",
+                "value" 1
+            )
+
+        }
+        control "r" "struct" (
+            "uiName" "Reflectivity"
+        )
+        {           
+            control "reflection_color" "color" (
+                "uiName" "Reflection Color",
+                "noAlpha",
+                "value" 1 1 1
+            )
+            control "edge_factor" "scalar" (
+                "uiName" "Edge Factor",
+                "value"  7.0,
+                "range"  0.1 20.0
+            )
+            control "reflection_edge_weight" "scalar" (
+                "uiName" "Edge Reflections Weight",
+                "value" 1.0
+            )
+            control "reflection_base_weight" "scalar" (
+                "uiName" "Facing Reflections Weight",
+                "value" 0.2
+            )
+            control "samples" "integer" (
+                "uiName" "Glossy Reflection Samples (0 = Not Glossy)",
+                "value"  0,
+            )
+            control "glossy_spread" "scalar" (
+                "uiName" "Glossy Reflections Spread",
+                "value" 0.0,
+                "range" 0.0 2.0
+            )
+            control "single_env_sample" "boolean" (
+                "uiName" "Single Environment Sampling",
+                "value" off
+            )        
+            control "max_distance" "scalar" (
+		    "uiName" "Max Distance",
+                "value" 0.0
+            )
+        }
+        control "m" "struct" (
+            "uiName" "Dirty Layer (Lambertian)"
+        )
+        {           
+            control "dirt_color" "color" (
+                "uiName" "Dirt Color",
+                "noAlpha",
+                "value" .3 .3 .3
+            )
+            control "dirt_weight" "scalar" (
+                "uiName" "Dirt Weight",
+                "value"  0.0,
+                "range"  0.0 1.0
+            )
+        }
+        control "a" "struct" (
+            "uiName" "Advanced Options"
+        )
+        {           
+            control "irradiance_weight" "scalar" (
+                "uiName" "Irradiance Weight (Indirect Illumination)",
+                "value"  1.0,
+                "range"  0.0 2.0
+            )
+            control "global_weight" "scalar" (
+                "uiName" "Global Weight",
+                "value"  1.0,
+                "range"  0.0 2.0
+            )
+        }
+        control "mode" "integer" (
+            "nonConnectable",
+            "uiName" "Mode",
+            "hidden"
+        )        
+        control "lights" "array light" (
+            "uiName" "Lights",
+            "hidden"
+        )        
+    }
+end declare
+
+$endif # if not "paint_max_mi_included"

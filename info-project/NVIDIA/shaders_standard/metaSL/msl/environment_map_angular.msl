@@ -1,0 +1,49 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Environment_map_angular
+{
+  input:
+    Texture2d env_tex = "default_reflection_angular.dds"
+	{
+		display_name("Environment Texture");
+		description("The environment texture from which the colors will be sampled.");
+	};
+    float intensity = 1.0
+   	{		
+		display_name("Intensity");
+		soft_range(float(0),float(10));
+		description( "How brightly the environment map will be reflected "
+					 "in the scene." );
+	};
+    
+  output:
+    Color result;
+    
+    void main()
+    {
+		float3 v = transform_vector("internal", "world", direction);
+			
+		float theta, gamma;
+	
+		theta = acos(v.y);
+		gamma = atan2(v.z, v.x);
+
+		float2 texture;
+		texture.x = (cos(gamma)*theta/PI);
+		texture.y = (sin(gamma)*theta/PI);
+		
+		texture = (texture + 1.0) * 0.5;
+			
+		result  = tex2D(env_tex, texture);
+		result *= intensity;
+    }
+} 
+{ 
+	shader_type( "environment" ); 
+	description( "Uses angular mapping to map the texture to environment "
+	             "reflection directions." );
+}
+;

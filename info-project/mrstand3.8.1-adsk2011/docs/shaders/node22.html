@@ -1,0 +1,196 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Participating Media</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node21.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node23.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION20"></a>
+
+  <h2>Participating Media</h2>
+
+  <p>Fog, clouds, silty water, and similar media scatter some of
+  the light that travels through it. In other words, these media
+  participate in the light transport (see [Jensen 98]). A volume
+  shader is needed to simulate participating media.</p>
+
+  <h3>Volume Shader</h3>
+
+  <p>The volume shader <i>parti_volume</i> can simulate homogeneous
+  (uniform density) and nonhomogeneous participating media with
+  isotropic (diffuse) or anisotropic scattering.
+  <i><a href="node22.html#INDEX71">parti_volume</a></i> and
+  <i><a href="node23.html#INDEX73">parti_volume_photon</a></i> use a two-lobed
+  scattering model, which means that light scatters both forward
+  and back in the incoming light direction. This scattering model
+  is invented by Ch. Schlick and can model real scattering from
+  dust, mist, rain-drops, etc.</p>
+
+  <p>Any medium (other than a vacuum) is assumed to contain
+  suspended particles which scatter light traveling through it.
+  Scattering plays an important role in the shading of volumes, and
+  it is the size of the particles in relation to the wavelength of
+  light which determines the type of scattering. If the particle
+  radii are much smaller than the wavelength of light, there is no
+  discernible scattering and the light is absorbed. Particles only
+  slightly smaller than the wavelength of light produce what is
+  known as Rayleigh scattering (cigarette smoke and dust).
+  Particles roughly the same size as the wavelength of light give
+  rise to Mie scattering (water droplets or fog). The Mie model can
+  account for both sparse and dense particle densities, referred to
+  as Hazy Mie and Murky Mie respectively. When the particle size is
+  much larger than the wavelength of light, geometric optics comes
+  into effect (normal solid surfaces). Glassner suggests the
+  following values:</p>
+
+  <table class="table">
+  <tr>
+  <th>function<th>r<th>g1<th>g2
+  </tr><tr>
+  <td>Rayleigh<td>0.50<td>-0.46<td>0.46
+  </tr><tr>
+  <td>Hazy Mie<td>0.12<td>-0.50<td>0.70
+  </tr><tr>
+  <td>Murky Mie<td>0.19<td>-0.65<td>0.91
+  </tr>
+  </table>
+
+  <a id="INDEX71"></a>
+<h5 class="anchor" id="mi_shader__parti_volume">parti_volume</h5>
+  <pre>
+    color "parti_volume" (
+        integer         "mode",
+        color           "scatter",
+        scalar          "extinction",
+        scalar          "r",
+        scalar          "g1",
+        scalar          "g2",
+        scalar          "nonuniform",
+        scalar          "height",
+        scalar          "min_step_len",
+        scalar          "max_step_len",
+        scalar          "light_dist",
+        integer         "min_level",
+        boolean         "no_globil_where_direct",
+        array light     "lights")
+</pre>
+
+<dl>
+  <dt>mode<dd>in mode 0, the participating medium fills the
+  entire volume. In mode 1, there is only participation medium
+  below the given height, and there is clear air or vacuum above.
+
+  <dt>scatter<dd> is the color of the scattering medium. This determines the
+  color of the direct and indirect light that is scattered by the medium. It
+  also acts as a multiplier of the photon energy for the photons in the photon
+  volume map. Its dependency with the extintion coefficient is inverse.
+
+  <dt>extinction<dd> is the extinction coefficient of the medium.
+  It determines how much light is absorbed or scattered in the
+  medium. 0 means clear air or vacuum. The higher the coefficient,
+  the denser the medium (and the more photon scattering). Note that a high extinction
+  coefficient doesnt allow photons to enter deep into the volume, as
+  they are already scattered after a short distance.
+
+  <dt>r<br>g1<br>g2<dd> control scattering. If both
+  g1 and g2 are zero (the default), isotropic scattering is
+  modeled: all scattering directions have equal probability. This
+  is sometimes also called diffuse scattering. Anisotropic
+  reflection is modeled by a two-lobed scattering model. Each lobe
+  can be either backscattering ( <i>-1 &lt; g &lt;
+  0</i>), diffuse (isotropic, <i>g = 0</i>), or forward scattering
+  ( <i>0 &lt; g &lt;
+  1</i>). The first lobe is weighted by <i>r</i>, the second lobe
+  by <i>1 - r</i>.
+
+  <dt>nonuniform<dd> determines if the medium is homogeneous
+  (uniform density) or nonhomogeneous (cloud-like density
+  variation). It is a number between 0 and 1. A value of 0 makes
+  the medium is completely homogeneous and depends only on the
+  extinction parameter. A value of 1 creates a cloud-like Blinn
+  density variation. Values between 0 and 1 give a mix between the
+  two extremes.
+
+  <dt>height<dd> determines the height above which there is clear
+  air or vacuum if the mode parameter is 1.
+
+  <dt>min_step_len<br>max_step_len<dd> are used to determine the
+  step length for ray marching. Usually keep the min value at 10 percent
+  of max. The smaller the max is, the more accurately, though slowly,
+  the volume steps will be sampled for visibility. The same parameter
+  is used in
+  <i><a href="node23.html#mi_shader__parti_volume_photon">parti_volume_photon</a></i>
+  for volume photon lookup.
+
+  <dt>light_dist<dd> is used for optimization of the sampling of
+  area light sources. It is used if the area light source has the
+  optional lower sampling, as in for example
+<pre>
+    rectangle  0.5 0.0 0.0  0.0 0.0 0.5   10 10 3 2 2 
+</pre>
+
+  <dd>For efficiency, <i>parti_volume</i> always uses the lower
+  number of samples (here 2 2). This is usually sufficient since
+  the direct illumination is computed at many points along each ray
+  during ray marching. However, the higher number of samples (here
+  10 10) should be used near an area light source. The light_dist
+  parameter determines how far away from a light source the higher
+  number of samples have to be used.</p>
+
+  <dt>min_level<dd> is ignored (it is used by the corresponding
+  volume photon shader).</p>
+
+  <dt>no_globil_where_direct<dd> tells the shader to not calculate
+  global illumination in the volume effect but just the direct
+  illumination. The parameter is for optimization if such contribution
+  is not required. When set to 1 (on) the parameters relative to the
+  directionality of the scattering effect, <var>r</var>, <var>g1</var>, and 
+  <var>g2</var> are not taken into account for the indirect illumination, 
+  they are however evaluated for direct illumination.</p>
+
+  <dt>lights<dd> is an array of light instances. 
+  If no lights are specified then the light list 
+  in the geometry instance is used. If no instance light list is specified
+  then all lights in the scene are used.</p>
+</dl>
+
+  <h3>Transparent Material</h3>
+
+  <p><span class="depr">Deprecated</span> This is a material shader for a helper
+  enclosing surface of a participating medium or volume that is not a mental ray
+  <dfn>hull</dfn> object. It simply continues to trace the incoming ray in the
+  same direction without any interaction with the current object. Such a volume
+  container should be invisible itself.</p>
+
+  <a id="INDEX72"></a>
+<h5 class="anchor" id="mi_shader__transmat">transmat</h5>
+  <pre>
+    color "transmat" ()
+</pre>
+
+  <p>There are no parameters.</p>
+
+  <p><br />
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node21.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node23.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Surfaces: Surface List</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node211.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node213.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION210"></a>
+<h3>Surfaces: Surface List</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_SURFACE</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miSurface[ ]</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>int no_surfaces</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls, except where otherwise noted</td>
+</tr>
+</table>
+<pre>
+enum miSurface_type {
+        miSURFACE_GEOMETRIC,
+        miSURFACE_GEOMOTION,            /* geometric + motion vectors */
+        miSURFACE_TEXTURE_2D,           /* texture with/without seam compens */
+        miSURFACE_TEXTURE_3D,
+        miSURFACE_BUMP,                 /* bump */
+        miSURFACE_TEXBUMP_2D,           /* texture + bump */
+        miSURFACE_TEXBUMP_3D
+};
+
+typedef struct miSurface {
+        miApprox        approx;                 /* approx techn. for surface */
+        miApprox        disp_approx;            /* approx for disp. surface */
+        miGeoIndex      no_parms[miUV_DIM];     /* no of parameter values */
+        miGeoIndex      no_ctls;                /* no of control points */
+        miGeoIndex      no_specpnts;            /* no of special points */
+        miGeoIndex      scalar_idx;             /* surf_scalar list index */
+        miGeoIndex      specpnt_idx;            /* special points list index */
+        miGeoIndex      basis_idx[miUV_DIM];    /* index into basis list */
+        enum miSurface_type type;
+        miUshort        degree[miUV_DIM];       /* from bases, for GAP */
+        miUshort        ctl_dim;                /* control pnt dimension */
+        miUshort        spare[3];
+} miSurface;
+</pre>
+<p>A translator must provide: <tt>type</tt>, <tt>approx</tt>,
+<tt>disp_approx</tt>, <tt>ctl_dim</tt>, <tt>degree</tt>,
+<tt>no_parms</tt>, <tt>no_ctls</tt>, <tt>scalar_idx</tt>,
+<tt>basis_idx</tt>.<br />
+<br />
+A translator may provide: <tt>no_specpnts</tt>,
+<tt>specpnt_idx</tt>.<br />
+<br /></p>
+<p><b>type</b> must be one of the <tt>miSURFACE_</tt> constants.
+The 2D variants perform seam rewind correction, the 3D variants do
+not. All surfaces begin with either <tt>miSURFACE_GEOMETRIC</tt> or
+<tt>miSURFACE_GEOMOTION</tt>, optionally followed by one of the
+others for each texture space, beginning with space 0 up to a
+maximum of space 63. (Future versions may have a larger maximum, up
+to 255.)</p>
+<p><b>approx</b> is the approximation technique as described above,
+in the <tt>miFace</tt> description.</p>
+<p><b>disp_approx</b> is the approximation technique for the
+displaced surface, if a displacement shader is available.</p>
+<p><b>ctl_dim</b> is the number of scalars per control point:</p>
+<table class="table">
+<tr>
+<td></td>
+<td><tt>miSURFACE_GEOMETRIC</tt>, non-rational:</td>
+<td>3</td>
+</tr>
+<tr>
+<td></td>
+<td><tt>miSURFACE_GEOMETRIC</tt>, rational:</td>
+<td>4</td>
+</tr>
+<tr>
+<td></td>
+<td><tt>miSURFACE_GEOMOTION</tt>, non-rational:</td>
+<td>6</td>
+</tr>
+<tr>
+<td></td>
+<td><tt>miSURFACE_GEOMOTION</tt>, rational:</td>
+<td>7</td>
+</tr>
+<tr>
+<td></td>
+<td><tt>miSURFACE_TEXTURE_2D</tt></td>
+<td>2</td>
+</tr>
+<tr>
+<td></td>
+<td><tt>miSURFACE_TEXTURE_3D</tt></td>
+<td>3</td>
+</tr>
+<tr>
+<td></td>
+<td><tt>miSURFACE_BUMP</tt>:</td>
+<td>3</td>
+</tr>
+<tr>
+<td></td>
+<td><tt>miSURFACE_TEXBUMP_2D</tt>, non-rational:</td>
+<td>5</td>
+</tr>
+<tr>
+<td></td>
+<td><tt>miSURFACE_TEXBUMP_2D</tt>, rational:</td>
+<td>6</td>
+</tr>
+<tr>
+<td></td>
+<td><tt>miSURFACE_TEXBUMP_3D</tt>, non-rational:</td>
+<td>5</td>
+</tr>
+<tr>
+<td></td>
+<td><tt>miSURFACE_TEXBUMP_3D</tt>, rational:</td>
+<td>6</td>
+</tr>
+</table>
+<p><b>degree[0]</b> and <b>degree[1]</b> contains the degree of the
+surface in the U and V directions, respectively. This is used by
+GAP to cache the degree from the surface bases.</p>
+<p><b>no_parms[0]</b> and <b>no_parms[1]</b> are the lengths of the
+U and V parameter vectors, respectively.</p>
+<p><b>no_ctls</b> is the total number of control points for this
+surface. The number of scalars required in the scalar list is
+<var>no_ctls &middot; ctl_dim</var>.</p>
+<p><b>no_specpoints</b> is the number of special points to be
+included in the tessellation.</p>
+<p><b>scalar_idx</b> is the index of the first scalar in the
+surface scalar list (also anchored in the object, see above). The
+scalar list for one surface consists of the U parameter vector,
+followed by the V parameter vector, followed by the geometric
+control points (all X first, then all Y, then all Z, then all W,
+then all motion X, then all motion Y, then all motion Z, if
+present), followed by the texture and bump control points in the
+same XYZW order if present.</p>
+<p><b>specpnt_idx</b> is the index of the first special point in
+the special points list (anchored in the object) to use.</p>
+<p><b>basis_idx[0]</b> and <b>basis_idx[1]</b> are indices for the
+bases in the basis list (anchored in the object) to use, separate
+for the U and V parameter directions.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node211.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node213.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

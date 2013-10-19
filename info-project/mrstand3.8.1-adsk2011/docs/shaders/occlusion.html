@@ -1,0 +1,426 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Occlusion</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node7.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node9.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION6"></a>
+
+<h2>Occlusion</h2>
+
+<h3>Ambient Occlusion</h3>
+
+<p>
+  Occlusion is a fast and simple method to simulate the effects of
+  global illumination. Occlusion is the extent to which the area
+  above a point is covered by other geometry. This is achieved by
+  tracing a number of probe rays inside the hemispherical area
+  above the point and testing to what extent this region is
+  blocked.
+
+  <p>Typical use of this shader is <i>ambient occlusion</i>,
+  where the shader is used to scale the contribution of ambient lighting
+  (which in turn may come from a diffuse environment map shader). For this use
+  the shader should be assigned to the <i>ambient</i> parameters of materials
+  like <i><a href="node8.html#INDEX29">mib_illum_phong</a></i>.
+
+  <p>Another use of occlusion is <i>reflective occlusion</i>, where
+  the shader is used to scale the contribution from a reflection
+  map. For this use, the shader is generally plugged into an
+  environment or reflection shader slot of a material, and the
+  actual environment map image is plugged into the <i>bright</i>
+  parameter. An alternative is to allow the return value of the
+  occlusion shader to modulate the strength attribute of a
+  reflection map shader.
+
+  <p>A third use is to create files for external compositing, where
+  the occlusion shader is assigned as the primary material shader on
+  every object in the scene. The output can be used to modulate other
+  render passes to achieve proper compositing in post-production.</p>
+
+  <p>The shader may also be used as a <em>light shader</em>. The light
+  source must be an area light of the <em>user</em> type. This generates
+  an "ambient" lightsource with built in occlusion.</p>
+
+  <p>This shader only depends on base ray tracing features provided by
+  mental ray, and does neither use nor benefit from advanced computations
+  like final gathering or global illumination.</p>
+
+<a id="INDEX35"></a>
+<h5 class="anchor" id="mi_shader__mib_amb_occlusion">mib_amb_occlusion</h5>
+  <pre>
+    color "mib_amb_occlusion" (
+        integer         "samples"            default 16,
+        color           "bright"             default 1 1 1 1,
+        color           "dark"               default 0 0 0 0,
+        scalar          "spread"             default 0.8,
+        scalar          "max_distance"       default 0,
+        boolean         "reflective"         default off,
+        integer         "output_mode"        default 0,
+        boolean         "occlusion_in_alpha" default off
+        # Version 2 parameters
+        scalar          "falloff"            default 1.0,
+        integer         "id_inclexcl"        default 0,
+        integer         "id_nonself"         default 0,
+    )
+    version 2
+    apply texture, light
+</pre>
+
+<dl>
+  <dt>samples<dd> is the number of probe rays that will be sent.
+  More rays yield a smoother image. Occlusion mapping will never be
+  as smooth as well-tuned final gathering or photons, but is
+  computationally cheap.
+
+  <dt>bright<dd> is the color used when no occluding objects are
+  found.
+  <dt>dark<dd> is the color used when total occlusion
+  occurs. In most practical cases it is set to black. For partial
+  occlusion, a gradual mix between the <var>bright</var> and
+  <var>dark</var>colors is returned.
+
+  <dt>spread<dd> defines how large an area of the hemisphere
+  above the point is sampled. The value defines a cone around the
+  sampling direction which is narrower for small values and wider
+  for large values. It ranges from 0.0, for a cone that is a single
+  direction, to 1.0 for a cone that covers the entire hemisphere.
+
+  <dt>max_distance<dd> is the range within which geometry is
+  probed. If it is zero, the entire scene is sampled. If it is a
+  nonzero value, only objects within this distance will be
+  considered (which makes sampling much faster) where objects
+  outside this range do not occlude at all and objects that are
+  closer occlude more strongly as the distance approaches zero.
+
+  <dt>reflective<dd> if turned off sampling is performed in a cone
+  area based around the surface normal. If <i>reflective</i> is on,
+  the samples are instead distributed around the reflection
+  direction. This generates <i>reflective occlusion</i> which can
+  enhance the realism of reflection mapping greatly.
+
+  <dt>output_mode<dd> defines what the returned color is: 0
+  enables standard occlusion behaviour; 1 enables environment
+  sampling. This changes the behavior of the shader slightly. As
+  directions are probed for occlusion, the current environment is
+  also sampled and weighted based on how occluded that particular
+  direction is. In mode 1 the output of the function is the
+  gathered weighted environment colors multiplied by the
+  <var>bright</var> color, and as a convenience the <var>dark</var>
+  color is added.
+  <dd>
+  Setting <i>output_mode</i> to 2 enables bent normals. The
+  average unoccluded world space normal direction is calculated and
+  returned encoded as a color where red is x, green is y and blue
+  is z. Setting <i>output_mode</i> to 3 is the same as 2 but the
+  normals are encoded in the camera coordinate space instead.
+
+  <dt>occlusion_in_alpha<dd> if turned on, the scalar occlusion
+  value is put in the returned colors alpha component, regardless
+  of what <i>output_mode</i> is set to. The other color components
+  remain as before.
+
+  <dt>falloff<dd> only matters when <var>max_distance</var> is
+  nonzero and defines the speed at which the occlusion is attenuated
+  by distance. Technically, it is a power function applied to the 
+  normalized distance from 0 to <var>max_distance</var>. The default value 
+  of 1.0 is a linear falloff. Values below 1.0 makes the falloff more 
+  rapid. Practically this means that for lower values occlusion is 
+  stronger for short distances (in small corners and crevices) and 
+  softer over larger distances.
+  
+  <dt>id_inclexcl<dd> defines an object instance label number to be
+  included (or excluded) from being considered occluding by the shader.
+  Set to 0 the parameter has no effect. A positive integer means that
+  only object instances with a label that <em>matches</em> this number
+  will cause occlusion. A negative reverses the condition and includes
+  all object instances <em>except</em> those with a matching label.
+  
+  <dt>id_nonself<dd> works similar to <var>id_inclexcl</var> in that it is
+  an object instance label determining which objects do not self-occlude.
+  Set to 0 it has no effect. Set to a positive integer will
+  prevent any object with that label from occluding other objects
+  with the same label. This is useful for "matte" or "stand-in"
+  objects that represents existing geometry in a photographic background
+  since any inter-occlusion between such objects are already present in
+  the background photo. Simple exclusion by <var>id_inclexcl</var> cannot be
+  used in this case because occlusion cast by "stand-in" background
+  geometry onto foreground geometry and vice versa is both desired -
+  only background-to-background occlusion needs to be prohibited.
+</dl>
+
+<h3>Fast Occlusion</h3>
+
+<p>
+  This shader is an alternative version to
+  <i><a href="#mi_shader__mib_amb_occlusion">mib_amb_occlusion</a></i>
+  with similar funcionality, but it is fully utilizing the ambient occlusion
+  facilities built into mental ray. This offers optimal rendering performance
+  and the possibility to benefit from the <em>ambient occlusion cache</em>,
+  if enabled.
+<p>
+  Note, this shader can not be used as a light shader.</p>
+
+<h5 class="anchor" id="mi_shader__mib_fast_occlusion">mib_fast_occlusion</h5>
+  <pre>
+    color "mib_fast_occlusion" (
+        integer "samples"            default 0,
+        color   "bright"             default 1 1 1 1,
+        color   "dark"               default 0 0 0 0,
+        scalar  "spread"             default 0,
+        scalar  "spread_exp"         default 1,
+        scalar  "max_distance"       default 0,
+        boolean "reflective"         default off,
+        integer "output_mode"        default 0,
+        boolean "occlusion_in_alpha" default off,
+        integer "cache_points"       default 0
+    )
+    version 1
+    apply texture
+</pre>
+
+<dl>
+  <dt>samples<dd> is the number of probe rays that will be sent.
+  More rays yield a smoother image. If the ambient occlusion cache is enabled,
+  this attribute will be ignored: the number of points to use for cache
+  interpolation is controlled by the <em>cache_points</em> attribute, see below.
+
+  <dt>bright<dd> is the color used when no occluding objects are
+  found and <b>dark</b> is the color used when total occlusion
+  occurs. In most practical cases it is set to black. For partial
+  occlusion, a gradual mix between the two colors is returned.
+
+  <dt>spread<dd> defines how large an area of the hemisphere
+  above the point is sampled. Unlike the
+  <i><a href="occlusion.html#mi_shader__mib_amb_occlusion">mib_amb_occlusion</a></i>
+  shader, this value is the cosine of the angle between the normal and the
+  maximum direction. Its value ranges from 0.0 for a cone that covers the
+  entire hemisphere to 1.0 for a cone that is a single direction.
+
+  <dt>spread_exp<dd>is the exponent of the spreading angle. It controls how
+  the rays shot from the sampling point concentrate around the normal.
+  A higher value means more density around the normal. <br><em>Currently
+  not supported by mental ray but provided for future extensions.</em>
+
+  <dt>max_distance<dd> is the range within which geometry is
+  probed. If it is zero, the entire scene is sampled. If it is a
+  nonzero value, only objects within this distance will be
+  considered (which makes sampling much faster) where objects
+  outside this range do not occlude at all and objects that are
+  closer occlude more strongly as the distance approaches zero.
+
+  <dt>reflective<dd> if turned off sampling is performed in a cone
+  area based around the surface normal. If <var>reflective</var> is on,
+  the samples are instead distributed around the reflection
+  direction. This generates <i>reflective occlusion</i> which can
+  enhance the realism of reflection mapping greatly.
+
+  <dt>output_mode<dd> defines what the returned color is: 0
+  enables standard occlusion behaviour; 1 enables environment
+  sampling. This changes the behavior of the shader slightly. As
+  directions are probed for occlusion, the current environment is
+  also sampled and weighted based on how occluded that particular
+  direction is. In mode 1 the output of the function is the
+  gathered weighted environment colors multiplied by the
+  <var>bright</var> color, and as a convenience the <var>dark</var>
+  color is added.
+  <dd>
+  Setting <var>output_mode</var> to 2 enables bent normals. The
+  average unoccluded world space normal direction is calculated and
+  returned encoded as a color where red is x, green is y and blue
+  is z. Setting <var>output_mode</var> to 3 is the same as 2 but the
+  normals are encoded in the camera coordinate space instead.
+
+  <dt>occlusion_in_alpha<dd> if turned on, the scalar occlusion
+  value is put in the returned colors alpha component, regardless
+  of what <var>output_mode</var> is set to. The other color components
+  remain as before.
+
+  <dt>cache_points<dd> is used to control the number of ambient occlusion points
+  to lookup for interpolation in the ambient occlusion cache. If the latter is
+  not enabled this attribute will be ignored. A value of 0 means the number
+  of ambient occlusion points will be determined by mental ray settings, any
+  value greater then 0 will override the setting for the current object.
+  Values smaller than 64 give more precise results but artifacts can appear.
+  Higher values tend to produce a blurry image.
+</dl>
+
+<h3>Ambient Occlusion using Final Gathering</h3>
+
+  <p>The mental ray final gathering algorithm always computes a scalar
+  occlusion value. This utitily shader simply returns this value as a
+  grayscale result.</p>
+
+<h5 class="anchor" id="mi_shader__mib_fg_occlusion">mib_fg_occlusion</h5>
+<pre>
+      color "mib_fg_occlusion" (
+	  color "result_when_fg_is_off" default 1 1 1 1
+      )
+      version 1
+</pre>
+
+<dl>
+  <dt>result_when_fg_is_off<dd> becomes the return value when final gathering
+  is off. When final gathering is on, the occlusion value is returned as a
+  grayscale value, and the parameter is never evaluated at all or used in any way. 
+  <dd>
+  Hence, connecting <i><a href="#mi_shader__mib_amb_occlusion">mib_amb_occlusion</a></i>
+  to the <var>result_when_fg_is_off</var> parameter, the result will be occlusion
+  calculated by final gathering when it is on, and occlusion calculated by 
+  <i><a href="#mi_shader__mib_amb_occlusion">mib_amb_occlusion</a></i> when
+  final gathering is off.
+</dl>
+
+<h3>Bent Normals</h3>
+  
+  <p>"Bent normal" is a term used for the average
+  un-occluded direction vector from a surface point. For completely
+  un-occluded surfaces this is the same as the normal vector, but for
+  surfaces occluded by other geometry it points in the direction in which
+  the least amount of occluding geometry is found. Bent normals are used
+  as an acceleration technique for ambient occlusion, allowing very
+  fast rendering that look like global illumination or
+  final gathering lit by an environment at a small fraction of the
+  rendering time.
+  
+  <p>Ambient occlusion as done by the
+  <i><a href="#mi_shader__mib_amb_occlusion">mib_amb_occlusion</a></i> shader
+  is a ray tracing technique that casts potentially large numbers of probe rays
+  to determine to which extent a surface point is occluded. The speed of this
+  operation depends on the number of rays (<var>samples</var>), the reach of
+  the rays (<var>max_distance</var>) and the complexity of the scene.
+
+  <p>When rendering an animation (or multiple views of the same scene), 
+  any object that does not move, does not change shape, or has no moving 
+  occluding object nearby will yield the same result for every frame.
+  Therefore one can "bake" (render to a file) the ambient occlusion 
+  solution <em>once</em> in a first rendering pass, and re-use this result 
+  in subsequent rendering passes for any number of frames, with potentially 
+  huge performance gains. If one also "bakes" the average un-occluded
+  direction (the bent normal) to a texture, the entire process of lighting
+  the object based on an environment is moved to this second rendering pass,
+  without having to trace a single ray.
+
+  <p>By setting the <var>output_mode</var> parameter to 2, 3, or 4 on the
+  ambient occlusion shader
+  <i><a href="#mi_shader__mib_amb_occlusion">mib_amb_occlusion</a></i>,
+  bent normals are returned with the vector being encoded as a color where
+  x is red, y is green, and z is blue. If <var>occlusion_in_alpha</var> is
+  enabled, the scalar occlusion value is returned in the alpha channel.
+  This color can be baked into a texture, for example with the help of
+  <i><a href="node15.html#mi_shader__mib_lightmap_write">mib_lightmap_write</a></i>
+  by connecting <i><a href="#mi_shader__mib_amb_occlusion">mib_amb_occlusion</a></i>
+  to its <var>input</var> parameter and rendering.
+
+  <p>Once the texture file is generated,
+  <i><a href="#mi_shader__mib_bent_normal_env">mib_bent_normal_env</a></i>
+  can be assigned to a surface shader (for example to the <var>ambient</var>
+  parameter of
+  <i><a href="node8.html#mi_shader__mib_illum_phong">mib_illum_phong</a></i>
+  to look up an environment to light the object based on the baked bent normal
+  texture, which is placed in the <var>bent_normals</var> parameter of
+  <i><a href="#mi_shader__mib_bent_normal_env">mib_bent_normal_env</a></i>.
+
+  <p>This allows an extremely low-overhead simulation of global
+  illumination-like effects for rigid objects and is especially suitable
+  for animations. The technique does not work on deformable objects since
+  their occlusion, shape, and normals can vary from frame to frame. For
+  deformable objects, it is better to apply the occlusion shader directly,
+  without baking its output.</p>
+
+<h5 class="anchor" id="mi_shader__mib_bent_normal_env">mib_bent_normal_env</h5>
+<pre>
+    color "mib_bent_normal_env" (
+        color           "bent_normals"        default 0 0 0 1,
+        boolean         "occlusion_in_alpha"  default on,
+        color           "occlusion"           default 1 1 1,
+        scalar          "strength"            default 0.2,
+        shader          "environment",
+        integer         "coordinate_space"    default 2,
+        integer         "env_samples"         default 1,
+        scalar          "samples_spread"      default 0.0,
+        transform       "matrix"              default 1 0 0 0
+                                                      0 1 0 0
+                                                      0 0 1 0
+                                                      0 0 0 1
+    )
+  </pre>
+
+<dl>
+  <dt>bent_normals<dd> is the bent normal data output by the occlusion 
+  shader. It should be baked to the object. This is usually attached
+  to a node that does the texture lookup such as
+  <i><a href="node6.html#mi_shader__mib_texture_lookup">mib_texture_lookup</a></i>.
+  The texture mapping used for generating the texture must match with
+  the one used for lookup.
+  
+  <dt>occlusion_in_alpha<dd> specifies whether the scalar occlusion value
+  is already baked into the alpha channel of the "bent normals" pass.
+  This uses slightly less memory but many "bake to texture" functions
+  of OEM integrations of mental ray do not bake the alpha channel.
+  
+  <dt>occlusion<dd> is the separate occlusion channel, to be used if it was 
+  not already baked into the alpha channel.
+  
+  <dt>strength<dd> is a simple scalar multiplier for the effect.
+  
+  <dt>environment<dd> is the environment shader to look up. If none is
+  provided, the environment from the material is used. To avoid image
+  noise, it is often desirable to use a separate, highly blurred
+  environment map with no high-resolution detail.
+
+  <dt>coordinate_space<dd> defines the coordinate space of the bent normal:
+
+  <ul>
+  <li> 0 is "unmodified". The bent normal data is in internal space.
+  <li> 1 is "by matrix". The bent normal data is transformed with the 
+  	passed transformation matrix.
+  <li> 2 is world space.
+  <li> 3 is camera space. 
+  <li> 4 is object space. This is often the most useful mode. If the
+  	map is both created and used in object space, it will automatically
+  	follow the object as it moves through an animation.
+  </ul>
+
+  <dd>The coordinate space numbers match the output_mode parameter values 
+  of the ambient occlusion shader, where 2 is world space, 3 is camera
+  space, and 4 is object space.
+
+  <dt>env_samples<dd> is the number of samples to take from the environment
+  map.  Normally, a highly-blurred environment map is used where only one
+  sample is sufficient, but it is possible to multi-sample the environment
+  map by setting a non-zero value.
+
+  <dt>sample_spread<dd> is the spread factor for each individual environment
+  sample.  The range is from 0.0 (infinitely thin rays -- a single sample)
+  to 1.0 (the entire hemisphere is sampled).
+
+  <dt>matrix<dd> is an explicit transformation matrix applied to the normal
+  data when coordinate_space is 1. This allows arbitrary transformations.
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node7.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node9.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

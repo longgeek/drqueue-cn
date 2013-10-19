@@ -1,0 +1,1131 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :    mtarpini
+# Purpose:	Ceramic Material
+#
+# ---------------------------------------------
+# Exports:
+#
+# - adsk_Shd_Lightmap		(hidden)
+# - adsk_Shd_Ceramic        (hidden)
+# - adsk_Shd_SSS			(hidden)
+# - adsk_Mtl_Ceramic
+#
+#
+# Imports:
+#
+# - adsk_Mtl_Spider
+# - adsk_Utility_shaders
+# - 3dsmaxshaders
+#
+# ---------------------------------------------
+# Description:
+#
+# Basically the workflow for the phen class implementation looks like this:
+#
+#   - a first low level phen, the appearance shader.
+#
+#   - a controller shader that takes the UI specs and outputs values to drive
+#     the exposed parameters in the appearence shader.
+#
+#   - the actual material class phen which encapsulates the above shaders.
+#
+#
+# ---------------------------------------------
+# History:
+#
+# June 20, 2007 - mtarpini, Testing shader
+# June 21, 2007 - mtarpini, Appearence phen
+# June 21, 2007 - mtarpini, Lightmap phen
+# June 22, 2007 - mtarpini, Material phen
+# Oct 22, 2007 - mtarpini, integrating with Ceramic
+# Nov 01, 2007 - mtarpini, mia_material_x instead of mia_material, 
+# Nov 05, 2007 - mtarpini, diffuse and specular components. bump changes.
+# Nov 05, 2007 - mtarpini, GUI updated
+# Nov 13, 2007 - mtarpini, RoundCorners and AmbientOcclusion checkboxes via spider
+# Nov 19, 2007 - mtarpini, 'appearence' phen has now a 'struct' output, this to work with mia_material and photon slot
+# Dec 17, 2007 - mtarpini, SSS redesigned
+# Feb 06, 2008 - laperrr, Updated UI name and Tooltips
+# Jan 02, 2009 - mtarpini, nodevisibility support
+#
+#****************************************************************************
+
+min version "3.6"
+
+
+
+
+
+#---------------------------------------------------------------------------------
+# adsk_Shd_Lightmap (encapsulate lightmap functions)
+#---------------------------------------------------------------------------------
+declare phenomenon
+	struct
+	{
+		#----------------------------------
+        vector			"point",
+        vector			"normal"
+
+    }	"adsk_Shd_Lightmap"
+	(
+		#----------------------------------
+		color texture	"lightmap",
+		color texture	"depthmap",
+
+		#----------------------------------
+		scalar			"lightmap_gamma",
+		string			"lightmap_group",
+		scalar			"lightmap_size",
+		boolean			"indirect",
+		scalar			"scatter_bias",
+		
+		#----------------------------------		
+		integer			"switcher",
+		
+		#----------------------------------
+		integer			"mode",
+		array light		"lights"
+	)
+
+	apply lightmap
+	version 1
+	
+	
+	
+	#------------------------------------------------------------------------
+	# Lambert Gamma
+	#------------------------------------------------------------------------
+    shader "lm_sample__instance" "misss_lambert_gamma" 
+    (
+        "ambient"                  0 0 0,
+        "ambience"                 1 1 1,
+        "diffuse"                  1 1 1,
+        "indirect"                 = interface "indirect",
+        "diffuse_curve"            = interface "lightmap_gamma",
+        "mode"                     = interface "mode",
+        "lights"                   = interface "lights"
+    )
+	
+    #------------------------------------------------------------------------
+	# Lightmap write
+	#------------------------------------------------------------------------
+    shader "lm_write__instance"   "misss_lightmap_write"
+    (
+        "lightmap"                 = interface "lightmap",
+        "depthmap"                 = interface "depthmap",       
+        "lightmap_group"           = interface "lightmap_group",
+        "lightmap_size"            = interface "lightmap_size",
+        "scatter_bias"             = interface "scatter_bias",
+        "input"                    "lm_sample__instance"
+    )
+	
+    #------------------------------------------------------------------------
+	# Lightmap switcher	
+	#------------------------------------------------------------------------
+	shader "lightmapswitcher__instance" "adsk_Utility_LightmapSwitcher"
+	(
+		#-------------------------------------
+		# In
+		#-------------------------------------
+		"lightmap_shader" "lm_write__instance",
+		"switcher" = interface "switcher"
+	)
+	
+	
+	#------------------------------------------------------------------------
+	# Phenomenon Root
+	#------------------------------------------------------------------------
+	root = "lightmapswitcher__instance"
+
+
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Lightmap"	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Lightmap", "category" "Material"
+		, "hidden"
+		)
+		
+		#-------------------------------------
+		# Lights and Mode Parameters
+		#-------------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+	}
+end declare
+#---------------------------------------------------------------------------------
+# <- end, declare phenomenon
+#---------------------------------------------------------------------------------
+
+
+
+
+#---------------------------------------------------------------------------------
+# adsk_Shd_Ceramic (appearance phen)
+#---------------------------------------------------------------------------------
+declare phenomenon
+	struct 
+    {
+        color   "result",
+		color   "diffuse_result",
+		color   "spec_result",
+		color   "refl_result"
+    } 
+    "adsk_Shd_Ceramic"
+    (
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        struct "m"
+        {    
+            #----------------------------------
+            color "diffuse_color",
+
+            #----------------------------------
+            scalar "diffuse_roughness",
+
+            #----------------------------------
+            scalar "reflectivity",
+            scalar "refl_gloss",
+			scalar "brdf_curve",
+
+            #----------------------------------
+            integer "bump_enable",
+            scalar  "bump_amount",
+            shader  "bump_map",
+
+            #----------------------------------    
+            integer "pattern_enable",
+            scalar  "pattern_amount",
+			shader  "pattern_map"
+        },
+
+        #-------------------------------------
+        # Ambient Occlusion 
+        #-------------------------------------
+        struct "o"
+        {
+            #----------------------------------
+            boolean  "ao_on",
+            integer  "ao_samples",
+            scalar   "ao_distance",
+			integer  "ao_do_details"
+        },
+        
+        #-------------------------------------
+        # Round Corners
+        #-------------------------------------
+        struct "r"
+        {
+			#----------------------------------
+			scalar  "roundcorners_radius",
+			boolean "roundcorners_allow_different_materials"              
+         },
+         
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------
+        struct "p"
+        {
+			#----------------------------------
+			integer "reflection_glossy_samples",
+			integer "refl_depth"
+        },
+
+        #-------------------------------------
+		# Internals ( Unit Scalable Parameters and GBufferID)
+        #-------------------------------------
+        struct "k"
+        {
+            #----------------------------------
+	      	vector "noise_tiling"
+        },
+
+        #----------------------------------
+        # Lights and Mode Parameters
+        #----------------------------------
+        integer "mode",
+        array light "lights"
+    )
+
+    apply material, photon, shadow
+    version 1
+    
+    
+	
+	
+	
+    #------------------------------------------------------------------------
+	# -> begin Reflection switcher  ###########################################
+    #------------------------------------------------------------------------    
+    #------------------------------------------------------------------------
+	# Dummy, White
+    #------------------------------------------------------------------------    
+    shader "whitecolor__instance" "adsk_Utility_ColorState" 
+    (
+        "the_color" 1 1 1 1
+    )        
+    #------------------------------------------------------------------------
+    # Shaders Switcher (utility)
+    #------------------------------------------------------------------------        
+    shader "reflect_switcher__instance" "adsk_Utility_Switch8Shader" (
+        "switcher" = interface "m.pattern_enable",
+        "type" 0,
+        "shader_1" "whitecolor__instance",
+        "shader_2" = interface "m.pattern_map"
+    )
+    #------------------------------------------------------------------------
+    # <- end Refl_map switcher ##############################################
+    #------------------------------------------------------------------------    
+    
+        
+	
+    #------------------------------------------------------------------------
+    # -> begin Bump    #########################################################
+    #------------------------------------------------------------------------    
+    #------------------------------------------------------------------------
+	# Dummy, Black
+    #------------------------------------------------------------------------    
+    shader "blackcolor__instance" "adsk_Utility_ColorState" 
+    (
+        "the_color" 0 0 0 0
+    )
+    #------------------------------------------------------------------------
+    # Soft Bump
+    #------------------------------------------------------------------------ 
+    shader "bump_wavy" "adsk_Utility_Noise_Tweakable"
+    (
+        "noise_size" 0.25,        
+        "noise_color1" 0 0 0 1,
+        "noise_color2" 1 1 1 1,
+        "low" 0.0,
+        "high" 1.0,
+		"tiling" = interface "k.noise_tiling",
+		"angle" 0 0 1.5708
+    )
+    #------------------------------------------------------------------------
+    # Shaders Switcher (utility)
+    #------------------------------------------------------------------------
+	shader "bump_switcher__instance" "adsk_Utility_Switch8Shader" 
+	(
+        "switcher" = interface "m.bump_enable",
+        "type" 2,
+        "shader_1" "blackcolor__instance",
+        "shader_2" "bump_wavy",
+        "shader_3" = interface "m.bump_map"
+    )
+    #------------------------------------------------------------------------
+	# Bump Shader
+    #------------------------------------------------------------------------
+	shader "bump__instance" "adsk_Utility_Mix3Bump"
+    (
+		"bump_1" "bump_switcher__instance",
+		"factor_1" = interface "m.bump_amount", 
+    )    
+	shader "bump_vector__instance" "adsk_Utility_Color_to_Float3"
+	(
+		"the_color" = "bump__instance"
+	)
+    #------------------------------------------------------------------------
+    # <- end Bump ###########################################################
+    #------------------------------------------------------------------------
+    
+	
+	
+	#------------------------------------------------------------------------
+	# -> begin Pattern (plus RoundCorners) ##################################
+	#------------------------------------------------------------------------	
+	#------------------------------------------------------------------------
+	# Switcher
+	#------------------------------------------------------------------------		
+	shader "pattern_switcher__instance" "adsk_Utility_Switch8Shader" 
+	(
+		"switcher" = interface "m.pattern_enable",
+		"type" 2,
+		"shader_1" "blackcolor__instance",
+		"shader_2" = interface "m.pattern_map"
+	)
+	#------------------------------------------------------------------------	
+	# Round Corners
+	#------------------------------------------------------------------------	
+	shader "roundcorners__instance" "mia_roundcorners"
+	(
+		"radius" = interface "r.roundcorners_radius",
+		"allow_different_materials" = interface "r.roundcorners_allow_different_materials"
+	)	
+	#------------------------------------------------------------------------	
+	# Bump Shader (from color to vector)
+	#------------------------------------------------------------------------	
+	shader "mix2bump__instance" "adsk_Utility_Mix3Bump"
+	(
+		"bump_1" "roundcorners__instance",
+		"factor_1" 1.0,
+		
+		"bump_2" "pattern_switcher__instance",
+		"factor_2" = interface "m.pattern_amount"
+	)
+	shader "overall_bump_vector__instance" "adsk_Utility_Color_to_Float3"
+	(
+		"the_color" = "mix2bump__instance"
+	)	
+	#------------------------------------------------------------------------
+	# <- end Pattern ########################################################
+	#------------------------------------------------------------------------
+    
+    #------------------------------------------------------------------------
+    # Visibility Track Support
+    #------------------------------------------------------------------------
+	shader "node_visibility__instance" "adsk_Utility_NodeVisibility" 
+	(
+		"input" 1 1 1 1, 		#this is controlled internally
+		"mode" 0
+	)
+	
+ 
+	
+    #------------------------------------------------------------------------    
+    #------------------------------------------------------------------------
+    # Arch & Design Shader (Main Shader)
+    #------------------------------------------------------------------------
+	shader "mia_material__instance" "mia_material_x"
+    (
+        #----------------------------------
+        "diffuse_weight" 1.0,
+        "diffuse" =							interface "m.diffuse_color",
+        "diffuse_roughness" =				interface "m.diffuse_roughness",
+
+        #----------------------------------
+        "reflectivity" =					interface "m.reflectivity",
+        "refl_color" =						"reflect_switcher__instance",
+        "refl_gloss" =						interface "m.refl_gloss",
+        "refl_gloss_samples" =				interface "p.reflection_glossy_samples",
+		"refl_interpolate" off,
+        "refl_hl_only" off,
+        "refl_is_metal" off,
+
+        #----------------------------------
+        "transparency" 0.0,
+        "refr_color" 1 1 1 0,
+        "refr_gloss" 1,
+        "refr_ior" 1.4,
+        "refr_gloss_samples" 8,
+        "refr_interpolate" off,
+        "refr_translucency" off,
+        "refr_trans_color" 0.7 0.6 0.5 0,
+        "refr_trans_weight" 0.5,
+
+        #----------------------------------
+        "anisotropy" 1.0,
+        "anisotropy_rotation" 0.0,
+        "anisotropy_channel" -1,
+
+        #----------------------------------
+        "brdf_fresnel" off,
+        "brdf_0_degree_refl" 0.1,
+        "brdf_90_degree_refl" 1.0,
+		"brdf_curve" = interface "m.brdf_curve",
+        "brdf_conserve_energy" on,
+
+        #----------------------------------
+        "intr_grid_density" 2,
+        "intr_refl_samples" 2,
+        "intr_refl_ddist_on" off,
+        "intr_refl_ddist" 0.0,
+        "intr_refr_samples" 2,
+        "single_env_sample" off,
+
+        #----------------------------------
+        "refl_falloff_on" off,
+        "refl_falloff_dist" 0.0,
+        "refl_falloff_color_on" off,
+        "refl_falloff_color" 0.0 0.0 0.0,
+        "refl_depth" =						interface "p.refl_depth",
+		"refl_cutoff" 0.0,
+		
+        "refr_falloff_on" off,
+        "refr_falloff_dist" 0.0,
+        "refr_falloff_color_on" off,
+        "refr_falloff_color" 0.0 0.0 0.0,
+        "refr_depth" 5,
+		"refr_cutoff" 0.0,
+
+        #----------------------------------
+        "indirect_multiplier" 1,
+        "fg_quality" 1,
+        "fg_quality_w" 1,
+
+        #----------------------------------
+        "ao_on"  =							interface "o.ao_on",
+        "ao_samples"  =						interface "o.ao_samples",
+        "ao_distance"  =					interface "o.ao_distance",
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0.0 0.0 0.0,
+        "ao_do_details"  =					interface "o.ao_do_details",
+
+        #----------------------------------
+        "thin_walled" off,
+        "no_visible_area_hl" on,
+        "skip_inside_refl" on,
+        "do_refractive_caustics" off,
+        "backface_cull" off,
+		"propagate_alpha" on,
+		
+        "hl_vs_refl_balance" 1,
+        "cutout_opacity" =					"node_visibility__instance",
+        "additional_color" 0.0 0.0 0.0,
+
+        #----------------------------------
+        "no_diffuse_bump" on,
+
+        #----------------------------------
+		"mode" = interface "mode",
+		"lights" =	interface "lights",
+		
+        #----------------------------------
+        "bump_mode" 1, 
+        "overall_bump" =					"overall_bump_vector__instance",
+        "standard_bump" =					"bump_vector__instance",
+        
+        #----------------------------------
+        "multiple_outputs" off
+
+    )#end shader
+    
+    
+	#------------------------------------------------------------------------
+	# Phenomenon Root
+	#------------------------------------------------------------------------
+	root = "mia_material__instance"
+
+
+
+
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Ceramic"	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Ceramic", "category" "Material"
+		 , "hidden"
+		)
+
+        control "lightmap" "color texture" ("uiName" "Lightmap", "writableTexture", "hidden")
+        control "depthmap" "color texture" ("uiName" "Depthmap", "writableTexture", "hidden")
+        		
+		#-------------------------------------
+		# Lights and Mode Parameters
+		#-------------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden", "nonConnectable")
+		control "mode" "integer" ("hidden", "nonConnectable")
+	}
+
+end declare #
+#---------------------------------------------------------------------------------
+# <- end, declare phenomenon
+#---------------------------------------------------------------------------------
+
+
+
+
+
+#---------------------------------------------------------------------------------
+# adsk_Shd_SSS (sub surface scattering shader)
+#---------------------------------------------------------------------------------
+declare phenomenon
+	color
+    "adsk_Shd_SSS"
+	(        
+		#-------------------------------------
+        color texture	"lightmap",
+        color texture	"depthmap",
+ 
+		struct "m"
+		{
+			color "diffuse_color",
+			color "mia_diffuse_result",
+			color "mia_spec_result",
+			color "mia_refl_result"
+		},
+		       
+		#-------------------------------------
+		# Sub Surface Scattering 
+		#-------------------------------------
+		struct "s"
+		{
+			#----------------------------------
+            color   "front_sss_color",
+            scalar  "front_sss_weight",
+            scalar  "front_sss_radius",
+            color   "mid_sss_color",
+            scalar  "mid_sss_weight",
+            scalar  "mid_sss_radius",
+            color   "back_sss_color",
+            scalar  "back_sss_weight",
+            scalar  "back_sss_radius",
+            scalar  "back_sss_depth"       					
+		},
+	    
+		#-------------------------------------
+	    # SSS Lightmap
+	    #-------------------------------------
+  		struct "l"
+  		{
+  			#----------------------------------
+            boolean "screen_composit",
+            scalar  "scale_conversion",
+            scalar  "falloff",
+            integer "sss_samples"
+	    }
+	)
+	apply texture
+	version 1	   
+	    
+	    
+	    
+	
+	
+	#------------------------------------------------------------------------
+	# -> begin Diffuse and Specular components ##############################
+	#------------------------------------------------------------------------
+	#------------------------------------------------------------------------
+	# Diffuse component
+	#------------------------------------------------------------------------	
+	shader  "mia_diffuse__instance" "adsk_Utility_ColorPassThrough"
+	(
+		"color" = interface "m.mia_diffuse_result"
+	)
+    #------------------------------------------------------------------------
+	# Add together Specular and Reflection components for SSS speculars
+    #------------------------------------------------------------------------    
+	shader  "mia_spec__instance" "adsk_Utility_ColorPassThrough"
+	(
+		"color" = interface "m.mia_spec_result"
+	)
+	shader  "mia_refl__instance" "adsk_Utility_ColorPassThrough"
+	(
+		"color" = interface "m.mia_refl_result"
+	)
+	shader "mia_specular__instance" "adsk_Utility_Mix2Shader" 
+    (
+		"shader1" "mia_spec__instance",
+		"shader2" "mia_refl__instance",
+		"mixing_mode" 1,
+		"mixing_factor" 1.0
+    )
+	#------------------------------------------------------------------------
+	# <- end Diffuse and Specular components ################################
+	#------------------------------------------------------------------------	
+
+
+        
+    #------------------------------------------------------------------------
+	# -> begin SSS ##########################################################
+    #------------------------------------------------------------------------
+    #------------------------------------------------------------------------
+	# Front Scatter Component (misss_fast)
+    #------------------------------------------------------------------------
+    shader "front_scatter__instance" "misss_fast_shader" 
+    (
+		#----------------------------------
+        "lightmap"                 = interface "lightmap",
+        "depthmap"                 = interface "depthmap",
+        
+        #----------------------------------
+        "diffuse_illum"            "mia_diffuse__instance",
+        "diffuse_color"            1 1 1 1,
+        "diffuse_weight"           0.2,
+        
+        #----------------------------------
+        "front_sss_color"          = interface "s.front_sss_color",
+        "front_sss_weight"         = interface "s.front_sss_weight",
+        "front_sss_radius"         = interface "s.front_sss_radius",
+        "back_sss_radius"          0,
+        "back_sss_weight"          0,
+        
+        #----------------------------------
+        "screen_composit"          = interface "l.screen_composit",
+        "scale_conversion"         = interface "l.scale_conversion",
+        "falloff"                  = interface "l.falloff",
+        "samples"                  = interface "l.sss_samples"
+    )
+    
+    #------------------------------------------------------------------------
+	# Back Scatter Component (misss_fast)
+    #------------------------------------------------------------------------        
+    shader "back_scatter__instance" "misss_fast_shader" 
+    (
+		#----------------------------------
+        "lightmap"                 = interface "lightmap",
+        "depthmap"                 = interface "depthmap",
+        ##########"bump"					   "bump__instance",
+        
+        #----------------------------------
+        "diffuse_illum"            "front_scatter__instance",
+        "diffuse_color"            = interface "m.diffuse_color",
+        "diffuse_weight"           1.0,
+        
+        #----------------------------------
+        "specular_illum"           "mia_specular__instance",
+
+        #----------------------------------
+        "front_sss_color"          = interface "s.mid_sss_color",
+        "front_sss_weight"         = interface "s.mid_sss_weight",
+        "front_sss_radius"         = interface "s.mid_sss_radius",
+        "back_sss_color"           = interface "s.back_sss_color",
+        "back_sss_weight"          = interface "s.back_sss_weight",
+        "back_sss_radius"          = interface "s.back_sss_radius",
+        "back_sss_depth"           = interface "s.back_sss_depth",
+        
+        #----------------------------------
+        "screen_composit"          = interface "l.screen_composit",        
+        "scale_conversion"         = interface "l.scale_conversion",
+        "falloff"                  = interface "l.falloff",
+        "samples"                  = interface "l.sss_samples"
+    )
+    #------------------------------------------------------------------------
+	# <- end SSS ############################################################
+    #------------------------------------------------------------------------
+	
+	
+    
+    #------------------------------------------------------------------------
+    # Phenomenon Root
+    #------------------------------------------------------------------------
+	root = "back_scatter__instance"
+
+
+
+
+    #------------------------------------------------------------------------
+    # UI
+    #------------------------------------------------------------------------
+	gui "gui_adsk_Shd_SSS"	{
+        #----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_SSS", "category" "Material"
+        , "hidden"
+        )
+        
+        control "lightmap" "color texture" ("uiName" "Lightmap", "writableTexture", "hidden")
+        control "depthmap" "color texture" ("uiName" "Depthmap", "writableTexture", "hidden")
+    }
+
+end declare #
+#---------------------------------------------------------------------------------
+# <- end, declare phenomenon
+#---------------------------------------------------------------------------------
+
+
+
+
+
+
+
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+# adsk_Mtl_Ceramic (material phen)
+#---------------------------------------------------------------------------------
+declare phenomenon
+     material "adsk_Mtl_Ceramic"
+    (
+		color texture  "lightmap",
+		color texture  "depthmap",
+
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        struct "m"
+        {
+            #-------------------------------------
+            integer "type",
+            color   "diffuse_color",
+
+            #-------------------------------------
+            integer "application",
+            integer "bump_enable",
+            shader  "bump_map",
+            scalar  "bump_amount",
+            
+            #-------------------------------------
+            integer "pattern_enable",
+            shader  "pattern_map",
+			scalar	"pattern_amount",
+			
+			#----------------------------------
+            color   "front_sss_color",
+            scalar  "front_sss_radius"			
+        },
+        
+        #-------------------------------------
+		# Special Effects
+        #-------------------------------------
+        struct "o"
+        {
+            #----------------------------------
+            boolean  "ao_on",
+            integer  "ao_samples",
+            scalar   "ao_distance",
+			boolean  "ao_do_details",
+        
+			#----------------------------------
+			boolean "roundcorners_on",  			
+			scalar 	"roundcorners_radius",
+			boolean "roundcorners_allow_different_materials"              
+         },
+                         
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------
+        struct "p"
+        {
+            #----------------------------------
+            integer "reflection_glossy_samples",
+	      	integer "refl_depth",
+	      	integer "sss_samples",
+	      	scalar  "lightmap_size"
+		},
+
+		#-------------------------------------
+		# Internals
+		#-------------------------------------
+		struct "x"
+		{
+			#----------------------------------
+	      	integer "gbuffer_id"
+        },
+                                
+        #----------------------------------
+		# Lights and Mode Parameters
+        #----------------------------------
+        integer "mode",
+        array light "lights"
+	)
+    
+    
+    
+
+    #------------------------------------------------------------------------
+    # Spider
+    #------------------------------------------------------------------------
+    shader "spider_instance" "adsk_Shd_Ceramic_spider"
+    (
+        "type" = interface "m.type",
+        "application" = interface "m.application",
+        
+		"roundcorners_on" = interface "o.roundcorners_on",
+		"roundcorners_radius_i" = interface "o.roundcorners_radius",
+		
+		"ao_do_details_i" = interface "o.ao_do_details",
+						
+		"front_sss_radius_i" = interface "m.front_sss_radius",		
+		"sss_overall_color" = interface "m.front_sss_color"
+    )
+
+    #------------------------------------------------------------------------
+    # Reflection Blur Global Sampler Multiplier
+    #------------------------------------------------------------------------
+    shader "refl_gloss_sample_global" "adsk_blurred_reflection_multiplier"
+    (
+        "blurred_reflection_value" = interface "p.reflection_glossy_samples"
+    )
+    
+    #------------------------------------------------------------------------
+	# Ceramic Instance
+    #------------------------------------------------------------------------    
+    shader "adsk_Shd_Ceramic__instance" "adsk_Shd_Ceramic"
+    (
+        #-------------------------------------
+        # Main Parameters
+        #-------------------------------------
+        "m"
+        {
+            #----------------------------------
+            "diffuse_color" = interface "m.diffuse_color",
+            
+            #----------------------------------
+            "diffuse_roughness" = "spider_instance.diffuse_roughness",
+                        
+            #----------------------------------
+            "reflectivity" = "spider_instance.reflectivity",
+            "refl_gloss" = "spider_instance.refl_gloss",
+			"brdf_curve" = "spider_instance.brdf_curve",			
+            
+            #----------------------------------
+            "bump_enable" = interface "m.bump_enable",            
+            "bump_amount" = interface "m.bump_amount",
+            "bump_map" = interface "m.bump_map",
+            
+            #----------------------------------    
+            "pattern_enable" = interface "m.pattern_enable",
+            "pattern_amount" = interface "m.pattern_amount",
+			"pattern_map" = interface "m.pattern_map"		
+        },
+        
+        #-------------------------------------
+		# Ambient Occlusion 
+        #-------------------------------------
+        "o"
+        {
+            #----------------------------------            
+            "ao_on"  = interface "o.ao_on",
+            "ao_samples"  = interface "o.ao_samples",
+			"ao_distance" = interface "o.ao_distance",
+			"ao_do_details" = "spider_instance.ao_do_details"
+        },
+        
+        #-------------------------------------
+        # Round Corners Parameters
+        #-------------------------------------
+        "r"
+        {
+            #----------------------------------
+              "roundcorners_radius" = "spider_instance.roundcorners_radius",
+	      	"roundcorners_allow_different_materials" = interface "o.roundcorners_allow_different_materials"
+        },    
+                
+        #-------------------------------------
+        # Performance Tuning Parameters
+        #-------------------------------------
+        "p"
+        {
+            #----------------------------------
+            "reflection_glossy_samples" = "refl_gloss_sample_global",
+	      	"refl_depth" = interface "p.refl_depth"
+        },
+
+        #-------------------------------------
+        # Unit Scalable Parameters
+        #-------------------------------------
+        "k"
+        {
+            #----------------------------------
+	      	"noise_tiling" = "spider_instance.noise_tiling"
+        },
+        
+        #----------------------------------
+		# Lights and Mode Parameters
+        #----------------------------------
+        "mode" = interface "mode",
+        "lights" = interface "lights"    
+    )
+
+
+	#------------------------------------------------------------------------
+	# SSS instance
+	#------------------------------------------------------------------------	
+	shader "misss_fast__instance" "adsk_Shd_SSS"	
+	(
+	
+		#-------------------------------------
+        "lightmap" = interface "lightmap",
+        "depthmap" = interface "depthmap",
+ 
+		"m"
+		{
+			"diffuse_color" = interface "m.diffuse_color",
+			"mia_diffuse_result" = "adsk_Shd_Ceramic__instance.diffuse_result",		#set mia_x multiple_outputs to 'on'
+			"mia_spec_result" = "adsk_Shd_Ceramic__instance.spec_result",
+			"mia_refl_result" = "adsk_Shd_Ceramic__instance.refl_result"
+		},	    	
+	    	
+		#-------------------------------------
+		# Sub Surface Scattering 
+		#-------------------------------------
+		"s"
+		{
+			#----------------------------------
+            "front_sss_color" = interface "m.front_sss_color",          
+            "front_sss_weight" 0.5,
+            "front_sss_radius" = "spider_instance.front_sss_radius",
+            
+            "mid_sss_color" = "spider_instance.mid_sss_color",
+            "mid_sss_weight" 0.5,
+            "mid_sss_radius" = "spider_instance.mid_sss_radius",
+            
+            "back_sss_color" = "spider_instance.back_sss_color",
+            "back_sss_weight" 0.5,
+            "back_sss_radius" = "spider_instance.back_sss_radius",
+            
+            "back_sss_depth" = "spider_instance.back_sss_depth"
+		},
+
+		#-------------------------------------
+	    # SSS Lightmap
+	    #-------------------------------------
+  		"l"
+  		{			
+  			#---------------------------------- 
+            "screen_composit" = "spider_instance.screen_composit",
+            "scale_conversion" 1.0,
+            "falloff" 2.0,
+			"sss_samples" = interface "p.sss_samples"            
+	    }
+	)	
+    #------------------------------------------------------------------------    
+	# Lightmapping (misss_lightmap_write) ###################################
+    #------------------------------------------------------------------------
+    shader "lm_write__instance" "adsk_Shd_Lightmap"
+	(
+		"lightmap" = interface "lightmap",
+		"depthmap" = interface "depthmap",
+
+		"lightmap_gamma" 0.75,		
+		"lightmap_group" "A",
+		"lightmap_size"  = interface "p.lightmap_size",
+		
+		"indirect" on,
+		"scatter_bias" 0.12,
+		
+		"switcher"  = "spider_instance.mia_sss_switcher",
+				
+		"mode"  = interface "mode",
+		"lights" = interface "lights"
+	)
+
+
+
+	#------------------------------------------------------------------------
+	# Render Elements support  ##############################################
+	#------------------------------------------------------------------------
+	shader "max_mia_mat_renderelem__instance" "adsk_Utility_MiaDecomposer" 
+	(
+		"mia_material" "adsk_Shd_Ceramic__instance", 
+		"GBufferID" = interface "x.gbuffer_id"
+	)
+	
+	
+	#------------------------------------------------------------------------
+	# Switch Mia/SSS base material
+    #------------------------------------------------------------------------
+	shader "mia_sss_switcher__instance" "adsk_Utility_Switch8Shader"
+	(
+		"switcher" = "spider_instance.mia_sss_switcher",
+		"type" 0,
+		"shader_1" "max_mia_mat_renderelem__instance",
+		"shader_2" "misss_fast__instance"
+	)
+	
+	
+	
+	#------------------------------------------------------------------------
+	#------------------------------------------------------------------------
+	# Material Connections
+	#------------------------------------------------------------------------
+    material "mat" 
+					= "max_mia_mat_renderelem__instance"
+        photon		= "adsk_Shd_Ceramic__instance"
+        shadow		= "adsk_Shd_Ceramic__instance"
+        #lightmap	= "lm_write__instance"
+        
+    end material
+    root material "mat"
+
+
+
+
+
+    #------------------------------------------------------------------------
+    # UI
+    #------------------------------------------------------------------------
+	gui "gui_adsk_Mtl_Ceramic"	{
+        #----------------------------------
+		control "Global" "Global" 
+		(
+			"uiName" "ProMaterials: Ceramic", "category" "Material",          
+			"viewport_diffuse" "m.diffuse_color",
+			"viewport_specular" 1.0 1.0 1.0,
+			"viewport_shininess" 1,
+			"hidden"
+		)
+
+        control "lightmap" "color texture" ("uiName" "Lightmap", "writableTexture", "hidden")
+        control "depthmap" "color texture" ("uiName" "Depthmap", "writableTexture", "hidden")
+
+        #-------------------------------------
+        #  Material Parameters
+        #-------------------------------------
+		control "m" "struct" ("uiName" "Ceramic Material Parameters", "openstate" "true")
+        {
+			#----------------------------------
+            control "type" "integer" ("enum", "nonConnectable", "uiName" "Type", "value" "0 Ceramic, 1 Porcelain", "range" 0 1)
+            control "diffuse_color"  "color" ("uiName"  "Color (Reflectance)", "value" 0.92 0.92 0.92 1.0)
+        
+			control "application" "integer" ("enum", "nonConnectable", "uiName" "Surface Finish" , "value" "0 High Gloss, 1 Satin, 2 Matte", "range" 0 2, 
+				"helpText" "Level of reflectivity")
+			
+            control "bump_enable" "integer" ("enum", "nonConnectable", "uiName" "Surface Bumps", "value" "0 None, 1 Wavy, 2 Custom", "range" 0 2, "helpText" "Low-frequency waves (often found in ceramics)")
+			control "bump_map"  "shader" ("uiName"  "-> Custom Map", "helpText" "Use when 'Surface Bumps: Custom' is selected")
+			control "bump_amount" "scalar" ("nonConnectable", "uiName" "-> Amount", "value" 0.05,  "range" -10.0 10.0, "helpText" "Distortion level of surface bumps")
+            
+            control "pattern_enable" "integer" ("enum", "nonConnectable", "uiName" "Tiling Pattern", "value" "0 None, 1 Custom", "range" 0 1)
+			control "pattern_map"  "shader" ("uiName"  "-> Custom Map", "helpText" "Use when 'Tiling Pattern: Custom' is selected")
+			control "pattern_amount" "integer" ("nonConnectable", "uiName" "-> Height", "value" 0.25,  "range" 0.01 10.0, "helpText" "Height of custom tiling pattern map")
+			
+			#----------------------------------
+            control "front_sss_color" "color" ("hidden", "uiName" "Porcelain Scatter Color", "noAlpha", "value" 0.99 0.97 1.0, "nonConnectable")
+			control "front_sss_radius" "scalar" ("hidden", "uiName" "Porcelain Scatter Radius (mm)", "value" 3.0, "range" 0 20, "nonConnectable")
+        }
+
+        #-------------------------------------
+		#  Special Effects
+        #-------------------------------------
+		control "o" "struct" ("uiName" "Special Effects", "openstate" "false")
+        {
+            #----------------------------------
+			control "ao_on" "boolean" ("uiName" "Ambient Occlusion", "value" 0, "nonConnectable", "enables" "ao_samples, ao_distance, ao_do_details",
+												"helpText" "Enables Ambient Occlusion. Emulates the look of true global illumination by using shaders to calculate the extent that an area is occluded or prevented from receiving incoming light. Use this effect with indirect light.")	
+			control "ao_samples"  "integer" ("uiName"  "-> Samples", "value" 16, "range" 2 256, "nonConnectable", 
+												"helpText" "Ambient occlusion quality (High= Smoother/Slower; Low= Grainier/Faster)")
+			control "ao_distance"  "scalar" ("uiName"  "-> Max Distance", "value" 4, "units" "world", "nonConnectable",
+												"helpText" "Defines the ambient occlusion radius (High= Large coverage area/Slower; Low= Small coverage area/Faster)")
+			control "ao_do_details" "integer" (enum, "uiName" "-> Use Color From Other Mats (Exact AO)", "value" off, "nonConnectable",
+												"helpText" "Enables a more complex mode of Ambient Occlusion that takes object color into account. Note: This improves excessive 'corner darkening' and solves the creation of 'dark rims' by AO around self-illuminating objects.")
+            
+			#----------------------------------
+			control "roundcorners_on" "boolean" ("uiName"  "Round Corners", "value" 0, "nonConnectable", "enables" "roundcorners_radius, roundcorners_allow_different_materials",
+												"helpText" "Enables simulated round corners. Note: This is only a shading effect, similar to a bump map, whereby no actual geometric changes occur. This effect only works properly on straight edges.")
+			control "roundcorners_radius"  "scalar" ("uiName"  "-> Fillet Radius", "value" 0.25, "units" "world", 
+												"helpText" "Adjusts the radius of the round corner effect")
+			control "roundcorners_allow_different_materials"  "boolean" ("uiName"  "-> Blend with Other Materials", "nonConnectable",
+												"helpText" "Activate to apply corner rounding effects to any material. Disable to apply corner rounding effects to the surface of the current material only.")
+        }
+        
+         #-------------------------------------
+		# Performance Tuning Parameters
+         #-------------------------------------
+		control "p" "struct" ("uiName" "Performance Tuning Parameters", "openstate" "false")
+        {
+            #----------------------------------
+			control "reflection_glossy_samples"  "integer" ("nonConnectable", "uiName"  "Reflection Glossy Samples", "value" 8, "range" 0 128,
+												"helpText" "Defines the maximum number of samples (rays) that mental ray computes to create glossy reflections")
+			control "refl_depth"  "integer" ("nonConnectable", "uiName"  "Reflection Max Trace Depth", "value" 0, "range" 0 20,
+												"helpText" "Number of times each ray is reflected. When set to zero, global render settings take precedence.")
+			control "sss_samples" "integer" ("hidden", "nonConnectable", "uiName" "Sub Surface Scattering Samples", "value" 64, "range" 0 512)
+			control "lightmap_size" "scalar" ("hidden", "nonConnectable",	"uiName" "Sub Surface Scattering Map Size (%)", "value" 50, "range" 0 100)			
+        }
+    
+         #-------------------------------------
+		# Internal
+         #-------------------------------------
+		control "x" "struct" ("uiName" "Internals", "openstate" "false")
+        {
+            #----------------------------------
+			control "gbuffer_id"  "integer" (hidden, "nonConnectable", "uiName"  "Translator must link here to pass a different ID", "value" 8)
+        }
+
+        #-------------------------------------
+        # Lights and Mode Parameters
+        #-------------------------------------
+        control "mode" "null" ("uiName" "Mode", "value" 4, "hidden")	#TEMP:for metasl
+        control "lights" "array light" ("hidden","nonConnectable")
+        control "mode" "integer" ("hidden","nonConnectable")
+	}
+
+end declare
+#---------------------------------------------------------------------------------
+# <- end, declare phenomenon
+#---------------------------------------------------------------------------------

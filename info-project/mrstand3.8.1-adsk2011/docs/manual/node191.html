@@ -1,0 +1,325 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Function Definitions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="assembly_api.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node192.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION189"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_api_function_call">mi_api_function_call</a></li>
+<li><a href="#api:mi_api_parameter_name">mi_api_parameter_name</a></li>
+<li><a href="#api:mi_api_parameter_default">mi_api_parameter_default</a></li>
+<li><a href="#api:mi_api_parameter_value">mi_api_parameter_value</a></li>
+<li><a href="#api:mi_api_parameter_shader">mi_api_parameter_shader</a></li>
+<li><a href="#api:mi_api_parameter_interface">mi_api_parameter_interface</a></li>
+<li><a href="#api:mi_api_parameter_push">mi_api_parameter_push</a></li>
+<li><a href="#api:mi_api_new_array_element">mi_api_new_array_element</a></li>
+<li><a href="#api:mi_api_parameter_pop">mi_api_parameter_pop</a></li>
+<li><a href="#api:mi_api_function_call_end">mi_api_function_call_end</a></li>
+<li><a href="#api:mi_api_function_append">mi_api_function_append</a></li>
+<li><a href="#api:mi_api_function_delete">mi_api_function_delete</a></li>
+<li><a href="#api:mi_api_shader_add">mi_api_shader_add</a></li>
+<li><a href="#api:mi_api_function_assign">mi_api_function_assign</a></li>
+<li><a href="#api:mi_api_shader_call">mi_api_shader_call</a></li>
+<li><a href="#api:mi_api_shader_call_x">mi_api_shader_call_x</a></li>
+</ul>
+
+<h3>Function Definitions</h3>
+<p>Functions, also called function calls, are references to a
+particular C function bundled with a set of parameter values. A
+function definition begins with naming the desired C function,
+which must have been declared (see above), followed by assignments
+of numerical or other values to individual parameters. The order of
+assignments is irrelevant; it is done by parameter name. Parameters
+that remain unassigned have a numerical value 0 or the empty
+string.</p>
+<a id="INDEX1032"></a>
+<h5 class="anchor" id="api:mi_api_function_call">mi_api_function_call</h5>
+<pre>
+    miBoolean mi_api_function_call(
+        char            *name)     /* called function */
+</pre>
+<p>Every function definition begins with this call, which
+references the C function by name. An error occurs if the name is
+not declared. This function is special in that it does not insist
+on <i>name</i> to be declared in the current scope (see Scopes
+below). Instead, it searches for the function beginning in the
+innermost scope and works back towards the outermost scope. This is
+useful because shader declarations usually appear in the form of a
+<tt>$include</tt> statement at the beginning of the scene file, it
+would be inconvenient to force a redeclaration in every scope (such
+as phenomenon definitions) just to have the correctly scoped names
+handy.</p>
+<a id="INDEX1033"></a>
+<h5 class="anchor" id="api:mi_api_parameter_name">mi_api_parameter_name</h5>
+<pre>
+    miBoolean mi_api_parameter_name(
+        char            *name)     /* new parameter */
+</pre>
+<p>After <i>mi_api_function_call</i>, the parameter values are
+assigned. The first step for an assignment is this call, which
+specifies the name o the parameter to be assigned to. The name must
+be one of those specified when the function was declared.
+<i>name</i> is always a simple name; to access the subtrees of
+arrays and structs special functions (push, pop, array element) are
+provided, see below. Parameter names may not contain dots
+(".").</p>
+<a id="INDEX1034"></a>
+<h5 class="anchor" id="api:mi_api_parameter_default">mi_api_parameter_default</h5>
+<pre>
+    miBoolean mi_api_parameter_default(
+        miParam_type    type,           /* one of miTYPE_* above */
+        void            *value)         /* ptr to int, float, bool */
+</pre>
+<p>Store a parameter default value for the parameter declared with
+the preceding <i><a href="node190.html#INDEX1027">mi_api_parameter_decl</a></i>
+call. The <i>value</i> must point to a <tt>miBoolean</tt>,
+<tt>miInteger</tt>, or <tt>miScalar</tt>, depending on the
+parameter type. Correspondingly, the <i>type</i> argument must be
+one of <tt>miSCENE_BOOLEAN</tt>, <tt>miSCENE_INTEGER</tt>, and
+<tt>miSCENE_SCALAR</tt>. Integers are automatically converted to
+scalars if the declared parameter type requires it. To declare all
+three components of a vector, or all four components of a color, or
+all sixteen components of a transformation, it must be called
+three, four, or sixteen times. Non-numeric types and array members
+may not have defaults.</p>
+<a id="INDEX1035"></a>
+<h5 class="anchor" id="api:mi_api_parameter_value">mi_api_parameter_value</h5>
+<pre>
+    miBoolean mi_api_parameter_value(
+        miParam_type    type,      /* parameter type */
+        void            *value,    /* pointer to value */
+        int             *null,     /* null pointer */
+        int             *size)     /* size in parm block */
+</pre>
+<p>Assign a value to the parameter named with the previous call.
+The type of the value being assigned and a pointer to the value
+must be passed. The <i>type</i> must agree with the declared type
+of the parameter, following these rules:</p>
+<ul>
+<li>For all textures <tt>miTYPE_TEX</tt> must be used, regardless
+of whether a color, scalar, or vector texture has been
+declared.</li>
+<li>Instead of <tt>miTYPE_SCALAR</tt>, <tt>miTYPE_INTEGER</tt> can
+be passed. The value will automatically be converted to a
+<tt>miScalar</tt> if the parameter has been declared as
+<tt>miTYPE_SCALAR</tt>.</li>
+<li>Similarly, a <i>type</i> of <tt>miTYPE_STRING</tt> can be
+passed for parameters declared as <tt>miTYPE_TEX</tt>,
+<tt>miTYPE_LIGHT</tt>, <tt>miTYPE_SHADER</tt>,
+<tt>miTYPE_MATERIAL</tt>, or <tt>miTYPE_GEOMETRY</tt>. The value
+will be interpreted correctly.</li>
+<li>A <i>type</i> of <tt>miTYPE_INTEGER</tt> can be passed for
+parameters declared as <tt>miTYPE_TEX</tt>, <tt>miTYPE_LIGHT</tt>,
+<tt>miTYPE_SHADER</tt>, <tt>miTYPE_MATERIAL</tt>, or
+<tt>miTYPE_GEOMETRY</tt>. The value will be interpreted as a
+numeric tag. This is a deviation from the similarity between .mi
+syntax and API calls, but simplifies matters for automatic
+procedural construction of phenomena.</li>
+<li>Values consisting of multiple scalars, such as vectors, colors,
+and matrices, can be given piecewise, one <tt>miTYPE_SCALAR</tt> at
+a time. If fewer than three scalars for a vector, four scalars for
+a color, or sixteen scalars for a matrix (row-major order) are
+provided, the remaining scalars are set to zero.</li>
+</ul>
+<p>These rules are all consequences of the fact that a .mi2
+language parser, when it sees a value, does not have access to the
+declaration.</p>
+<p>The passed <i>null</i> pointer must be a null pointer. It exists
+only for backwards compatibility of the function prototype. The
+<i>size</i> pointer must be either a null pointer or a pointer to
+an integer that will be set to the size in bytes of the parameter.
+For example, if <i>type</i> is <tt>miTYPE_VECTOR</tt>,
+<i>mi_api_parameter_value</i> will set it to 12
+(sizeof(miVector)).</p>
+<a id="INDEX1036"></a>
+<h5 class="anchor" id="api:mi_api_parameter_shader">mi_api_parameter_shader</h5>
+<pre>
+    miBoolean mi_api_parameter_shader(
+        char            *name)     /* shader name */
+</pre>
+<p>Instead of providing a value to a parameter, register another
+function by name that is called at runtime to calculate the value.
+This is used to build dynamic shader trees.</p>
+<a id="INDEX1037"></a>
+<h5 class="anchor" id="api:mi_api_parameter_interface">mi_api_parameter_interface</h5>
+<pre>
+    miBoolean mi_api_parameter_interface(
+        char            *name)     /* interface parm name */
+</pre>
+<p>Instead of providing a value to a parameter, register a link to
+an interface parameter that provides the value at runtime.</p>
+<a id="INDEX1038"></a>
+<h5 class="anchor" id="api:mi_api_parameter_push">mi_api_parameter_push</h5>
+<pre>
+    miBoolean mi_api_parameter_push(
+        miBoolean       is_array)  /* pushing array? */
+</pre>
+<p>After the call to <i>mi_api_parameter_name</i> for a structure
+or array, before values can be stored, the context must be pushed
+one level down into the structure's or array's parameter subtree.
+The <i>is_array</i> argument is <tt>miFALSE</tt> for structures and
+<tt>miTRUE</tt> for arrays. After the push, structure members and
+array elements can be assigned with regular
+<i>mi_api_parameter_value</i> calls. Every new array member must be
+preceded with a call to the following function.</p>
+<a id="INDEX1039"></a>
+<h5 class="anchor" id="api:mi_api_new_array_element">mi_api_new_array_element</h5>
+<pre>
+    miBoolean mi_api_new_array_element(void)
+</pre>
+<p>After the push operation, before a new array value can be
+assigned, this function must be used to make room for another array
+element. After the first call to this function,
+<i>mi_api_parameter_value</i> assigns to array element [0], after
+the next [1] is assigned, and so on. Array elements can only be
+assigned sequentially. If no values or not enough values are
+assigned to a parameter, its remaining scalars remain zero.</p>
+<a id="INDEX1040"></a>
+<h5 class="anchor" id="api:mi_api_parameter_pop">mi_api_parameter_pop</h5>
+<pre>
+    miBoolean mi_api_parameter_pop(void)
+</pre>
+<p>After a structure or array has been assigned its component
+values, the parameter subtree of the structure or array must be
+exited with a pop operation. For example, to assign the scalars 1
+and 2 to members a and b of structure s, the call sequence is
+<tt>name(s), push, name(a), value(1), name(b), value(2), pop</tt>.
+The order of assignment to a and b is not significant. To assign 3
+and 4 to an array a of length 2, the call sequence is <tt>name(a),
+push, new_element, value(3), new_element, value(4), pop</tt>.
+Push/pop pairs can be nested.</p>
+<a id="INDEX1041"></a>
+<h5 class="anchor" id="api:mi_api_function_call_end">mi_api_function_call_end</h5>
+<pre>
+    miTag mi_api_function_call_end(
+        miTag           oldtag)    /* for incr change */
+</pre>
+<p>After all parameter values have been assigned, the function
+definition is completed with this call. The tag of the new function
+is returned and can now be used where a function is expected during
+scene definition. Since functions (as opposed to declarations) are
+not generally named, the standard incremental method cannot be
+applied; therefore a <i>tag</i> argument can be supplied. If
+<i>tag</i> is not the null tag, the existing function identified by
+<i>tag</i> is replaced with the new one such that all references in
+the scene that referred to the old function now refer to the new
+one. In this case <i>tag</i> is also returned.</p>
+<a id="INDEX1042"></a>
+<h5 class="anchor" id="api:mi_api_function_append">mi_api_function_append</h5>
+<pre>
+    miTag mi_api_function_append(
+        miTag           list,      /* append to this list */
+        miTag           func)      /* function to append */
+</pre>
+<p>Most regular shaders (not <a href="node126.html#INDEX492">output
+shader</a>s and <a href="node76.html#INDEX224">inheritance
+function</a>s) can be given as a list of shaders. In this case
+mental ray will call all shaders in the list in sequence, with each
+successive shader operating on the result of the previous. The main
+application are lens shaders, which are often lists of lens
+shaders. To append a function <i>func</i> to another function or
+function list <i>list</i> this call is used. The first function in
+the list is the anchor of the list; it can be passed as <i>list</i>
+when appending to the list but it is more efficient to pass the
+last function added to the list.</p>
+<a id="INDEX1043"></a>
+<h5 class="anchor" id="api:mi_api_function_delete">mi_api_function_delete</h5>
+<pre>
+    miBoolean mi_api_function_delete(
+        miTag           *list)     /* func list to delete */
+</pre>
+<p>When a scene element referencing functions is changed
+incrementally, it is usually desired to delete the old function
+list before a new one is built with calls to
+<i>mi_api_function_append</i>. This call deletes all functions of
+the function list, and stores a null tag in the list anchor. The
+<i>list</i> argument is a pointer to the function list tag to
+permit this call to clear the function list tag itself.</p>
+<a id="INDEX1044"></a>
+<h5 class="anchor" id="api:mi_api_shader_add">mi_api_shader_add</h5>
+<pre>
+    miBoolean mi_api_shader_add(
+        char            *name,     /* shader name */
+        miTag           func_tag)  /* shader function */
+</pre>
+<p>Normally functions are unnamed. This call can be used to assign
+a name to a function. The main application are procedural textures,
+which are nothing but a texture shading function accessible by name
+(the name can be provided as parameter value to texture parameters
+of other functions). Named shaders also appear in the .mi2 language
+as <tt>shader</tt> statements. Note that lights, materials, and
+other scene elements are more than just shading functions, a named
+shader cannot be used where a material or light is expected.</p>
+<a id="INDEX1045"></a>
+<h5 class="anchor" id="api:mi_api_function_assign">mi_api_function_assign</h5>
+<pre>
+    miTag mi_api_function_assign(
+        char            *name)     /* name of shader */
+</pre>
+<p>This call can be used to look up a named shader (was given a
+name by the preceding call) to obtain its tag. The returned tag can
+be used like a tag returned by <i>mi_api_function_call_end</i>.
+This is called an "assignment" because the .mi2 language allows
+assigning an existing named shader wherever a shading definition is
+called; such assignments are introduced with an equals sign.</p>
+
+<a id="INDEX1046"></a>
+<h5 class="anchor" id="api:mi_api_shader_call">mi_api_shader_call</h5>
+<pre>
+    miBoolean mi_api_shader_call(
+        miTag           func_tag,     /* function to call */
+        char            *c_inst_name, /* camera instance */
+        char            *option_name) /* options element */
+</pre>
+<p>This function can be used to call a shading function
+immediately. This call returns after the called function returns.
+If <i>func_tag</i> is a function list, all functions in the list
+are called in sequence. The functions are provided with a dummy
+state containing mostly nulls; if a camera instance or options
+element are passed by name, appropriate camera and options
+substructures are placed in the state. Either <i>c_inst_name</i> or
+<i>option_name</i> may be null pointers.</p>
+
+<a id="INDEX1047"></a>
+<h5 class="anchor" id="api:mi_api_shader_call_x">mi_api_shader_call_x</h5>
+<pre>
+    miBoolean mi_api_shader_call_x(
+        miColor         *result,      /* returned color */
+        miTag           func_tag,     /* function to call */
+        char            *c_inst_name, /* camera instance */
+        char            *option_name, /* options element */
+        void            *data)        /* extra user data */
+</pre>
+<p>This is a variant of
+<i><a href="node191.html#INDEX1047">mi_api_shader_call</a></i> that can be
+used to call a shader, and retrieve a result from it. It is the
+caller's responsibility to pass a <i>result</i> pointer to memory
+that is large enough to hold all the data that the shader returns,
+if it returns data other than a <tt>miColor</tt>. The <i>data</i>
+pointer is passed to the shader as its fourth argument, and is not
+otherwise touched or dereferenced by mental ray.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node190.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node192.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

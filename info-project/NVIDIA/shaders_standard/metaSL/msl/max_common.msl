@@ -1,0 +1,170 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#ifndef MAX_COMMON_MSL
+#define MAX_COMMON_MSL
+
+#define HLSL_OPTIMIZE
+
+#ifdef HLSL_OPTIMIZE
+#define PARAS(x) x
+#else
+#define PARAS(x) Parameters.x
+#endif
+
+#ifdef HLSL_OPTIMIZE
+#define ARCH_PARAS(x) x
+#else
+#define ARCH_PARAS(x) ArchitecturalMaterialParams.x
+#endif
+
+#ifdef HLSL_OPTIMIZE
+#define BASIC_PARAS(x) x
+#else
+#define BASIC_PARAS(x) basic_parameters.x
+#endif
+
+#ifdef HLSL_OPTIMIZE
+#define PAINT_PARAS(x) x
+#else
+#define PAINT_PARAS(x) paint_parameters.x
+#endif
+
+#ifdef HLSL_OPTIMIZE
+#define INK_PARAS(x) x
+#else
+#define INK_PARAS(x) ink_parameters.x
+#endif
+
+// see tex_bitmap.cpp
+#define ALPHA_FILE 0
+#define ALPHA_RGB  1
+#define ALPHA_NONE 2
+
+// see tex_bricks.cpp
+#define MINFILTERWIDTH 1.0e-7f
+
+// see tex_cellular.cpp
+#define SMOOTH 0.2
+#define MAX_ITERATIONS 20.0
+
+// see tex_dent.cpp
+#define DENTSIZE         50.0
+#define NOISE_DIM        20
+#define NOISE_DIM_PLUS_1 21
+#define FNOISE_DIM       20.0
+
+// see tex_gradient.cpp
+#define NOISE_REGULAR 0
+#define NOISE_FRACTAL 1
+#define NOISE_TURB    2
+
+// see tex_gradramp.cpp
+#define CUSTOM_INTERP   0
+#define BIAS_IN_INTERP  1
+#define INOUT_INTERP    2
+#define BIAS_OUT_INTERP 3
+#define LINEAR_INTERP   4
+#define SOLID_INTERP    5
+#define JGC_FLAG_MODE  	1
+#define JGC_UV_MAP_MODE	2
+#define JGC_BITMAP_MODE	3
+#define JGC_LAST_MODE	4
+#define BIASIN(X)       maxBias(0.35f, X)
+#define BIASOUT(X)	maxBias(0.65f, X)
+#define NKNOTS          6
+#define BIASINOUT(X)	(maxSpline(X, NKNOTS, knots))
+#define RadToDeg(x)     (180.0 * (x) / PI)
+
+// see tex_marble.cpp
+#define FACT 500.0
+
+// see tex_noise.cpp
+#define NAVG   10000
+#define NAVGNS 10000
+#define BLENDBAND 4.0
+
+// see tex_speckle.cpp
+#define SCALE_FACTOR 10.0
+
+// see tex_smoke.cpp
+#define MAXNITS 20
+
+// see tex_splat.cpp
+#define EPSILON 0.02f
+
+// see tex_stucco.cpp
+#define CRV 0.2
+#define K   0.625 // (0.5/(1.0-CRV)
+#define K1  3.125 // (K/CRV)
+#define DEL 0.1
+
+// see max_arch.cpp
+#define Intens(c) (((c).r + (c).g + (c).b) / 3.0)
+
+// see max_inknpnt.cpp
+#define MAX_NUM_PAINT_LEVELS 256
+
+// see max_proto.h
+#define mi_MAX_EVAL_COLOR  0
+#define mi_MAX_EVAL_MONO   1
+#define mi_MAX_EVAL_NORMAL 2
+#define mi_MAX_MTL_CONTEXT 0
+#define mi_MAX_LGT_CONTEXT 1
+#define mi_MAX_ENV_CONTEXT 2
+
+// see max_stduv.h
+#define UVWSRC_EXPLICIT   0
+#define UVWSRC_OBJXYZ	  1
+#define UVWSRC_EXPLICIT2  2
+#define UVWSRC_WORLDXYZ   3
+
+#define UVMAP_EXPLICIT      0
+#define UVMAP_SPHERE_ENV    1
+#define UVMAP_CYL_ENV       2
+#define UVMAP_SHRINK_ENV    3
+#define UVMAP_SCREEN_ENV    4
+#define UVMAP_CANVAS_ENV    5
+#define AXIS_UV 0
+#define AXIS_VW 1
+#define AXIS_WU 2
+#define MAPSLOT_TEXTURE      0 	// texture maps
+#define MAPSLOT_ENVIRON      1 	// environment maps: generate UVW on-the-fly
+
+// see max_stdxyz.cpp
+#define XYZ_COORDS 0
+#define UVW_COORDS 1
+#define UVW2_COORDS 2
+#define XYZ_WORLD_COORDS 3
+
+// see max_texutil.h
+#define fmax(x,y)	(((x)>(y))?(x):(y))
+
+// see max_texutil.cpp
+#define B 512  // 0x200
+#define BM 511 // 0x1FF
+#define RN 10000.0
+#define maxS_curve(t) ( t * t * (3.0 - 2.0 * t) )
+#define maxLerp(t, a, b) ( a + t * (b - a) )
+#define CR00     -0.5
+#define CR01      1.5
+#define CR02     -1.5
+#define CR03      0.5
+#define CR10      1.0
+#define CR11     -2.5
+#define CR12      2.0
+#define CR13     -0.5
+#define CR20     -0.5
+#define CR21      0.0
+#define CR22      0.5
+#define CR23      0.0
+#define CR30      0.0
+#define CR31      1.0
+#define CR32      0.0
+#define CR33      0.0
+#define RAND_TABLE_SIZE 10000
+#define MAX_CELL_LEVELS	20
+
+#endif // MAX_COMMON_MSL

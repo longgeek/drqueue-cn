@@ -1,0 +1,204 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Functions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node200.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node202.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION199"></a>
+<h3>Functions</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_FUNCTION</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miFunction</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>int param_size</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls</td>
+</tr>
+</table>
+<pre>
+enum miFunction_type {
+        miFUNCTION_C,                           /* regular C/C++ shader */
+        miFUNCTION_PHEN,                        /* phenomenon interface */
+        miFUNCTION_C_REQ,                       /* C/C++ shader with reqmnts */
+        miFUNCTION_OUTFILE,                     /* write an image to a file */
+        miFUNCTION_DATA,                        /* user data decl, no miFunc */
+        miFUNCTION_PASS_SAVE,                   /* write pass file */
+        miFUNCTION_PASS_PREP,                   /* pass file preprocessor */
+        miFUNCTION_PASS_MERGE,                  /* pass file merge function */
+        miFUNCTION_PASS_DELETE,                 /* pass file delete */
+        miFUNCTION_HARDWARE                     /* hardware rendering shader */
+};
+
+typedef struct miFunction {
+        miPointer       sparep1[7];
+        enum miFunction_type type;              /* C/C++, phenomenon, or file*/
+        miUint          out_typemap;            /* if output, IMG_TYPE bitmap*/
+        miUint          out_interpmap;          /* if output, interpolate bm */
+        miTag           function_decl;          /* declaration if C or PHEN */
+        miTag           next_function;          /* next function call in list*/
+        miTag           parameter_indirect;     /* get params from this func */
+        miTag           interfacephen;          /* parent phen, if any */
+        miBoolean       spare0;                 /* not used */
+        int             parameter_size;         /* size of parameter block */
+        int             result_size;            /* size of result struct */
+        int             ghost_offs;             /* offset to tag ghost, or 0 */
+        miTag           pass_read;              /* pass: infile, infile list */
+        miTag           pass_write;             /* pass: outfile or 0 */
+        miSint1         pass_maxsamples;        /* pass: max samples or ~0 */
+        miCBoolean      spare2[3];              /* not used */
+        miCBoolean      no_expl_params;         /* candidate for indirect par*/
+        miCBoolean      cloned;                 /* is this a clone */
+        miCBoolean      spare3[5];              /* not used */
+        miUchar         label;                  /* sequential # for bitmasks */
+        char            parameters[8];          /* parameter block, then */
+                                                /* miTag ghost for phenomena */
+} miFunction;
+</pre>
+<p>A translator must provide: <tt>function_decl</tt> (using
+<i>mi_scene_link</i>), <tt>parameter_size</tt> (as
+<i>mi_scene_create</i> argument), <tt>result_size</tt>,
+<tt>parameters</tt>.<br />
+<br />
+A translator may provide: <tt>next_function</tt>,
+<tt>interfacephen</tt>, <tt>ghost_offs</tt>,
+<tt>no_expl_params</tt>, <tt>label</tt>.</p>
+<p>Functions are shading functions are pairs of a function
+identification (the shader name) and a parameter block. They are
+used for materials, textures, lights, transformations, and many
+other purposes.</p>
+<p>Most are called during rendering; some are called during
+preprocessing or tessellation.</p>
+<p><b>user</b><sup>2.1</sup>, <b>cached_address</b><sup>2.1</sup>,
+<b>cached_result</b><sup>2.1</sup>,
+<b>cached_ghost_ptr</b><sup>2.1</sup>,
+<b>gcache_timestamp</b><sup>2.1</sup>,
+<b>lightlist</b><sup>2.1</sup>, and <b>lock</b> all assumed that
+preprocessing or shaders could write to the
+<a href="node83.html#INDEX286">scene DAG</a>, which is not the case in
+mental ray 3.0 so these fields were retired. The only field of
+interest to shaders was <b>user</b>, which could be used to store
+shader <a href="node83.html#INDEX285">user data</a>, typically in
+init shaders. New shaders must use
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> in
+<tt>miQ_FUNC_USERPTR</tt> mode to access the
+<a href="node159.html#INDEX837">user pointer</a>.</p>
+<p><b>type</b> is one of the <tt>miFUNCTION_*</tt> values. Note
+that some types such as <tt>miFUNCTION_OUTFILE</tt> do not actually
+describe procedural functions; using a <tt>miFunction</tt> here
+allows convenient chaining of <a href="node77.html#INDEX227">output
+statement</a>s or pass statements in the camera.</p>
+<p><b>out_typemap</b> is a bitmap that contains the image types
+needed for the function if it is either an output shader or an
+output file. In the future, this will also be used for pass
+functions.</p>
+<p><b>out_interpmap</b> is a bitmap that contains the interpolation
+flags for each bit in the <i>out_typemap</i> bitmap.</p>
+<p><b>function_decl</b> is the declaration of the function,
+containing both the shader name and a declaration of the parameters
+it requires. Declaration database elements have type
+<tt>miSCENE_FUNCTION_DECL</tt>; see below. <tt>miFunction</tt>s
+that do not have procedural functions, such as type
+<tt>miFUNCTION_OUTFILE</tt>, have a null tag here.</p>
+<p><b>next_function</b> references the next function in a chain.
+Some shader types allow chaining; for example there may be multiple
+lens shaders anchored in the camera that are called in
+sequence.</p>
+<p><b>parameter_indirect</b> contains the tag of the shader where
+the parameters should be picked up. It is possible to put a
+parameterless <a href="node121.html#INDEX481">shadow shader</a>
+and/or <a href="node142.html#INDEX580">photon shader</a> into a
+material, that will use the parameters of the
+<a href="node115.html#INDEX440">material shader</a>s. This avoids redundant
+parameter lists but creates interdependencies, so it is rarely
+used.</p>
+<p><b>interfacephen</b> is the tag of the phenomenon that contains
+the shader. Presently only used internally to cache the phenomenon
+tag for lens shaders required by a phenomenon. Should not be used
+by translators.</p>
+<p><b>parameter_size</b> is the size of the shader parameter area
+in bytes. Shader parameters are stored at the beginning of the
+<i>parameters</i> array.</p>
+<p><b>result_size</b> is the number of bytes in the result data
+structure. By default this is 16 (the size of <tt>miColor</tt>,
+which is the default return type). It <i>must</i> be set to match
+the <tt>result_size</tt> field of the declaration. In mental ray
+3.0, it is important to set this field correctly for
+<a href="node131.html#INDEX498">contour store shader</a>s; this was
+unnecessary in mental ray 2.1.</p>
+<p><b>ghost_offs</b> is nonzero for phenomenon <tt>miFunction</tt>s
+and provides an offset into the <tt>parameters</tt> array where the
+tags begin. This value is either zero or the smallest multiple of 4
+equal to or greater than <tt>parameter_size</tt> because tags are
+integers that must be properly aligned.</p>
+<p><b>pass_read</b> is the tag of a string (type
+<tt>miSCENE_STRING</tt>) for pass prep functions attached to the
+<i>pass</i> chain of the camera; or the tag of a tag list (type
+<tt>miSCENE_TAG</tt>) containing string tags followed by a null
+tag, for pass merge functions. The strings are pass file names.
+Non-pass functions do not use this field.</p>
+<p><b>pass_write</b> is the tag of a string (type
+<tt>miSCENE_STRING</tt>) for pass save, pass prep, and pass delete
+functions attached to the <i>pass</i> chain of the camera. The
+strings is a pass file name. Non-pass functions do not use this
+field.</p>
+<p><b>pass_maxsamples</b> is the max sampling density for the
+written pass file. The default is <tt>\ 0</tt>, which uses the
+rendering max sampling value from the options. This field is not
+currently used.</p>
+<p><b>no_expl_params</b> is set if the function has no parameters,
+and should pick up the parameters from parameter_indirect.</p>
+<p><b>cloned</b> is an internal flag used by mental ray to identify
+functions that were created during preprocessing to construct new
+shader chains from Phenomenon roots, for example if a Phenomenon
+adds a lens shader to the camera lens shader list.</p>
+<p><b>label</b> is a number in the range 0 ... 255 that helps
+distinguishing shaders. A new number is assigned automatically
+whenever a new function is created, but no attempt is made to keep
+the numbers unique. This helps the incremental rendering heuristics
+to decide whether a pixel should be re-rendered.</p>
+<p><b>parameters</b> contains one or two variable-sized data areas:
+the function parameters, and the optional tag ghost array. A
+pointer to the parameter block is passed to the shader whenever it
+is called. The parameters are expected to be laid out as described
+by the function declaration.</p>
+<p>The tag ghost array is used for phenomenon <tt>miFunction</tt>s.
+It exists only if <tt>ghost_offs</tt> is nonzero. It has the same
+layout as the parameter array, such that there is one tag for every
+parameter at the same offset in the respective array. If the tag
+for a parameter is nonzero, the tag points to another
+<tt>miFunction</tt> which must be called (unless its cache is
+valid, in which case the previous result is re-used; see above) to
+provide the parameter instead of using the parameter directly. In
+this case the parameter in the parameter array is the offset into
+the result returned by the call.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node200.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node202.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

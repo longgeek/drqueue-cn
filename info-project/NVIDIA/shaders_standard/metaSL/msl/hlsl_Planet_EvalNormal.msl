@@ -1,0 +1,237 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// see tex_planet.cpp
+#define NOISE_DIM_PLUS_1 21
+#define FNOISE_DIM       20.0
+
+shader hlsl_Planet_EvalNormal {
+ input:
+  // Color Color1 = Color(0.45, 0.35, 0.001, 1.0) {
+  //   display_name("Color1");
+  // };
+  // Color Color2 = Color(0.001, 0.5, 0.001, 1.0) {
+  //   display_name("Color2");
+  // };
+  // Color Color3 = Color(1.0, 1.0, 0.001, 1.0) {
+  //   display_name("Color3");
+  // };
+  // Color Color4 = Color(0.001, 1.0, 1.0, 1.0) {
+  //   display_name("Color4");
+  // };
+  // Color Color5 = Color(0.001, 0.001, 1.0, 1.0) {
+  //   display_name("Color5");
+  // };
+  // Color Color6 = Color(0.001, 0.001, 0.75, 1.0) {
+  //   display_name("Color6");
+  // };
+  // Color Color7 = Color(0.001, 0.001, 0.5, 1.0) {
+  //   display_name("Color7");
+  // };
+  // Color Color8 = Color(0.001, 0.001, 0.25, 1.0) {
+  //   display_name("Color8");
+  // };
+  float ContinentSize = 3.0 {
+    display_name("ContinentSize");
+  };
+  float IslandFactor = 0.25 {
+    display_name("IslandFactor");
+  };
+  // float OceanPercent = 50.0 {
+  //   display_name("OceanPercent");
+  // };
+
+  // for now we use the seed from max_Dent !!!
+
+  // TODO: int RandomSeed
+
+  // bool BlendWaterLand = true {
+  //   display_name("BlendWaterLand");
+  // };
+  Shader Coords;
+  // TODO: int GBufferID;
+
+  // textures
+  Texture2d noise_table = "dent_noise_out.dds" {
+    disable_filtering();
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+
+ output:
+  Color result;
+
+  // see tex_planet.cpp
+  float maxPlanet_Noise(in float x,
+			in float y,
+			in float z) {
+    // see maxDentNoise in max_Dent !!!
+    float mx = fmod(x, FNOISE_DIM);
+    if (mx < 0.0) mx += FNOISE_DIM;
+    float my = fmod(y, FNOISE_DIM);
+    if (my < 0.0) my += FNOISE_DIM;
+    float mz = fmod(z, FNOISE_DIM);
+    if (mz < 0.0) mz += FNOISE_DIM;
+    int ix = (int) mx;
+    int iy = (int) my;
+    int iz = (int) mz;
+    float fx = fmod(mx, 1.0);
+    float fy = fmod(my, 1.0);
+    float fz = fmod(mz, 1.0);
+    int index = 0;
+    float tx = 0.0;
+    float ty = 0.0;
+    float n = 0.0;
+    // n = noiseTable[ix][iy][iz];
+    index = iy * NOISE_DIM_PLUS_1 + ix;
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz) + 1.0) / (2.0 * 21.0);
+    Color c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    n = c.r;
+    // n00 = n + fx*(noiseTable[ix+1][iy][iz]-n);
+    index = iy * NOISE_DIM_PLUS_1 + (ix + 1);
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    float n00 = n + fx * (c.r - n);
+    // n = noiseTable[ix][iy][iz+1];
+    index = iy * NOISE_DIM_PLUS_1 + ix;
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz + 1) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    n = c.r;
+    // n01 = n + fx*(noiseTable[ix+1][iy][iz+1]-n);
+    index = iy * NOISE_DIM_PLUS_1 + (ix + 1);
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz + 1) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    float n01 = n + fx * (c.r - n);
+    // n = noiseTable[ix][iy+1][iz];
+    index = (iy + 1) * NOISE_DIM_PLUS_1 + ix;
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    n = c.r;
+    // n10 = n + fx*(noiseTable[ix+1][iy+1][iz]-n);
+    index = (iy + 1) * NOISE_DIM_PLUS_1 + (ix + 1);
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    float n10 = n + fx * (c.r - n);
+    // n = noiseTable[ix][iy+1][iz+1];
+    index = (iy + 1) * NOISE_DIM_PLUS_1 + ix;
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz+1) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    n = c.r;
+    // n11 = n + fx*(noiseTable[ix+1][iy+1][iz+1]-n);
+    index = (iy + 1) * NOISE_DIM_PLUS_1 + (ix + 1);
+    tx = (2.0 * float(index) + 1.0) / (2.0 * 441.0);
+    ty = (2.0 * float(iz+1) + 1.0) / (2.0 * 21.0);
+    c =  
+      Texture2D_sampler_color(noise_table, 0.0, "none").lookup(float2(tx, ty));
+    float n11 = n + fx * (c.r - n);
+    float n0 = n00 + fy * (n10 - n00);
+    float n1 = n01 + fy * (n11 - n01);
+    return (n0 + fz * (n1 - n0)) / 32768.0;
+  } // maxPlanet_Noise
+
+  // see tex_planet.cpp
+  float maxPlanet_NoiseFunc(// others
+			    in float x,
+			    in float y,
+			    in float z) {
+    return (maxPlanet_Noise(x, y, z) +
+	    maxPlanet_Noise(x * IslandFactor,
+			    y * IslandFactor,
+			    z * IslandFactor) / 5.0);
+  } // maxPlanet_NoiseFunc
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // xyz-coords
+    float3 xyz_coords = transform_point("internal", "object", position);
+    float3 xtra_dP = float3(0.0, 0.0, 0.0);
+    float3 xtra_bumpDP_0 = float3(1.0, 0.0, 0.0);
+    float3 xtra_bumpDP_1 = float3(0.0, 1.0, 0.0);
+    float3 xtra_bumpDP_2 = float3(0.0, 0.0, 1.0);
+    // try to call hlsl_base_UVGenerator
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Coords.call("output", "result", shader_return,
+		    "output", "xtra_dP", xtra_dP,
+		    "output", "xtra_bumpDP_0", xtra_bumpDP_0,
+		    "output", "xtra_bumpDP_1", xtra_bumpDP_1,
+		    "output", "xtra_bumpDP_2", xtra_bumpDP_2)) {
+      xyz_coords.xyz = shader_return.rgb;
+    }
+    else {
+      xyz_coords *= 100.0;
+    }
+    // use xyz-coords
+    float3 np = float3(0.0, 0.0, 0.0);
+    float size = (ContinentSize != 0.0) ? ContinentSize : 0.0001;
+    float3 q = float3(0.0, 0.0, 0.0);
+    q.x = xyz_coords.x / size;
+    q.y = xyz_coords.y / size;
+    q.z = xyz_coords.z / size;
+    float d = maxPlanet_NoiseFunc(// inst
+				  q.x, q.y, q.z);
+    float del = 10.0;
+    np.x = (maxPlanet_NoiseFunc(// inst
+				q.x + del * xtra_bumpDP_0.x,
+				q.y + del * xtra_bumpDP_0.y,
+				q.z + del * xtra_bumpDP_0.z) - 
+	    d) / del * 100.0;
+    np.y = (maxPlanet_NoiseFunc(// inst
+				q.x + del * xtra_bumpDP_1.x,
+				q.y + del * xtra_bumpDP_1.y,
+				q.z + del * xtra_bumpDP_1.z) - 
+	    d) / del * 100.0;
+    np.z = (maxPlanet_NoiseFunc(// inst
+				q.x + del * xtra_bumpDP_2.x,
+				q.y + del * xtra_bumpDP_2.y,
+				q.z + del * xtra_bumpDP_2.z) - 
+	    d) / del * 100.0;
+    // miMatrix  *tm;
+    // mi_query (miQ_TRANS_OBJECT_TO_INTERNAL, state, miNULLTAG, &tm);
+    float4x4 m = get_transform("object", "internal");
+    // mi_matrix_copy (m, *tm);
+    float3 v = float3(0.0, 0.0, 0.0);
+    float3 vn = float3(0.0, 0.0, 0.0);
+    // mi_vector_normalize ((miVector *)&(m)[0]);
+    v = float3(m[0][0], m[1][0], m[2][0]);
+    vn = normalize(v);
+    m[0][0] = vn.x;
+    m[1][0] = vn.y;
+    m[2][0] = vn.z;
+    // mi_vector_normalize ((miVector *)&(m)[4]);
+    v = float3(m[0][1], m[1][1], m[2][1]);
+    vn = normalize(v);
+    m[0][1] = vn.x;
+    m[1][1] = vn.y;
+    m[2][1] = vn.z;
+    // mi_vector_normalize ((miVector *)&(m)[8]);
+    v = float3(m[0][2], m[1][2], m[2][2]);
+    vn = normalize(v);
+    m[0][2] = vn.x;
+    m[1][2] = vn.y;
+    m[2][2] = vn.z;
+    float3x3 m2;
+    m2[0] = m[0].xyz;
+    m2[1] = m[1].xyz;
+    m2[2] = m[2].xyz;
+    // mi_vector_transform (&np, &np, m);
+    np = m2 * np;
+    result.rgb = np.xyz;
+    result.a = 1.0;
+  } // main
+};

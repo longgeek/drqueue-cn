@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Obsolete Auxiliary Functions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node151.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node153.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION150"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_light_info">mi_light_info</a></li>
+<li><a href="#api:mi_global_lights_info">mi_global_lights_info</a></li>
+<li><a href="#api:mi_texture_info">mi_texture_info</a></li>
+<li><a href="#api:mi_shader_info">mi_shader_info</a></li>
+<li><a href="#api:mi_instance_info">mi_instance_info</a></li>
+</ul>
+
+<h3>Obsolete Auxiliary Functions</h3>
+<p>These functions are obsolete; use
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> for future
+implementations.</p>
+<p><a id="INDEX782"></a></p>
+<h5 class="anchor" id="api:mi_light_info">mi_light_info</h5>
+<pre>
+    void mi_light_info(
+        miTag           tag,
+        miVector        *org,
+        miVector        *dir,
+        void            **paras)
+</pre>
+<p><i>tag</i> is assumed to be a <a href="node80.html#INDEX250">light
+source</a> <a href="node90.html#INDEX339">instance</a> as found in a
+light parameter of a shader, or returned by
+<i><a href="miquery.html#api:mi_query">mi_query</a></i>. It is looked up, and its
+origin (location in <a href="node101.html#INDEX367">internal
+space</a>) is stored in <tt>*</tt> <i>org</i>, and its direction
+(also in <a href="node101.html#INDEX367">internal space</a>) is
+stored in <tt>*</tt> <i>dir</i>. If <i>tag</i> refers to a light
+source instead of the instance, both vectors are defined in local
+space. Since light sources can only have one or the other but not
+both, the unused vector is set to a null vector. This can be used
+to distinguish directional (infinite) light sources; their
+<i>org</i> vector is set to <i>(0, 0, 0)</i>. The <i>paras</i>
+pointer is set to the shader parameters of the referenced light
+shader; if properly cast by the caller, it can extract information
+such as whether a non-directional light source is a point or a spot
+light, and its color and attenuation parameters. (mental ray
+considers a spot light to be a point light with directional
+attenuation.) Any of the three pointers <i>org</i>, <i>dir</i>, and
+<i>paras</i> can be a null pointer.</p>
+<p><a id="INDEX783"></a></p>
+<h5 class="anchor" id="api:mi_global_lights_info">mi_global_lights_info</h5>
+<pre>
+    int mi_global_lights_info(
+        miTag           **tag)
+</pre>
+<p>Returns the address of an array containing all global light
+<b><a id="INDEX784"></a>leaf instance</b>s. The
+tags in this array can be used like light shader parameters for
+calls to <i><a href="node140.html#INDEX555">mi_sample_light</a></i>
+and <i><a href="node152.html#INDEX782">mi_light_info</a></i>. One
+important difference between shader light parameters and global
+lights is that global lights are the result of instancing, so if a
+light is transformed and/or multiply instanced it will appear
+transformed and/or more than once in the global light list, while
+shader parameters will be accessed as stored in the scene with no
+instancing applied. It is recommended that translators that support
+multiple light instancing use material shaders that use the global
+light list instead of a light array in the shader parameter list
+(which, however, may still be useful as an argument for
+<i><a href="node140.html#INDEX565">mi_inclusive_lightlist</a></i> and
+<i><a href="node140.html#INDEX566">mi_exclusive_lightlist</a></i>).</p>
+<p><a id="INDEX785"></a></p>
+<h5 class="anchor" id="api:mi_texture_info">mi_texture_info</h5>
+<pre>
+    void mi_texture_info(
+        miTag           tag,
+        int             *xres,
+        int             *yres,
+        void            **paras)
+</pre>
+<p><i>tag</i> is assumed to be a texture as found in a texture
+parameter of a shader. If <i>tag</i> refers to a procedural
+<a href="node166.html#INDEX846">texture shader</a>, <tt>*</tt>
+<i>xres</i> and <tt>*</tt> <i>yres</i> are set to 0 and <tt>*</tt>
+<i>paras</i> is set to the shader parameters of the texture shader.
+If <i>tag</i> is an image texture, <tt>*</tt> <i>xres</i> and
+<tt>*</tt> <i>yres</i> are set to the image resolution in pixels,
+and <tt>*</tt> <i>paras</i> is set to 0. Any of the three pointers
+can be a null pointer.</p>
+<p><a id="INDEX786"></a></p>
+<h5 class="anchor" id="api:mi_shader_info">mi_shader_info</h5>
+<pre>
+    void *mi_shader_info(
+        miState         *state)
+</pre>
+<p>Returns a pointer to the <b><a id="INDEX787"></a>user pointer</b> of
+the current shader in the state,
+<code>state&rarr;shader</code>. This is useful for shaders that
+allocate memory during startup (in the instance
+<a href="node159.html#INDEX835">init shader</a>) and need a place to store
+the pointer to the initialized data in a place where shader
+instances can pick it up. A unique user pointer is returned for
+each shader instance (each unique function/parameters pair).</p>
+<p><a id="INDEX788"></a></p>
+<h5 class="anchor" id="api:mi_instance_info">mi_instance_info</h5>
+<pre>
+    int mi_instance_info(
+        miState         *state,
+        void ** const   paraspp,
+        void ** const   spare1,
+        void ** const   spare2,
+        void ** const   spare3)
+</pre>
+<p>Returns the size of and a pointer to the inherited instance
+parameters. Instance parameters are attached to the instances of
+the <a href="node83.html#INDEX286">scene DAG</a>, and are combined
+in a <a href="node83.html#INDEX286">scene DAG</a> traversal step
+during scene preprocessing, before rendering begins. The structure
+of the inherited data is determined by the
+<a href="node76.html#INDEX224">inheritance function</a> or
+<a href="node76.html#INDEX225">traversal function</a>, not by the shader,
+and is generally under control of the translator that generated the
+scene. Typically, all instances contain either no parameters at all
+(size 0), or they all use the same data structure. The instance
+being checked is <code>state&rarr;instance</code>. The <i>spare</i>
+pointers must be passed as 0.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node151.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node153.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,39 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Light_directional
+{
+  input:
+    Color   color = Color(1,1,1,1)
+	{		
+		display_name("Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color that the light will shine on the scene." );
+	};
+    float  intensity = PI
+	{	
+		display_name("Intensity");
+		soft_range(float(0),float(10));
+		description( "How bright the light will shine on the scene." );
+	};
+    
+  output:
+    Color result;
+	Color light_shadow;
+    
+    void main()
+    {
+        result = color * intensity;
+        result.a = 1.0;
+	light_shadow = shadowing();
+    }
+} 
+{ 
+	shader_type( "light" );
+	light_type( "infinite" );
+	description( "Creates a light source that illuminates the "
+				 "entire scene from a single direction." );
+}
+;

@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shader Declarations</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node168.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node170.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION167"></a>
+<h3>Shader Declarations</h3>
+<p>
+<span class="depr">Deprecated</span>
+<p>
+Software and hardware shaders are both declared. A software
+shader declaration is little more than a list of the parameters
+accepted by the shader and their data types, without the actual
+values (they are defined later when the shader is used). Such a
+declaration might look like this, using mental ray's .mi scene
+definition syntax:</p>
+<pre>
+    declare shader
+        color "mib_illum_lambert" (
+            color           "ambience",
+            color           "ambient",
+            color           "diffuse",
+            integer         "mode",
+            array light     "lights"
+        )
+        version 2
+    end declare
+</pre>
+<p>The declaration is the same for hardware and software shaders.
+This makes it simple to substitute a hardware shader for a software
+shader if both are written with the same interface parameters.
+Hardware shaders use the declaration to tell mental ray how the
+input parameters should be stored in <a href="node178.html#INDEX855">uniform
+variable</a>s, just like software
+shaders use this information for building a stack frame for the
+C/C++ shader code.</p>
+<p>The idea is that the declaration is the gateway between the
+shader and the hardware. Such a declaration may be fairly complex,
+but once written by the shader writer, the shader looks very
+similar to any other shader. The burden of writing the shader and
+declaring it is shifted to the programmer in a way that the artist,
+who later uses the shader, does not have to care about the
+complexities of hardware shader writing at all.</p>
+<p>The only exception is that shaders might have built-in
+limitations not usually found in software shaders, such as
+accepting only a limited number of lights or textures; but these
+limitations are all in the domain of scene design and not in the
+domain of programming. Since the artist and the programmer require
+different skill sets, and are not normally the same person, mental
+ray maintains a strict separation of these two roles.</p>
+<p>Hardware shaders come with additional information that is hidden
+behind the parameter declaration, in ways that only the programmer
+but not the artist needs to understand. A hardware shader
+declaration needs to contain the following information:</p>
+<ul>
+<li>The implementation of the <a href="node168.html#INDEX850">vertex
+shader</a>, if required.</li>
+<li>The implementation of the <a href="node168.html#INDEX851">fragment
+shader</a>.</li>
+<li>An optional C/C++ function that can perform extra OpenGL setup
+and shutdown. (Most hardware shaders do not need this.)</li>
+<li>Hardware requirements, such as the availability of a certain
+OpenGL version of a feature.</li>
+</ul>
+<p>The following section describes an example based on
+<a href="node178.html#INDEX854">NVIDIA</a>'s <a href="node173.html#INDEX853">Cg</a>
+language.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node168.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node170.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

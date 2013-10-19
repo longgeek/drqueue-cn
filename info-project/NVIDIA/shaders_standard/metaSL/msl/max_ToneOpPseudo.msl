@@ -1,0 +1,275 @@
+/******************************************************************************
+ * Copyright 1986-2008 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision: 1.3 $
+
+// switch for the HW vs. SW version
+#define USE_HW_VERSION
+
+// see max_toneop.cpp
+#define kAS_to_SI 10.76391
+
+// see max_toneop.cpp
+#define DSP_COLORED  0
+#define DSP_GRAY     1      
+
+// see max_toneop.cpp
+#define SCALE_LOGARITHMIC 0
+#define SCALE_LINEAR      1
+#define COLOR_TABLE_SATURATION      255.0
+#define COLOR_TABLE_VALUE           255.0
+#define COLOR_TABLE_START_HUE       170.0 
+#define COLOR_TABLE_HUE_RANGE       170.0   
+#define COLOR_TABLE_NUMBER_OF_GRAY  256.0
+
+// see max_toneop.cpp
+#define kQuantity_Illuminance 0
+#define kQuantity_Luminance   1
+
+// see max_toneop.cpp
+#define DISPLAY_INTERNATIONAL 0
+#define DISPLAY_AMERICAN      1
+#define DISPLAY_TYPE_COUNT    2
+
+shader max_ToneOpPseudo {
+ input:
+#ifdef USE_HW_VERSION
+  Texture2d env_tex = "max_ToneOpPseudo.exr" {
+    display_name("Texture");
+  };
+  float2 texture_uv {
+		default_to_state("texture_coordinate", "texture_space");
+  };
+#endif
+  bool active = true {
+    display_name("Active");
+  };
+  float minimum = 0.0 {
+    display_name("Minimum");
+    soft_range(Scalar(0.0), Scalar(10000.0));
+  };
+  float maximum = 10000.0 {
+    display_name("Maximum");
+    soft_range(Scalar(0.0), Scalar(10000.0));
+  };
+  int quantity = 1 {
+    display_name("Quantity");
+    soft_range(Int(0), Int(1));
+  };
+  int display = 0 {
+    display_name("Display");
+    soft_range(Int(0), Int(2));
+  };
+  float physicalscale = 1500.0 {
+    display_name("Physical Scale");
+    soft_range(Scalar(1.0), Scalar(3000.0));
+  };
+  bool automatic = false {
+    display_name("Automatic");
+  };
+  int scalefunction = 1 {
+    display_name("Scale Function");
+    soft_range(Int(0), Int(1));
+  };
+  int unitsystemused = 0 {
+    display_name("Unit System Used");
+    soft_range(Int(0), Int(2));
+  };
+  bool processBG = false {
+    display_name("Process Background");
+  };
+  int nbcolors = 100 {
+    display_name("Number Of Colors");
+  };
+
+ output:
+  Color result;
+
+  // see max_hsv.cpp
+  void HSVtoRGB(in Color hsv, out Color res) {
+    res = Color(0.0, 0.0, 0.0, 0.0);
+    float h = 6.0 * hsv.r;
+    float s = hsv.g;
+    int I = (Int) h;
+    float f = h - I;
+    float M = (hsv.b * (1.0 - s));
+    float N = 0.0;
+    float K = 0.0;
+    if (fmod(I, 2.0) == 1.0) N = (hsv.b * (1.0 - s * f));
+    else K = (hsv.b * (1.0 - s * (1.0 - f)));
+    switch(I) {
+    case 6:
+    case 0:
+      res.r = hsv.b;
+      res.g = K;
+      res.b = M;
+      res.a = 1.0;
+      break;
+    case 1:
+      res.r = N;
+      res.g = hsv.b;
+      res.b = M;
+      res.a = 1.0;
+      break;
+    case 2:
+      res.r = M;
+      res.g = hsv.b;
+      res.b = K;
+      res.a = 1.0;
+      break;
+    case 3:
+      res.r = M;
+      res.g = N;
+      res.b = hsv.b;
+      res.a = 1.0;
+      break;
+    case 4:
+      res.r = K;
+      res.g = M;
+      res.b = hsv.b;
+      res.a = 1.0;
+      break;
+    case 5:
+      res.r = hsv.b;
+      res.g = M;
+      res.b = N;
+      res.a = 1.0;
+      break;
+    }
+  }
+
+  // see max_toneop.cpp
+  float calcBrightness(in Color value) {
+    return (abs(value.r) * 0.263 +
+	    abs(value.g) * 0.655 +
+	    abs(value.b) * 0.082);
+  } // calcBrightness
+
+  // see max_toneop.cpp
+  int max_ToneOpPseudo_ScaleToRGB(// result
+				  inout Color local_result,
+				  // state
+				  // arg
+				  // shader parameters
+				  in float param_physicalscale,
+				  in int param_quantity,
+				  in float data_minimum,
+				  in float data_maximum,
+				  in int param_scalefunction,
+				  in float inst_cfA,
+				  in float inst_cfB,
+				  in float inst_conversionFactor,
+				  in int inst_nbColors) {
+    float brightness = calcBrightness(local_result) * param_physicalscale;
+    if(param_quantity == kQuantity_Luminance) brightness /= PI;
+    if (brightness < data_minimum) brightness = data_minimum;
+    else if (brightness > data_maximum) brightness = data_maximum;
+    int i = 0;
+    if (param_scalefunction == SCALE_LOGARITHMIC) {
+      i = (Int) (inst_cfA * log10(inst_cfB * (1.0 + brightness)));
+    }
+    else {
+      i = (Int) ((brightness - data_minimum) * inst_conversionFactor);
+    }
+    if (i < 0) i = 0;
+    else if (i >= inst_nbColors) i = inst_nbColors - 1;
+    return i;
+  } // max_ToneOpPseudo_ScaleToRGB
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+#ifdef USE_HW_VERSION
+    // instead of tracing a ray into the scene we use a texture !!!
+    // TMP
+    Vector3 v = Matrix3x3(internal_to_camera) * direction;
+    Vector2 texture;
+    texture.x = 0.5 + v.x; // / (Scalar) image_x_resolution;
+    texture.y = 0.5 - v.y; // / (Scalar) image_y_resolution;
+    // TMP
+    //result = tex2d(env_tex, texture);
+    //[James:] change for texture coordinate
+    result = tex2d(env_tex, texture_uv);
+#else
+    // trace a ray into the scene
+    Color eye_contrib = Color(0.0, 0.0, 0.0, 0.0);
+    Ray ray;
+    Ray ray_dx; // ignore for the moment
+    Ray ray_dy; // ignore for the moment
+    String gather_output_name;
+    Trace_options trace_options;
+    ray = Ray(origin, direction);
+    trace_options.set_ray_type("eye");
+    if (trace_immediate(ray, ray_dx, ray_dy, trace_options,
+			gather_output_name, eye_contrib)) {
+      result += eye_contrib;
+    } // if (trace_immediate(...))
+    else {
+      result += trace_environment(ray);
+    } // else [ if (trace_immediate(...)) ]
+#endif
+    if (active) {
+      // init function
+      float inst_minimum_SI = minimum;
+      float inst_maximum_SI = maximum;
+      if (unitsystemused != DISPLAY_INTERNATIONAL) {
+	inst_minimum_SI *= kAS_to_SI;
+	inst_maximum_SI *= kAS_to_SI;
+      } // if (unitsystemused != DISPLAY_INTERNATIONAL)
+      float maxBrightness = inst_maximum_SI;
+      float minBrightness = inst_minimum_SI;
+      float inst_conversionFactor = (maxBrightness > minBrightness ?
+				     1.0 / (maxBrightness - minBrightness) :
+				     1.0);
+      inst_conversionFactor *= nbcolors;
+      float inst_cfB = 1.0 / (1.0 + minBrightness);
+      float inst_cfA = (Scalar) nbcolors;
+      if (maxBrightness > minBrightness) {
+	inst_cfA /= log10((1.0 + maxBrightness) / (1.0 + minBrightness));
+      } // if (maxBrightness > minBrightness)
+      // TODO: check if we are called as lens shader
+      int index = max_ToneOpPseudo_ScaleToRGB(// result
+					      result,
+					      // state
+					      // shader parameters
+					      physicalscale,
+					      quantity,
+					      inst_minimum_SI,
+					      inst_maximum_SI,
+					      scalefunction,
+					      inst_cfA,
+					      inst_cfB,
+					      inst_conversionFactor,
+					      nbcolors);
+      // instead of using an array of colors we calculate the color directly
+      if (display == DSP_COLORED) {
+	float deltaHue = (Scalar) -COLOR_TABLE_HUE_RANGE / nbcolors;
+	Color hsv = Color(0.0, 0.0, 0.0, 0.0);
+	hsv.r = ((Scalar) COLOR_TABLE_START_HUE + index * deltaHue) / 256.0;
+	hsv.g = (Scalar) COLOR_TABLE_SATURATION / 256.0;
+	hsv.b = (Scalar) COLOR_TABLE_VALUE / 256.0;
+	HSVtoRGB(hsv, result);
+	result.a = 1.0;
+      } // if (display == DSP_COLORED)
+      else {
+	// gray scale
+	int a = 0; // unsigned long a;
+	float delta = (Scalar) COLOR_TABLE_NUMBER_OF_GRAY / nbcolors;
+	a = (Int/*unsigned long*/)(delta * index + 0.5);
+	result.r = a / 256.0;
+	result.g = a / 256.0;
+	result.b = a / 256.0;
+	result.a = 1.0;
+      } // else [ if (display == DSP_COLORED) ]
+    } // if (active)
+  } // main
+
+}
+{
+#ifdef USE_HW_VERSION
+  shader_type( "environment" );
+#else
+  shader_type("lens");
+#endif
+};

@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shadow Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node120.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node122.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION119"></a>
+
+<h2>Shadow Shaders</h2>
+<p><a id="INDEX481"></a> As described in the
+previous section, light shaders may trace shadow rays between the
+light source and the point to be illuminated. When this ray hits an
+occluding object, that object's shadow shader is called, if
+present. (If the object has no shadow shader, the object is assumed
+to block all light.) Shadow shaders accept an input color that is
+dimmed according to the <a href="node76.html#INDEX200">transparency</a>
+and color of the occluding
+object. If the resulting color is black, that is, if the object is
+fully opaque, the shadow shader should return <tt>miFALSE</tt>.</p>
+<p>If there is more than one occluding object between the
+<a href="node80.html#INDEX250">light source</a> and the illuminated point,
+the order in which the shadow shaders of the occluding objects are
+called is undefined, unless shadow sorting or segmented shadows are
+turned on. Shadow shaders that rely on being called in the correct
+order, the one closest to the light source first, should define
+<tt>shadow sort</tt> in their shader declaration to ensure that
+shadow sorting is enabled if the shader is used.</p>
+<p>Shadow shaders should check for shadow segment mode. If <a href="node102.html#INDEX391">shadow segments</a> are turned on, shadow
+shaders must behave rather differently, similar to computing
+transparency in material shaders. The shadow ray points from the
+previous intersection (or the illumination point for the initial
+segment) to the current intersection point. It should set up
+<tt>state-&gt;refraction_volume</tt> for the next shadow segment,
+obtain the illumination by calling
+<b><a id="INDEX482"></a>mi_trace_shadow_seg</b>, and then apply the
+usual modifications.</p>
+<p>Shadow shaders should distinguish two cases:</p>
+<ul>
+<li><tt>state-&gt;options-&gt;shadow</tt> is <tt>1</tt> or
+<tt>'l'</tt><br />
+<br />
+All shadow ray origins are at the light source, and their
+intersection point is on the intersection object whose shadow
+shader was called. The <i>mi_trace_shadow</i> call by the light
+shader calls all shadow shaders.</li>
+<li><tt>state-&gt;options-&gt;shadow</tt> is <tt>'s'</tt><br />
+<br />
+Shadow rays travel in the opposite direction and form a chain from
+the illuminated point towards the light source. Each shadow ray's
+origin is the previous ray's end point. The shadow shader must
+perform inside/outside calculations and leave the correct <a href="node117.html#INDEX460">volume shader</a> in
+<tt>state-&gt;volume</tt>. The <i>mi_trace_shadow</i> call by the
+<a href="node120.html#INDEX471">light shader</a> only calls the
+first shadow shader closest to the illuminated point; that shadow
+shader must call <i>mi_trace_shadow_seg</i> after choosing the
+volume.</li>
+</ul>
+<p>If a new <a href="node115.html#INDEX440">material shader</a> is
+written, it is often necessary to also write a matching <a href="node121.html#INDEX481">shadow shader</a>. The shadow shader
+performs a subset of the calculations done in the material shader:
+it may evaluate textures and transparencies, but it will not sample
+lights and it will not cast secondary rays (other than shadow rays
+in shadow segment mode). The shader writer can either write a
+separate shadow shader, or let the <a href="node115.html#INDEX440">material shader</a> double as shadow shader
+by building the scene such that the material shader appears twice
+in the material definition. Most shaders take the latter approach.
+It relies on the material shader to omit all calculations that are
+necessary only in the material shader when called as a shadow
+shader. The shader can find out whether it is called as a material
+shader or as a shadow shader by checking if <i>state</i>&rarr;type
+is <tt>miRAY_SHADOW</tt>: if yes, this is a shadow shader.</p>
+<p>The following shadow shader is a separate shader that attenuates
+the light that passes through the object based on two shader
+parameters, the diffuse color and the transparency. Material
+shaders usually also have ambient and specular colors, but the best
+approach is to pass the diffuse color to shadow shaders because it
+describes the "true color" of the object best. Note that the scene
+can be arranged such that although the shadow shader is separate
+from the material shader, it still gets a copy of the material
+shader's <a href="node65.html#INDEX142">shader parameter</a>s so
+the shadow shader can access the "true" material parameters. In a
+.mi file, this is done by declaring the shadow shader with no
+parameters and naming none in the <tt>shadow</tt> statement in the
+material definition (just give <tt>()</tt>). This sharing of
+parameters even if the shader itself is not shared avoids having to
+duplicate a large set of parameters.</p>
+<pre>
+    miBoolean myshadow(
+        miColor         *result,
+        miState         *state,
+        struct myshadow *paras)
+    {
+        miScalar        opacity;
+        miScalar        f, omf;
+
+        if (state-&gt;options-&gt;shadow == 's') {
+                set up state-&gt;refraction_volume;
+                if (!mi_trace_shadow_seg(result, state))
+                        result-&gt;r = result-&gt;g = result-&gt;b = 0;
+        }
+        opacity = 1 - *mi_eval_scalar(&amp;paras-&gt;transp);
+        if (opacity &lt; 0.5) {
+                f = 2 * opacity;
+                result-&gt;r *= f * diffuse.r;
+                result-&gt;g *= f * diffuse.g;
+                result-&gt;b *= f * diffuse.b;
+        } else {
+                f = 2 * (opacity - 0.5);
+                omf = 1 - f;
+                result-&gt;r *= f + omf * diffuse.r;
+                result-&gt;g *= f + omf * diffuse.g;
+                result-&gt;b *= f + omf * diffuse.b;
+        }
+        return(result-&gt;r != 0 || result-&gt;g != 0 || result-&gt;b != 0);
+    }
+</pre>
+<p>In non-segmented shadow mode, the <i>org</i> variable in the
+state always contains the position of the light source responsible
+for casting the shadow rays. The <tt>point</tt> state variable
+contains the point on the shadow-casting object. The <i>dist</i>
+state variable is the distance to the light source (except for
+directional lights, which have no origin). In shadow segment mode,
+shadow rays travel in the opposite direction; <i>org</i> is the
+previous intersection (or the illumination point for the initial
+segment), and <i>dir</i> points towards the light source.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node120.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node122.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

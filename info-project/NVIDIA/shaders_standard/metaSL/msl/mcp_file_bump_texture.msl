@@ -1,0 +1,152 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product shader generating bumped normals based on a highfield texture
+ *****************************************************************************/
+#include <mcp_lib.msl>
+
+
+shader Mcp_file_bump_texture {
+    input:
+    texture2D texture
+    {
+        description("The input texture.");
+    };
+      //special bump parameters
+    float factor = 1.0f
+    {
+                description( "Determines the degree of bumpiness." );
+    };
+      //the coordinates, normaly come from Mcp_coordinate_source or Mcp_coordinate_transform 	
+    Mcp_coordinate uvw = Mcp_coordinate(
+                texture_coordinate[0].xyz,
+                ddx(texture_coordinate[0]).xyz,
+                ddy(texture_coordinate[0]).xyz,
+                float3(1.,0.,0.),
+                float3(0.,1.,0.)
+                )
+    {
+            description("Cropping range in U direction.");
+    };
+      //transformations that need affect texture filtering in special ways
+      //those should effectively be handled by the core!
+    Mcp_texture_placement texture_placement = Mcp_texture_placement(
+                 float2(0.0, 1.0),
+                 float2(0.0, 1.0),
+                 true,
+                 true,
+                 false,
+                 false)
+    {
+        description("Description of bitmap fint into coodinate space");
+    };
+
+    output:
+            float3 result;
+    /*      Color rdu;
+            Color rdu2;
+            Color rdv;
+            Color rdv2;
+            Color rn;
+            Color rn2;*/
+
+    void main()
+    {
+        result = normal; // get normal from state
+    //float3 mydu,mydv;
+    //dduv_from_ddxy(mydu,mydv,uvw.ddx,uvw.ddy);
+    /*rdu = Color(mydu,1.);
+        rdu2 = Color(uvw.du,1.);
+        rdv = Color(mydv,1.);
+        rdv2 = Color(uvw.dv,1.);
+        rn = Color(normalize(cross(mydu,mydv)),1.);
+        rn2 = Color(normal,1.);*/
+    //float3 offset_u = mydu/texture.width ;
+    //float3 offset_v = mydv/texture.height ;
+        
+        float3 offset_u = uvw.du/texture.width ;
+        float3 offset_v = uvw.dv/texture.height ;
+        
+        float3 coord = uvw.position;
+        // wrap or clamp u
+        if (!texture_placement.wrap_u)
+            coord.x = clamp(coord.x, 0.0, 1.0);
+        else if( coord.x > 0.){
+            if (texture_placement.mirror_u && int(coord.x) % 2 == 1){
+                offset_u.x = - offset_u.x;
+                offset_v.x = - offset_v.x;
+                coord.x = 1.0 - fmod(coord.x, 1.0);
+            }
+            else
+                coord.x = fmod(coord.x, 1.0);		
+        }
+        else{
+            if (texture_placement.mirror_u && int(coord.x) % 2 == 0){
+                offset_u.x = - offset_u.x;
+                offset_v.x = - offset_v.x;
+                coord.x = - fmod(coord.x, 1.0);
+            }
+            else
+                coord.x = 1+fmod(coord.x, 1.0);		
+        }
+
+        //clamp v
+        if (!texture_placement.wrap_v)
+            coord.y = clamp(coord.y, 0.0, 1.0);
+        else if( coord.y > 0.){
+            if (texture_placement.mirror_v && int(coord.y) % 2 == 1){
+                offset_u.y = - offset_u.y;
+                offset_v.y = - offset_v.y;
+                coord.y = 1.0 - fmod(coord.y, 1.0);
+            }
+            else
+                coord.y = fmod(coord.y, 1.0);		
+        }
+        else{
+            if (texture_placement.mirror_v && int(coord.y) % 2 == 0){
+                offset_u.y = - offset_u.y;
+                offset_v.y = - offset_v.y;
+                coord.y = - fmod(coord.y, 1.0);
+            }
+            else
+                coord.y = 1+fmod(coord.y, 1.0);		
+        }
+        // crop
+        coord.x = texture_placement.crop_u.x + (texture_placement.crop_u.y - texture_placement.crop_u.x) * coord.x;
+        coord.y = texture_placement.crop_v.x + (texture_placement.crop_v.y - texture_placement.crop_v.x) * coord.y;
+
+        float2 coord_u = coord.xy;
+        float2 coord_v = coord.xy;
+        // differential offset
+        coord_u += offset_u.xy;
+        coord_v += offset_v.xy;
+
+        Texture2D_sampler_color samp = Texture2D_sampler_color(texture);
+
+        // doting with this vector gives the average component value
+    //float3 a  = float3(1./3, 1./3, 1./3);
+        float3 a  = float3(1., 1., 1.);
+
+        Color c;
+        c = samp.lookup(coord.xy);
+        float val   = dot(a, c.xyz);
+
+        c = samp.lookup(coord_u);
+        float val_u = dot(a, c.xyz) - val;
+
+        c = samp.lookup(coord_v);
+        float val_v = dot(a, c.xyz) - val;
+
+        // modify normal
+        result -= factor *  (texture_tangent_u[0] * val_u +
+                                   texture_tangent_v[0] * val_v);
+        result = normalize(result);
+
+    } // main
+}
+{
+        description( "Uses a scalar bump map to perturb the normal." );
+};

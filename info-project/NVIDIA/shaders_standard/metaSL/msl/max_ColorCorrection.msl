@@ -1,0 +1,499 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+// Branches with numerical compare may trigger unexpected behavior of Microsoft shader compiler (MAXX-6117).
+// For correct result and better performance, try to avoid branch whenever possible.
+#define BRANCH_OPTIMIZE
+
+//undefine to enable structs
+#define HLSL_OPTIMIZE
+#ifdef HLSL_OPTIMIZE
+#define PARAS(x) x 
+#else
+#define PARAS(x) MaxColorCorrectionParams.x
+#endif
+
+shader max_ColorCorrection {
+
+     input:
+
+#ifdef HLSL_OPTIMIZE
+    Color color = Color(0){
+    };
+    Shader map = Shader(){
+    };
+    const int rewireR = 0{
+    };
+    const int rewireG = 1{
+    };
+    const int rewireB = 2{
+    };
+    const int rewireA = 3{
+    };
+    float hueShift = 0.0{
+    };
+    float saturation = 0.0{
+    };
+    Color tint = Color(0){
+    };
+    float tintStrength = 0.0{
+    };
+    int lightnessMode = 0{
+    };
+    float contrast = 0.0{
+    };
+    float brightness = 0.0{
+    };
+    const int exposureMode = 0{
+    };
+    const bool enableR = false{
+    };
+    const bool enableG = false{
+    };
+    const bool enableB = false{
+    };
+    float gainRGB = 1.0{
+    };
+    float gainR = 1.0{
+    };
+    float gainG = 1.0{
+    };
+    float gainB = 1.0{
+    };
+    float gammaRGB = 1.0{
+    };
+    float gammaR = 1.0{
+    };
+    float gammaG = 1.0{
+    };
+    float gammaB = 1.0{
+    };
+    float pivotRGB = 1.0{
+    };
+    float pivotR = 1.0{
+    };
+    float pivotG = 1.0{
+    };
+    float pivotB = 1.0{
+    };
+    float liftRGB = 0.0{
+    };
+    float liftR = 0.0{
+    };
+    float liftG = 0.0{
+    };
+    float liftB = 0.0{
+    };
+    float printerLights = 5.0{
+    };
+  
+    int ExtraParameters_GBufferID = 0{
+    };
+#else
+struct MaxColorCorrectionParams_struct {
+    Color color;
+    Shader map;
+    int rewireR;
+    int rewireG;
+    int rewireB;
+    int rewireA;
+    float hueShift;
+    float saturation;
+    Color tint;
+    float tintStrength;
+    int lightnessMode;
+    float contrast;
+    float brightness;
+    int exposureMode;
+    bool enableR;
+    bool enableG;
+    bool enableB;
+    float gainRGB;
+    float gainR;
+    float gainG;
+    float gainB;
+    float gammaRGB;
+    float gammaR;
+    float gammaG;
+    float gammaB;
+    float pivotRGB;
+    float pivotR;
+    float pivotG;
+    float pivotB;
+    float liftRGB;
+    float liftR;
+    float liftG;
+    float liftB;
+    float printerLights;
+  }; // Parameters
+
+        
+  MaxColorCorrectionParams_struct MaxColorCorrectionParams =
+      MaxColorCorrectionParams_struct(  
+                                  Color(0),
+                                  Shader(),
+                                  0,
+                                  1,
+                                  2, 
+                                  3,
+                                  0.0,
+                                  0.0,
+                                  Color(0),
+                                  0.0,
+                                  0, //standard
+                                  0.0,
+                                  0.0,
+                                  0,
+                                  false,
+                                  false,
+                                  false,
+                                  1.0,//gain
+                                  1.0,
+                                  1.0,
+                                  1.0,
+                                  1.0,//gamma
+                                  1.0,
+                                  1.0,
+                                  1.0,
+                                  1.0,//pivot
+                                  1.0,
+                                  1.0,
+                                  1.0, 
+                                  0.0,//lift
+                                  0.0, 
+                                  0.0,
+                                  0.0,
+                                  5.0  );
+   struct ExtraParameters {
+    int GBufferID;
+  }; // ExtraParameters
+  ExtraParameters ep = ExtraParameters(0);
+#endif
+  // Additional inputs
+  bool evalNormal = false{
+  }; // Bump mode
+ output:
+  Color result;
+
+#define REWIRE_ARRAY_SIZE 11
+
+float rotate(in float v, in float lo, in float hi)
+{
+	float delta = hi - lo;
+
+	//while (v < lo) v += delta;
+	if (v < lo)
+	{
+		int f = ceil((lo - v) / delta);
+		v += delta * f;
+	}
+
+	//while (v > hi) v -= delta;
+	if (v >= hi)
+	{
+		int f = floor((v - hi) / delta) + 1;
+		v -= delta * f;
+	} 
+
+	return v;
+}
+
+  float rewire_value(in int index, in Color color)
+  {
+      float ret = 0.0;
+      switch(index)
+      {
+      case 0://RED
+          ret = color.r;
+          break;
+      case 1://GREEN
+          ret = color.g;
+          break;
+      case 2://BLUE
+          ret = color.b;
+          break;
+      case 3://ALPHA
+          ret = color.a;
+          break;
+      case 4://RED INVERSE
+          ret = 1.0 - color.r;
+          break;
+      case 5://GREEN INVERSE
+          ret = 1.0 - color.g;
+          break;
+      case 6://BLUE INVERSE
+          ret = 1.0 - color.b;
+          break;
+      case 7://ALPHA INVERSE
+          ret = 1.0 - color.a;
+          break;
+      case 8://MONO
+          ret = (color.r + color.g + color.b)/3.0;
+          break;
+      case 9://ONE
+          ret = 1.0;
+          break;
+      case 10://ZERO 
+      default:
+          ret = 0.0;
+          break;
+      }
+      return ret;
+  }
+
+#define MIN_COLOR_DELTA 0.00001
+
+float CalcHue( in Color c )
+{
+	float min_ = min(c.r, min(c.g, c.b));
+	float max_ = max(c.r, max(c.g, c.b));
+	float delta = max_ - min_;
+	if (delta < MIN_COLOR_DELTA)
+	{
+		return 0.0f;
+	}
+
+#ifdef BRANCH_OPTIMIZE
+	float3 hs = (c.gbr - c.brg) / delta + float3(0.0f, 2.0f, 4.0f);
+	hs *= step(max_.xxx, c.rgb);
+	float h = max(hs.x, max(hs.y, hs.z));
+#else
+	float h = 0.0f;
+	if (c.r == max_)
+	{
+		h = (c.g - c.b) / delta;
+	}
+	else if (c.g == max_)
+	{
+		h = 2 + (c.b - c.r) / delta;
+	}
+	else
+	{
+		h = 4 + (c.r - c.g) / delta;
+	}
+#endif
+
+	return rotate(h * 60.0f, 0.0f, 360.0f);
+}
+
+  void RGBtoHSL( in Color cin, inout Color cout ) 
+  {
+      cout.r = CalcHue( cin );
+      cout.g = CalcSat( cin );
+      cout.b = CalcLum( cin );
+   }
+
+  float hue_to_rgb(in float v1, in float v2, in float H)
+  {
+      H = rotate( H, 0.0f, 1.0f );
+
+      if ( (6.0f * H) < 1.0 ) 
+          return v1 + (v2 - v1) * 6 * H;
+      else if ( (2.0f * H) < 1.0 ) 
+          return v2;
+	  else if ( (3.0f * H) < 2.0 )
+          return v1 + (v2 - v1) * ((2.0f/3.0f)-H) * 6;
+      else  
+          return v1;
+  }
+
+   void HSLtoRGB( in Color cin, inout Color cout ) 
+   {
+    
+      float H = cin.r;
+      float S =  cin.g;
+      float L = cin.b;
+
+#ifdef BRANCH_OPTIMIZE
+      float Q = L + min(L, 1.0f - L) * S;
+#else
+      float Q =  L < 0.5 ? (L * (1.0f + S)) 
+                               : (L + S - L*S);
+#endif
+
+      float P = 2.0 * L - Q ;
+      float Hk = H / 360.0f;
+  
+      cout.r = max(hue_to_rgb( P, Q, Hk + 1.0f/3.0f ), 0);
+      cout.g = max(hue_to_rgb( P, Q, Hk             ), 0);
+      cout.b = max(hue_to_rgb( P, Q, Hk - 1.0f/3.0f ), 0);
+   }
+
+float CalcLum( in Color c )
+{
+	return max((max(c.r, max(c.g, c.b)) + min(c.r, min(c.g, c.b))) / 2.0f, 0.0f);
+}
+
+float CalcSat(in Color c)
+{
+	float min_ = min(c.r, min(c.g, c.b));
+	float max_ = max(c.r, max(c.g, c.b));
+
+#ifdef BRANCH_OPTIMIZE
+	float sat = (max_ - min_) / (1.0f - abs(max_ + min_ - 1.0f));
+#else
+	float sat = 0.0f;
+	float lum = CalcLum(c);
+	if (min_ == max_ || lum == 0.0f)
+		return 0.0f;
+	else if (lum <= 0.5f)
+		return (max_ - min_) / (2.0f * lum);
+	else
+		return (max_ - min_) / (2.0f - 2.0f * lum);
+#endif
+
+	return max(sat, 0.0f);
+}
+
+float3 transformColor3(in Color c, in float gain, in float pivot, in float gamma, in float lift)
+{
+	float g = gain / 100.0f;
+	float3 base = c.rgb;
+	if (PARAS(exposureMode) == 0)
+	{ // Gain
+		base = c.rgb * g / pivot;
+	}
+	else if (PARAS(exposureMode) == 1)
+	{ // F-Stops
+		base = c.rgb * pow(2.0f, g) / pivot;
+	}
+	else
+	{ // Printer Lights
+		base = c.rgb * pow(PARAS(printerLights), g) / pivot;
+	}
+
+	// When the base of pow() is 0, it'll produce incorrect result.
+	// Handle the exception by an extra check.
+	float3 temp = pivot * pow(base, 1.0f / gamma);
+	return step(float3(MIN_COLOR_DELTA), base) * temp + lift;
+}
+
+float transformColor(in float c, in float gain, in float pivot, in float gamma, in float lift)
+{
+	float g = gain / 100.0f;
+	float base = c;
+	if (PARAS(exposureMode) == 0)
+	{ // Gain
+		base = c * g / pivot;
+	}
+	else if (PARAS(exposureMode) == 1)
+	{ // F-Stops
+		base = c * pow(2.0f, g) / pivot;
+	}
+	else
+	{ // Printer Lights
+		base = c * pow(PARAS(printerLights), g) / pivot;
+	}
+
+	// When the base of pow() is 0, it'll produce incorrect result.
+	// Handle the exception by an extra check.
+	float temp = pivot * pow(base, 1.0f / gamma);
+	return step(MIN_COLOR_DELTA, base) * temp + lift;
+}
+
+  Color maxColorCorrection_Eval(in Color paras_shader_result)
+   {
+       Color local_result = paras_shader_result;
+      
+
+      // Rewiring
+      {
+         int rewire_r = PARAS(rewireR);
+         int rewire_g = PARAS(rewireG);
+         int rewire_b = PARAS(rewireB);
+         int rewire_a = PARAS(rewireA);
+         Color tmp = local_result;
+
+         local_result.r = rewire_value(clamp(rewire_r, 0, REWIRE_ARRAY_SIZE), tmp);
+         local_result.g = rewire_value(clamp(rewire_g, 0, REWIRE_ARRAY_SIZE), tmp);
+         local_result.b = rewire_value(clamp(rewire_b, 0, REWIRE_ARRAY_SIZE), tmp);
+         local_result.a = rewire_value(clamp(rewire_a, 0, REWIRE_ARRAY_SIZE), tmp);
+         
+      }
+
+      // Perform HSL variation (Color rollout)
+      {
+         Color hsl = Color(0.0, 0.0, 0.0, 0.0);
+         RGBtoHSL(local_result, hsl);
+
+         if (hsl.g > 0.0) // Only do anything for saturations above Zero
+         {
+            // Hue Shift
+            hsl.r = rotate( hsl.r + PARAS(hueShift), 0.0f, 360.0f );
+            hsl.g = max( hsl.g * (1.0f + PARAS(saturation)/100.0f), 0.0f );
+         }
+
+         // Tint calculation
+         Color local_tint = PARAS(tint);
+         float   strength = PARAS(tintStrength);
+
+         float hue_tint = CalcHue( local_tint );
+
+         // Verify that it is not infinity or undefined (could happened if monochrome - no hue)
+         if (hue_tint >= 0.0f && hue_tint <= 360.0f)
+            hsl.r = (hsl.r + (hue_tint - hsl.r) * (strength/100.0f));
+
+         HSLtoRGB( hsl, local_result );
+         
+         
+      }
+
+	// Perform Lightness variation
+	if (0 == PARAS(lightnessMode))
+	{
+		float b = PARAS(brightness) / 100.0f;
+		float c = PARAS(contrast) / 100.0f;
+		local_result.rgb = (local_result.rgb - 0.5f) * (1.0f + c) + 0.5f + b;
+	}
+	else
+	{
+		local_result.rgb = transformColor3(local_result, PARAS(gainRGB), PARAS(pivotRGB), PARAS(gammaRGB), PARAS(liftRGB));
+
+		if (PARAS(enableR))
+		{
+			local_result.r = transformColor(local_result.r, PARAS(gainR), PARAS(pivotR), PARAS(gammaR), PARAS(liftR));
+		}
+		if (PARAS(enableG))
+		{
+			local_result.g = transformColor(local_result.g, PARAS(gainG), PARAS(pivotG), PARAS(gammaG), PARAS(liftG));
+		}
+		if (PARAS(enableB))
+		{
+			local_result.b = transformColor(local_result.b, PARAS(gainB), PARAS(pivotB), PARAS(gammaB), PARAS(liftB));
+		}
+	}
+
+	local_result = max(local_result, Color(0.0f));
+	return local_result;
+   }
+
+
+  void main() {
+   result = Color(0.0, 0.0, 0.0, 0.0);
+ 
+   if(!evalNormal)
+   {
+      
+      Color shader_result = Color(0, 0, 0, 0);
+      if( false == PARAS(map).call("input", "evalNormal", evalNormal,
+                                             "output", "result", shader_result) )
+      {
+           shader_result = PARAS(color);
+      }
+      result = maxColorCorrection_Eval(shader_result);
+   }
+   else
+   {
+      if(false == PARAS(map).call("input", "evalNormal", evalNormal,
+                                            "output", "result", result) )
+      {
+          result = Color(0, 0, 0, 0);
+      }
+      result.a = 0;
+   }
+  } // main
+};

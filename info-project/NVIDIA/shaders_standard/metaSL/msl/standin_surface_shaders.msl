@@ -1,0 +1,123 @@
+/******************************************************************************
+* Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ ******************************************************************************/
+
+shader standin_surface_for_volume
+{
+    output:
+        Color result;
+
+    void main()
+    {
+        result = volume_input;
+    }
+};
+
+
+shader standin_surface_for_environment
+{
+    output:
+        Color result;
+
+    void main()
+    {
+		result = Color(0.0);
+		
+        // Compute reflected direction using the interpolated normal.
+        float3 reflected = reflect(direction, normal);
+
+        // If reflected direction points below surface, use geometric normal.
+        if (dot(reflected, geometry_normal) < 0.0) {
+            reflected = reflect(direction, geometry_normal);
+        }
+
+        Ray ray(position, reflected);
+        Ray ray_dx(float3(0), float3(0));
+        Ray ray_dy(float3(0), float3(0));
+        Trace_options trace_opt;
+        trace_opt.set_ray_type("environment");
+        trace(ray, ray_dx, ray_dy, trace_opt, "result", result);
+    }
+};
+
+
+shader standin_surface_for_lights
+{
+    output:
+        Color result;
+
+    void main()
+    {
+		result = Color(0.0);
+        Light_iterator light;
+        foreach (light) {
+             result += light.contribution;
+        }
+    }
+};
+
+
+shader default_light
+{
+    input:
+        float intensity = PI;
+		
+    output:
+        Color result;
+        Color light_shadow;
+      
+    void main()
+    {
+        result       = Color(1.0, 1.0, 1.0, 1.0);  // Light contribution
+        light_shadow = Color(1.0, 1.0, 1.0, 1.0);  // Shadow contribution 
+        
+        float distance_scale         = 1.f;
+        float distance_falloff_start = 0.f;
+        float distance_falloff_limit = 1000.f;
+
+        float d = saturate(
+            (light_distance/(distance_scale - distance_falloff_start))/
+            (distance_falloff_limit - distance_falloff_start));
+                
+        float f = 1.0/(1.0 + pow(d, 1.f));
+        
+        result = result * intensity * f;
+
+        light_shadow = shadowing();        
+    }
+};
+
+shader mill_default_light
+{
+    output:
+        Color result;
+    void main()
+    {
+        result = PI;
+    }
+};
+
+shader default_environment
+{
+  input:
+    Texture_cube env_tex = "default_reflection_cubic.dds"
+	{
+		display_name("Environment Cube Texture");
+		description("The cube texture from which the environment colors will be sampled");
+	};
+
+ output:
+    Color result;
+    
+    void main()
+    {
+		float3 v = transform_vector("internal", "world", direction);	
+		result  = texCUBE(env_tex, v.xzy);
+    }
+}
+{
+	shader_type( "environment" ); 
+	description( "Uses the cubic mapping to map the texture to environment "
+	             "reflection directions." );
+};

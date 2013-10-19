@@ -1,0 +1,179 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// tex_bitmap.cpp
+#define ALPHA_FILE 0
+#define ALPHA_RGB  1
+#define ALPHA_NONE 2
+
+shader hlsl_Bitmap_EvalColor {
+ input:
+  float ClipU = 0.0 {
+    display_name("U");
+    hard_range(0.0, 1.0);
+  };
+  float ClipV = 0.0 {
+    display_name("V");
+    hard_range(0.0, 1.0);
+  };
+  float ClipW = 1.0 {
+    display_name("W");
+    hard_range(0.0, 1.0);
+  };
+  float ClipH = 1.0 {
+    display_name("H");
+    hard_range(0.0, 1.0);
+  };
+  // because maxJitter(...) uses maxNTsrand(...) based on parameter
+  // values we can't bake the noise into textures !!!
+  // TODO: float Jitter
+  // TODO: bool UseJitter
+  const bool Apply = false {
+    display_name("Apply crop?");
+  };
+  const bool CropPlace = false {
+    display_name("Crop (or place)?");
+  };
+  // TODO: int Filtering
+  const int MonoOutput = 0 { // alpha_as_mono
+  };
+  const int RGBOutput = 0 { // alpha_as_rgb
+  };
+  const int AlphaSource = 0 { // alpha_source
+    // hardrange(0, 2);
+  };
+  const bool PreMultAlpha = true { // premultiply_alpha
+  };
+  float Gamma = 1.0 {
+  };
+
+  Texture2d Bitmap = "brickwall.dds";
+  Shader Coords;
+  Shader Output;
+  // TODO: struct "time parameters"
+  // TODO: struct "ExtraParameters"
+
+ output:
+  Color result;
+  float mono_result;
+
+  // see max_support.h
+  float maxFLOOR(in float x) {
+    if (x < 0.0) return ((int) x - 1.0);
+    else return (int) x;
+  } // maxFLOOR
+
+  // see max_support.h
+  float maxFRAC(in float x) {
+    return x - maxFLOOR(x);
+  } // maxFRAC
+
+  // see max_support.cpp
+  float maxIntensity(in Color c) {
+    float f = (c.r + c.g + c.b) * 0.333333333;
+    return f;
+  } // maxIntensity
+
+  // see tex_bitmap.cpp
+  bool maxPlaceUVFilter(inout float u, inout float v) {
+    float ufac = ClipW;
+    float vfac = ClipH;
+    // avoid division by zero: make sure we don't have zero
+    if((ufac != 0) && (vfac != 0)) {
+      float u0 = ClipU;
+      float u1 = ClipU + ufac;
+      // note: v is the inverse from the 3dsmax implementation
+      float v0 = 1.0 - (ClipV + vfac);
+      float v1 = 1.0 - ClipV;
+      if (u < u0 || v < v0 || u > u1 || v > v1) return false;
+      u = (u - u0) / ufac;
+      v = (v - v0) / vfac;
+      return true;
+    } // if((ufac != 0) && (vfac != 0))
+    else {
+      return false;
+    } // else [ if((ufac != 0) && (vfac != 0)) ]
+  } // maxPlaceUVFilter
+
+  void main() {
+      result = Color(0.0, 0.0, 0.0, 0.0);
+      mono_result = 0.0;
+
+      // uv-coords
+      float u = texture_coordinate[0].x;
+      float v = texture_coordinate[0].y;
+      // try to call hlsl_base_UVGenerator
+      Color shader_return = Color(u, v, 0.0, 0.0);
+	  float2 ddxy= float2(0,0);
+
+      Coords.call("output", "result", shader_return,"output", "duv", ddxy);
+
+	  u = shader_return.r;
+	  v = shader_return.g;
+      // use uv-coords
+      float2 uv = float2(0.002, 0.002);
+      float fu = maxFRAC(u);
+      float fv = maxFRAC(v);
+      if (Apply) {
+          if (CropPlace) {
+              if (!maxPlaceUVFilter(// inout
+                  fu, fv)) {
+                      // transpBlack
+                      result = Color(0.0, 0.0, 0.0, 0.0);
+                      return;
+              }
+              uv.x = fu;
+              uv.y = fv;
+          } // if (CropPlace)
+          else {
+              uv.x = maxFRAC(ClipU + fu * ClipW);
+              uv.y = maxFRAC(1.0 - ClipV - ClipH + fv * ClipH);
+          } // else [ if (CropPlace) ]
+          ddxy*=float2(ClipW,ClipH);
+      } // if (Apply)
+      else {
+          uv.x = fu;
+          uv.y = fv;
+      } // else [ if (Apply) ]
+
+      // texture lookup
+      result = Texture2D_sampler_color(Bitmap, 1.0, "default").lookup(uv,ddxy/4.,ddxy/4.);
+
+      // Apply gamma correction
+      if (Gamma > 0.0 && Gamma != 1.0)
+          result.rgb = pow(result.rgb, Gamma);
+
+      if (MonoOutput == 0)
+      {
+	      switch (AlphaSource) 
+	      {
+	      case ALPHA_NONE:
+	          result.a = 1.0;
+	          break;
+	      case ALPHA_RGB:
+	          result.a = maxIntensity(result);
+	          break;
+	      }
+      }
+
+      if (!PreMultAlpha)
+          result.rgb *= result.a;
+
+      // call "output" shader, if any
+      Color output_shader_return = Color(0.0, 0.0, 0.0, 0.0);
+      if (Output.call("input", "inputColor", result, 
+          "output", "result", output_shader_return)) {
+              result = output_shader_return;
+      }
+
+      if (MonoOutput != 0)
+          mono_result = result.a;
+      else
+          mono_result = maxIntensity(result);
+
+      if (RGBOutput != 0)
+          result.rgb = result.a;
+  } // main
+};

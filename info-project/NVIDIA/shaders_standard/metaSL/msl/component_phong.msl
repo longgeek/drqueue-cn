@@ -1,0 +1,57 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+#import <mi_msl_shared.msl>
+
+shader Component_phong
+{
+  input:    
+    float specular_shininess = 50.0
+    {			
+	display_name("Specular Shininess");
+	soft_range(float(0),float(100));
+	description( "The width of specular highlights across the "
+	"surface." );
+    };
+
+  output:
+    Color diffuse;
+    Color specular;
+
+    void main() 
+    {        
+	diffuse  = Color(0,0,0,0);
+	specular = Color(0,0,0,0);
+
+	float3 vdir = direction;
+
+	// enumerate lights
+	Light_iterator light;
+	foreach (light)
+	{
+	    float cos = saturate(light.dot_nl);
+	    if (cos > 0.0) {
+		diffuse += (cos / PI) * light.contribution;
+
+		float s = mi_phong_specular(light.direction, 
+			vdir, normal, specular_shininess);
+
+		specular += (s * cos) * light.contribution;
+	    }
+	}
+
+	// irradiance term
+	Irradiance_options irradiance_options;
+	irradiance_options.set_importance(1.0);
+	diffuse += (1.0/PI) * irradiance(irradiance_options);
+
+	diffuse.a = 1.0;
+	specular.a = 1.0;
+    }
+}
+{
+    description( "An illumination model for surfaces with glossy "
+    "properties, such as plastics and tiles." );
+}
+;

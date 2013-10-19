@@ -1,0 +1,214 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Parameter Types</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node61.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node63.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION60"></a>
+<h3 id="mi:shader_params">Parameter Types</h3>
+
+<p>The declaration gives the type and name of the shader to
+declare, which is the name of the C function and the name used when
+the shader is called, followed by a list of parameters with types.
+Names are normally quoted to disambiguate them from keywords
+reserved by mental ray. Commas separate parameter declarations. The
+following types are supported:</p>
+<a id="INDEX119"></a>
+<p>
+<dfn id="mi:param_boolean">boolean</dfn></p>
+<a id="INDEX120"></a>
+<p>A boolean is either true or false. Possible values are <dfn>true</dfn> and
+<dfn>false</dfn>, or their synonyms <dfn>on</dfn> and <dfn>off</dfn>,</p>
+<p>
+<dfn id="mi:param_integer">integer</dfn></p>
+<a id="INDEX121"></a>
+<p>Integers are numbers without decimal point in the range
+<var class="number">&minus;2<sup>31</sup>&hellip;2<sup>31</sup>&minus;1</var>.</p>
+<p>
+<dfn id="mi:param_scalar">scalar</dfn></p>
+<a id="INDEX122"></a>
+<p>Scalars are floating-point numbers, defined as an optional minus
+sign, a sequence of digits containing an optional decimal point at
+any place, followed by an optional decimal exponent. A decimal
+exponent is the letter <span class="math">e</span> or
+<span class="math">E</span> followed by a positive or negative integer.
+Examples are <var class="number">1.0</var>, <var class="number">.5</var>,
+<var class="number">2.</var>, <var class="number">1.e4</var>, or
+<var class="number">&minus;2.3e&minus;6</var>.</p>
+<p>
+<dfn id="mi:param_vector">vector</dfn></p>
+<a id="INDEX123"></a>
+<p>A vector is a sequence of three scalars as defined above,
+describing the <var>x</var>, <var>y</var>, and <var>z</var>
+components of the vector.</p>
+<p>
+<dfn id="mi:param_transform">transform</dfn></p>
+<a id="INDEX124"></a>
+<p>A transformation is a sequence of 16 scalars describing a
+<var class="number">4&times;4</var> matrix, with the translation in
+the last row. The data structure consists of an array of 16
+<tt>miScalar</tt>s in row-major order. Many shaders check the last
+scalar and ignore the matrix if it is 0. In most cases the last
+scalar of a valid matrix is 1, and always nonzero.</p>
+<p>
+<dfn id="mi:param_color">color</dfn></p>
+<a id="INDEX125"></a>
+<p>A color is a sequence of three or four scalars as defined above,
+describing the red, blue, green, and alpha components of the color,
+in this order. If alpha is omitted, it defaults to 0.0.</p>
+<p>
+<dfn id="mi:param_spectrum">spectrum</dfn></p>
+<a id="INDEX859"></a>
+<p>A spectrum describes electromagnetic radiation within a
+wavelength range associated with visible light. The contents of a
+spectrum data type are not directly accessible.</p>
+<p>
+<dfn id="mi:param_shader">shader</dfn></p>
+<a id="INDEX126"></a>
+<p>Shader names defined with the <tt>shader</tt> statement (not to
+be confused with the shader declaration statement) can be passed to
+other shaders that have parameters of this type. The shader
+receives a tag that it can call using
+<i><a href="node138.html#INDEX513">mi_call_shader</a></i> and similar
+<a href="node138.html#INDEX510">shader interface function</a>s.</p>
+<p>
+<dfn id="mi:param_texture">color&nbsp;texture</dfn></p>
+<a id="INDEX127"></a>
+<p>Color textures name a texture as defined by a <tt>color
+texture</tt> statement in the .mi file. The <tt>color texture</tt>
+statement names either a texture file, or a texture shader followed
+by a user parameter list. Note that a color texture does not name
+the texture shader directly. When a color texture is evaluated, it
+returns an RGBA color.</p>
+<p id="mi:param_texture_scalar"><dfn>scalar&nbsp;texture</dfn></p>
+<a id="INDEX128"></a>
+<p>Scalar textures are equivalent to color textures, except that
+they name a <tt>scalar texture</tt> statement in the .mi file. When
+a scalar texture is evaluated, it returns a scalar (a single
+floating-point number). This is most often used to apply a texture
+map to a scalar material parameter such as transparency.</p>
+<p>
+<dfn id="mi:param_texture_vector">vector&nbsp;texture</dfn></p>
+<a id="INDEX129"></a>
+<p>Vector textures are another variation. They name a <tt>vector
+texture</tt> statement in the .mi file, which returns a vector when
+evaluated. Bump map bases on materials are typical applications for
+vector textures. Vector textures are rarely used.</p>
+<p>
+<dfn id="mi:param_light">light</dfn></p>
+<a id="INDEX130"></a>
+<p>Lights specify a light instance as defined by an
+<tt>instance</tt> statement in the .mi file, which in turn names a
+light. Despite the name, shader parameters of type <tt>light</tt>
+do not name the light directly because only the light's instance
+provides the necessary position and orientation information. Like
+textures, light parameters do not name light shaders directly.</p>
+<p>
+<dfn id="mi:param_string">string</dfn></p>
+<a id="INDEX131"></a>
+<p>Strings are quoted character strings of arbitrary length. The
+data type is a tag that can be converted by the shader to a
+character pointer using the
+<i><a href="node139.html#INDEX540">mi_db_access</a></i> and
+<i><a href="node139.html#INDEX542">mi_db_unpin</a></i>
+<a href="node138.html#INDEX510">shader interface function</a>s.</p>
+<p>
+<dfn id="mi:param_map">map</dfn> <span class="recent">3.7</span></p>
+<p>Map parameters reference a map data, which carries arbitrary data
+with positional information. Shaders access it much like user data.
+See section <a href="map_mi.html#mi:map">map data</a> for details.</p>
+<p>
+<dfn id="mi:param_data">data</dfn></p>
+<a id="INDEX132"></a>
+<p>Data parameters reference a user data block, holding arbitrary
+structured or unstructured data of any kind. User data is useful
+for large amounts of shared scene data. Shaders access it much like
+strings. See section <a href="node81.html#userdata">userdata</a>
+for details.</p>
+<p>
+<dfn id="mi:param_lightprofile">lightprofile</dfn></p>
+<a id="INDEX133"></a>
+<p>Light profiles such as IES and Eulumdat are physical lamp
+description files supplied by lamp vendors. They can be used by
+shaders to determine the accurate amount of light emitted in a
+given direction. See section
+<a href="node82.html#lightprofile">lightprofile</a> for details.</p>
+<p>
+<dfn id="mi:param_geometry">geometry</dfn></p>
+<a id="INDEX134"></a>
+<p>Geometry references objects, groups, or instances. They are
+allowed for all types of shaders but are primarily useful for
+<a href="node179.html#INDEX857">geometry shader</a>s, which can
+introduce geometric scene entities. Geometry shaders have a
+different shader API than other shaders. They are described in
+chapter <a href="node181.html#geoshaderapi">geoshaderapi</a>.
+Shaders and phenomena whose return type is <tt>geometry</tt> can be
+used in instance definition statements (see page
+<a href="node90.html#instance">instance</a>).</p>
+<p>
+<dfn id="mi:param_material">material</dfn></p>
+<a id="INDEX135"></a>
+<p>primarily useful in <a href="node179.html#INDEX858">phenomenon</a>
+definitions, which may
+contain materials in addition to shaders. Shaders and phenomena
+whose return type is <tt>material</tt> can be used in
+<a href="node79.html#INDEX242">material</a> definition statements (see page
+<a href="node79.html#material">material</a>).</p>
+<p>
+<dfn id="mi:param_struct">struct&nbsp;{&nbsp;&hellip;&nbsp;}</dfn></p>
+<a id="INDEX136"></a>
+<p>Structures define sub-lists of parameters. This is normally used
+to build arrays of structures, for example to declare an array of
+textures, each of which comes with a blending factor and other
+sub-parameters. The ellipsis ... stands for another (non-empty)
+comma-separated sequence of type/parameter_name pairs.</p>
+<p>
+<dfn id="mi:param_array">array&nbsp;</dfn><var>type</var></p>
+<a id="INDEX137"></a>
+<p>Arrays are different from all other types in that they are not
+named. The <dfn>array</dfn> keyword is a prefix to any of the above
+types that turns a single value into a one-dimensional array of
+values. For example, <dfn>array scalar</dfn> <var>"terms"</var>
+declares a parameter named <var>terms</var> that is an array of
+scalars. The number of elements in the array size is dynamic and
+unlimited. Arrays of arrays are not supported.</p>
+<p>When choosing names, avoid periods and double colons, which have
+a special meaning when accessing
+<a href="node138.html#INDEX530">interface parameter</a>s in
+<a href="node179.html#INDEX858">phenomenon</a> subshaders.</p>
+<p>The return type of the shader must either be a simple type (any
+type except <dfn>struct</dfn> or <dfn>array</dfn>), or an unnamed
+<dfn>struct</dfn> containing only simple types. Unnamed means that
+there is no name between the <dfn>struct</dfn> keyword and the
+opening brace. This allows a shader to return multiple result
+values.</p>
+<p class="note">Note, it is important that all shaders are correctly
+defined with all return parameters, especially in case of a return
+structure. mental ray will use the size of the declared return parameters
+to reserve enough space internally when calling such a shader. This is
+critical for <a href="node131.html#INDEX498">contour store shader</a>s.
+</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node61.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node63.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

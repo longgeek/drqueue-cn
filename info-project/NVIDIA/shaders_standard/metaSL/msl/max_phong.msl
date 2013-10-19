@@ -1,0 +1,200 @@
+/*****************************************************************************
+ * Copyright 1986-2007 by mental images GmbH, Fasanenstr. 81, D-10623
+ * Berlin, Germany. All rights reserved.
+ * Adapted by N Hazzard to support 3ds Max Standard Material
+ *****************************************************************************/
+#import <mi_msl_shared.msl>
+
+shader max_phong
+{
+  input:    
+    Color  ambient_color = Color(0,0,0,0)
+	{		
+		display_name("Ambient Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color of the Ambient lighting in the scene. This "
+					 "value is set by the user independent of the actual "
+					 "color of the lighting in the scene." );
+	};
+	Scalar ambient_scalar = 1
+	{	
+		display_name("Ambient Scalar");
+		soft_range(Scalar(0),Scalar(1));
+		description( "The intensity of the Ambient lighting in the scene. "
+					 "This value is set by the user independent of the "
+					 "actual intensity of the lighting in the scene." );
+	};
+    Color  diffuse_color = Color(1,1,1,1)
+	{	
+		display_name("Diffuse Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color used to tint the Diffuse Reflectance Color." );
+	};
+    Scalar diffuse_scalar = 0.7
+	{		
+		display_name("Diffuse Scalar");
+		soft_range(Scalar(0),Scalar(1));
+		description( "The intensity of the light diffusely reflected from "
+					 "this surface." );
+	};
+    Color  specular_color = Color(1,1,1,1)
+	{	
+		display_name("Specular Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color used to tint the Specular Reflectance "
+					 "Color." );
+	};
+    Scalar specular_scalar = 0.5
+	{	
+		display_name("Specular Scalar");
+		soft_range(Scalar(0),Scalar(1));
+		description( "The intensity of the specular light reflections from "
+					 "this surface." );
+	};
+    
+    Scalar specular_shininess = 50.0
+    {	
+			display_name("Specular Shininess");
+			soft_range(Scalar(0),Scalar(100));
+			description( "The width of specular highlights across the "
+						 "surface." );
+    };
+
+    Scalar opacity_scalar = 1.0
+    {	
+			display_name("Opacity Scalar");
+			soft_range(Scalar(0),Scalar(100));
+			description( "The Opacity amount across the surface." );
+    };
+	Vector2 opacity_data = Vector2(0,1)
+	{
+		display_name("Opacity Data");
+		soft_range(Color(0),Color(100));
+		description( "The special weight/Opacity value used when opacity comes"
+					"from a texture and amount is less than 1." );
+
+	};
+
+    Color  selfillumination_color = Color(0,0,0,1)
+	{	
+		display_name("Self Illumination Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color used for Self Illumination." );
+	};
+	Bool y_is_up = true
+	{
+		display_name("Y is up");
+		description("Defines what direction is up."
+				  "Allows switching between 3ds Max and Mental Mill");
+	};
+
+    
+  output:
+	Color result;
+	Color ambient;
+	Color diffuse;
+	Color specular;
+	float transparency;
+
+	float max_phong_specular(
+		float3		lightDir,        // Direction to light
+		float3		eyeDir,          // Direction from eye
+		float3		n,               // Normal in camera space
+		float      	specular_shininess) // Specular intensity
+	{
+		float3 refl = (2.f * -dot(eyeDir,n)) * n + eyeDir;
+		float h = dot(refl,lightDir);
+		return pow(max(h,0.f),specular_shininess);
+	}
+
+    void main() 
+    {        
+        diffuse  = Color(0,0,0,0);
+        specular = Color(0,0,0,0);
+        Vector3 vdir = direction;
+    
+        // enumerate lights
+        Light_iterator light;
+		foreach (light)
+		{
+			Scalar d = saturate(light.dot_nl);
+			diffuse += d * light.contribution;
+		    
+			Scalar s = max_phong_specular(light.direction, 
+				vdir, normal, specular_shininess);
+			if (d > 0.0)
+				specular += s * light.contribution;
+		}
+
+		diffuse.a = 1.0f;
+		specular.a = 1.0f;
+		
+		
+
+		Color diffuse_reflectance_color = diffuse;
+		Color specular_reflectance_color = specular;
+		mi_component_illumination_base(
+			ambient_color,
+			ambient_scalar,
+			diffuse_reflectance_color,
+			diffuse_color,
+			diffuse_scalar,
+			specular_reflectance_color,
+			specular_color,
+			specular_scalar,
+			result,
+			ambient,
+			diffuse,
+			specular);
+
+		result += selfillumination_color;			
+		Scalar opacity_weight = opacity_data.y;
+		Scalar opacity_amount = opacity_data.x;
+
+		// This should be handled by a mix map and all inputs could be controlled like this
+		// Need to be careful, max uses "opacity" where we are talking Alpha...
+		if(opacity_weight< 1.0f)
+			result.a = lerp(opacity_amount,opacity_scalar,opacity_weight);
+		else
+			result.a = opacity_scalar; 
+		transparency = 1 - result.a;
+
+		Color refl = Color(0,0,0,1);
+	   	Trace_options topt;
+	    	topt.set_ray_type("reflect");
+		
+	    	Ray ray(position, reflect(vdir, normal).xzy);
+	    	Ray ray_dxy( float3(0.0), float3(0.0));
+	    	if ( !trace(ray, ray_dxy, ray_dxy, topt, "result", refl)) {
+			topt.set_ray_type("environment");
+			refl = trace(ray, ray_dxy, ray_dxy, topt, "result", refl);
+	    	}
+		result += refl ;
+		
+		// Copied from d3dx9math.h
+  	// To get rid of the INF texels from a FP16 texture
+		float D3DX_16F_MAX = (6.550400e+004);    // max value of FP16	
+		if(result.r > D3DX_16F_MAX)
+		{
+			result.r = D3DX_16F_MAX;
+		}
+		if(result.g > D3DX_16F_MAX)
+		{
+			result.g = D3DX_16F_MAX;
+		}
+		if(result.b > D3DX_16F_MAX)
+		{
+			result.b = D3DX_16F_MAX;
+		}
+
+	}
+}
+{
+	description("Implements the Phong illumination model which models "
+				"surfaces with glossy specular properties such as plastics "
+				"and tiles. Adds support for Ambient, Diffuse, and Specular "
+				"tinting and scaling controls."
+				" Modified to support 3ds Max std material"
+				"implementations" );
+}
+;

@@ -1,0 +1,62 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// Evaluates all illumination components of a BSDF shader and stores them in 
+// separatre variables. Note that depending on the BSDF to be evaluated, not 
+// all output variables might hold a value.
+//
+// Usage: 
+// This shader must be used in a shader graph that is connected to the surface 
+// slot inside a material definition. The results of this node can be 
+// manipulated further using color manipulation nodes to create a desired look.  
+
+shader Surface_components
+{
+	input:
+	output:
+		Color result;
+		Color direct_diffuse_result;
+		Color direct_glossy_result;
+		Color direct_specular_result;
+		Color indirect_diffuse_result;
+		Color indirect_specular_result;
+		Color indirect_glossy_result;
+		
+		
+	void main()
+	{
+		Spectrum diffuse, glossy, specular;
+		
+		// evaluate the direct light contributions
+		direct_light(diffuse,
+					specular,
+					glossy);
+					
+		direct_diffuse_result  = diffuse;
+		direct_glossy_result   = glossy;
+		direct_specular_result = specular;
+		
+		// evaluate the indirect light contributions
+		indirect_light(diffuse,
+					specular,
+					glossy);
+					
+		indirect_diffuse_result  = diffuse;
+		indirect_glossy_result   = glossy;
+		indirect_specular_result = specular;
+			
+		result = direct_diffuse_result +
+				direct_glossy_result + 
+				direct_specular_result + 
+				indirect_diffuse_result + 
+				indirect_specular_result +
+				indirect_glossy_result;	
+	}
+}
+{
+	description("Use this shader a material definition to evaluate all different illumination"
+	" contributions separately. It must be used in a graph that is linked to the 'surface' slot"
+	" of a material definition.");
+};

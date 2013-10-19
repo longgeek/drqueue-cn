@@ -1,0 +1,47 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+shader metasl_mip_gamma_gain {
+ input:
+  Color input = Color(0.0, 0.0, 0.0, 0.0) {
+  };
+  float gamma = 2.2 {
+      soft_range(0.1, 5.0);
+  };
+  float gain = 1.0 {
+  };
+  bool reverse = true {
+  };
+ output:
+  Color result;
+
+  void main() {
+    result = input;
+
+    float g = gamma;
+
+    /* "Default" to 2.2 */
+    if (g <= 0.0f) 
+        g = 2.2f;
+
+    if (!reverse)
+        g = 1.0f / g;
+
+    if (!reverse)
+        result.rgb *= gain;
+
+    if (g != 1.0f)
+    {
+        result.r = result.r == 0 ? 0 : pow(result.r, g);
+        result.g = result.g == 0 ? 0 : pow(result.g, g);
+        result.b = result.b == 0 ? 0 : pow(result.b, g);
+    }
+
+    if (reverse && gain > 0.0f) 
+        result.rgb /= gain;
+  } // main
+};

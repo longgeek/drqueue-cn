@@ -1,0 +1,272 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// see tex_marble.cpp
+#define FACT 500.0
+
+// see max_texutil.cpp
+#define B 512 // 0x200
+#define RN 10000.0
+#define maxS_curve(t) ( t * t * (3.0 - 2.0 * t) )
+#define maxLerp(t, a, b) ( a + t * (b - a) )
+
+shader hlsl_Marble_EvalColor {
+ input:
+  Shader Map1;
+  Shader Map2;
+  Color Color1 = Color(0.2, 0.2, 0.1, 1.0) {
+    display_name("Color #1");
+  };
+  Color Color2 = Color(0.82, 0.82, 0.6, 1.0) {
+    display_name("Color #2");
+  };
+  const bool Map1Enabled = false {
+    display_name("Map1 Enabled");
+  };
+  const bool Map2Enabled = false {
+    display_name("Map2 Enabled");
+  };
+  float Size = 20.0 {
+    display_name("Size");
+  };
+  float Width = 0.025 {
+    display_name("Vein width");
+  };
+  Shader Coords;
+  // TODO: int GBufferID
+
+  // textures
+  Texture2d noise_tables = "noise_out.dds" {
+    disable_filtering();
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+
+ output:
+  Color result;
+
+  // see max_texutil.cpp
+  void maxSetup(in float v,
+		out int b0, out int b1,
+		out float r0, out float r1) {
+    float t = v + RN;
+    int it = (int) t;
+    b0 = it - (it / B) * B; // ((int)t) & BM;
+    // (b0+1) & BM;
+    b1 = b0 + 1;
+    if (b1 >= B) b1 = 0;
+    r0 = (float)(t - (int) t);
+    r1 = r0 - 1.0; // what if r0 < 1.0?
+  } // maxSetup
+
+  // additional functions for texture lookup
+  int p(in int i1) {
+    // int x_pix = i1 % 114;
+    int y_pix = i1 / 114; // 0 <= y < 9
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    // return int((511.0 * tex2d(noise_tables, float2(x, y)).r + 0.5));
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    return int((c.r + 0.5));
+  } // p
+
+  float g3(in int i1, in int i2) {
+    // int x_pix = i1 % 114;
+    int y_pix = 27 + i1 / 114; // 27 <= y < 36
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    if (i2 == 0)
+      return c.r;
+    else if (i2 == 1)
+      return c.g;
+    else if (i2 == 2)
+      return c.b;
+    else {
+      error("g3(%d, %d)", i1, i2);
+      return 0.0;
+    }
+  } // g3
+
+  // see max_texutil.cpp
+  float maxNoise3(float vecx, float vecy, float vecz) {
+    int bx0 = 0;
+    int bx1 = 0;
+    float rx0 = 0.0;
+    float rx1 = 0.0;
+    maxSetup(vecx, bx0, bx1, rx0, rx1);
+    int by0 = 0;
+    int by1 = 0;
+    float ry0 = 0.0;
+    float ry1 = 0.0;
+    maxSetup(vecy, by0, by1, ry0, ry1);
+    int bz0 = 0;
+    int bz1 = 0;
+    float rz0 = 0.0;
+    float rz1 = 0.0;
+    maxSetup(vecz, bz0, bz1, rz0, rz1);
+    int i = p(bx0);
+    int j = p(bx1);
+    int b00 = p(i + by0);
+    int b10 = p(j + by0);
+    int b01 = p(i + by1);
+    int b11 = p(j + by1);
+    float sx = maxS_curve(rx0);
+    float sy = maxS_curve(ry0);
+    float sz = maxS_curve(rz0);
+    float u = 0.0;
+    float v = 0.0;
+    u = (rx0 * g3(b00 + bz0, 0) +
+	 ry0 * g3(b00 + bz0, 1) +
+	 rz0 * g3(b00 + bz0, 2));
+    v = (rx1 * g3(b10 + bz0, 0) +
+	 ry0 * g3(b10 + bz0, 1) +
+	 rz0 * g3(b10 + bz0, 2));
+    float a = maxLerp(sx, u, v);
+    u = (rx0 * g3(b01 + bz0, 0) +
+	 ry1 * g3(b01 + bz0, 1) +
+	 rz0 * g3(b01 + bz0, 2));
+    v = (rx1 * g3(b11 + bz0, 0) +
+	 ry1 * g3(b11 + bz0, 1) +
+	 rz0 * g3(b11 + bz0, 2));
+    float b = maxLerp(sx, u, v);
+    float c = maxLerp(sy, a, b);
+    u = (rx0 * g3(b00 + bz1, 0) +
+	 ry0 * g3(b00 + bz1, 1) +
+	 rz1 * g3(b00 + bz1, 2));
+    v = (rx1 * g3(b10 + bz1, 0) +
+	 ry0 * g3(b10 + bz1, 1) +
+	 rz1 * g3(b10 + bz1, 2));
+    a = maxLerp(sx, u, v);
+    u = (rx0 * g3(b01 + bz1, 0) +
+	 ry1 * g3(b01 + bz1, 1) +
+	 rz1 * g3(b01 + bz1, 2));
+    v = (rx1 * g3(b11 + bz1, 0) +
+	 ry1 * g3(b11 + bz1, 1) +
+	 rz1 * g3(b11 + bz1, 2));
+    b = maxLerp(sx, u, v);
+    float d = maxLerp(sy, a, b);
+    return maxLerp(sz, c, d);
+  } // maxNoise3
+
+  // see max_texutil.cpp
+  float maxNoise3DS(in float x, in float y, in float z) {
+    float r = 1.65 * maxNoise3(x, y, z);
+    if (r < -1.0) r = -1.0;
+    if (r > 1.0) r = 1.0;
+    return r;
+  } // maxNoise3DS
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // xyz-coords
+    float3 xyz_coords = transform_point("internal", "object", position);
+    // try to call hlsl_base_UVGenerator
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Coords.call("output", "result", shader_return)) {
+      xyz_coords.xyz = shader_return.rgb;
+    }
+    else {
+      xyz_coords *= 100.0;
+    }
+    // call other shader parameters
+    Color Map1Color = Color(0.0, 0.0, 0.0, 0.0);
+    bool useMap1 = false;
+    if (Map1Enabled &&
+	Map1.call("output", "result", Map1Color)) {
+      useMap1 = true;
+    }
+    Color Map2Color = Color(0.0, 0.0, 0.0, 0.0);
+    bool useMap2 = false;
+    if (Map2Enabled &&
+	Map2.call("output", "result", Map2Color)) {
+      useMap2 = true;
+    }
+    // use xyz-coords
+
+    // begin of maxMarble_EvalColor
+    float size = Size;
+    size = (size != 0.0) ? size : 0.0001;
+    float x = xyz_coords.x;
+    float y = xyz_coords.y;
+    float z = xyz_coords.z;
+    x *= FACT / size;
+    y *= FACT / size;
+    z *= FACT / size;
+    // begin of maxMarbleFunc
+    int id;
+    float d = 0.0;
+    float i = 0.0;
+    float r[3];
+    r[0] = x / 100.0;
+    r[1] = y / 200.0;
+    r[2] = z / 200.0;
+    d = ((x + 10000.0) * Width +
+	 7 * (1.0 + maxNoise3DS(r[0], r[1], r[2])) * 0.5);
+    // id = ((int) d) % 17;
+    id = (int) fmod(d, 17.0);
+    if (id < 4) {
+      r[0] = x / 70.0;
+      r[1] = y / 50.0;
+      r[2] = z / 50.0;
+      i = (0.7 +
+	   0.2 * (1.0 + maxNoise3DS(r[0], r[1], r[2])) * 0.5);
+    } // if (id < 4)
+    else {
+      r[0] = x / 100.0;
+      r[1] = y / 100.0;
+      r[2] = x / 100.0;
+      if (id < 9 || id >= 12) {
+	d = abs(d - ((int) d / 17.0) * 17.0 - 10.5) * 0.1538462;
+	i = (0.4 + 0.3 * d +
+	     0.2 * (1.0 + maxNoise3DS(r[0], r[1], r[2])) * 0.5);
+      } // if (id < 9 || id >= 12)
+      else
+	i = (0.2 * (1.0 +
+		    (1.0 + maxNoise3DS(r[0], r[1], r[2]))*0.5));
+    } // else [ if (id < 4) ]
+    d = i;
+    // end of maxMarbleFunc
+    if (d <= 0.0005) {
+      if (useMap1) {
+	result = Map1Color;
+        return;
+      } // if (useMap1)
+      else {
+	result = Color1;
+	return;
+      } // else [ if (useMap1) ]
+    } // if (d <= 0.0005)
+    else {
+      if (d >= 0.9995) {
+	if (useMap2) {
+	  result = Map2Color;
+	  return;
+	} // if (useMap2)
+	else {
+	  result = Color2;
+	  return;
+	} // else [ if (useMap2) ]
+      } // if (d >= 0.9995)
+    } // else [ if (d <= 0.0005) ]
+    Color c1 = Color1;
+    if (useMap1) {
+      c1 = Map1Color;
+    } // if (useMap1)
+    Color c2 = Color2;
+    if (useMap2) {
+      c2 = Map2Color;
+    } // if (useMap2)
+    result.r = (1.0 - d) * c1.r + d * c2.r;
+    result.g = (1.0 - d) * c1.g + d * c2.g;
+    result.b = (1.0 - d) * c1.b + d * c2.b;
+    result.a = (1.0 - d) * c1.a + d * c2.a;
+    // end of maxMarble_EvalColor
+  } // main
+};

@@ -1,0 +1,216 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="Author" content="mental images GmbH">
+<meta name="Company" content="mental images">
+<meta name="Creator" content="hypertex">
+<meta name="CreatorVersion" content="1.0">
+<meta name="CreationDate" content="18 Feb 2010">
+<link rel="stylesheet" type="text/css" href="mental.css">
+<style type="text/css"> i {color:darkred} dfn {font-style:italic}
+var {font-weight:bold; color:black} </style><a name="mirayswitch"></a>
+<title>Ray Type Switching Shaders</title>
+</head><body>
+<ul class="nav">
+<li><a href="production.html">home</a></li>
+<li><a href="prod_card_opacity.html">&laquo;&nbsp;prev</a></li>
+<li><a href="prod_utility.html">next&nbsp;&raquo;</a></li>
+</ul>
+<h1>Ray Type Switching Shaders</h1>
+<p>
+<h2 id="Generic_Switchers">Generic Switchers</h2>
+<p>
+The <i>mip_rayswitch</i> and <i>mip_rayswitch_advanced</i> utility 
+shaders allows different types of rays to return different results. 
+There are many cases in which this can be useful, including but not 
+limited to:
+<br />
+<ul>
+
+<li> Separating primary and secondary rays into calls to other shader.
+<li> Returning a different environment to eye rays (i.e. a photographic
+      background plate for screen background), reflection rays (i.e. a
+      spherical high resolution environment to be seen in reflections)
+      and final gather rays (a filtered environment suitable for lighting
+      the scene).
+<li> Limiting time consuming shaders where they are nearly invisible 
+      (avoiding a complicated secondary illumination or ambient occlusion
+      shader in the refractions seen through frosted glass)
+</ul>
+
+<p>
+The <i>mip_rayswitch</i> shader is a simple shader that accepts a 
+set of other colors (generally set to other subshaders) to apply for 
+certain classes of rays.
+<p>
+<pre>
+declare shader "mip_rayswitch" (
+        color  "eye",
+        color  "transparent",
+        color  "reflection",
+        color  "refraction",
+        color  "finalgather",
+        color  "environment",
+        color  "shadow",
+        color  "photon",
+        color  "default"
+    )
+    version 1
+    apply material, texture, environment
+end declare
+</pre>
+<p>
+For primary rays, <b>eye</b> sets the result for eye rays.
+<p>
+For secondary rays, <b>transparent</b> is the result for 
+transparency rays, <b>reflection</b> for reflection rays 
+and <b>environment</b> for environment rays.
+<p>
+The <b>finalgather</b> is the result for final gather rays
+as well as child rays to final gather rays.
+<p>
+Similarly, <b>shadow</b> is the result for shadow rays, 
+<b>photon</b> catches all photon rays. 
+<p>
+Finally, the <b>default</b> is the result for any other
+ray type. It is not a fall-through default, however, each
+of the above returns their respective result whether connected
+to a shader or not (i.e. generally 0 0 0 0 black).
+<p>
+If one wants fall-through defaults, one must use the advanced 
+version of the shader:
+<p>
+<pre>
+declare shader "mip_rayswitch_advanced" (
+        shader "eye",
+        shader "transparent",
+        shader "reflection",
+        shader "refraction",
+        shader "finalgather",
+        shader "environment",
+        shader "any_secondary",
+        shader "shadow",
+        shader "photon",
+        shader "default"
+    )
+    version 1
+    apply material, texture, environment
+end declare
+</pre>
+<p>
+This shader works very similar to <i>mip_rayswitch</i>, but
+instead of accepting inputs of type &quot;color&quot;, it accepts inputs
+of type &quot;shader&quot;.
+<p>
+While this no longer allows assigning a fixed color directly, it
+instead allows <em>fall-through defaults</em>.
+<p>
+Each of the parameters works in a similar way: <b>eye</b> is
+the shader for eye rays, <b>transparent</b> for transparency
+rays, <b>reflection</b> for reflection rays, <b>refraction</b>
+for refraction rays, etc.
+<p>
+The difference is if one of these shaders are <em>not specified</em>, 
+one of the fall-through cases take over. If either of the specific 
+secondary ray type shaders are not specified, and a ray of that 
+type arrives, the <b>any_secondary</b> acts as a catch-all 
+for all the secondary ray types not explicitly set.
+<p>
+Similarly, the <b>default</b> parameter works as a catch all
+for every unspecified shader above it.
+<p>
+<h2 id="Environment_Switcher">Environment Switcher</h2>
+<p>
+A classical issue one runs into with mental ray is that there is simply
+a single concept of &quot;the environment&quot;, whereas one often, in practical
+use, wants to separate the concept of a <em>background</em> to that of
+an <em>environment</em>.
+<p>
+This shader accomplishes exactly that:
+<p>
+<pre>
+declare shader "mip_rayswitch_environment" (
+        color   "background"  default 0 0 0 0,
+        color   "environment" default 0 0 0 0,
+    )
+    apply texture, environment
+    version 1
+end declare
+</pre>
+<p>
+The shader returns <b>background</b> for any eye ray, transparency
+ray that is a child of an eye ray, or any refracted ray that travels
+in the same direction as said transparency ray would (i.e. rays of type
+miRAY_REFRACT, but that was refracted by an IOR of 1.0 and is a direct
+child of an eye ray).
+<p>
+For any other type of rays (reflection, refraction, final gathering etc.)
+the shader returns the <b>environment</b> color.
+<p>
+The shader is intended to be used as the camera environment, but will 
+function anywhere in a shading graph as a ray switching node, in many 
+cases where one need to distinguish between &quot;primary&quot; and 
+&quot;secondary&quot; rays.
+<p>
+For example, this is the ideal shader to switch between primary-
+and secondary rays to support the &quot;best of both worlds&quot; usage 
+of <i>mip_matteshadow</i> described on page 
+<a href="prod_mattecamera.html#Best_of_both_worlds">Best-of-both-worlds</a>.
+<p>
+<h2 id="Render_Stage_Switcher">Render Stage Switcher</h2>
+<p>
+Sometimes one desires to use different colors or subshaders depending
+on where in the rendering pipeline mental ray is. For example, one may
+wish to make a certain material completely opaque to final gather
+rays, or for a light to have a different color while emitting photons,
+or similar.
+<p>
+<pre>
+declare shader "mip_rayswitch_stage" (
+        color "unknown",
+        color "main_render",
+        color "finalgather_precomp",
+        color "ao_precomp",
+        color "caustic_photons",
+        color "globillum_photons",
+        color "importon_emit",
+        color "lightmapping"
+    )
+    version 1
+    apply material, texture, environment
+end declare
+</pre>
+<p>
+The parameters all work in a similar way to all the other switcher shaders.
+<p>
+<b>unknown</b> is for any &quot;unknown&quot; stage. This should normally never be
+called, but exists as a safety precaution to safeguard against
+any new rendering stages introduced in future mental ray versions that are
+unknown at this time.
+<p>
+During the normal tile rendering pass, the shader returns the value of 
+the <b>main_render</b> input.
+<p>
+During finalgather precomputation phase, the shader returns the value of 
+<b>finalgather_precomp</b>.
+<p>
+During ambient occlusion precomputation phase, the shader returns the 
+value of <b>ao_precomp</b>. Note that mental ray 3.7 does not call shaders
+at all during this phase, so this will never be called - but future versions
+of mental ray may act differently.
+<p>
+During caustic and global illumination photon tracing, the values for 
+<b>caustic_photons</b> and <b>globillum_photons</b> inputs are
+used respectively.
+<p>
+During the importon emission phase, the value from <b>importon_emit</b> is used.
+<p>
+Finally, during the light mapping preprocessing phase (used, for example, by
+the subsurface scattering shaders) the value in <b>lightmapping</b> is used.
+<ul class="nav">
+<li><a href="production.html">home</a></li>
+<li><a href="prod_card_opacity.html">&laquo;&nbsp;prev</a></li>
+<li><a href="prod_utility.html">next&nbsp;&raquo;</a></li>
+</ul>
+</body></html>

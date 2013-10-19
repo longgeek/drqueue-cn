@@ -1,0 +1,107 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Declaration Options</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node63.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node65.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION62"></a>
+<h3>Declaration Options</h3>
+<p>Declarations of shaders (and phenomena, see page
+<a href="node179.html#phenomenon">phenomenon</a>) allow a number of options
+to be specified in the <b><a id="INDEX139"></a>declaration</b> block.
+These options specify <i>requirements</i> of the shader or
+<a href="node179.html#INDEX858">phenomenon</a>, specifying conditions that
+must be met before the <a href="node99.html#INDEX356">shader</a> or
+phenomenon can run correctly, or information about the shader that
+tells mental ray how to call it. They should be used only if it is
+impossible for the shader to do its job without this option, but
+not to second-guess the user, assuming that if this shader is used,
+then the user "probably" wants this option. Shader requirements
+take away control from the user and should be used with care.
+Before rendering, mental ray collects the requirements of all
+shaders defined in the scene, checks for conflicts, and adjusts
+global options and camera parameters to suit the shaders. Shaders
+should not assume that an option specified in the declaration has
+an effect because mental ray may choose to ignore it if there is a
+conflict with another declaration.</p>
+<p>For example, if a shader specifies that it can operate only if
+ray tracing is enabled (a common case for lens shaders), it should
+specify the <tt>trace on</tt> option to tell mental ray to enable
+<a href="node102.html#INDEX390">ray tracing</a> even if no ray
+tracing was specified in the global <tt>options</tt> statement.</p>
+<p>Here is the complete list of available options. If an option is
+not present, the default is "don't care" unless otherwise noted. If
+specified, these options are equivalent to the corresponding
+options given in the <tt>options</tt> top-level statement; refer to
+the description of option blocks for more details on the operation
+of these options.</p>
+<p><tt>scanline&nbsp;on<dfn>|</dfn>off</tt></p>
+<p>The scanline rendering algorithm must be turned on or off,
+respectively.</p>
+<p><tt>trace&nbsp;on<dfn>|</dfn>off</tt></p>
+<p>Ray tracing must be turned on or off. For example, lens shaders
+that modify the ray direction should set this to <tt>on</tt>.</p>
+<p><tt>shadow&nbsp;off</tt></p>
+<p>Shadows must be turned off for this shader to function.</p>
+<p><tt>shadow&nbsp;on</tt></p>
+<p>Shadowing must be enabled, either regular, sorted, or
+segmented.</p>
+<p><tt>shadow&nbsp;sort</tt></p>
+<p>Shadowing must be enabled, either sorted or segmented. Regular
+is not sufficient.</p>
+<p><tt>shadow&nbsp;segments</tt></p>
+<p>Segmented shadows must be enabled. Regular or sorted shadows are
+not sufficient.</p>
+<p><tt>face&nbsp;front<dfn>|</dfn>back<dfn>|</dfn>both</tt></p>
+<p>Intersection testing should consider front-facing, back-facing,
+or both front-facing and back-facing geometry, respectively. For
+example, a surface is visible if the incoming ray direction is
+opposite to the normal vector of the surface, and the face mode is
+either front or both but not back.</p>
+<p><tt>derivative</tt> <dfn>[</dfn><tt>1</tt><dfn>]</dfn> <dfn>[</dfn><tt>2</tt><dfn>]</dfn></p>
+<p>The object that this shader or phenomenon is attached to (by
+being named in its material, for example) must have first or second
+<b><a id="INDEX140"></a>derivative</b>s,
+respectively, or both. This option has an effect only on
+<a href="node9.html#INDEX13">free-form surface</a> geometry because mental
+ray cannot compute derivatives for polygons.</p>
+<p><tt>object&nbsp; space</tt></p>
+<p>The shader functions only if all geometry is defined in
+<a href="node83.html#INDEX271">object coordinate</a>s.</p>
+<p><tt>camera&nbsp; space</tt></p>
+<p>The shader functions only if all geometry is defined in
+<a href="node101.html#INDEX370">camera space</a>.</p>
+<p><tt>volume</tt>&nbsp; <i>level</i><sub>int</sub></p>
+<p>The <b><a id="INDEX141"></a>volume level</b>
+defines the "density" behavior of <a href="node117.html#INDEX460">volume
+shader</a>s. If <a href="node118.html#INDEX466">autovolume</a> mode is
+enabled in the options block, mental ray keeps track of which volumes
+a ray is in. If the current point is in multiple volumes, equal volume
+levels mix, and higher levels displace lower volumes. For example, if the
+point is in four volumes A, B, C, and D, with volume shaders
+defining levels 3, 2, 3, and 1, respectively, both the volume
+shaders A and C will be called because they displace B and D. See
+page <a href="node118.html#autovolshd">autovolshd</a> for more
+information about autovolume-enabled volume shaders.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node63.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node65.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

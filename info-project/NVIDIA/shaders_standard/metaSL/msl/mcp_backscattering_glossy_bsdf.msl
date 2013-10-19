@@ -1,0 +1,413 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product BSDF for glossy model with optional
+ *                backscattering part
+ *****************************************************************************/
+#include <mcp_lib.msl>
+#define DBSDF_MAX_EXP 1000000.0f
+struct Disk_distribution 
+{
+    float2 center;      // center point of the distribuion
+    float2 n;           // exponents
+    float radius;       // radius
+};
+
+bsdf Mcp_backscattering_glossy_bsdf {
+
+
+    input:
+    Scattering_mode  scattering_mode = mode_reflect;
+    float            roughness=.5;
+    float            anisotropy=0.;
+    float            anisotropy_rotation=0.;
+    float            backscatter_blend=0.; // in [0,1]
+    Backscatter      backscatter=Backscatter(.3,1.,5.,.2);
+    /*	struct Backscatter {
+            float  roughness;
+            float  anisotropy;
+            float  curve_exponent;
+            float  curve_min;
+    };*/
+    float3 bump = normal;
+
+
+    member:
+    varying float2 k_fw;
+    varying float2 k_bs;
+    float3 tangent_u,tangent_v;
+
+    varying Mcp_backscattering_glossy_bsdf()
+    {
+        //rotate the basis if needed
+        tangent_u = texture_tangent_u[0];
+        tangent_v = texture_tangent_v[0];
+        if (anisotropy_rotation != 0.0)
+        {
+            float angle = 2. * PI * anisotropy_rotation;
+            float cos_angle = cos(angle);
+            float sin_angle = sin(angle);
+            tangent_u = cos_angle * texture_tangent_u[0] + sin_angle * texture_tangent_v[0];
+            tangent_v = -sin_angle * texture_tangent_u[0] + cos_angle * texture_tangent_v[0];
+        }
+        // exponent mapping as for AS
+        float ik_fw = 2.0f / (roughness * roughness);
+        float iso_fw = 1.0f - anisotropy;
+        k_fw = float2(ik_fw, ik_fw * iso_fw * iso_fw);
+        // clamp.
+        k_fw.x = min(k_fw.x, DBSDF_MAX_EXP);
+        k_fw.y = min(k_fw.y, DBSDF_MAX_EXP);
+        
+        float ik_bs = 2.0f / (backscatter.roughness * backscatter.roughness);
+        float iso_bs = 1.0f - backscatter.anisotropy;
+        k_bs = float2(ik_bs, ik_bs * iso_bs * iso_bs);
+        // clamp.
+        k_bs.x = min(k_bs.x, DBSDF_MAX_EXP);
+        k_bs.y = min(k_bs.y, DBSDF_MAX_EXP);
+    }
+
+    //the worst case of active attributes for this bsdf, independent of what actual input parameters are.
+    Bsdf_attributes get_attributes()
+    {
+        return Bsdf_attributes{geometry_dependent};
+    }
+
+    //the list of all possible bsdf components computed by this bsdf
+    Bsdf_components get_components()
+    {
+        return Bsdf_components{reflect_glossy};
+    }
+    //the list of active attributes, given the actual input parameters. 
+    //For this bsdf it equals the worst case described by get_attributes(), so we do not need to implement this
+    Bsdf_attributes get_active_attributes() 
+    {
+        return get_attributes();
+    }
+    Bsdf_components get_active_components() 
+    {
+        return get_components();
+    }
+
+    Spectrum eval( float3 fixed_direction, 
+                   float3 sampled_direction, 
+                   Bsdf_components allowed_components, 
+                   bool transport_source){
+
+        allowed_components = bsdf_check_type(
+                geometry_normal,fixed_direction,sampled_direction,allowed_components);
+        if (Bsdf_components{reflect_glossy} in allowed_components) {			   
+            float nk1 = dot(bump,fixed_direction);
+            float nk2 = dot(bump,sampled_direction);
+            float3 h = normalize(fixed_direction + sampled_direction);
+            float nh = dot(bump,h);
+            float xh = dot(tangent_u,h);
+            float zh = dot(tangent_v,h);
+
+            float ph1 = 0.0f;
+            float ph2 = 0.0f;
+            float fw_prob = 1.0-backscatter_blend;
+            if (fw_prob > 0.0)
+            {
+                // forward reflection:
+                // center at normal
+                Disk_distribution dd;
+                dd.center = float2(0.0f, 0.0f);
+                dd.n = k_fw;
+
+                dd.radius = nk1;
+                if (dd.radius > 0.0f) {
+                    //    dd.max_valid_radius = 1.0f - sqrtf(fmaxf(1.0f - nk1 * nk1, 0.0f));
+                    ph1 += fw_prob * hvd_disk_eval_single(nk1, nh, xh, zh, dd);
+                }
+
+                dd.radius = nk2;
+                if (dd.radius > 0.0f) {
+                    // dd.max_valid_radius = 1.0f - sqrtf(fmaxf(1.0f - nk2 * nk2, 0.0f));
+                    ph2 += fw_prob * hvd_disk_eval_single(nk2, nh, xh, zh, dd);
+                }
+            }
+
+            if (backscatter_blend > 0.0f)
+            {
+                // retro-reflection:
+                // center at direction
+                Disk_distribution dd;
+                float xk1 = dot(fixed_direction,tangent_u);
+                float zk1 = dot(fixed_direction,tangent_v);
+                dd.center = float2(xk1, zk1);
+                dd.n = k_bs;
+                dd.radius = 1.0f;
+                //dd.max_valid_radius = 1.0f;	
+
+                ph1 += backscatter_blend * hvd_disk_eval_single(nk1, nh, xh, zh, dd);
+                ph2 += backscatter_blend * hvd_disk_eval_single(nk2, nh, xh, zh, dd);
+
+        //weight *= dparas.m_bs_edge_curve_0 + (1.0f - dparas.m_bs_edge_curve_0) * powf((1.0f - nk1) * (1.0f - nk2), dparas.m_bs_edge_curve);
+            }
+
+            
+            Spectrum value = Spectrum(min(ph1, ph2));
+            if (transport_source == light) {
+                return value * abs(dot(fixed_direction,bump)
+                              / (dot(fixed_direction,geometry_normal) * PI));
+            }
+            else {
+                return value / PI;
+            }
+        }
+        else
+            return Spectrum(0.);
+    }
+
+    float pdf(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        void(transport_source);
+        allowed_components = bsdf_check_type(
+            geometry_normal, fixed_direction, sampled_direction, allowed_components);
+        if (Bsdf_components{reflect_glossy} in allowed_components) 
+        {
+            // anisotropic phong distribution
+            float nk1 = dot(bump,fixed_direction);
+            float nk2 = dot(bump,sampled_direction);
+            float3 h = normalize(fixed_direction + sampled_direction);
+            float nh = dot(bump,h);
+            float xh = dot(tangent_u,h);
+            float zh = dot(tangent_v,h);
+
+            float ph1 = 0.0f;
+            float ph2 = 0.0f;
+            float fw_prob = 1.0-backscatter_blend;
+            if (fw_prob > 0.0)
+            {
+                // forward reflection:
+                // center at normal
+                Disk_distribution dd;
+                dd.center = float2(0.0f, 0.0f);
+                dd.n = k_fw;
+
+                dd.radius = nk1;
+                if (dd.radius > 0.0f) {
+                    //			    dd.max_valid_radius = 1.0f - sqrtf(fmaxf(1.0f - nk1 * nk1, 0.0f));
+                    ph1 += fw_prob * hvd_disk_eval_single(nk1, nh, xh, zh, dd);
+                }
+
+                dd.radius = nk2;
+                if (dd.radius > 0.0f) {
+                    // dd.max_valid_radius = 1.0f - sqrtf(fmaxf(1.0f - nk2 * nk2, 0.0f));
+                    ph2 += fw_prob * hvd_disk_eval_single(nk2, nh, xh, zh, dd);
+                }
+            }
+            if (backscatter_blend > 0.0f)
+            {
+                // retro-reflection:
+                // center at direction
+                Disk_distribution dd;
+                float xk1 = dot(fixed_direction,tangent_u);
+                float zk1 = dot(fixed_direction,tangent_v);
+                dd.center = float2(xk1, zk1);
+                dd.n = k_bs;
+                dd.radius = 1.0f;
+                //dd.max_valid_radius = 1.0f;	
+
+                ph1 += backscatter_blend * hvd_disk_eval_single(nk1, nh, xh, zh, dd);
+                ph2 += backscatter_blend * hvd_disk_eval_single(nk2, nh, xh, zh, dd);
+
+    //				weight *= dparas.m_bs_edge_curve_0 + (1.0f - dparas.m_bs_edge_curve_0) * powf((1.0f - nk1) * (1.0f - nk2), dparas.m_bs_edge_curve);
+            }
+            return min(ph1, ph2);
+        }
+        else
+            return 0.0;
+    }
+
+    Bsdf_components sample(
+        in float3           fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        if (Bsdf_components{reflect_glossy} in allowed_components)
+        {
+        // in transmission enabled mode symmetry of this distribution type must be enforced explicitly:
+        // the disk distribution is based on the convention that the directional
+        // dependency is based on a direction to the thicker medium, directions to the
+        // thinner medium need to be transformed to the thicker medium first
+    //	    const vec_t k1_thick = !thin_walled && (paras.m_refl_type >= BSDFReflectionType_Trans) && (state.material_ior.y > state.material_ior.x)
+    //		 ? -refract_to_thicker(k1, normal, state.material_ior.x, state.material_ior.y, nk1)
+
+            float nk1 = dot(fixed_direction,normal);
+            Disk_distribution dd;
+            float fw_prob = 1.0-backscatter_blend;
+            bool forward = primary_sample.polar < fw_prob;
+            dd.radius = nk1;
+            if (forward)
+            {
+                primary_sample.polar /= fw_prob;
+                // forward reflection
+                dd.center = float2( 0.0f);
+                dd.n = k_fw;
+                dd.radius = nk1;
+            }
+            else
+            {
+                primary_sample.polar = (primary_sample.polar - fw_prob) / (1.0f - backscatter_blend);
+                // retro-reflection
+                float xk1 = dot(fixed_direction,tangent_u);
+                float zk1 = dot(fixed_direction,tangent_v);
+                dd.center = float2(xk1, zk1);
+                dd.n = k_bs;
+                dd.radius = 1.0f;
+            }
+          
+            float phi_iso = 2.0 * PI * primary_sample.azimuthal;
+            float sp0=sin(phi_iso);
+            float cp0=cos(phi_iso);
+
+            float cp0sqr = cp0*cp0;
+            float tmp0 = dd.n.x - cp0sqr*dd.n.x;
+            float tmp = tmp0 + cp0sqr*dd.n.y;
+            float cp = (tmp != 0.0f) ? cp0*sqrt(dd.n.y/tmp) : -1.0f;
+            float tmp2 = sp0*sqrt(dd.n.x*tmp);
+            float sp = ((primary_sample.azimuthal > 0.743f) && (primary_sample.azimuthal < 0.757f)) ? 
+                -1.0f : ((tmp0+tmp2)/(tmp+tmp2)); //!! epsilon hell, check for results again as soon as mapping TODO above changes
+
+            float n12 = dd.n.x * cp * cp + dd.n.y * sp * sp;
+            float xi_r = primary_sample.polar;
+            float r = dd.radius * sqrt(1.0f - pow(1.0f - xi_r, 1.0f / (n12 + 1.0f)));
+            float2 u = float2(dd.center.x + r * cp, dd.center.y + r * sp);
+            
+            // create vector to disk
+            float3 h_disk = normal * nk1 + tangent_u * u.x + tangent_v * u.y;
+
+            // scaling transformation
+            float3 h = normalize(h_disk);
+
+            // orthogonal projection transformation
+            //const vec_t h = (h_disk + normal * nk1).normalize();
+
+            // compute density for k1
+            float nh = dot(h,normal);
+            float xh = dot(h,tangent_u);
+            float zh = dot(h,tangent_v);
+            float ph1 = hvd_disk_eval_single(nk1, nh, xh, zh, dd);
+
+            // compute k2 and density for k2
+            float kh = dot(h,fixed_direction);
+            float3 k2 = h * (kh+kh) - fixed_direction;
+            float nk2 = dot(normal,k2);
+            float xk2 = dot(k2,tangent_u);
+            float zk2 = dot(k2,tangent_v);
+            //float weight = 1.;
+            // reset parameters depending on direction
+            if (forward)
+            {
+                dd.radius = nk2;
+            }
+            else
+            {
+                dd.center = float2(xk2, zk2);
+            //    weight *= backscatter.curve_min + (1.0f - backscatter.curve_min) * 
+            //        pow((1.0f - nk1) * (1.0f - nk2), backscatter.curve_exponent);
+            }
+
+            //float ph2 = hvd_disk_eval_single(nk2, nh, xh, zh, dd);
+
+            //weight *= min(ph1, ph2) / ph1;
+            sample_probability = ph1;
+            float3 sampled_normal = h;
+            
+            
+            float k1h = dot(fixed_direction,sampled_normal);
+            // transform to direction
+            sampled_direction = -fixed_direction + sampled_normal * (k1h + k1h);
+            
+            allowed_components = bsdf_check_type(
+                 geometry_normal, fixed_direction, sampled_direction, allowed_components);
+            if (Bsdf_components{reflect_glossy} in allowed_components) 
+            {
+                float3 h = normalize(fixed_direction + sampled_direction);
+                float nh  = dot(h,bump);
+                if (nh <= 0.0f)
+                {
+                    return bsdf_invalid_sample(sampled_direction, sample_weight);
+                }
+
+                if (transport_source == light) {
+                    sample_weight = Spectrum(1.) * abs(dot(fixed_direction,normal)
+                                  / (dot(fixed_direction,geometry_normal))) ;
+                }
+                else {
+                    sample_weight =  Spectrum(1.);
+                }
+                return Bsdf_components{reflect_glossy};
+            }
+            else{
+                return bsdf_invalid_sample(sampled_direction, sample_weight);
+            }
+        }
+        else
+        {
+            return bsdf_invalid_sample(sampled_direction, sample_weight);
+        }
+
+
+    }
+
+	
+    // evaluate distribution on disk for point in disk plane
+    float eval_disk_distribution(
+        float x,
+        float y,
+        Disk_distribution dd)
+    {
+    	float radius = dd.radius;
+
+        // anisotropic "lump" distribution
+        float inv_radius2 = 1.0f / (radius * radius);
+        float dx2 = x - dd.center.x;
+        dx2 *= dx2;
+        float dy2 = y - dd.center.y;
+        dy2 *= dy2;
+
+        float f = 1.0f - (dx2 + dy2) * inv_radius2;
+        float n12 = (dd.n.x * dx2 + dd.n.y * dy2) / (dx2 + dy2);
+        return (f < 0.0f) ? 0.0f :
+    	(sqrt((dd.n.x + 1.0f) * (dd.n.y + 1.0f)) * 
+    		(1.0 / PI) * inv_radius2 * pow(f, n12)
+    	);
+    }
+
+    float hvd_disk_eval_single(
+        float nk,
+        float nh,
+        float xh,
+        float zh,
+        Disk_distribution dd)
+    {
+        // compute coordinates x, y of h in disk plane, scaling projection
+        // (using intercept theorems)
+        float inv_nh = 1.0f/nh;
+        float nk_nh = nk * inv_nh;
+        float x = nk_nh * xh;
+        float y = nk_nh * zh;
+
+        // distribution on disk
+        float p_disk = eval_disk_distribution(x, y,  dd);
+
+        // distribution in halfvector space
+        float p_h = nk_nh * nk_nh * inv_nh * p_disk;
+
+        return p_h;
+    }
+
+};

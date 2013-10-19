@@ -1,0 +1,188 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Color Calculations</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node35.html">&laquo;&nbsp;prev</a></li>
+<li><a href="spectral.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION34"></a>
+
+<h2 id="fo:color">Color Calculations</h2>
+<p>
+By default all <b><a id="INDEX69"></a>color</b>s
+in mental ray are given in the <b><a id="INDEX70"></a> RGBA
+color space</b> and all internal calculations
+are performed in RGBA. The <b><a id="INDEX71"></a>alpha channel</b>
+is used to determine transparency;
+0 means fully transparent and 1 means fully opaque. mental ray uses
+premultiplied colors, which means that the R, G, and B components
+are scaled by A and may not exceed A if A is less than 1.0. This
+becomes significant only when colors are stored in 8-bit or 16-bit
+frame buffers because the store operation requires quantization and
+clipping of arbitrary floating-point values to the fixed integer
+ranges of the frame buffer formats. Optionally, RGBA colors may be
+stored in the output image in non-premultiplied form to increase
+the precision of highly transparent pixels, but by convention,
+mental ray and all shaders work with premultiplied colors (there is
+no precision loss here because mental ray works with floating-point
+values). Premultiplication is used to simplify compositing
+operations.</p>
+<p>Internally, <a href="node36.html#INDEX69">color</a>s are not
+restricted to the unit cube in RGB space. As a final step before
+output, colors are clipped using one of two methods. By default,
+the red, green and blue values are simply truncated. Optionally,
+colors may be clipped using a <b><a id="INDEX72"></a>desaturation</b>
+method which maintains intensity (if
+possible), but shifts the hue towards the white axis of the cube.
+Desaturation color clipping may be selected with either the
+<tt>-desaturate on</tt> option on the command line or
+<tt>desaturate on</tt> in the <a href="node76.html#INDEX0">options</a>
+block in the scene. The alpha
+channel is always truncated.</p>
+<p>mental ray also supports three different color clipping modes
+that control how premultiplied colors are clipped before storing in
+the frame buffer:</p>
+<dl style="margin-left: 2em">
+<dt>rgb</dt>
+<dd>ensures that R, G, and B never exceed alpha by increasing alpha
+if necessary, and preserving R, G, and B.</dd>
+<dt>alpha</dt>
+<dd>makes the same guarantee, but reduces R, G, and/or B to
+preserve the alpha channel.</dd>
+<dt>raw</dt>
+<dd>applies no color clipping whatever.</dd>
+</dl>
+<p>In any of these case, the result is clipped into the 0...1
+range.</p>
+<p>As a special case, mental ray supports the floating-point TIFF
+image file format, and a proprietary floating-point format (ctfp),
+that do not require any quantization, clipping, or loss of
+precision. Therefore, desaturation and color clipping are never
+applied.</p>
+<p>mental ray also supports the <b><a id="INDEX73"></a>RGBE</b>
+<b><a id="INDEX74"></a>high
+dynamic range</b> color data format. Its stores RGB colors (no
+alpha) as floating-point values with an 8-bit mantissa and an 8-bit
+shared exponent. The shared exponent allows a large value range
+from 0 to 10<sup>38</sup> (actually more, but the internal
+calculations use floats), and has the effect that the ratio between
+the largest and the smallest component cannot exceed 255. It
+combines the storage efficiency of 8-bit RGB with the ability to
+store values greater than 1.0.</p>
+
+<h3 id="fo:colorprofile">Color Profiles</h3>
+<p>
+mental ray supports color profiles. The following color profiles
+are predefined:</p>
+<p><a id="IDEX584"></a></p>
+<table class="table" cellpadding="1" cellspacing="1" width="100%">
+<tr>
+<th>name</th>
+<th>description</th>
+</tr>
+<tr>
+<td>micsSRGB, micsHDTV</td>
+<td>sRGB, no gamma correction</td>
+</tr>
+<tr>
+<td>micsSRGBg</td>
+<td>sRGB, with gamma correction</td>
+</tr>
+<tr>
+<td>micsHDTVg</td>
+<td>Rec. 709 (HDTV), with gamma correction</td>
+</tr>
+<tr>
+<td>micsNTSC</td>
+<td>NTSC, no gamma correction</td>
+</tr>
+<tr>
+<td>micsSharpRGB</td>
+<td>A wide gamut color space</td>
+</tr>
+<tr>
+<td>micsLineRGB</td>
+<td>R: 700nm, G: 550nm, B: 432nm</td>
+</tr>
+<tr>
+<td>micsBoxRGB</td>
+<td>R: 575-730nm, G: 500-575nm, B: 380-500nm</td>
+</tr>
+<tr>
+<td>micsCIEXYZ</td>
+<td>CIE XYZ (1931, 2 degree), output only</td>
+</tr>
+<tr>
+<td>micsCIELab</td>
+<td>perceptionally uniform CIE L*a*b*, output only</td>
+</tr>
+<tr>
+<td>micsCIELuv</td>
+<td>perceptionally uniform CIE L*u*v*, output only</td>
+</tr>
+<tr>
+<td>micsSpectrum</td>
+<td>spectral rendering, needs special shaders, rendering only</td>
+</tr>
+<tr>
+<td>micsSimpleCMY</td>
+<td>simple printer output with D50 white point</td>
+</tr>
+<tr>
+<td>micsSimpleCMYK</td>
+<td>simple printer output with D50 white point</td>
+</tr>
+</table>
+<p>Color profiles are enabled by giving a profile in the options
+block</p>
+<pre>
+      options "<var>opt</var>"
+           colorprofile "<var>profile_name</var>"
+      end options
+</pre>
+<p>The above color profile determines the rendering color space.
+The use of color profiles implies a floating point color frame
+buffer. Colors in the frame buffer are stored in an internal color
+space, that is, the colors of the rendering color space are
+transformed to internal color space before they are written to the
+color frame buffer. The CIE color profiles are in general
+unsuitable for rendering purposes, but they may be used for output
+purposes. The sRGB and HDTV color spaces differ only in their gamma
+values. Ideally gamma correction is performed by the viewing
+device. However, if the output image format has a resolution of
+less than twelve bits per color channel, then banding artifacts may
+result. For this reason it may be desirable to perform the gamma
+correction before the image is written out. Therefore mental ray
+offers the gamma corrected profiles <tt>"micsSRGBg"</tt> and
+<tt>"micsHDTVg"</tt> as well as the not gamma corrected
+<tt>"micsSRGB"</tt> with its alias <tt>"micsHDTV"</tt>.</p>
+<p>Color parameters of shaders may also be flagged with a color
+profile. The application of such a transformation cannot be
+automated, since which color arguments of a shader should be
+transformed to render color space depends on the inner workings of
+the involved shader. As a rule of thumb, color parameters
+describing material properties should not be transformed, while
+color parameters describing light properties should be transformed.
+If a color parameter is not flagged with a color profile, then it
+is assumed to be given in render color space.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node35.html">&laquo;&nbsp;prev</a></li>
+<li><a href="spectral.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

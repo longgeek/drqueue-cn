@@ -1,0 +1,393 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Instances</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node196.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node198.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION195"></a>
+<h3>Instances</h3>
+
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_INSTANCE</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miInstance</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>int param_size</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls, two identity matrices, parameter size as given by
+size argument</td>
+</tr>
+</table>
+<pre>
+enum miGenMotionType {
+        miGM_INHERIT = 0,
+        miGM_TRANSFORM,
+        miGM_OFF
+};
+
+typedef struct miTransform {
+        miTag           function;               /* function, may be null tag */
+        float           time;                   /* the last evaluation time */
+        miMatrix        global_to_local;        /* transformation in world */
+        miMatrix        local_to_global;        /* transformation to world */
+        miCBoolean      identity;               /* SCENE: matrices are ident.*/
+        miCBoolean      spare[3];               /* SCENE: not used */
+        int             id;                     /* SCENE: unique transform ID*/
+} miTransform;
+
+typedef struct miInstance {
+        miTransform     tf;                     /* space transformation */
+        miMatrix        motion_transform;       /* motion transformation */
+        miTag           item;                   /* instanced item */
+        miTag           material;               /* inherited material or list*/
+        miTag           parent;                 /* SCENE: leaf inst. parent */
+        miTag           boxes;                  /* SCENE: renderable repres. */
+        miTag           next;                   /* SCENE: leaf instance list */
+        miTag           prev;                   /* SCENE: leaf instance list */
+        int             mtl_array_size;         /* if mtl array, array size */
+        miTag           light_obj_ring;         /* SCENE: obj-light links */
+        miTag           userdata;               /* optional user data blocks */
+        miUint          label;                  /* optional label */
+        miTag           geogroup;               /* SCENE: geomshader group */
+        miCBoolean      off;                    /* ignore this instance */
+        miUint1         gen_motion;             /* motion information */
+        miUint1         visible;                /* visible ? */
+        miUint1         shadow;                 /* casts/receives shadow? */
+        miUint1         reflection;             /* casts/receives reflections? */
+        miUint1         refraction;             /* casts/receives refractions? */
+        miUint1         transparency;           /* casts/receives transparency? */
+        miUint1         caustic;                /* caustic bitmap */
+        miUint1         globillum;              /* globillum bitmap */
+        miUint1         finalgather;            /* finalgather bitmap */
+        char            face;                   /* a=all, f=front, b=back */
+        miCBoolean      temp_material;          /* SCENE: has inherited mtl */
+        miUint1         select;                 /* selectable when picking? */
+        miCBoolean      mtl_override;           /* inst mtl overrides obj mtl*/
+        miUshort        history_size;           /* leaf inst: # of hist tags */
+        miTag           approx_list;            /* 10 inherited miApprox's: */
+                                                /* v,t,s,c,g, displ v,t,s,c,g*/
+        miCBoolean      approx_override;        /* inst approx overr. obj app*/
+        miUint1         hardware;               /* render inst. with hardware */
+        miUint1         shadowmap;              /* casts shadowmap shadows? */
+        char            spare;                  /* not used */
+        miTag           param_decl;             /* parameter declaration */
+        int             param_size;             /* parameter size in bytes */
+        char            param[8];               /* arbitrary-sized parameters*/
+} miInstance;
+</pre>
+<p>A translator must provide: either <tt>tf.function</tt> and
+<tt>time</tt>, or <tt>global_to_local</tt> and
+<tt>local_to_global</tt>; also <tt>item</tt> (using
+<i>mi_scene_link</i>), <tt>param_decl</tt>, <tt>param_size</tt>,
+and <tt>param</tt>.</p>
+<p>All fields except the matrices, the material, and the parameters
+are reserved for Scene and may not be modified by other modules.
+The tags can be modified indirectly with the link and unlink
+functions, which take care of reference counts. The instance
+element has two variable parts; one for inherited shader parameters
+and one for the relation list. The latter is maintained internally
+by mental ray.</p>
+<dl>
+<dt>tf.function<dd>optionally points to a transformation
+function that computes a matrix from the current time. If present,
+this function is called during preprocessing with three parameters:
+a pointer to the result global-to-local matrix, the instance tag,
+and the time as given in the preprocessing control structure.
+
+<dt>tf.time<dd>is the time the evaluation function, if present,
+was last called with. If it matches the current time, the matrices
+need not be calculated by calling the function again.
+
+<dt>tf.global_to_local<dd>transforms the parent space to the
+local space of the instanced subtree. If a transformation functions
+exists, it writes its result here; if not, the translator must
+store an appropriate matrix here.
+
+<dt>tf.local_to_global<dd>is the inverse matrix, set by Scene
+after the transformation function (if it exists) has returned the
+<tt>tf.global_to_local</tt> matrix.
+
+<dt>tf.identity<dd>is <tt>miTRUE</tt> if the transformation
+matrices in this instance are identity transforms (this saves the
+renderer unnecessary ray transformations).
+
+<dt>tf.id<dd>is a unique transformation ID. Scene creates it
+during preprocessing, trying to assign identical IDs to identical
+transformations. This is especially important for
+<a href="node180.html#INDEX862">leaf instance</a>s: the renderer does not
+have to re-transform the current ray if the new box has the same
+transformation (same ID) as the previous.
+
+<dt>motion_transform<dd>specifies the transformation from parent
+space to local space for motion blur transforms. If this is a null
+matrix, the instance transformation <tt>tf</tt> is used.
+
+<dt>item<dd>is the tag of the element being instanced. Only
+groups, cameras, lights, objects, or functions can be referenced.
+If a function (or function list) is supplied, mental ray will call
+them during scene preprocessing as
+<a href="node179.html#INDEX857">geometry shader</a>. They must return a
+single object tag, which may (and often should) be a placeholder
+object.
+
+<dt>material<dd>is either a material (if <i>mtl_array_size</i>
+is 0) or a material list (if <i>mtl_array_size</i> is nonzero) used
+for material inheritance (as opposed to parameter inheritance).
+During scene preprocessing, the non-null material tag closest to a
+geometrical object (lowest in the DAG hierarchy) becomes the
+default material for any polygon or surface in the object that does
+not have its own non-null material tag. If the tag references a
+list (type <tt>miSCENE_TAG</tt>) or materials, it is expected to
+contain <i>mtl_array_size</i> tags, which will be indexed with the
+polygon or surface label during rendering. (The <i>mtl_override</i>
+flag modifies the inheritance rules, see below.)
+
+<dt>mtl_array_size<dd>specifies the number of tags in the
+material tag list if nonzero. If the material tag specifies a
+material directly, it must be zero. This number is used during
+rendering as a flag that tells mental ray that the material tag
+references a list, and also how many items there are in the list to
+prevent array bounds overflows.
+
+<dt>boxes<dd>is used by mental ray internally to store
+tessellation results in <a href="node180.html#INDEX862">leaf
+instance</a>s created during preprocessing.
+
+<dt>next<br>
+prev<dd>are used by mental ray internally to
+chain <a href="node180.html#INDEX862">leaf instance</a>s created
+during preprocessing.
+
+<dt>light_obj_ring<dd>is used internally by mental
+ray to keep track of <a href="node123.html#INDEX486">geometric area
+light source</a>s.
+
+<dt>userdata<dd>allows attaching a user data block (miUserdata)
+or a chain of user data blocks. Shaders can retrieve the data with
+<i>mi_query</i>.
+
+<dt>label<dd>stores an opaque integer set by the scene file with
+a <tt>tag</tt> statement.
+<dt>geogroup<dd>is used internally to point to the group element
+which contains all the geometry-shader created scene elements for
+this instance.
+
+<dt>off<dd>if true, stops the recursive descent during
+preprocessing as if the instance and its instanced item didn't
+exist. This is useful for temporarily suspending subtrees without
+deleting them. It implements the <tt>hide</tt> flag in the .mi
+scene language.
+
+<dt>gen_motion<dd>specifies that motion blur should be generated
+for the instance. Setting this field to <tt>miGM_OFF</tt> switches
+off motion blur for this instance. Motion blur is always generated
+when this field is set to <tt>miGM_TRANSFORM</tt>. The parent
+instance determines whether motion blur is active or not when
+gen_motion is set to <tt>miGM_INHERIT</tt> here.
+
+<dt id="instance_flags">visible
+<br>shadow
+<br>transparency
+<br>reflection
+<br>refraction
+<br>finalgather
+<br>caustic
+<br>globillum
+<br>select
+<dd>instance flags or modes to control rendering properties.
+A simple flag is a boolean value to switch a single property
+(<var>visible</var>, <var>select</var>). Most of the flags provide control
+of sub-properties like <dfn>cast</dfn> and <dfn>receive</dfn>, which is
+encoded in a <var>mode</var> bitmap. See below for details on the individual
+flags.
+<dd class="note">Note, that <em>"cast this effect"</em> typically means to
+<em>"be visible to this type of ray"</em>, and <em>"receive this effect"</em>
+means <em>"cast this type of ray"</em>.
+<dd>
+The flags are inherited down the scene DAG in such a way that flags in lower
+DAG instances take precedence. During scene pre-processing, any non-null flag in
+the DAG instance closest to a geometrical object (lowest in the DAG hierarchy)
+is put into the <a href="node180.html#INDEX862">leaf instance</a>. Before
+rendering starts the <a href="node180.html#INDEX862">leaf instance</a> flags
+are merged with the object flags to define the final properties; and they are
+stored in internal raylib rendering data structures. Note, that for all the
+flags the value <code>0</code> means <em>"nothing set"</em> or
+<em>"no override"</em>, which is the default.
+<dd>
+<dl>
+<dt>visible
+<br>select<dd>
+Simple flag to control primary visibility and selectability.
+In the merging operation of the instance with object flags, the boolean flag
+is treated as a "tri-state boolean", hence represented as an integer (with only
+2 lowest bits recognized) with the values:
+<table class="table">
+<tr><th>value<th>meaning</tr>
+<tr><td><code>0</code><td>not set (but use inherited value)</tr>
+<tr><td><code>1</code><td>enable</tr>
+<tr><td><code>2</code><td>disable</tr>
+</table>
+In other words, <code>0</code> means that just the object flag is taken,
+<code>1</code> enables the property even if the object has disabled it, and
+<code>2</code> disables it even if the object has the flag set.
+<dt>shadow
+<br>reflection
+<br>refraction
+<br>transparency
+<dd>
+These flags are mode bitmaps which control cast and receive properties of the
+rendering effect separately. The lowest 4 bits of the integer field are
+recognized as follows:
+<table class="table">
+<tr><th>bit<th>meaning</tr>
+<tr><td><code>0</code><td>enables casting (from this object)</tr>
+<tr><td><code>1</code><td>enables receiving (from other objects)</tr>
+<tr><td><code>2</code><td>disables casting</tr>
+<tr><td><code>3</code><td>disables receiving</tr>
+</table>
+If no bit is set then this instance does not enforce any changes of flags
+on the object. Typical values are:
+<table class="table">
+<tr><th>value<th>force</tr>
+<tr><td><code>1</code><td>cast</tr>
+<tr><td><code>2</code><td>receive</tr>
+<tr><td><code>3</code><td>all (cast and receive)</tr>
+<tr><td><code>4</code><td>no cast</tr>
+<tr><td><code>6</code><td>receive-only (no cast but receive)</tr>
+<tr><td><code>8</code><td>no receive</tr>
+<tr><td><code>9</code><td>cast-only (no receive but cast)</tr>
+<tr><td><code>12</code><td>none (no cast nor receive)</tr>
+</table>
+
+<dt>finalgather
+<br>caustic
+<br>globillum
+<dd>Similar to above, but these effects support two more bits that are
+recognized as follows:<br>
+<table class="table">
+<tr><th>bit<th>meaning</tr>
+<tr><td><code>0</code><td>enables casting (from this object)</tr>
+<tr><td><code>1</code><td>enables receiving (from other objects)</tr>
+<tr><td><code>2</code><td>disables casting</tr>
+<tr><td><code>3</code><td>disables receiving</tr><tbody>
+<tr><td><code>4</code><td>hide object from effect</tr>
+<tr><td><code>5</code><td>make visible to effect</tr>
+</table>
+The extra bits allow to completely hide objects from final gathering or photon
+tracing without touching the other bits; they have higher priority and
+will be checked first by mental ray. In other words, the lower bits only take
+effect if the higher bits are enabling and not disabling the object at all.
+Bit masking operations can be used to set these higher bits only, like:
+<pre>inst&rarr;finalgather |= hide ? 0x10 : 0x20;</pre>
+This implements the <code>on|off</code> syntax in the .mi scene language for
+these flags.
+</dl>
+
+<dd class="note">The <var>reflection</var>, <var>refraction</var>, and
+<var>finalgather</var> flags replace the former <var>trace</var> flag. Code
+that used to write to the <code>trace</code> field must now write to these
+three flag bitmaps instead.
+
+<dt id="api:face">face<dd>controls face culling.
+<a id="INDEX1060"></a> The possible values are <tt>'f'</tt> (front),
+<tt>'b'</tt> (back), and <tt>'a'</tt> (all). If not specified, the
+culling flag given in the options or in the state is used.
+
+<dt>temp_material<dd>is an internal flag that tells SCENE
+postprocessing that the material field contains a material that was
+created during preprocessing, and must be deleted on
+postprocessing. This happens if the <a href="node76.html#INDEX224">inheritance
+function</a> sets one or more of
+the material fields in its material argument, to implement CATIA
+aspect inheritance.
+
+<dt>mtl_override<dd>changes the inheritance rules for the
+material or material list stored in this instance. If true, and
+materials exist, this instance will override materials in instances
+lower in the DAG and in the object, instead of allowing lower
+materials to override higher ones. This is useful for implementing
+highlighting selections.
+
+<dt>history_size<dd>is set in <a href="node180.html#INDEX862">leaf instance</a>s,
+so that the <a href="node76.html#INDEX224">inheritance function</a> or
+<a href="node76.html#INDEX225">traversal function</a> can use
+the <tt>miLEAFHISTORY</tt> macro to access the inheritance history,
+beginning at the scene root group (0), followed by the instance in
+the root group that led to the current location in the DAG (1), all
+the way to the current instance (history_size - 1). The macro
+accepts one integer argument (0 for root group etc.) and returns a
+tag. For example, this is useful in inheritance functions for
+comparisons to a selection list and then setting a highlight
+material and <i>mtl_override</i> on a match.
+
+<dt>approx_list<dd>implements flagged approximation inheritance.
+If nonzero, it is a tag of an element of type
+<tt>miSCENE_APPROX_LIST</tt> holding up to 10 approximations, in
+the order visible, trace, shadow, caustic, globillum, displace
+visible, displace trace, displace shadow, displace caustic, and
+displace globillum. Approximations with multiple flags are stored
+in multiple slots. Unused slots have style
+<tt>miAPPROX_STYLE_NONE</tt> (see miApprox below).
+
+<dt>approx_override<dd>, if set, causes instances higher in the
+scene graph (closer to the root group) to override lower instances
+and object approximations.
+
+<dt>hardware<dd>specifies that the subtree must be rendered
+using OpenGL hardware.
+
+<dt>shadowmap<dd>specifies that the object casts shadows into
+shadowmaps, if the shadow flag is enabled as well.
+
+<dt>param_decl<dd>points to a parameter declaration that
+describes the parameters. If parameters exist, this tag must be set
+by the translator to allow data exchange with other hosts. If it is
+missing, no data will be swapped regardless of the remote host's
+byte order. In <a href="node180.html#INDEX862">leaf instance</a>s,
+Scene stores the most recent parent instance's parameter
+declaration tag here.
+
+<dt>param_size<dd>is the size of the parameters in bytes. It is
+taken from the first and only argument of the create and resize
+calls. In the <a href="node180.html#INDEX862">leaf instance</a>,
+the <a href="node76.html#INDEX224">inheritance function</a>
+determines the size.
+
+<dt>param<dd>is an arbitrary-sized array of parameters stored by
+the translator. During preprocessing, the DAG is traversed, and the
+parameters are passed to an <a href="node76.html#INDEX224">inheritance
+function</a> that is called for
+every instance found during traversal. The end result is stored in
+the <a href="node180.html#INDEX862">leaf instance</a> by Scene.
+</dl>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node196.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node198.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

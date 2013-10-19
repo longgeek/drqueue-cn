@@ -1,0 +1,56 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Volume_fog_linear
+{
+	input:
+		float falloff_start = 0
+		{
+			display_name("Falloff Start");
+			soft_range(0,10);
+			description( "Distance from camera at which the input "
+			             "will begin to be attenuated." );
+		};
+		float falloff_end = 100
+		{
+			display_name("Falloff End");
+			soft_range(0,1000);
+			description( "Distance from camera at which the input "
+			             "will be fully attenuated." );
+		};
+		float  falloff_distance_scale = 1.0
+   		{
+			display_name("Falloff Distance Scale");
+			soft_range(0.001,100);
+			description( "Factor to apply in all distance calculations." );
+		};
+		Color   fog_color = Color(1,1,1,1)
+   		{
+			display_name("Fog Color");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "Attenuation value of fog as distance moves from "
+			             "start to end of the falloff range." );
+		};
+
+
+	output:
+		Color result;
+
+	void main()
+	{
+		float distance = ray_length;
+		float atten = (distance/falloff_distance_scale - falloff_start)
+			/(falloff_end - falloff_start);
+		atten = saturate(atten);
+		result = lerp(volume_input, fog_color, Color(atten, atten, atten, atten));
+	}
+} 
+{ 
+	shader_type("volume"); 
+	description( "Attenuates scene colors based on a fog-like "
+	             "effect with a linear falloff." );
+}
+;
+

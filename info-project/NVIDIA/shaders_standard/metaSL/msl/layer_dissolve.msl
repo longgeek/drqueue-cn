@@ -1,0 +1,52 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+#import <mi_msl_shared.msl>
+
+shader Layer_dissolve
+{
+	input:
+		Color foreground = Color(0,0,0,0)
+		{			
+			display_name("Foreground");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The Foreground Color." );
+		};
+		Color background = Color(0,0,0,0)
+		{		
+			display_name("Background");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The Background Color." );
+		};
+		Texture2d noise_texture = "unfiltered_noise_normal.dds"
+		{
+			display_name("Noise Texture");
+			description("Texture holding the dissolve threshold values.");
+		};
+		float opacity = 0.5
+		{
+			display_name("Opacity");
+			hard_range(0.0, 1.0);
+			description("Threshold value for the pixel selection");
+		};
+
+	output:
+		Color result;
+
+	void main()
+	{
+		float2 uv1 = texture_coordinate[0].xy;
+		Color noise = tex2D(noise_texture, uv1); 
+
+		if( noise.r	> opacity )
+			result = foreground;
+		else
+			result = background;
+	}
+}
+{
+	description( "Uses a biased random decision at each pixel to choose "
+	             "between Foreground and Background." );
+}
+;

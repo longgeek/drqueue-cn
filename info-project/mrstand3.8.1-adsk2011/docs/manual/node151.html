@@ -1,0 +1,167 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Pass Rendering Functions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="miquery.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node152.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION149"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_renderpass_sample_get">mi_renderpass_sample_get</a></li>
+<li><a href="#api:mi_renderpass_sample_put">mi_renderpass_sample_put</a></li>
+<li><a href="#api:mi_renderpass_samplerect_flush">mi_renderpass_samplerect_flush</a></li>
+<li><a href="#api:mi_renderpass_samplerect_black">mi_renderpass_samplerect_black</a></li>
+</ul>
+
+<h3>Pass Rendering Functions</h3>
+<p><a id="INDEX774"></a><a id="INDEX775"></a> <a id="INDEX776"></a></p>
+<pre>
+    void *mi_renderpass_access(
+        miState         *state,
+        int             pass,
+        int             fb)
+</pre>
+<p>This function is used by <a href="node182.html#INDEX893">pass
+rendering</a> merge functions to
+retrieve a pointer to sampling data. The merge function is called
+once for each sample, and has to merge all render pass samples for
+the same coordinate into the result sample. The <i>pass</i>
+argument is -1 for obtaining a pointer to the result sample, or
+0&nbsp;&hellip;&nbsp;<code>state&rarr;options&rarr;npasses</code>&minus;1
+for obtaining a pointer to the sample rendered in that pass. If a
+null pointer is returned, the pass did not cast this sample; this
+happens only if the corresponding area of the pass image is
+completely blank or the frame buffer specified by <i>fb</i> was not
+rendered. (The shader may assume an all-null sample in this case.)
+The <i>fb</i> argument specifies the frame buffer to access, and
+must be one of the <tt>miRC_IMAGE_*</tt> macros.
+<tt>miRC_IMAGE_RGBA</tt> and <tt>miRC_IMAGE_Z</tt> are always
+available; others may return 0.</p>
+<p><a id="INDEX777"></a></p>
+<h5 class="anchor" id="api:mi_renderpass_sample_get">mi_renderpass_sample_get</h5>
+<pre>
+    miBoolean mi_renderpass_sample_get(
+        void            *result,
+        int             resultsize,
+        miState         *state,
+        int             fb,
+        int             x,
+        int             y)
+</pre>
+<p>This function is intended exclusively for pass
+preprocessing functions. It returns the sample data from a single
+frame buffer <i>fb</i> at the specified sample coordinate <i>x</i>,
+<i>y</i>. The sample is copied to <i>result</i>. At most
+<i>resultsize</i> bytes are copied. For example, if <i>fb</i> is
+<tt>miRC_IMAGE_RGBA</tt>, <i>result</i> should be a pointer to a
+<tt>miColor</tt> and <i>resultsize</i> should be
+<i>sizeof(miColor)</i>. Since <tt>miRC_IMAGE_RGBA</tt> is always
+the first frame buffer, it is possible to copy the entire sample by
+specifying a larger <i>resultsize</i>. A size that is too large
+will be truncated to the actual sample size. This assumes that the
+prep shader knows the actual sample layout, which makes such a
+shader nonportable to other projects. The <i>imf_info -m</i>
+command-line tool can be used to determine the sample layout of a
+pass sample file.</p>
+<p><a id="INDEX778"></a></p>
+<h5 class="anchor" id="api:mi_renderpass_sample_put">mi_renderpass_sample_put</h5>
+<pre>
+    miBoolean mi_renderpass_sample_put(
+        void            *result,
+        int             resultsize,
+        miState         *state,
+        int             fb,
+        int             x,
+        int             y)
+</pre>
+<p>This function is intended exclusively for pass
+preprocessing functions. It is the reverse function to the
+previous, and writes a sample to the output pass file. Written
+samples cannot be read again; the <i>get</i> and <i>put</i>
+functions access different pass files according to the
+<tt>read</tt> and <tt>write</tt> file names specified in the pass
+prep statement in the options block.</p>
+<p><a id="INDEX779"></a></p>
+<pre>
+    mi_renderpass_resolution(
+        int             *xl,
+        int             *yl,
+        int             *xs,
+        int             *ys,
+        int             *xres,
+        int             *yres,
+        miState         *state,
+        int             x,
+        int             y)
+</pre>
+<p>This function is intended exclusively for pass
+preprocessing functions. It returns information about the rectangle
+that the sample coordinate <i>x</i>, <i>y</i> is in. Pass files are
+organized in the same rectangles that become visible as rendering
+units when attaching the <i>imf_disp</i> tool to a running mental
+ray render. They generally have a fixed size depending on
+oversampling, but may be smaller or larger near the edges of the
+image. The lower left sample coordinate <i>xl, yl</i>, the
+rectangle size in samples <i>xs, ys</i>, and the resolution of the
+entire image in samples <i>xres, yres</i> is returned. Any of these
+pointers may be null if the corresponding count is not needed. Note
+that rectangles may overlap. It is often useful to consider
+rectangles when preprocessing even though the <i>get</i> and
+<i>put</i> functions seem sufficient, because the following
+<i>flush</i> and <i>black</i> functions allow optimizations based
+on rectangles.</p>
+<p><a id="INDEX780"></a></p>
+<h5 class="anchor" id="api:mi_renderpass_samplerect_flush">mi_renderpass_samplerect_flush</h5>
+<pre>
+    miBoolean mi_renderpass_samplerect_flush(
+        miState         *state,
+        int             pass,
+        int             x,
+        int             y)
+</pre>
+<p>This function is intended exclusively for pass
+preprocessing functions. If applied to the read pass file (
+<i>pass</i> is 1), this announces that the rectangle that the
+coordinate <i>x</i>, <i>y</i> is in will not be read from for a
+while, which removes it from the cache. If applied to the write
+pass file ( <i>pass</i> is 0), this announces that the prep shader
+is definitely finished with writing this rectangle. It is ok to
+read again from a flushed rectangle, but writes to flushed
+rectangle will be ignored and must be avoided. The flush function
+reduces the memory required for preprocessing a pass file.</p>
+<p><a id="INDEX781"></a></p>
+<h5 class="anchor" id="api:mi_renderpass_samplerect_black">mi_renderpass_samplerect_black</h5>
+<pre>
+    miBoolean mi_renderpass_samplerect_black(
+        miBoolean       *result,
+        miState         *state,
+        int             x,
+        int             y)
+</pre>
+<p>This function is intended exclusively for pass
+preprocessing functions. It returns <tt>miTRUE</tt> if all samples
+in the rectangle that the coordinate <i>x</i>, <i>y</i> is in are
+entirely black (all null bytes). Calling this function can avoid a
+lot of unnecessary computation in the prep shader.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="miquery.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node152.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

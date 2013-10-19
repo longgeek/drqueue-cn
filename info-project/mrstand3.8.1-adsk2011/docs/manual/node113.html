@@ -1,0 +1,214 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Parameter Assignments and mi_eval</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node112.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node114.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION111"></a>
+<h2>Parameter Assignments and mi_eval</h2>
+<p><a id="paramassign"></a> <a name="INDEX429"
+id="INDEX429"></a> The chapter on the .mi scene description
+language (page <a href="node112.html#declaration">declaration</a>)
+explains assignment of shaders and phenomenon interface parameters
+to <a href="node65.html#INDEX142">shader parameter</a>s.
+Assignments replace the constant value of a parameter with a link
+to a shader that gets called automatically when the shader asks for
+the value of the parameter, or a link to the
+<a href="node138.html#INDEX531">phenomenon interface</a> which is looked
+up, respectively.</p>
+<p><a id="INDEX430"></a> Shader assignments
+simplify the development of small, simple shaders called
+<i><a href="node19.html#INDEX34">base shader</a>s</i> that can be
+combined into larger shaders or phenomena. For example, assignments
+make it possible to apply a texture to any shader parameter simply
+by replacing the constant value of a parameter with an assignment
+to a texture shader. It is no longer necessary for shader writers
+to anticipate which parameters should be texturable, and adding
+additional shader parameters of type <tt>color texture</tt> to the
+parameter list, just in case.</p>
+<p>For example, consider this shader assignment example from page
+<a href="node67.html#assignex">assignex</a>:</p>
+<pre>
+     declare shader
+        color "phong" (color  "ambient",
+                       color  "diffuse",
+                       color  "specular",
+                       scalar "shiny")
+        version 1
+     end declare
+
+     declare shader
+        struct {color "a", color "b"}
+              "texture" (color texture "picture")
+        version 1
+     end declare
+
+     color texture "fluffy" "/tmp/image.rgb"
+
+     shader "map" "texture" (
+        "picture"   "fluffy")
+
+     shader "mtlsh" "phong" (
+        "shiny"     50,
+        "ambient"   0.3 0.3 0.3,
+        "diffuse"   = "map.a",
+        "specular"  = "map.b")
+</pre>
+<p>The author of the <i>phong</i> shader can focus on the purpose
+of the shader (Phong illumination) without having to consider
+texturing at all. The texture is applied later as a shader
+assignment to the parameters of <i>phong</i>. This example further
+illustrates that shaders may have structured return values, in this
+case in the shader <i>texture</i> which returns both <i>a</i> and
+<i>b</i>, which can be picked up individually using the dot-member
+notation.</p>
+<p>Frequently, shaders do not access all their parameters. Consider
+a multiplexing material shader that calls one of two material
+shaders depending on whether the incident ray hit the front face or
+the back face of the material. It would be very inefficient to
+evaluate both material shaders and then choose one of the two
+returned colors. For this reason, mental ray does not pre-evaluate
+all assignments before calling a shader. Instead, the shader itself
+must ask for the value of one of its parameters explicitly. This is
+done with the <i><a href="node138.html#INDEX522">mi_eval</a></i>
+function. The signature of <i><a href="node138.html#INDEX522">mi_eval</a></i> is</p>
+<a id="INDEX431"></a> <a id="INDEX432"></a><a id="INDEX433"></a>
+<a id="INDEX434"></a> <a id="INDEX435"></a><a id="INDEX436"></a>
+<a id="INDEX437"></a> <a id="INDEX438"></a>
+<pre>
+     void       *mi_eval           (miState         *state,
+                                    void            *param)
+     miBoolean  *mi_eval_boolean   (miBoolean       *param)
+     miInteger  *mi_eval_integer   (miInteger       *param)
+     miScalar   *mi_eval_scalar    (miScalar        *param)
+     miVector   *mi_eval_vector    (miVector        *param)
+     miScalar   *mi_eval_transform (miScalar        *param)
+     miColor    *mi_eval_color     (miColor         *param)
+     miTag      *mi_eval_tag       (miTag           *param)
+     miSpectrum *mi_eval_spectrum  (miSpectrum_para *param)
+</pre>
+<p>The typed variants of <i><a href="node138.html#INDEX522">mi_eval</a></i> are implemented as macros
+that perform all necessary typecasting, as a convenience for shader
+writers. There are three cases handled by <i><a href="node138.html#INDEX522">mi_eval</a></i>:</p>
+<ul>
+<li>If there is no assignment to the parameter whose address is
+passed, <i><a href="node138.html#INDEX522">mi_eval</a></i> simply
+returns that parameter. Being a macro, it can do so without
+measurable loss of performance.</li>
+<li>If the parameter is assigned to a shader, the shader will be
+called automatically and a pointer to the returned value is
+returned. If the shader was called before in the same context (such
+as the current phenomenon execution), the shader is not called
+again and a pointer to the cached previous result is returned.</li>
+<li>If the parameter is assigned to the interface of the phenomenon
+the shader is defined in, <i><a href="node138.html#INDEX522">mi_eval</a></i> returns a pointer to the
+value stored in the interface.</li>
+</ul>
+<p>In any case, the end result is that <i><a href="node138.html#INDEX522">mi_eval</a></i> returns a pointer to the
+parameter value, no matter where it comes from. If the shader
+accessed its parameters directly, without using <i><a href="node138.html#INDEX522">mi_eval</a></i>, it would get garbage (such
+as 0 or <tt>NaN</tt>) if the parameter is assigned. For arrays,
+<i><a href="node138.html#INDEX522">mi_eval</a></i> must be applied
+to the array itself, as well as the <tt>i_</tt> <i>array</i> and
+<tt>n_</tt> <i>array</i> integers. Once the address of the array
+has passed through <i><a href="node138.html#INDEX522">mi_eval</a></i>, the array pointer is
+subscripted normally without applying <i><a href="node138.html#INDEX522">mi_eval</a></i> to each element. This is a
+convention; only entire arrays should be assigned to other shaders
+or to the <a href="node138.html#INDEX531">phenomenon interface</a>
+if present, but not individual array members.</p>
+<p>For example, the <i>phong</i> shader in the example above would
+be implemented as:</p>
+<p><a id="mtlshaderex"></a></p>
+<pre>
+     struct phong {
+        miColor       ambient;
+        miColor       diffuse;
+        miColor       specular;
+        miScalar      shiny;
+     };
+
+     int phong_version(void) {return(1);}
+
+     miBoolean phong(
+        miColor       *result,    /* returned illum color */
+        miState       *state,     /* ray tracer state */
+        struct phong  *paras)     /* phong parameters */
+     {
+        miColor       *diffuse;   /* final diffuse param */
+        miColor       *specular;  /* final specular param */
+        miScalar      shiny;      /* phong exponent */
+        int           n, i;       /* light counter */
+        miTag         *lights;    /* global light list */
+        miInteger     samples;    /* # of samples taken */
+        miColor       color;      /* color from light */
+        miColor       sum;        /* summed sample colors */
+        miVector      dir;        /* direction to light */
+        miScalar      dot_nl;     /* normal &lt;dot&gt; dir*/
+        miScalar      spec_f;     /* specular factor */
+
+        *result  = *mi_eval_color (&amp;paras-&gt;ambient);
+        diffuse  =  mi_eval_color (&amp;paras-&gt;diffuse);
+        specular =  mi_eval_color (&amp;paras-&gt;specular);
+        shiny    = *mi_eval_scalar(&amp;paras-&gt;shiny);
+
+        mi_query(miQ_NUM_GLOBAL_LIGHTS, state, 0, &amp;n);
+        mi_query(miQ_GLOBAL_LIGHTS,     state, 0, &amp;lights);
+
+        for (i=0; i &lt; n; i++) {
+            sum.r = sum.g = sum.b = 0;
+            samples = 0;
+            while (mi_sample_light(&amp;color, &amp;dir, &amp;dot_nl,
+                                   state, lights[i],
+                                   &amp;samples)) {
+
+                spec_f = mi_phong_specular(shiny, state,
+                                                      &amp;dir);
+                sum.r += color.r * (dot_nl * diffuse-&gt;r +
+                                    spec_f * specular-&gt;r);
+                sum.g += color.g * (dot_nl * diffuse-&gt;g +
+                                    spec_f * specular-&gt;g);
+                sum.b += color.b * (dot_nl * diffuse-&gt;b +
+                                    spec_f * specular-&gt;b);
+            }
+            if (samples) {
+                result-&gt;r += sum.r / samples;
+                result-&gt;g += sum.g / samples;
+                result-&gt;b += sum.b / samples;
+            }
+        }
+        result-&gt;a = 1;
+        return(miTRUE);
+     }
+</pre>
+<p>Note that <i><a href="node138.html#INDEX528">mi_eval_color</a></i> is called early to
+obtain pointers to parameters once. If there is a large number of
+lights, this saves a large number of <i>mi_eval_color</i> calls
+later. Although <i><a href="node138.html#INDEX522">mi_eval</a></i>
+et al. employ caching and fast lookups, this makes the shader
+faster than it were if the code were written like this:</p>
+<pre>
+    dot_nl * mi_eval_color(&amp;paras-&gt;diffuse)-&gt;r
+</pre>
+<p>in the inner loop.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node112.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node114.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

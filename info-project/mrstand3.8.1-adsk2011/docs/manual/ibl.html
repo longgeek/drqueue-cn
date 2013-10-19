@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Image-Based Lighting</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node18.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node25.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h2 id="fo:ibl">Image-Based Lighting <span class="recent">3.7</span></h2>
+<p>
+<dfn>Image-based lighting</dfn>, often abbreviated as <dfn>IBL</dfn>,
+is a common approach to illuminate a scene by a high-dynamic range image
+taken from a real-world environment. Such an image is able to capture and
+transport the original light energy and colors from the physical world to the
+renderer.
+mental ray provides a <dfn>native IBL</dfn> solution for image-based lighting
+or lighting from procedurally generated environment. It delivers results with
+superior quality and optimized performance compared to traditional ways, like
+using <a href="node52.html#fo:finalgather">final gathering</a> combined with
+explicitly modeled geometry surrounding the scene with the IBL image mapped
+onto its surface.
+<p>
+Once enabled, and a regular environment shader is attached to the render
+camera, mental ray will create an internal special light source which returns
+the illumination from the environment. For rendering, mental ray is
+pre-sampling the environment and creating lookup acceleration data structures
+to support importance-driven adaptive sampling during the lighting
+computations in shaders. This light contribution is automatically added to
+all shaders performing regular direct light sampling, thus allowing existing
+shaders to benefit from this feature.
+<p id="fo:ibl_progressive">
+The <i>IBL</i> mode can be used in conjunction with progressive rendering.
+<p id="fo:ibl_progressive_cache"><span class="new">3.8</span>
+For interactive use cases, mental ray provides optimization features which
+allow to generate "convincing", but not necessarily physically accurate, results
+much faster. The <dfn id="ibl_approximate">approximate IBL</dfn> lighting mode
+can be used to trade speed for quality. This feature may be coupled with the
+<dfn id="occlusion_cache">occlusion cache</dfn> which stores pre-computed
+occlusion information for the geometry in the scene. This data can be used
+during rendering to approximate shadowing and render more quickly by avoiding
+actual shadow tracing. These technique allow to produces images with much less
+noise at the cost of pre-processing time and visible artifacts. Optionally,
+the exact IBL solution can be blended in over time, fading out the
+interpolation errors and finally converging to the exact solution.
+Existing shaders don't need to be adjusted to take benefit of these
+optimization features.
+<p>
+The
+<i>IBL</i> can be controlled with <a href="node76.html#opt:ibl">scene options</a>.
+</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node18.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node25.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a>
+</p>
+</body>
+</html>

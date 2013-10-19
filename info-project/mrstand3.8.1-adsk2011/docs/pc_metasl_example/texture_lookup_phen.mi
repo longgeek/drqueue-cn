@@ -1,0 +1,87 @@
+link "mr_prebuilt.dll"
+
+
+$include "pass_through.msl"
+$include "texture_lookup_phen.xmsl" 
+$include "light_point.msl"
+
+color texture "test_back" "default.dds"
+
+color texture "tex"	"default.dds"
+material "mtl" "texture_lookup_phen" (
+	"texture"	"tex"
+)
+end material
+
+
+light "light0" "Light_point" ( 
+	"color" 	1.000000 1.000000 1.000000 1.000000,
+	"intensity" 	3.141590,
+	"distance_falloff_exponent" 	0.000000,
+	"distance_scale" 	1.000000,
+	 ) 
+	 origin		0 0 0 
+end light 
+
+instance "iLight0" "light0" 
+	 hide		off 
+	 transform
+		 0.707107 -0.500000 0.500000 0.000000
+		 0.707107 0.500000 -0.500000 0.000000
+		 0.000000 0.707107 0.707107 0.000000
+		 0.000000 0.000000 -2.000000 1.000000
+end instance 
+
+
+options "opt" 
+	 samples 0 1 
+	 contrast 0.1  0.1  0.1 
+	 object space 
+	 face both 
+end options 
+
+
+camera "cam" 
+	 frame	1 
+	 output	"pic" "msl_image.pic" 
+	 focal	50 
+	 aperture	44 
+	 resolution	500 424 
+end camera  
+
+instance "cam_inst" "cam" 
+	 hide		off 
+	 transform	
+		 0.707107 -0.500000 0.500000 0.000000
+		 0.707107 0.500000 -0.500000 0.000000
+		 0.000000 0.707107 0.707107 0.000000
+		 0.000000 0.000000 -2.000000 1.000000
+end instance 
+
+
+object "msl_obj" 
+	 group 
+$include "msl_custom_obj.mi"
+	 end group 
+end object 
+
+instance "msl_obj_inst" "msl_obj" 
+	 visible		on 
+	 shadow		on 
+	 trace		on 
+	 transform	
+		 1.000000 0.000000 0.000000 0.000000
+		 0.000000 1.000000 0.000000 0.000000
+		 0.000000 0.000000 1.000000 0.000000
+		 0.000000 0.000000 0.000000 1.000000
+end instance 
+
+
+instgroup "rootgrp" 
+	 "cam_inst" "msl_obj_inst"   
+	"iLight0" 
+end instgroup 
+
+render "rootgrp" "cam_inst" "opt" 
+
+

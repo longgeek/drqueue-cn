@@ -1,0 +1,172 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Environment Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node118.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node120.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION117"></a>
+<h2>Environment Shaders</h2>
+<p><a id="INDEX468"></a>Environment shaders provide
+a color for rays that leave the scene entirely, and for rays that
+would exceed the <a href="node76.html#INDEX196">trace depth</a>
+limit. Environment shaders are called automatically by mental ray
+if a ray leaves the scene, or when a ray exceeds the trace depth.
+It can also be done explicitly by shaders using the
+<i>mi_trace_environment</i> function:</p>
+<pre>
+     mi_reflection_dir(&amp;dir, state);
+     if (/* do ray tracing? */)
+         mi_trace_reflection (&amp;color, state, &amp;dir);
+     else
+         mi_trace_environment(&amp;color, state, &amp;dir);
+      /* use the returned color */
+</pre>
+<p>Environment shaders, like any other shader, may return
+<tt>miFALSE</tt> to inform the caller that the environment lookup
+failed. If mental ray\ falls back on calling the environment
+shader, it returns the value returned by the environment shader,
+not necessarily <tt>miFALSE</tt>.</p>
+<p>In both the explicit case and the automatic case (when a ray
+cast by a function call such as <i><a href="node140.html#INDEX549">mi_trace_reflection</a></i> leaves the
+scene without intersecting with any object) mental ray calls the
+environment shader found in <i>state</i>&rarr;environment. In
+<a href="node124.html#INDEX489">primary ray</a>s, this variable is
+initialized with the global <a href="node119.html#INDEX468">environment shader</a> in the camera (also
+found in <i>state</i>&rarr;camera<i>&rarr;</i>environment).
+Subsequent material shaders get the environment defined in the
+material if present, or the camera environment otherwise.</p>
+<p>In mental ray 2.x, material shaders never inherit the
+environment from the parent shader, they always use the environment
+in the material or the camera. All other types of shaders inherit
+the environment from the parent shader. In mental ray 3.x, the
+environment shader is inherited unless the material defines its
+own.</p>
+<p>Here is an example environment shader that uses a texture that
+covers an infinite sphere around the scene:</p>
+<p><a id="INDEX469"></a></p>
+<pre>
+    struct mib_texture_lookup_spherical {
+        miVector        dir;
+        miScalar        rotate;
+        miTag           tex;
+    };
+
+    DLLEXPORT miBoolean mib_lookup_spherical(
+        miColor         *result,
+        miState         *state,
+        struct mib_texture_lookup_spherical *paras)
+    {
+        miTag           tex = *mi_eval_tag(&amp;paras-&gt;tex);
+        miVector        dir = *mi_eval_vector(&amp;paras-&gt;dir);
+        double          theta, norm;
+
+        result-&gt;r = result-&gt;g = result-&gt;b = result-&gt;a = 0;
+        if (!tex)
+                return(miFALSE);
+        if (dir.x == 0 &amp;&amp; dir.y == 0 &amp;&amp; dir.z == 0)
+                mi_vector_to_world(state, &amp;dir, &amp;state-&gt;dir);
+
+        norm = mi_vector_norm(&amp;dir);
+        if (!norm)
+                return(miFALSE);
+
+        /*
+         * without rotation, 0 is in the direction of the x axis,
+         * increasing in a clockwise direction
+         */
+
+        /* avoid calling atan2(0, 0), which return NaN on some platforms */
+        if (!dir.x &amp;&amp; !dir.z)
+                theta = 0.0;
+        else
+                theta = -atan2(dir.x, dir.z) / (2.0*M_PI);
+
+        theta += *mi_eval_scalar(&amp;paras-&gt;rotate) / M_PI;
+        theta -= floor(theta);
+        dir.x = theta;
+        dir.y = asin(dir.y/norm) / M_PI + 0.5;
+        dir.z = 0.0;
+        return(mi_lookup_color_texture(result, state, tex, &amp;dir));
+    }
+</pre>
+<p>This shader uses a parameter in its shader parameter structure,
+a tag <i>tex</i>, to specify a <a href="node166.html#INDEX846">texture shader</a>. The texture is
+evaluated by calling <i><a href="node150.html#INDEX741">mi_lookup_color_texture</a></i>, which
+stores storing the <a href="node108.html#INDEX409">texture
+coordinate</a> in <code>state&rarr;tex</code> and calls the texture
+shader. For a description of texture shaders and how to call them,
+see the texture shader section on page <a href="node116.html#texshaderex">texshaderex</a>.</p>
+<p>Here is an interesting variation of environment shaders that
+pastes the environment textures as a background plate, such that it
+exactly covers the rendered image plane. There are also parameters
+for zooming and panning to permit a bigger environment, if
+environment rays are cast outside the normal range.</p>
+<p><a id="INDEX470"></a></p>
+<pre>
+    struct mib_lookup_background {
+        miVector        zoom;
+        miVector        pan;
+        miBoolean       torus_u;
+        miBoolean       torus_v;
+        miTag           tex;
+    };
+
+    DLLEXPORT miBoolean mib_lookup_background(
+        miColor         *result,
+        miState         *state,
+        struct mib_lookup_background *paras)
+    {
+        miVector        *zoom;
+        miVector        *pan;
+        miVector        coord;
+        miTag           tex = *mi_eval_tag(&amp;paras-&gt;tex);
+
+        if (!tex) {
+                result-&gt;r = result-&gt;g = result-&gt;b = result-&gt;a = 0;
+                return(miFALSE);
+        }
+        zoom = mi_eval_vector(&amp;paras-&gt;zoom);
+        pan  = mi_eval_vector(&amp;paras-&gt;pan);
+        coord.x = state-&gt;raster_x / state-&gt;camera-&gt;x_resolution * .9999;
+        coord.y = state-&gt;raster_y / state-&gt;camera-&gt;y_resolution * .9999;
+        coord.z = 0;
+        coord.x = pan-&gt;x + (zoom-&gt;x ? zoom-&gt;x * coord.x : coord.x);
+        coord.y = pan-&gt;y + (zoom-&gt;y ? zoom-&gt;y * coord.y : coord.y);
+        if (*mi_eval_boolean(&amp;paras-&gt;torus_u))
+                coord.x -= floor(coord.x);
+        if (*mi_eval_boolean(&amp;paras-&gt;torus_v))
+                coord.x -= floor(coord.y);
+        if (coord.x &lt; 0 || coord.y &lt; 0 || coord.x &gt;= 1 || coord.y &gt;= 1) {
+                result-&gt;r = result-&gt;g = result-&gt;b = result-&gt;a = 0;
+                return(miTRUE);
+        } else
+                return(mi_lookup_color_texture(result, state, tex, &amp;coord));
+    }
+</pre>
+<p>Note that this shader returns <tt>miTRUE</tt> even if the ray
+missed the environment texture. Effectively, the shader considers
+all possible rays, and returns black if the texture is missed. If
+an environment does not cover all possible points around the scene,
+it should return black or some other valid color.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node118.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node120.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

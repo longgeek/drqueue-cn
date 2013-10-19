@@ -1,0 +1,91 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Render Pass Merge Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node135.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node137.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION134"></a>
+<h2>Render Pass Merge Shaders</h2>
+<p><a id="INDEX506"></a><a id="INDEX507"></a> <a id="passmerge"></a>
+Pass merge shaders combine multiple pass files to a single pass file or
+image. They have access to all pass files, but only a single sample
+location at a time. One of the input file may be the currently
+rendered scene instead of a pass file on disk; in this case the
+merge shader is called every time the renderer has completed one
+sample, such as when a <a href="node124.html#INDEX487">lens
+shader</a> or primary <a href="node115.html#INDEX440">material
+shader</a> returns.</p>
+<p>Here is an example of a simple merge shader that loops over all
+samples and selects the frontmost, based on its Z depth:</p>
+<pre>
+    DLLEXPORT int passmerge_version(void) {return(1);}
+
+    DLLEXPORT miBoolean passmerge(
+        miColor         *dummy,
+        miState         *state,
+        void            *paras)
+    {
+        int             best_p = -1, p;
+        miScalar        best_z = 1e10, *zp;
+        miColor         *src, *tar;
+
+        for (p=0;; p++) {
+            zp = mi_renderpass_access(state, p, miRC_IMAGE_Z);
+            if (!zp) break;
+            if (*zp &gt; 0 &amp;&amp; *zp &lt; best_z) {
+                best_z = *zp;
+                best_p = p;
+            }
+        }
+        if (best_p &gt;= 0) {
+            tar = mi_renderpass_access(state, -1,     miRC_IMAGE_RGBA);
+            src = mi_renderpass_access(state, best_p, miRC_IMAGE_RGBA);
+            *tar = *src;
+            if ((int)state-&gt;raster_x/3%5 == (int)state-&gt;raster_y/3%5)
+                switch(best_p) {
+                  case 0:  tar-&gt;a = tar-&gt;r = 1; break;
+                  case 1:  tar-&gt;a = tar-&gt;g = 1; break;
+                  case 2:  tar-&gt;a = tar-&gt;b = 1; break;
+                  default: tar-&gt;a = tar-&gt;r = tar-&gt;g = tar-&gt;b = 1;
+                }
+        }
+        return(miTRUE);
+    }
+</pre>
+<p>The shader first loops over all passes, reading the Z distance
+from the depth frame buffer ( <tt>miRC_IMAGE_RGBA</tt>). In
+pass rendering mode, the color and depth frame buffers always
+exist. When the lookup fails, the end of the pass list was reached
+and the loop terminates. Otherwise, for non-infinite depths (<i>*zp
+= 0</i>), the one closest to the camera is saved in the
+<i>best_</i> variables.</p>
+<p>When the closest sample was found, assuming one non-infinite
+distance was found, its color value is copied to the output (
+<i>tar</i>), and diagonal white stripes are painted on top. Only
+the color frame buffer is written to. A better merge shader would
+write the entire sample, and perform a correct depth-sorted alpha
+blending loop. This is what the built-in default merge function
+does. It is very rarely necessary to override the built-in merge
+function with a custom one like this.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node135.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node137.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

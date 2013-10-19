@@ -1,0 +1,332 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Light Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node119.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node121.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION118"></a>
+<h2>Light Shaders</h2>
+<p><a id="INDEX471"></a>Light shaders are called
+from other shaders by sampling a light using the
+<i><a href="node140.html#INDEX555">mi_sample_light</a></i> or
+<i><a href="node140.html#INDEX557">mi_trace_light</a></i> functions, which
+perform some calculations and then call the given light shader, or
+directly if a ray hits a source. <i>mi_sample_light</i> may also
+request that it is called more than once if an
+<a href="node80.html#INDEX255">area light source</a> is to be sampled. For
+an example for using <i><a href="node140.html#INDEX555">mi_sample_light</a></i>,
+see the section on <a href="node115.html#INDEX440">material shader</a>s above.
+<i><a href="node140.html#INDEX557">mi_trace_light</a></i> performs
+less exact shading for area lights, and is provided for backwards
+compatibility only.</p>
+<p>The light shader computes the amount of light contributed by the
+light source to a previous intersection point, stored in
+<code>state&rarr;point</code>. The calculation may be based on the
+direction <code>state&rarr;dir</code> to that point, and the
+distance <code>state&rarr;dist</code> from the <a href="node80.html#INDEX250">light source</a> to that ray. There may also
+be shader parameters that specify directional and distance
+attenuation. Directional lights have no location;
+<code>state&rarr;dist</code> is undefined in this case.</p>
+<p>Light shaders are also responsible for <a href="node76.html#INDEX197">shadow</a> casting. Shadows are computed by
+finding all objects that are in the path of the light from the
+light source to the illuminated intersection point. This is done in
+the light shader by casting "<b><a id="INDEX472"></a>shadow ray</b>s" after the standard light color
+computation including attenuation is finished. Shadow rays are cast
+from the light source back towards the illuminated point (or vice
+versa if shadow segment mode is enabled), in the same direction of
+the <a href="node117.html#INDEX463">light ray</a>. Every time an
+occluding object is found, that object's <a href="node121.html#INDEX481">shadow shader</a> is called, if it has one,
+which reduces the amount of light based on the object's <a href="node76.html#INDEX200">transparency</a> and color. If an occluding
+object is found that has no shadow shader, it is assumed to be
+opaque, so no light from the light source can reach the illuminated
+point. For details on shadow shaders, see the next section.</p>
+<p><a id="INDEX473"></a> Here is an example for a
+simple point light that supports no attenuation, but casts
+shadows:</p>
+<p><a id="INDEX474"></a></p>
+<pre>
+    struct mypoint {
+        miColor         color;
+    };
+
+    miBoolean mypoint(
+        register miColor        *result,
+        register miState        *state,
+        register struct mypoint *paras)
+    {
+        *result = *mi_eval_color(&amp;paras-&gt;color);
+        return(mi_trace_shadow(result, state));
+    }
+</pre>
+<p>The shader parameters are assumed to contain the light color.
+The shadows are calculated simply by giving the shadow shaders of
+all occluding objects the chance to reduce the light from the light
+source by calling <i>mi_trace_shadow</i>. The shader returns
+<tt>miTRUE</tt> if some light reaches the illuminated point.</p>
+<p>There is a useful trick that can improve performance
+significantly: the <a href="node120.html#INDEX471">light shader</a>
+should trace shadow rays only if the contribution from the light is
+greater than some threshold, for example because distance or angle
+attenuation has left so little of the light color (less than 1/256,
+for example) that it does not matter whether this contribution is
+counted or not. If this is the case, the shader might skip shadow
+calculation (significantly increasing speed in a complex scene) and
+return <tt>(miBoolean)2</tt> to indicate that if this is a small
+<a href="node80.html#INDEX255">area light source</a>, there is no
+point in continuing to sample it because all the other samples are
+not going to make a contribution either. Returning 2 does not work
+well for large area light sources because some parts of the light
+may be closer than others and may exceed the threshold for
+returning early. Consider the following alternate shader body:</p>
+<pre>
+     {
+        *result = *mi_eval_color(&amp;paras-&gt;color);
+        apply_distance_attenuation(result);
+        apply_angle_attenuation(result);
+        if (result-&gt;r &lt; .005 &amp;&amp; result-&gt;g &lt; .005
+                             &amp;&amp; result-&gt;b &lt; .005)
+            return((miBoolean)2);
+        else
+            return(mi_trace_shadow(result, state));
+     }
+</pre>
+<p>The point light can be turned into a <b><a id="INDEX475"></a>spot light</b> by adding directional attenuation
+parameters for the inner and outer cones and a spot direction
+parameter to the shader parameters, and change the shader to reduce
+the light intensity if the illuminated point falls between the
+inner and outer cones, and turns the light off if it does not fall
+into the outer cone at all:</p>
+<p><a id="INDEX476"></a></p>
+<pre>
+    struct mib_light_spot {
+        miColor         color;          /* color of light source */
+        miBoolean       shadow;         /* light casts shadows */
+        miScalar        factor;         /* makes opaque objects transparent */
+        miBoolean       atten;          /* distance attenuation */
+        miScalar        start, stop;    /* if atten, distance range */
+        miScalar        cone;           /* inner solid cone */
+    };
+
+    DLLEXPORT miBoolean mib_light_spot(
+        register miColor        *result,
+        register miState        *state,
+        register struct mib_light_spot *paras)
+    {
+        register miScalar       d, t, start, stop, cone;
+        miScalar                spread;
+        miVector                ldir, dir;
+        miTag                   ltag;
+
+        *result = *mi_eval_color(&amp;paras-&gt;color);
+        if (state-&gt;type != miRAY_LIGHT)                 /* visible area light*/
+                return(miTRUE);
+                                                                /*angle atten*/
+        ltag = ((miInstance *)mi_db_access(state-&gt;light_instance))-&gt;item;
+        mi_db_unpin(state-&gt;light_instance);
+        mi_query(miQ_LIGHT_DIRECTION, state, ltag, &amp;ldir);
+        mi_vector_to_light(state, &amp;dir, &amp;state-&gt;dir);
+        mi_vector_normalize(&amp;dir);
+        d = mi_vector_dot(&amp;dir, &amp;ldir);
+        if (d &lt;= 0)
+                return(miFALSE);
+        mi_query(miQ_LIGHT_SPREAD, state, ltag, &amp;spread);
+        if (d &lt; spread)
+                return(miFALSE);
+        cone = *mi_eval_scalar(&amp;paras-&gt;cone);
+        if (d &lt; cone) {
+                t = 1 - (d - cone) / (spread - cone);
+                result-&gt;r *= t;
+                result-&gt;g *= t;
+                result-&gt;b *= t;
+        }
+        if (*mi_eval_scalar(&amp;paras-&gt;atten)) {                   /* dist atten*/
+                stop = *mi_eval_scalar(&amp;paras-&gt;stop);
+                if (state-&gt;dist &gt;= stop)
+                        return(miFALSE);
+
+                start = *mi_eval_scalar(&amp;paras-&gt;start);
+                if (state-&gt;dist &gt; start &amp;&amp; fabs(stop - start) &gt; EPS) {
+                        t = 1 - (state-&gt;dist - start) / (stop - start);
+                        result-&gt;r *= t;
+                        result-&gt;g *= t;
+                        result-&gt;b *= t;
+                }
+        }
+        if (*mi_eval_boolean(&amp;paras-&gt;shadow)) {                 /* shadows: */
+                d = *mi_eval_scalar(&amp;paras-&gt;factor);
+                if (d &lt; 1) {
+                        miColor filter;
+                        filter.r = filter.g = filter.b = filter.a = 1;
+                                                                /* opaque */
+                        if (!mi_trace_shadow(&amp;filter,state) || BLACK(filter)) {
+                                result-&gt;r *= d;
+                                result-&gt;g *= d;
+                                result-&gt;b *= d;
+                                if (d == 0)
+                                        return(miFALSE);
+                        } else {                                /* transparent*/
+                                double omf = 1 - d;
+                                result-&gt;r *= d + omf * filter.r;
+                                result-&gt;g *= d + omf * filter.g;
+                                result-&gt;b *= d + omf * filter.b;
+                        }
+                }
+        }
+        return(miTRUE);
+}
+</pre>
+<p>This shader performs both distance attenuation (it illuminates
+only between the <i>start</i> and <i>stop</i> parameters if
+defined) and angle attenuation (full energy up to <i>cone</i>, then
+a linear falloff to the <i>spread</i> of the light source
+definition, accessed with <i><a href="miquery.html#api:mi_query">mi_query</a></i>). Outside <i>spread</i>
+the shader will not even get called (this is why <i>spread</i> is a
+light definition parameter, not a shader parameter - mental ray
+needs it reject light sources during sampling). The shader can also
+handle visible light sources: it returns its light color if the ray
+type is not equal to <tt>miRAY_LIGHT</tt>. Finally, the shader
+casts shadow rays if they are enabled to reduce the returned light
+if there are occluding objects.</p>
+<p>Note that none of these light shaders takes the normal at the
+illuminated point into account; the light shader is merely
+responsible for calculating the amount of light that reaches that
+point. The <a href="node115.html#INDEX440">material shader</a> (or
+other shader) that sampled the light must use the <i>dot_nd</i>
+value returned by <i>mi_sample_light</i>, and its own shader
+parameters such as the diffuse color, to calculate the actual
+fraction of light reflected by the material. Note also that
+<code>state&rarr;instance</code> is not the instance of the light
+but of the illuminated point; use
+<code>state&rarr;light_instance</code> instead.</p>
+<p><a id="shdgeolight"></a> mental ray 3.1 also
+supports <b><a id="INDEX477"></a>geometric area
+light source</b>s, which behave like the fixed four <a href="node80.html#INDEX255">area light source</a> types (rectangle,
+disc, sphere, and cylinder) except that the light shape is defined
+by an object instance. All points on the surface of the object are
+emitting light uniformly. For every light sample, mental ray
+constructs an intersection point with the object, and then calls
+the light shader. The light shader now has two sets of
+parameters:</p>
+<ul>
+<li>The <i>state</i> contains the same values as for any other
+light shader. In particular, <code>state&rarr;point</code> and the
+other intersection-related state variables describe the illuminated
+point.</li>
+<li>The <code>state&rarr;child</code> state contains the
+intersection information for the light object, just like a material
+shader would receive it, including <a href="node108.html#INDEX409">texture coordinate</a>s if available. For
+example, <code>state&rarr;child&rarr;point</code> contains the
+chosen light-emitting intersection point on the light object. Note
+that the child state's local space is the object's internal space,
+not the light's internal space; it is recommended that the instance
+that connects the light and the light object uses an identity
+transformation.</li>
+</ul>
+<p>If the light object is uniformly emitting light from all points
+on its surface, no modifications to the light shader are required
+to work with <b><a id="INDEX478"></a>geometric area
+light source</b>s. Note that geometric area light source are
+supported only for point lights, but not spot or infinite
+lights.</p>
+<p><a id="shduserlight"></a>mental ray
+supports an additional <b>user-defined area light source</b>, which leaves
+sample point selection completely to the light shader. The shader is
+expected to select points on its surface, cast shadow rays at these
+points if required, and return the illumination from that point.
+mental ray treats such lights as zero-dimension point lights, without
+any further information on origin and direction. Instead, the light
+shader modifies the values <code>state&rarr;org</code> and
+<code>state&rarr;dir</code> as necessary, including any dependent values
+like <code>state&rarr;dist</code> and <code>state&rarr;dot_nd</code>.
+The shader is called
+repeatedly until it returns <tt>(miBoolean)2</tt>. A call counter
+is provided in <tt>state-&gt;count</tt>, which is 0 for the first
+call, and counts up to 65536 (normally a few or a few tens of calls
+are considered sufficient).</p>
+<p>mental ray also supports light profiles, such as IES or
+<b><a id="INDEX479"></a>Eulumdat light
+profile</b>s<a id="INDEX480"></a>, that are
+supplied by physical lamp vendors. A light profile can be attached
+to light objects in the scene as a property, or may be passed
+directly to <a href="node120.html#INDEX471">light shader</a>s which
+attenuate the light color (which is not provided by the profile) by
+the profile's directional attenuation specification. This is done
+by the <i><a href="node140.html#INDEX570">mi_lightprofile_sample</a></i> <a href="node138.html#INDEX510">shader interface function</a>, which
+requires a profile argument that is taken from a shader
+parameter:</p>
+<pre>
+    typedef struct {
+        miColor   color;      /* color of light source */
+        miTag     profile;    /* tag of ies profile to use */
+    } photometric_light_t;
+
+    DLLEXPORT int photometric_light_version(void) {return(1);}
+
+    DLLEXPORT miBoolean photometric_light(
+        miColor             *result,
+        miState             *state,
+        photometric_light_t *paras)   
+    {
+        miTag    lp_tag = *mi_eval_tag(&amp;paras-&gt;profile);
+        miScalar factor = mi_lightprofile_sample(state, lp_tag, miTRUE);
+        factor *= 1.0 / (state-&gt;dist * state-&gt;dist);
+
+        *result    = *mi_eval_color(&amp;paras-&gt;color);
+        result-&gt;r *= factor;
+        result-&gt;g *= factor;
+        result-&gt;b *= factor;
+
+        return(mi_trace_shadow(result, state));
+    }
+</pre>
+<p>This shader performs physically correct inverse-square distance
+falloff, and also takes care of shadows. Here is a scene example
+that uses this shader:</p>
+<pre>
+    declare shader
+        color "photometric_light" (
+            color        "color",
+            lightprofile "profile")
+        version 1
+    end declare
+
+    lightprofile "myprof"
+        format  ies
+        hermite 1
+        file    "/usr/local/ies/profile.ies"
+    end lightprofile
+
+    light "mylight"
+        "photometric_light" (
+            "color"   100 100 100,
+            "profile" "myprof")
+        ...
+    end light
+</pre>
+<p>The light color is chosen large because of the inverse-square
+falloff; it depends on the distance from the light to the
+illuminated point. This scene fragment assumes that an
+<a href="node230.html#INDEX1067">IES light profile</a> file, as provided by
+the lamp vendor, exists in <tt>/usr/local/ies/profile.ies</tt>.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node119.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node121.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

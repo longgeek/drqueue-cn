@@ -1,0 +1,127 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Known Limitations</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="configuration.html">&laquo;&nbsp;prev</a></li>
+<li><a href="firewalls.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h2 id="limitations">Known Limitations</h2>
+<dl>
+
+<dt id="ao">Ambient Occlusion
+<dd>There is currently no scene selection mechanism supported to exclude
+certain objects from native ambient occlusion computation. Especially, the
+finalgather object and instance flags are not respected. If this is desired
+final gathering may be used to calculate just the ambient occlusion
+information, even if it takes longer to finish due to calling of shaders.
+<dd>The native ambient occlusion cache can not be stored in files on disks.
+
+<dt id="assembly">Assemblies
+<dd>Assemblies may not update after incremental changes of their scene
+representation.
+
+<dt id="brdf">BRDF/BSDF <span class="new">3.8</span>
+<dd>There is currently no support for measured BRDF data as input to a mental
+ray BRDF. The BRDF/BSDF which is attached to a material is currently used to
+estimate lighting distribution for direct illumination and IBL only, to
+improve performance and quality. It is not used similarly in any indirect
+illumination algorithm in mental ray, but instead it is point-sampled like
+regular material 'black-box' shaders.
+
+<dt id="ccmesh">Catmull-Clark Meshes
+<dd>The current implementation does not support automatic splitting of large
+input faces.
+<dd>The current implementation does not support variable creases. If this is
+needed the regular hierarchical subdivision surfaces should be used.
+
+<dt id="framebuffer">Frame Buffer Files
+<dd>For cached frame buffers, the temporary disk files are saved in 'tiled'
+<code>.map</code> format which is limited to a file size of 2GB. Therefore,
+a single frame buffer may not exceed this 2GB size limit. For example, the
+resolution of a square 8-bit RGBA frame buffer is limited to about
+23,000&nbsp;x&nbsp;23,000 pixels.
+
+<dt id="ip">Irradiance Particles <span class="recent">3.7</span>
+<dd>
+Irradiance Particles cannot be used in combination with globillum photons.
+mental ray will automatically adjust the rendering options on attempts to
+enable incompatible features, to allow existing scenes to be rendered with
+the new algorithm easily. However, Irradiance Particles are compatible with
+caustic photons and final gathering.
+
+<dt id="iray">iray Rendering Mode <span class="new">3.8</span>
+<dd>
+The iray rendering mode is functional but may be limited on certain platforms.
+If the installed GPU hardware, graphics driver software, or CUDA software is
+not capable of running iray then mental ray will execute a CPU version of the
+algorithm instead, which delivers identical results but typically requires
+much more time to finish.
+
+<dt id="map">Map Data <span class="new">3.8</span>
+<dd>There is currently no support for visualization of map files in image
+tools, and there are no native tools available yet to manipulate map files,
+for example to merge several maps into one.
+<dd>
+Using map data in distributed network rendering is not fully supported yet.
+Although material shaders are allowed to manipulate a map at the same time
+it is used during rendering, this mode currently requires special attention
+in custom shaders to synchronize the map content properly. This is not
+necessary in more common use cases of generating the map content prior to
+rendering, like in a pre-process, a previous rendering, or by an external
+application.
+
+<dt id="metasl">MetaSL Support <span class="new">3.8</span>
+<dd>The current support for MetaSL features is not completed. Two back-ends
+are currently supported for software rendering on all platforms: the C/C++
+back-end using an external compiler, and the LLVM back-end not depending on
+external tools, and replacing the previously offered .NET back-end running
+on Windows only. Most MetaSL shaders should work in the current version, but
+certain advanced effects may show problems until more MetaSL features are
+fully functional.
+
+<dt id="progressive">Progressive Rendering <span class="recent">3.7</span>
+<dd>In this rendering mode just the main color framebuffer is computed.
+Although the traditional shading model is supported certain advanced features
+implemented in shaders may not work. Especially shaders which perform
+oversampling are generally not well suited for this rendering mode because
+sampling cannot be controlled and optimized by mental ray. The progressive
+rendering performance may suffer noticeably in such cases.
+
+<dt id="rasterizer">Rasterizer
+<dd>The order of compositing of the samples from transparent objects is
+undetermined, like not using a depth-sorted ordering for example.
+<dd>Visible area lights are not rendered by the rasterizer.
+
+<dt id="stereo">Stereoscopic <span class="new">3.8</span>
+<dd>The only algorithms affected by stereoscopic rendering are the "first hit"
+renderers: scanline, rasterizer and tracing eye rays. Other view dependent
+algorithms like final gathering, importons, or tessellation, operate as if
+a single camera was used, that is they work from the "center eye". Similarly,
+shaders can not determine which of the two eyes is being rendered. In particular,
+<code>state->camera</code> refers to the "center eye", not the one actually
+being rendered.
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="configuration.html">&laquo;&nbsp;prev</a></li>
+<li><a href="firewalls.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

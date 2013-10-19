@@ -1,0 +1,368 @@
+#*****************************************************************************
+# Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+# Germany. All rights reserved.
+#*****************************************************************************
+# Created:  26.05.2005
+# Module:   base_phen
+# Purpose:  .mi declarations for baseshader Phenomena
+#
+# Exports:
+#    mib_glossy_reflection_phong_phen
+#    mib_glossy_refraction_phong_phen
+# History:
+#   26.05.05 zap:  created
+#****************************************************************************/
+
+
+#****************************************************************************
+# Example glossy reflection Phenomenon using:
+# - mib_glossy_reflections
+# - mib_illum_phong
+#****************************************************************************
+
+declare phenomenon "mib_glossy_reflection_phong_phen" 
+    (
+        color    "ambient"                default 0 0 0,
+        color    "diffuse"                default 0.5 0.06 0.0,
+        color    "specular"               default 0.6 0.6 0.6,
+        scalar   "exponent"               default 100.0,
+        color    "reflection_color"       default 0.6 0.6 0.6,
+        scalar   "max_distance"           default 0.0,
+        scalar   "falloff"                default 2.0,
+        color    "environment_color"      default 0.6 0.6 0.6,
+        scalar   "reflection_base_weight" default 0.6,
+        scalar   "reflection_edge_weight" default 1.0,
+        scalar   "edge_factor"            default 5.0,
+        shader   "environment",
+        boolean  "single_env_sample"      default true,
+        integer  "samples"                default 16,
+        scalar   "u_spread"               default 0.2,
+        scalar   "v_spread"               default 0.2,
+        vector   "u_axis",
+        vector   "v_axis",
+        scalar      "dispersion"          default 0.0,
+        array color "spectrum",
+        integer  "mode",
+        array light "lights"
+    )
+
+    shader "phong" "mib_illum_phong" (
+        "ambient" = interface "ambient",
+        "ambience" = interface "diffuse",
+        "diffuse"  = interface "diffuse",
+        "specular" = interface "specular",
+        "exponent" = interface "exponent",
+        "mode"     = interface "mode",
+        "lights"   = interface "lights"
+    )
+    
+    shader "glossy" "mib_glossy_reflection" (
+        "base_material" "phong",
+        "reflection_color"       = interface "reflection_color",
+        "max_distance"           = interface "max_distance",
+        "falloff"                = interface "falloff",
+        "environment_color"      = interface "environment_color",
+        "reflection_base_weight" = interface "reflection_base_weight",
+        "reflection_edge_weight" = interface "reflection_edge_weight",
+        "edge_factor"            = interface "edge_factor",
+        "environment"            = interface "environment",
+        "single_env_sample"      = interface "single_env_sample",
+        "samples"                = interface "samples",
+        "u_spread"               = interface "u_spread",
+        "v_spread"               = interface "v_spread",
+        "u_axis"                 = interface "u_axis",
+        "v_axis"                 = interface "v_axis",
+        "dispersion"             = interface "dispersion",        
+        "spectrum"               = interface "spectrum"
+    )
+
+    root = "glossy"    
+    apply material
+    version 1
+    gui "gui_mib_glossy_reflection_phong_phen" {
+        control "Global" "Global" (
+            "uiName" "mi Glossy Reflection + Phong (mi)",
+            # "hidden"
+        )
+
+        control "ambient" "color" (
+            "uiName" "Ambient / Extra light",
+            "noAlpha",
+            "value" 0 0 0 0
+        )
+        control "diffuse" "color" (
+            "uiName" "Diffuse",
+            "noAlpha",
+            "value" 0.50 0.06 0.0 0
+        )
+        control "specular" "color" (
+            "uiName" "Specular",
+            "noAlpha",
+            "value" 0.6 0.6 0.6 0
+        )
+        control "exponent" "scalar" (
+            "uiName" "Specular exponent",
+            "value" 100.0
+        )
+        control "reflection_color" "color" (
+            "uiName" "Reflection color",
+            "value" 0.6 0.6 0.6
+        )
+        control "max_distance" "scalar" (
+            "uiName" "Max distance",
+            "value" 0.0
+        )
+        control "falloff" "scalar" (
+            "uiName" "Falloff shape (power function)",
+            "value" 2.0
+        )
+        control "environment_color" "color" (
+            "uiName" "Environment reflection color",
+            "value" 0.6 0.6 0.6
+        )
+        control "reflection_base_weight" "scalar" (
+            "uiName" "Reflection facing weight",
+            "value" 0.6
+        )
+        control "reflection_edge_weight" "scalar" (
+            "uiName" "Reflection edge weight",
+            "value" 1.0
+        )
+        control "edge_factor" "scalar" (
+            "uiName" "Edge factor",
+            "value" 5.0
+        )
+        control "single_env_sample" "boolean" (
+            "uiName" "Single environment sampling",
+            "value" on
+        )
+        control "environment" "shader" (
+            "uiName" "Specific environment shader",
+        )
+        control "samples" "integer" (
+            "uiName" "Samples",
+            "value" 16
+        )
+        control "u_spread" "scalar" (
+            "uiName" "U Spread",
+            "value" 0.2
+        )
+        control "v_spread" "scalar" (
+            "uiName" "V Spread",
+            "value" 0.2
+        )
+        control "u_axis" "vector" (
+            "uiName" "U axis",
+            "value" 0.0 0.0 0.0
+        )
+        control "v_axis" "vector" (
+            "uiName" "U axis",
+            "value" 0.0 0.0 0.0
+        )
+        control "dispersion" "scalar" (
+            "uiName" "Dispersion (rainbow effect)",
+            "value" 0.0
+        )
+        control "spectrum" "array color" (
+            "uiName" "Spectrum"
+        )
+        control "mode" "integer" (
+            "uiName" "Mode",
+            "hidden"
+        )
+        control "lights" "array light" (
+            "uiName" "Lights",
+            "hidden"
+        )
+    }
+
+
+end declare
+
+
+#****************************************************************************
+# Example glossy refractions Phenomenon using:
+# - mib_glossy_refraction
+# - mib_illum_phong
+#****************************************************************************
+
+declare phenomenon "mib_glossy_refraction_phong_phen" 
+    (
+        color    "ambient"                default 0 0 0,
+        color    "diffuse"                default 0.08 0.08 0.12,
+        color    "specular"               default 0.6 0.6 0.6,
+        scalar   "exponent"               default 100.0,
+
+        color    "deep_diffuse"           default 0.3 0.3 0.3,
+        shader   "back_material",
+        boolean  "render_reverse_of_back_material" default on,
+
+        color    "refraction_color"       default 0.7 0.1 0.1,
+        scalar   "max_distance"           default 0.0,
+        scalar   "falloff"                default 2.0,
+        scalar   "refraction_base_weight" default 1.0,
+        scalar   "refraction_edge_weight" default 0.6,
+        scalar   "edge_factor"            default 5.0,
+        scalar   "ior"                    default 1.2,
+        integer  "samples"                default 16,
+        scalar   "u_spread"               default 0.2,
+        scalar   "v_spread"               default 0.2,
+        vector   "u_axis",
+        vector   "v_axis",
+        scalar      "dispersion"        default 0.0,
+        array color "spectrum",
+
+        integer  "mode",
+        array light "lights"
+    )
+
+    shader "topsurface" "mib_illum_phong" (
+        "ambient" = interface "ambient",
+        "ambience" = interface "diffuse",
+        "diffuse"  = interface "diffuse",
+        "specular" = interface "specular",
+        "exponent" = interface "exponent",
+        "mode"     = interface "mode",
+        "lights"   = interface "lights"
+    )
+
+    shader "deepsurface" "mib_illum_lambert" (
+        "ambient"  0 0 0,
+        "ambience" 0 0 0,
+        "diffuse"  = interface "deep_diffuse",
+        "mode"     = interface "mode",
+        "lights"   = interface "lights"
+    )
+    
+    shader "glossy" "mib_glossy_refraction" (
+        "top_material"          "topsurface",
+        "deep_material"         "deepsurface",
+        "back_material"          = interface "back_material",
+        "render_reverse_of_back_material" = interface "render_reverse_of_back_material",
+
+        "refraction_color"       = interface "refraction_color",
+        "max_distance"           = interface "max_distance",
+        "falloff"                = interface "falloff",
+        "refraction_base_weight" = interface "refraction_base_weight",
+        "refraction_edge_weight" = interface "refraction_edge_weight",
+        "edge_factor"            = interface "edge_factor",
+        "ior"                    = interface "ior",
+        "samples"                = interface "samples",
+        "u_spread"               = interface "u_spread",
+        "v_spread"               = interface "v_spread",
+        "u_axis"                 = interface "u_axis",
+        "v_axis"                 = interface "v_axis",
+        "dispersion"             = interface "dispersion",        
+        "spectrum"               = interface "spectrum"
+    )
+
+    root = "glossy"    
+    apply material
+    version 1
+
+    gui "gui_mib_glossy_refraction_phong_phen" {
+        control "Global" "Global" (
+            "uiName" "mi Glossy Refraction + Phong (mi)",
+            # "hidden"
+        )
+
+        control "ambient" "color" (
+            "uiName" "Ambient / Extra light",
+            "noAlpha",
+            "value" 0 0 0 0
+        )
+        control "diffuse" "color" (
+            "uiName" "Diffuse",
+            "noAlpha",
+            "value" 0.08 0.08 0.1 0
+        )
+        control "specular" "color" (
+            "uiName" "Specular",
+            "noAlpha",
+            "value" 0.6 0.6 0.6 0
+        )
+        control "exponent" "scalar" (
+            "uiName" "Specular exponent",
+            "value" 100.0
+        )
+
+        control "deep_diffuse" "color" (
+            "uiName" "Deep diffuse (only if Max distance > 0)",
+            "noAlpha",
+            "value" 0.3 0.3 0.3 0
+        )
+
+        control "back_material" "shader" (
+            "uiName" "Back mtl."
+        )
+        
+        control "render_reverse_of_back_material" "boolean" (
+            "uiName" "Render reverse side of Back material",
+            "value" 1
+        )
+        control "refraction_color" "color" (
+            "uiName" "Refraction color",
+            "value" 0.7 0.1 0.0
+        )
+        control "max_distance" "scalar" (
+            "uiName" "Max distance",
+            "value" 0.0
+        )
+        control "falloff" "scalar" (
+            "uiName" "Falloff shape (power function)",
+            "value" 2.0
+        )
+        control "refraction_base_weight" "scalar" (
+            "uiName" "Refraction facing weight",
+            "value" 1.0
+        )
+        control "refraction_edge_weight" "scalar" (
+            "uiName" "Refraction edge weight",
+            "value" 0.6
+        )
+        control "edge_factor" "scalar" (
+            "uiName" "Edge factor",
+            "value" 5.0
+        )
+        control "ior" "scalar" (
+            "uiName" "Index of Refraction (0.0 = off)",
+            "value" 1.2
+        )
+        control "samples" "integer" (
+            "uiName" "Samples",
+            "value" 16
+        )
+        control "u_spread" "scalar" (
+            "uiName" "U Spread",
+            "value" 0.2
+        )
+        control "v_spread" "scalar" (
+            "uiName" "V Spread",
+            "value" 0.2
+        )
+        control "u_axis" "vector" (
+            "uiName" "U axis",
+            "value" 0.0 0.0 0.0
+        )
+        control "v_axis" "vector" (
+            "uiName" "U axis",
+            "value" 0.0 0.0 0.0
+        )
+        control "dispersion" "scalar" (
+            "uiName" "Dispersion (rainbow effect)",
+            "value" 0.0
+        )
+        control "spectrum" "array color" (
+            "uiName" "Spectrum"
+        )
+        control "mode" "integer" (
+            "uiName" "Mode",
+            "hidden"
+        )
+        control "lights" "array light" (
+            "uiName" "Lights",
+            "hidden"
+        )
+    }
+
+end declare

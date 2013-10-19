@@ -1,0 +1,143 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Thread-Local Storage</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node162.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node164.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION161"></a>
+<h3>Thread-Local Storage</h3>
+<p><a id="shadertls"></a><a id="INDEX838"></a><a id="INDEX839"></a>
+Sometimes shaders need to share data, but need to
+modify it. Sharing would allow using the first method for constant
+data, but that does not permit changing the data during rendering
+because no consistent writes are possible - multiple instances of
+the shaders in different threads may write to the same data
+simultaneously. This can corrupt even simple operations such as
+incrementing a variable, because the execution order is
+unpredictable. The sequence <i>read_A</i> <i>write_A</i>
+<i>read_B</i> <i>write_B</i> in threads A and B works, but there is
+no way to avoid the sequence <i>read_A</i> <i>read_B</i>
+<i>write_A</i> <i>write_B</i>. This problem is called a
+<b><a id="INDEX840"></a>race condition</b>, and it can cause
+one increment to be lost, in rare and hard-to-debug cases. Locking
+would prevent that but may cause an unacceptable performance
+loss.</p>
+<p>Thread-local storage avoids the race condition by providing one
+copy of the data to each thread. Multiple threads can execute
+simultaneously but with any single thread the execution is strictly
+sequential, so that the read/write
+<a href="node163.html#INDEX840">race condition</a> cannot happen. Here is
+an example that counts shader calls:</p>
+<pre>
+     DLLEXPORT void myshader(           /* main shader */
+         miState         *state,
+         struct myshader *paras,
+         miBoolean       *inst_req)
+     {
+         int             *counter;
+
+         mi_query(miQ_FUNC_TLS_GET, state, miNULLTAG, &amp;counter);
+         if (!counter) {
+             counter = mi_mem_allocate(sizeof(int));
+             mi_query(miQ_FUNC_TLS_SET, state, miNULLTAG, &amp;counter);
+             *counter = 0;
+         }
+         (*counter)++;
+         ...
+         return(miTRUE);
+     }
+
+     DLLEXPORT miBoolean myshader_init(
+        miState          *state,
+        struct myshader  *paras,
+        miBoolean        *init_req)
+     {
+        *init_req = miTRUE;
+        return(miTRUE);
+     }
+
+     DLLEXPORT void myshader_exit(      /* exit shader */
+         miState         *state,
+         struct myshader *paras)
+     {
+         int             **ptrs;
+         int             num, i, total = 0;
+
+         if (!paras)
+             return(miTRUE);
+         mi_query(miQ_FUNC_TLS_GETALL, state, miNULLTAG, &amp;counters, &amp;num);
+         for (i=0; i &lt; num; i++) {
+             total += *counters[i];
+             mi_mem_release(counters[i]);
+         }
+         mi_info("myshader was called %d times", total);
+         return(miTRUE);
+     }
+</pre>
+<p>The thread-local data is a single integer that counts shader
+calls in this thread. Since init shaders are called once per shader
+or once per shader instance, but not once every time the shader is
+called in a new thread, the data cannot be installed and
+initialized in the init shader. Instead, it is created in the main
+body if it did not already exist. This is safe because no two
+threads will get the same pointer returned by
+<tt>miQ_FUNC_TLS_GET</tt>. (Note that setting * <i>counter</i> to
+zero is actually redundant because
+<i><a href="node155.html#INDEX794">mi_mem_allocate</a></i> always returns
+zeroed memory.)</p>
+<p>The example exit shader collects all the thread-local counters
+of all threads that installed a counter, and computes and prints
+the total. It is done during shader instance exit, not the shader
+exit, by checking that <i>paras</i> is nonzero. This requires
+shader instance init/exit to be enabled in the init function by
+setting <i>init_req</i> to <tt>miTRUE</tt>.</p>
+<p>This will only work on a single host because each host exits its
+own shaders, and there is no way to communicate the counters
+between hosts. Moreover, slave hosts may come and go, and may call
+their exit shaders multiple times for a single frame.</p>
+<p><a id="querytls"></a> Thread-local shader
+storage relies on three new
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> modes:</p>
+<ul>
+<li><tt>miQ_FUNC_TLS_SET</tt> saves a user pointer passed as fourth
+argument. Different threads will store the pointers separately and
+will not interfere with each other. Note that this mode differs
+from all other <i><a href="miquery.html#api:mi_query">mi_query</a></i>
+modes in that it stores data instead of retrieving data.</li>
+<li><tt>miQ_FUNC_TLS_GET</tt> retrieves the previously set pointer
+into the address given by the fourth argument, or a null pointer if
+no pointer has been set (which normally prompts the caller to set
+the pointer now).</li>
+<li><tt>miQ_FUNC_TLS_GETALL</tt> retrieves the address of an array
+of all the pointers stored using <tt>miQ_FUNC_TLS_SET</tt>, one per
+thread that did so. The size of the table is stored in the address
+provided as the fifth argument and should point to an integer
+variable. Threads that did not set a pointer are not represented in
+the array. This mode should be used in the exit shader to release
+all allocated thread-local data.</li>
+</ul>
+<p>The second argument to <i><a href="miquery.html#api:mi_query">mi_query</a></i>
+must be the shader state,
+and the third must be a null tag.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node162.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node164.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

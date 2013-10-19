@@ -1,0 +1,579 @@
+<root>
+  <version major="2" minor="0"/>
+  <metasl_code intrinsic_nodes="true"/>
+  <metasl_code file_name="conversion.msl"/>
+  <metasl_code file_name="max_Bump.msl"/>
+  <metasl_code file_name="mia_material.msl"/>
+
+  <phenomenon name="mia_material_phenomenon">
+    <input name="diffuse_weight" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Diffuse level"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="the maximum amount of diffuse reflection"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="diffuse" type="Color" value="0.5 0.5 0.5 1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Color"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="The color of the diffuse reflection, or, when using 'Metal Material' the color of the metal itself"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float4" value="0 0 0 0"/>
+        <annotation_member name="param1" type="float4" value="1 1 1 1"/>
+      </annotation>
+    </input>
+    <input name="diffuse_roughness" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Roughness"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="adjusts the material's roughness. Higher values yield more 'powdery' surfaces like clay"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="transparency_2" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Transparency_2"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="The maximum amount of transparency"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="reflectivity" type="float" value="0.6">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Reflectivity"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="The maximum amount of glossy/mirror reflectivity. The final also amount depends on the settings of the BRDF curve as w scales the reflectivy of the material"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="refl_color" type="Color" value="1 1 1 1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Reflection color"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="The color/intensity of the reflection. When metal material is on, the color of the reflection is influenced as well"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float4" value="0 0 0 0"/>
+        <annotation_member name="param1" type="float4" value="1 1 1 1"/>
+      </annotation>
+    </input>
+    <input name="refl_gloss" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Reflection glossiness"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="The blurriness / sharpness of reflections. A value of 1.0 means that the surface is a perfect mirror"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="refl_is_metal" type="const bool" value="false">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Metal material"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="causes reflections to be tint in material's color"/>
+      </annotation>
+    </input>
+    <input name="refl_gloss_samples" type="int" value="8">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Reflection gloss samples"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="The quality of glossy reflections. The higher the value, the better the quality but rendering time will increase as well."/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="int" value="0"/>
+        <annotation_member name="param1" type="int" value="128"/>
+      </annotation>
+      <annotation name="literal"/>
+    </input>
+    <input name="refl_interpolate" type="const bool" value="false">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Fast Reflection (interpolate)"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="turns interpolation (= acceleration) for reflections on/off. When on, speed increases at a certain loss of quality. Works best with flat surfaces."/>
+      </annotation>
+      <annotation name="literal"/>
+    </input>
+    <input name="refl_hl_only" type="const bool" value="false">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Reflect highlights and FG only"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value=" highlights / final gathering only will be reflected"/>
+      </annotation>
+    </input>
+    <input name="refr_color" type="Color" value="1 1 1 1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Refraction color"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="color / intensity of refractions. The 'easiest' way to create colored glass"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float4" value="0 0 0 0"/>
+        <annotation_member name="param1" type="float4" value="1 1 1 1"/>
+      </annotation>
+    </input>
+    <input name="anisotropy" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Anisotropy"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="values different from 1.0 will stretch the highlight to give the impression of a brushed surface"/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="2"/>
+      </annotation>
+    </input>
+    <input name="anisotropy_rotation" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Anisotropy rotation"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="orientation of anisotropic highlights. The range from 0 to 1 will be mapped to 0 to 360 degrees "/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="brdf_fresnel" type="const bool" value="false">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="BRDF fresnel"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="When on, uses fresnel term to calculate reflection falloff which is defined by a physical term. If off, the other BRDF terms will be used to calculate the falloff function"/>
+      </annotation>
+    </input>
+    <input name="brdf_0_degree_refl" type="float" value="0.2">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="BRDF 0 degree reflection"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="Reflectivity at 0 degrees, i.e. when the surface is directly facing the viewer"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="brdf_90_degree_refl" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="BRDF 90 degree reflection"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="Reflectivity at 90 degrees i.e. when the surface is seen at grazing angles "/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="brdf_curve" type="float" value="5">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="BRDF Curve shape "/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="Tweaks the shape of the falloff curve function. "/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="10"/>
+      </annotation>
+    </input>
+    <input name="refr_gloss" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Refraction glossiness"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="The blurriness / sharpness of the transparency. A value of 1.0 means that the surface is 'clear'. The lower the value the glossier objects appear behind "/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="bump" type="Shader" display_name="bump">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="bump"/>
+      </annotation>
+    </input>
+    <input name="Multiplier" type="float" display_name="Multiplier" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Multiplier"/>
+      </annotation>
+    </input>
+    <input name="cutout_opacity" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Cutout opacity"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="Best to be mapped with a texture. Where the map is white, the object will be visible, black means that the object won't be seen at all"/>
+      </annotation>
+      <annotation name="hard_range">
+        <annotation_member name="param0" type="float" value="0"/>
+        <annotation_member name="param1" type="float" value="1"/>
+      </annotation>
+    </input>
+    <input name="refr_ior" type="float" value="1.4">
+      <annotation name="display_name">
+        <annotation_member name="param0" type="String" value="Index of refraction"/>
+      </annotation>
+      <annotation name="description">
+        <annotation_member name="param0" type="String" value="Index of refraction. Water has the value 1.33 "/>
+      </annotation>
+      <annotation name="soft_range">
+        <annotation_member name="param0" type="float" value="0.01"/>
+        <annotation_member name="param1" type="float" value="4"/>
+      </annotation>
+    </input>
+    <output name="result" type="Color" display_name="result">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="result"/>
+      </annotation>
+    </output>
+    <output name="transparency" type="float" display_name="transparency">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="transparency"/>
+      </annotation>
+    </output>
+
+    <node name="max_Bump_1" class="max_Bump">
+      <input name="Multiplier" value="1">
+        <attachment target_name="Multiplier"/>
+      </input>
+      <input name="Map" value="">
+        <attachment target_name="bump"/>
+      </input>
+      <output name="result"/>
+      <output name="normal_result"/>
+      <gui_data width="1.64845" height="3.08" open_width="1.64845" open_height="2.37876" position="-2.25759 -0.408911" view_translation="0 -0.34" view_scale="1" open_state="closed" selected_state="false" input_scroll="0" output_scroll="0" splitter_position="0.743506" open_in_param_width="1.5" open_out_param_width="1.5">
+        <preview_data>
+          <preview_data_element name="Map" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="Multiplier" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="normal_result" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="mia_material_1" class="mia_material">
+      <input name="diffuse_weight" value="1">
+        <attachment target_name="diffuse_weight"/>
+      </input>
+      <input name="diffuse" value="0.5 0.5 0.5 1">
+        <attachment target_name="diffuse"/>
+      </input>
+      <input name="diffuse_roughness" value="0">
+        <attachment target_name="diffuse_roughness"/>
+      </input>
+      <input name="reflectivity" value="0.6">
+        <attachment target_name="reflectivity"/>
+      </input>
+      <input name="refl_color" value="1 1 1 1">
+        <attachment target_name="refl_color"/>
+      </input>
+      <input name="refl_gloss" value="1">
+        <attachment target_name="refl_gloss"/>
+      </input>
+      <input name="refl_gloss_samples" value="8">
+        <attachment target_name="refl_gloss_samples"/>
+      </input>
+      <input name="refl_interpolate" value="false">
+        <attachment target_name="refl_interpolate"/>
+      </input>
+      <input name="refl_hl_only" value="false">
+        <attachment target_name="refl_hl_only"/>
+      </input>
+      <input name="refl_is_metal" value="false">
+        <attachment target_name="refl_is_metal"/>
+      </input>
+      <input name="transparency" value="0">
+        <attachment target_name="transparency_2"/>
+      </input>
+      <input name="refr_color" value="1 1 1 1">
+        <attachment target_name="refr_color"/>
+      </input>
+      <input name="refr_gloss" value="1">
+        <attachment target_name="refr_gloss"/>
+      </input>
+      <input name="refr_ior" value="1.4">
+        <attachment target_name="refr_ior"/>
+      </input>
+      <input name="refr_gloss_samples" value="4"/>
+      <input name="refr_interpolate" value="false"/>
+      <input name="refr_translucency" value="false"/>
+      <input name="refr_trans_color" value="0.7 0.6 0.5 1"/>
+      <input name="refr_trans_weight" value="0.521429"/>
+      <input name="anisotropy" value="1">
+        <attachment target_name="anisotropy"/>
+      </input>
+      <input name="anisotropy_rotation" value="0">
+        <attachment target_name="anisotropy_rotation"/>
+      </input>
+      <input name="anisotropy_channel" value="-1"/>
+      <input name="brdf_fresnel" value="false">
+        <attachment target_name="brdf_fresnel"/>
+      </input>
+      <input name="brdf_0_degree_refl" value="0.2">
+        <attachment target_name="brdf_0_degree_refl"/>
+      </input>
+      <input name="brdf_90_degree_refl" value="1">
+        <attachment target_name="brdf_90_degree_refl"/>
+      </input>
+      <input name="brdf_curve" value="5">
+        <attachment target_name="brdf_curve"/>
+      </input>
+      <input name="brdf_conserve_energy" value="true"/>
+      <input name="intr_grid_density" value="0"/>
+      <input name="intr_refl_samples" value="2"/>
+      <input name="intr_refl_ddist_on" value="false"/>
+      <input name="intr_refl_ddist" value="0"/>
+      <input name="intr_refr_samples" value="2"/>
+      <input name="single_env_sample" value="false"/>
+      <input name="refl_falloff_on" value="false"/>
+      <input name="refl_falloff_dist" value="0"/>
+      <input name="refl_falloff_color_on" value="false"/>
+      <input name="refl_falloff_color" value="0 0 0 1"/>
+      <input name="refl_depth" value="5"/>
+      <input name="refl_cutoff" value="0.01"/>
+      <input name="refr_falloff_on" value="false"/>
+      <input name="refr_falloff_dist" value="0"/>
+      <input name="refr_falloff_color_on" value="false"/>
+      <input name="refr_falloff_color" value="0 0 0 1"/>
+      <input name="refr_depth" value="5"/>
+      <input name="refr_cutoff" value="0.01"/>
+      <input name="indirect_multiplier" value="1"/>
+      <input name="fg_quality" value="1"/>
+      <input name="fg_quality_w" value="1"/>
+      <input name="ao_on" value="false"/>
+      <input name="ao_samples" value="3"/>
+      <input name="ao_distance" value="10"/>
+      <input name="ao_dark" value="0.2 0.2 0.2 1"/>
+      <input name="ao_ambient" value="0 0 0 1"/>
+      <input name="ao_do_details" value="false"/>
+      <input name="thin_walled" value="false"/>
+      <input name="no_visible_area_hl" value="true"/>
+      <input name="skip_inside_refl" value="false"/>
+      <input name="do_refractive_caustics" value="false"/>
+      <input name="backface_cull" value="false"/>
+      <input name="propagate_alpha" value="true"/>
+      <input name="hl_vs_refl_balance" value="1"/>
+      <input name="cutout_opacity" value="1">
+        <attachment target_name="cutout_opacity"/>
+      </input>
+      <input name="additional_color" value="0 0 0 1"/>
+      <input name="bump">
+        <attachment target_name="result" target_node="max_Bump_1" is_reference="true"/>
+      </input>
+      <input name="no_diffuse_bump" value="false"/>
+      <input name="mode" value="0"/>
+      <input name="lights" value="0"/>
+      <input name="lights2" value="0"/>
+      <input name="lights3" value="0"/>
+      <output name="result">
+        <attachment target_name="result"/>
+      </output>
+      <gui_data width="4.1209" height="12.98" open_width="4.1209" open_height="11.11" position="1.26162 0.638027" view_translation="1.56185 179.274" view_scale="1.728" open_state="closed" selected_state="false" input_scroll="0" output_scroll="0" splitter_position="0.164869" open_in_param_width="1.5" open_out_param_width="1.5">
+        <preview_data>
+          <preview_data_element name="intr_refl_ddist_on" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="diffuse" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="bump" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="brdf_curve" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="mode" type_name="const int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_falloff_dist" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_falloff_on" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="hl_vs_refl_balance" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="fg_quality" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_trans_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="no_diffuse_bump" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="intr_refl_ddist" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refl_falloff_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refl_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="anisotropy_rotation" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="intr_refr_samples" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_translucency" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="ao_samples" type_name="const int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="ao_distance" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_depth" type_name="const int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refl_falloff_on" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="brdf_conserve_energy" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="skip_inside_refl" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="diffuse_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="no_visible_area_hl" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_trans_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="thin_walled" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="intr_refl_samples" type_name="const int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="anisotropy_channel" type_name="const int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_falloff_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_gloss" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="ao_ambient" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="cutout_opacity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="do_refractive_caustics" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="reflectivity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_ior" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="lights" type_name="const int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refl_hl_only" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="single_env_sample" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="additional_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="diffuse_roughness" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="anisotropy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refl_depth" type_name="const int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refl_gloss_samples" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_cutoff" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="fg_quality_w" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refl_is_metal" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refl_falloff_color_on" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="ao_do_details" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refl_falloff_dist" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refl_gloss" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="transparency" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="ao_dark" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_falloff_color_on" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="ao_on" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="propagate_alpha" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="lights2" type_name="const int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="lights3" type_name="const int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refl_cutoff" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="brdf_90_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_gloss_samples" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="brdf_fresnel" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="intr_grid_density" type_name="const int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_interpolate" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refl_interpolate" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="indirect_multiplier" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="backface_cull" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="refr_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="brdf_0_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="result" type_name="Color" show_preview="true" orbit="-0.814601" tilt="0.475398" zoom="2" pan="-0.02 -0.05" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Conversion_color_to_floats_1" class="Conversion_color_to_floats">
+      <input name="color" value="1 1 1 1">
+        <attachment target_name="result" target_node="mia_material_1"/>
+      </input>
+      <output name="r"/>
+      <output name="g"/>
+      <output name="b"/>
+      <output name="a"/>
+      <gui_data width="3.24576" height="3.23" open_width="3.24576" open_height="3.80661" position="4.12815 2.92449" view_translation="0 11.42" view_scale="1" open_state="closed" selected_state="false" input_scroll="0" output_scroll="0" splitter_position="0.801858" open_in_param_width="1.5" open_out_param_width="1.5">
+        <preview_data>
+          <preview_data_element name="a" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="b" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="g" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="r" type_name="float" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Math_float_subtract_1" class="Math_float_subtract">
+      <input name="left" value="1"/>
+      <input name="right" value="0">
+        <attachment target_name="a" target_node="Conversion_color_to_floats_1"/>
+      </input>
+      <output name="result">
+        <attachment target_name="transparency"/>
+      </output>
+      <gui_data width="2.55146" height="2.93" open_width="2.55146" open_height="2.95117" position="7.59642 2.21392" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false" input_scroll="0" output_scroll="0" splitter_position="0.730375" open_in_param_width="1.5" open_out_param_width="1.5">
+        <preview_data>
+          <preview_data_element name="left" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="right" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+          <preview_data_element name="result" type_name="float" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+  </phenomenon>
+
+  <node name="mia_material_phenomenon_1" class="mia_material_phenomenon">
+    <input name="diffuse_weight" value="1"/>
+    <input name="diffuse" value="0.5 0.5 0.5 1"/>
+    <input name="diffuse_roughness" value="0"/>
+    <input name="transparency_2" value="1"/>
+    <input name="reflectivity" value="0.675159"/>
+    <input name="refl_color" value="1 1 1 1"/>
+    <input name="refl_gloss" value="0.815287"/>
+    <input name="refl_is_metal" value="true"/>
+    <input name="refl_gloss_samples" value="-6"/>
+    <input name="refl_interpolate" value="false"/>
+    <input name="refl_hl_only" value="false"/>
+    <input name="refr_color" value="1 1 1 1"/>
+    <input name="anisotropy" value="1.47771"/>
+    <input name="anisotropy_rotation" value="0.089172"/>
+    <input name="brdf_fresnel" value="true"/>
+    <input name="brdf_0_degree_refl" value="0.598726"/>
+    <input name="brdf_90_degree_refl" value="0.178344"/>
+    <input name="brdf_curve" value="5.28662"/>
+    <input name="refr_gloss" value="0.388535"/>
+    <input name="bump"/>
+    <input name="Multiplier" value="1"/>
+    <input name="cutout_opacity" value="1"/>
+    <input name="refr_ior" value="1.4"/>
+    <output name="result"/>
+    <output name="transparency"/>
+    <gui_data width="4.28648" height="5.76047" open_width="6.52055" open_height="9.19646" position="1.6314 25.0399" view_translation="-2.15328 -0.0365642" view_scale="0.0970591" open_state="closed" selected_state="true" input_scroll="0" output_scroll="0" splitter_position="0.316028" open_in_param_width="1.5" open_out_param_width="1.5">
+      <preview_data>
+        <preview_data_element name="diffuse" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="bump" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="brdf_curve" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="Multiplier" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="refl_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="anisotropy_rotation" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="diffuse_weight" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="refr_gloss" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="cutout_opacity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="reflectivity" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="refr_ior" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="refl_hl_only" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="diffuse_roughness" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="anisotropy" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="refl_gloss_samples" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="transparency_2" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="refl_is_metal" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="refl_gloss" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="transparency" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="brdf_90_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="brdf_fresnel" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="refl_interpolate" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="refr_color" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="brdf_0_degree_refl" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.5"/>
+        <preview_data_element name="result" type_name="Color" show_preview="true" orbit="2.0054" tilt="-1.5146" zoom="3" pan="-0.025 0.125" preview_object="1" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true" scroll_offset="0" open_preview_height="1.5" closed_preview_height="1.03047"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <render_data>
+    <light_list/>
+    <scene_ambient color="0 0 0 0"/>
+  </render_data>
+</root>

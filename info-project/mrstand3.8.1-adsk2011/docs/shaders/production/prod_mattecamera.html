@@ -1,0 +1,684 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="Author" content="mental images GmbH">
+<meta name="Company" content="mental images">
+<meta name="Creator" content="hypertex">
+<meta name="CreatorVersion" content="1.0">
+<meta name="CreationDate" content="18 Feb 2010">
+<link rel="stylesheet" type="text/css" href="mental.css">
+<style type="text/css"> i {color:darkred} dfn {font-style:italic}
+var {font-weight:bold; color:black} </style><title>Matte/Shadow Objects and Camera Maps</title>
+</head><body>
+<ul class="nav">
+<li><a href="production.html">home</a></li>
+<li><a href="prod_mirrorball.html">&laquo;&nbsp;prev</a></li>
+<li><a href="prod_mattecamera.html">next&nbsp;&raquo;</a></li>
+</ul>
+<h1>Matte/Shadow Objects and Camera Maps</h1>
+<p>
+<h2 id="Introduction">Introduction</h2>
+<p>
+Often one wants to include synthetic<a href="#Foot1" title="When we use the term &quot;synthetic&quot; we mean additional objects to be inserted in the scene, and &quot;real world&quot; for objects that are already there. "><sup>1</sup></a> objects into an existing
+photographic background plate filled with real world objects,
+for example, adding a yet-to-be-constructed building into an 
+empty lot, adding a virtual car onto a road, or having a virtual
+character walk through a scene and realistically interact with
+objects in the real world scene.
+<p>
+Two main shaders exists to facilitate this, <i>mip_cameramap</i>,
+which &quot;projects&quot; an image from the camera onto geometry, and
+<i>mip_matteshadow</i> which takes care of generating hold-out
+mattes, as well as allowing the real world objects in the 
+photographic plate both cast and receive shadows, as well as 
+receive reflections and indirect light.
+<p>
+<h2 id="mip_cameramap">mip_cameramap</h2>
+<p>
+This shader is used to look up a color texture based on the surface 
+points on-screen pixel coordinate. The shader is similar in function to 
+<b>mib_lookup_background</b> from the <code>base</code> library, 
+but with the following important differences:
+<br />
+<ul>
+
+<li> The coordinate being looked up is the true &quot;back transformation&quot;
+      of the shading point into raster space, rather than just the
+      current rendered pixels raster position.
+      This means that the background is correctly seen in reflections
+      and refractions.
+<li> It can perform a &quot;per pixel&quot; match, avoiding blurring of the 
+      background due to interpolation.
+</ul>
+
+<p>
+<pre>
+declare shader "mip_cameramap" (
+        color texture "map",
+        scalar  "multiplier"               default 1.0,
+        scalar  "degamma"                  default 1.0,
+        boolean "per_pixel_match"          default off,
+        boolean "transparent_alpha"        default off,
+        boolean "offscreen_is_environment" default on,
+        color   "offscreen_color"
+    )
+    version 4
+    apply material, texture, environment
+end declare
+</pre>
+<p>
+The <b>map</b> parameter is a color texture to be looked up,
+and <b>multiplier</b> a multiplier for that map. 
+<p>
+If necessary, the shader can apply an inverse gamma correction to
+the texture by the <b>degamma</b> parameter. If gamma is handled
+by other shaders in the chain, or if the global mental ray gamma 
+is used, use a value of 1.0, which means &quot;unchanged&quot;.
+<p>
+When <b>per_pixel_match</b> is off, the texture is simply stretched
+to fill the scene exactly. When <b>per_pixel_match</b> is on, the 
+lower left pixel of the map is exactly matched to the lower left rendered
+pixel. If the pixel size of the map and the pixel size of the rendering 
+is different a warning is printed, but the image is still rendered 
+although the image will be cropped/padded as needed.
+<p>
+Sometimes one wants the shader applied as a background, but still want
+to extract information from the alpha channel. 
+If <b>transparent_alpha</b> is on, the alpha values is always zero.
+If it is off, the alpha value from the texture is used.
+<p>
+The shader performs a true &quot;reverse transform&quot; of the shading 
+point into raster space. While this by necessity results in an on-screen
+location for eye rays, this is not so for reflections, refractions etc.
+These rays may hit a point on the object which is off screen. If
+the <b>offscreen_is_environment</b> is on, these rays will return
+the environment. If it is off, the <b>offscreen_color</b> is
+returned. In either case, this color is <em>not</em> affected by neither
+the <b>multiplier</b> nor <b>gamma</b>.
+<p>
+<h2 id="mip_matteshadow">mip_matteshadow</h2>
+<p>
+This shader is used to create &quot;matte objects&quot;, i.e. objects who
+is used to &quot;represent&quot; existing real world objects in an existing 
+photographic plate, for the purposes of...
+<br />
+<ul>
+
+<li> ...blocking another synthetic object from the cameras view 
+         (to allow the synthetic objects to go behind the real world object).
+<li> ...allowing synthetic objects to cast shadows and occlusion on 
+         and receive shadows from the real world objects.
+<li> ...adding reflections of synthetic objects onto real world objects.
+<li> ...allow the interplay of indirect light between synthetic and real 
+         world objects.
+</ul>
+
+<p>
+In all above cases the <i>mip_matteshadow</i> is applied to an object
+<em>representing</em> the real world object, and the synthetic object is
+using a traditional material.
+<p>
+The shader can also function as a &quot;shadows only&quot; shader, i.e. a shader
+which only shows how much in shadow a point is compared to the incoming
+light, but ignoring the actual amount of incoming light itself (only the
+occluded percentage of it).
+<p>
+<pre>
+declare shader
+        struct {
+            color "result",
+            color "shadows_raw",
+            color "ao_raw",
+            color "refl_raw",
+            color "indirect_raw",
+            color "illumination_raw"
+        } "mip_matteshadow" (
+        color   "background"        default 0 0 0 0,
+        # Shadows
+        boolean "catch_shadows"     default on,
+        color   "shadows"           default 0 0 0 1,
+        color   "ambient"           default 0.2 0.2 0.2,
+        boolean "no_self_shadow"    default on,
+        boolean "use_dot_nl"        default on,
+        scalar  "colored_shadows"   default 1.0,
+        # AO
+        boolean "ao_on"             default on,
+        color   "ao_dark"           default 0.0 0.0 0.0,
+        integer "ao_samples"        default 16,
+        scalar  "ao_distance"       default 0.0,
+        # Reflections
+        boolean "catch_reflections" default off,
+        color   "refl_color"        default 0.2 0.2 0.2 0.2,
+        color   "refl_subtractive"  default 0.2 0.2 0.2 0.2,
+        integer "refl_samples"      default 0,
+        scalar  "refl_glossiness"   default 10.0,
+        scalar  "refl_max_dist"     default 0.0,
+        scalar  "refl_falloff"      default 2.0,
+        # Indirect
+        boolean "catch_indirect"    default off,
+        color   "indirect",
+        # System
+        boolean "multiple_outputs"  default off,
+        # Additional illumination
+        boolean "catch_illuminators" default off,
+        array light "illuminators",
+        # Extra input
+        color   "additional_color"  default 0 0 0,
+        # Light linking
+        integer     "mode",
+        array light "lights"    
+    )
+    version 6
+    apply material, texture
+end declare
+</pre>
+<p>
+<em>NOTE:</em> This section will only <b>briefly</b> lists the parameters 
+and the section &quot;usage tips&quot; on page <a href="prod_mattecamera.html#matteuseagetips">matteuseagetips</a> gives an in 
+depth explanation of different use cases.
+<p>
+The shader has multiple outputs (it returns a struct). However, by default
+(for compatibility reasons) it only fills in the first item of the struct,
+the compound &quot;result&quot;. Only if the parameter <b>multiple_outputs</b> is
+enabled are the separate results written to the other outputs.
+<p>
+The <b>background</b> parameter is the background color. If neither of the
+<b>catch_...</b> options are on, this result is simply returned, including
+its alpha, and the shader does nothing. Otherwise it is the base color upon
+which all the other operations occur. When using external compositing this is 
+generally transparent black (0 0 0 0), otherwise one would use the real 
+world background plate mapped with the <i>mip_cameramap</i> shader.
+<p>
+The <b>catch_shadows</b> option enables other objects to cast shadows
+on this object. 
+<p>
+The <b>shadows</b> parameter is the color of the shadows. When shadows 
+are detected, a blend between <b>background</b> and <b>shadows</b>
+depending on how much &quot;in shadow&quot; the point is.
+<p>
+The <b>ambient</b> parameter sets a &quot;base light level&quot;. It raises the
+lowest &quot;in shadow&quot; level. For example, if this is 0.2 0.2 0.2 the darkest
+shadow produced will be an 20 percent blend of <b>background</b> to a 80 
+percent blend of <b>shadow</b> (unless ambient occlusion is enabled).
+<p>
+Turning on the <b>no_self_shadow</b> option (and also using an
+instance of the shader as shadow shader) causes any object using 
+<i>mip_matteshadow</i> not to receive shadows on any 
+other such object.
+<p>
+The <b>use_dot_nl</b> option defines if the angle to the light is 
+considered when calculating the incoming amount or not. 
+<p>
+If <b>color_shadows</b> is 0.0, all shadows are cast in gray scale.
+If it is 1.0, the shadows have full color. For example, if the surface 
+is lit by one red and one green light, the red light will have a green 
+shadow, and the green light will have a red shadow.
+<p>
+If <b>ao_on</b> is enabled, a built in <em>Ambient Occlusion</em> 
+(henceforth simply called &quot;AO&quot;) is applied based on the color in
+the <b>ambient</b> parameter. The AO respects the 
+<b>no_self_shadow</b> switch and will not cause AO from objects 
+with the same material instance as itself.
+<p>
+The <b>ao_dark</b> parameter decides how dark shadows the AO
+will cause. The default black is generally adequate, but a lighter
+color will cause a less pronounced shading effect. 
+<p>
+<b>ao_samples</b> number of AO rays are shot. One can limit the reach
+of the AO rays with the <b>ao_distance</b> parameter. If it is zero,
+the rays reach infinitely far. Short rays increase performance dramatically
+but localizes the AO effect.
+<p>
+The <b>catch_reflections</b> turns on reflections. 
+<p>
+The <b>refl_color</b> is the multiplier for reflections. Note that
+the alpha value of this color is important in that the reflections will
+influence the alpha by this amount. In some cases the reflections may
+need to be subtractive, in which case <b>refl_subtractive</b> is 
+used -  see page <a href="prod_mattecamera.html#matteuseagetips">matteuseagetips</a> for details.
+<p>
+The <b>refl_samples</b> parameters sets the number of glossy
+reflection samples. If it is zero, mirror reflections are used.
+Otherwise the <b>refl_glossiness</b> sets the ward glossiness
+for reflections.
+<p>
+Reflections are seen at most <b>refl_max_dist</b> and the shape
+of the falloff is <b>refl_falloff</b>, very similar like the 
+<code>base</code> library's shader <b>mib_glossy_reflection</b>.
+<p>
+If the option <b>catch_indirect</b> is enabled, indirect light is
+gathered and scaled by the <b>indirect</b> color (which one generally
+sets to the same as the <b>background</b> color, thereby treating the 
+background color as a reflectance value for the indirect light).
+<p>
+The <b>multiple_outputs</b> causes the shader to output more than
+a single value in the returned struct.
+<p>
+If the <b>catch_illuminators</b> switch is on, the lights listed
+as <b>illuminators</b> are tested and allowed to actually light 
+the scene. This is a simple Lambertian illumination treating the 
+<b>background</b> parameter as the diffuse color<a href="#Foot2" title="The difference between lights and illuminators is that the lights are only used to cause shadows on the background, whereas the illuminators are used to throw actual light on it. This means that the lights array should contain lights which are already present in the background plate, and the illuminators array contains any additional lights introduced by a CG element, for example the headlights of a CG car. "><sup>2</sup></a>.
+<p>
+The <b>additional_color</b> is a color input simply added to the
+result, for easy shader graph construction. It can be used for anything<a href="#Foot3" title="For example to add a specular highlight to an illuminator by plugging in a mib_illum_phong with it's diffuse color set to black. "><sup>3</sup></a>.
+<p>
+Finally, <b>mode</b> sets the light inclusion/exclusion mode and 
+<b>lights</b> is the light list used for casting shadows, just like in 
+many other shaders.
+<p>
+The shader also has <em>multiple outputs</em>. For compatibility, the shader
+does not actually write any values to anything but the main output if the
+<b>multiple_outputs</b> parameter is not on. But if this parameter is
+enabled, the shader outputs the following values:
+<br />
+<ul>
+
+<li> <b>result</b> - the compound result.
+<li> <b>shadows_raw</b> - the raw full-color shadow pass on white
+background, suitable for compositing on top of a background in &quot;multiply&quot; mode.
+<li> <b>ao_raw</b> - the raw ambient occlusion.
+<li> <b>refl_raw</b> - the raw reflections
+<li> <b>indirect_raw</b> - the indirect light arriving
+<li> <b>illumination_raw</b> - light gathered from any lights in the
+<b>illuminators</b> list.
+</ul>
+
+<p>
+All outputs are as &quot;raw&quot; as possible to be maximally useful as layers in post production, 
+e.g. the reflections have not been multiplied with the reflection color, etc.
+<p>
+<h2 id="mip_matteshadow_mtl">mip_matteshadow_mtl</h2>
+<p>
+This is a <em>material phenomena</em> that embeds <i>mip_matteshadow</i>, and 
+applies it as surface, shadow and photon shader for a material. It has the same
+parameters as <i>mip_matteshadow</i> itself, plus a scalar <b>opacity</b>.
+<p>
+The opacity does not apply to the shadows or photons, but only to the visible 
+surface shading itself. By using the opacity, one can use painted masks 
+for irregular edges. For example, use a simple tapered cylinder to roughly 
+match a forearm, and use a camera-projected mask (applied with the help of 
+<i>mip_cameramap</i>) for the actual contours of the arm. This also
+allows matching motion blur that may be present in the background plate
+with the help of masks.
+<p>
+
+<a name="matteuseagetips"></a>
+<h2 id="Usage_Tips">Usage Tips</h2>
+<p>
+The shaders in this section are concerned with combining a real 
+world photographic plate with synthetic objects. For the sake of
+our examples, we are basing them on the following <em>photograph</em> 
+of a kitchen counter, with an old beat up plastic salt shaker,
+a spice jar, a piece of paper, and some other things on it:
+<div class="pic">
+<img width="100%" src="images/prod-bg-only.jpg" alt="This is our background photograph. This is not a rendering... yet."><br />This is our background photograph. This is not a rendering... yet.
+</div>
+<p>
+<h3 id="Camera_Mapping_Explained">Camera Mapping Explained</h3>
+<p>
+What is the difference between <i>mip_cameramap</i> and the 
+<i>mib_lookup_background</i> from the <code>base</code> library? 
+<p>
+The main difference is 
+that the former only uses the current raster position (i.e. x and y
+coordinate of the pixel currently being rendered) whereas the 
+latter actually calculates the image space position of the shaded 
+point.
+<p>
+Why does that matter? Lets try an example. See the following example 
+of reflective sphere on top of a background photograph mapped to a 
+flat plane using the two different shaders:
+<div class="pic">
+<img width="80%" src="images/prod-cammap-wrong.jpg" alt="mib_lookup_background"><br />mib_lookup_background<br /><img width="80%" src="images/prod-cammap-right.jpg" alt="mip_cameramap"><br />mip_cameramap<br /></div>
+<p>
+Notice how the left image, which uses <i>mib_lookup_background</i> 
+looks incorrect. It looks transparent rather than reflective. What
+is the cause of this?
+<p>
+Imagine we are rendering pixel coordinate 200,200 which lies on the 
+sphere. An eye ray is sent that hits the sphere. This hit point is
+indeed on the 200,200 pixel coordinate. But the ray continues
+as a reflection ray to hit the ground plane. 
+<p>
+This new point (on the ground plane) is not the same as the pixel being 
+rendered, it is somewhere else in the model. 
+Yet <i>mib_lookup_background</i> only concerns itself with the current
+pixel (200,200) and will return the color at that point from the map.
+<p>
+Conversely, <i>mip_cameramap</i> actually converts this <em>new</em>
+point to a new set of raster coordinates (e.g. 129,145) and will
+look up the map at that <em>new</em> position, creating the correct
+appearance in the reflection.
+<p>
+However, there is a snag; what happens if the reflected point lies
+<em>outside the screen</em>? What if the calculated raster coordinate is 
+(-45, 39)? The answer is that <i>mip_cameramap</i> either returns the
+specified color, or, if <b>offscreen_is_environment</b> is on, 
+returns the environment color for that ray direction.
+<p>
+<h3 id="Matte_Objects_and_Catching_Shadows">Matte Objects and Catching Shadows</h3>
+<p>
+In this section we will use <i>mip_matteshadow</i> to create 
+stand-in objects (also known as &quot;matte objects&quot;) for real world
+geometry. For the example we only concern ourself with the old
+plastic salt shaker on the left of the image, and the kitchen
+counter itself. The following simple 3D model has been constructed:
+<div class="pic">
+<img width="100%" src="images/prod-gb-gray.jpg" alt="The simple 3D model of our background"><br />The simple 3D model of our background
+</div>
+<p>
+If we are <em>not</em> using <i>mip_matteshadow</i> and for example
+simply attempt to map our background to a standard Lambertian surface
+we get the following result:
+<div class="pic">
+<img width="100%" src="images/prod-bg-lambert.jpg" alt="Mapping the background onto a Lambert shader"><br />Mapping the background onto a Lambert shader
+</div>
+<p>
+Clearly unsatisfactory, since Lambertian shading is applied on
+top of shading already present in the real world image. What
+we need is to separate <i>shadows</i> from the <i>shading</i>.
+<p>
+This can be done using use <i>mip_matteshadow</i>. Lets show
+the result by applying the shader with a white background and
+black shadows:
+<div class="pic">
+<img width="100%" src="images/prod-shadowcatch-selfsh.jpg" alt="Raw shadow information"><br />Raw shadow information
+</div>
+<p>
+This image contains the raw shadow information, and is otherwise
+white. This mode of operation is very useful for external compositing
+usage, where a completely separate <i>shadow pass</i> can be 
+generated by making the synthetic objects invisible to the camera
+(the torus in our case) and using <i>mip_shadowmatte</i> with
+white background and black shadows.
+<p>
+<em>NOTE:</em> This usage supports colored shadows! 
+With a red and green light present, the green light will show
+red shadows and vice versa.
+<p>
+There is one problem with the above image: It contains a shadow
+of the salt shaker. But our real-world picture already contains
+a shadow of the salt shaker. This is solved by the following steps:
+<br />
+<ul>
+
+<li> Applying <i>mip_matteshadow</i> as the 
+      shadow shader for the material.
+<li> Turning its <b>no_self_shadow</b> option on.
+</ul>
+
+<div class="pic">
+<img width="100%" src="images/prod-shadowcatch-noself.jpg" alt="The mip_matteshadow material does not shadow itself"><br />The mip_matteshadow material does not shadow itself
+</div>
+<p>
+When the shader is used as the materials shadow shader and 
+the <b>no_self_shadow</b> is on, no object with 
+<i>mip_matteshadow</i> will shadow another object with 
+<i>mip_matteshadow</i>, but will still cast shadows on
+other objects, and other objects will cast shadows upon it.
+<p>
+Notice however that the shadows are very dark and the torus 
+shadow thrown <em>onto</em> the salt shaker has a harsh left
+edge. To solve this, one can set the <b>ambient</b> color
+to a low value and turn on <b>use_dot_nl</b> which will
+make the shadows &quot;fade out&quot; as they become perpendicular
+to the light, avoiding the harsh edge:
+<div class="pic">
+<img width="100%" src="images/prod-shadowcatch-lighter-shad-dotnl.jpg" alt="Lighter shadow and use_dot_nl on"><br />Lighter shadow and use_dot_nl on
+</div>
+<p>
+At this point we can replace the white color with our background
+using <i>mip_cameramap</i>:
+<div class="pic">
+<img width="100%" src="images/prod-shadowcatch-lighter-dotnl-bg.jpg" alt="Background used instead of white"><br />Background used instead of white
+</div>
+<p>
+<h3 id="Advanced_Catching_of_Shadows">Advanced Catching of Shadows</h3>
+<p>
+Shadows can be handled in several ways with <i>mip_matteshadow</i>.
+We already mentioned the method above of creating a shadow pass
+using a white <b>background</b> and black <b>shadows</b> setting.
+<p>
+We also showed the method of using a picture for <b>background</b>
+and black for <b>shadows</b>.
+<p>
+There are two other options, however:
+<p>
+One is to use a picture of the <em>lit</em> scene for <b>background</b>
+and <em>another</em> picture of the scene in shadow for the <b>shadow</b>
+parameter. 
+<div class="pic">
+<img width="80%" src="images/prod-bg-only.jpg" alt="The scene fully lit"><br />The scene fully lit<br /><img width="80%" src="images/prod-bg-shadowed.jpg" alt="The scene in shadow"><br />The scene in shadow<br /></div>
+<p>
+This technique is especially useful since it solves <em>any</em>
+self-shadowing issues perfectly, it is even advised to have 
+<b>no_self_shadow</b> off in this mode. Here is the result:
+<div class="pic">
+<img width="100%" src="images/prod-two-pic-shadow.jpg" alt="Shadows come from unlit version of photo"><br />Shadows come from unlit version of photo
+</div>
+<p>
+This gives amazing detail and automatically gives the &quot;correct&quot;
+color and strength of shadows without any tuning being necessary.
+<p>
+A final way is to handle shadows completely in external compositing.
+This is accomplished by setting <b>background</b> to 0 0 0 0 
+(i.e. transparent black, alpha is zero) and <b>shadow</b> to 0 0 0 1 
+(i.e. opaque black, alpha is one).
+<p>
+This will create a rendering as follows:
+<div class="pic">
+<img width="80%" src="images/prod-matted-torus-shadows.jpg" alt="The color channels"><br />The color channels<br /><img width="80%" src="images/prod-matted-torus-shadows-alpha.jpg" alt="The alpha channel"><br />The alpha channel<br /></div>
+<p>
+This image can be composited on top of the background externally since
+the shadow information is present in the alpha channel.
+<p>
+<h3 id="Reflections">Reflections</h3>
+<p>
+Since we are using <i>mip_cameramap</i> reflections and refractions
+of the background objects work correctly:
+<div class="pic">
+<img width="100%" src="images/prod-reflecrac-demo.jpg" alt="Reflection and refraction"><br />Reflection and refraction
+</div>
+<p>
+Note how even the reflection of the salt shaker is correct.
+<p>
+Note that this also means final gathering will pick up the background
+as indirect illumination correctly:
+<div class="pic">
+<img width="100%" src="images/prod-reflecrac-fg-demo.jpg" alt="Final gathering lights up our objects"><br />Final gathering lights up our objects
+</div>
+<p>
+The shader can also show (glossy) reflections of other objects:
+<div class="pic">
+<img width="100%" src="images/prod-reflecrac-fg-gloss-demo.jpg" alt="Glossy paper reflects our objects"><br />Glossy paper reflects our objects
+</div>
+<p>
+Please note how the reflection only involves the actual synthetic
+objects added, the shader already assumes that the real world
+photo contains reflections for the other real world objects, i.e.
+a <i>mip_matteshadow</i> object never reflects another, nor
+does it reflect the environment.
+<p>
+
+One subtle detail is still missing, though. Notice how the 
+cylinder is reflecting the paper, but nothing else. This is
+because the <b>mip_matteshadow</b> does not know what to 
+do about rays that hit the ground plane somewhere &quot;off
+screen&quot;.
+<div class="pic">
+<img width="100%" src="images/prod-cylinder-bad.jpg" alt="No reflections"><br />No reflections
+</div>
+<p>
+This is solved by using the <b>offscreen_is_environment</b>
+parameter of <b>mip_cameramap</b>, and then utilize 
+an environment map (for example <b>mip_mirrorball</b>) to
+supply an environment map:
+<div class="pic">
+<img width="100%" src="images/prod-cylinder-ok.jpg" alt="Much better"><br />Much better
+</div>
+<p>
+
+The shader can also receive indirect light such as final
+gathering and (if also applied as photon shader) photons. 
+To demonstrate this we enable <b>catch_indirect</b> and turn 
+our white objects luminous red and made sure our glass sphere 
+generates caustics:
+<div class="pic">
+<img width="100%" src="images/prod-reflecrac-fg-caustic-demo.jpg" alt="Receiving indirect light"><br />Receiving indirect light
+</div>
+<p>
+As above, the shader makes sure no indirect light is bounced
+from one matte object to another, and no indirect light is received
+from the environment (since both these effects are assumed to be
+present in the original real-world photo).
+<p>
+ 
+A final special case for reflection is when the background photo
+already contains massive amounts of reflections. Here is 
+a new background photo on top of a highly reflective surface:
+<div class="pic">
+<img width="100%" src="images/prod-shiny-plate.jpg" alt="Photograph of our salt shaker on a very reflective surface"><br />Photograph of our salt shaker on a very reflective surface
+</div>
+<p>
+If we add our synthetic objects to this scene and use the same settings
+we used for the glossy paper, we get the following rather odd looking 
+results:
+<div class="pic">
+<img width="100%" src="images/prod-subtr-ref-off.jpg" alt="Additive reflections - doesn't look right"><br />Additive reflections - doesn't look right
+</div>
+<p>
+But this looks very incorrect! One can see the reflection of the 
+background through the added reflections, and the added reflections 
+appear much too bright.
+<p>
+To fix this one uses the <b>refl_subtract</b> to set the amount of
+attenuation of the background caused by the reflection. Naturally this
+can be a painted map to match reflective areas in the image, i.e. a
+water puddle in front of a house etc.
+<div class="pic">
+<img width="100%" src="images/prod-subtr-ref-on.jpg" alt="Subtractive reflections - that's much better!"><br />Subtractive reflections - that's much better!
+</div>
+<p>
+The correct result. The synthetic reflections override the
+existing reflections and replace them! Also note that even 
+reflections of objects
+<em>behind a real world object inside a real world reflection</em>
+works correctly (the white ball 
+behind the salt shaker is behind it even in the reflection).
+<p>
+Finally, all objects pick up indirect illumination based on the 
+background plate itself. Only one rectangular area light source exists 
+in the rendering.
+<p>
+<h3 id="Reflections_and_Alpha">Reflections and Alpha</h3>
+<p>
+When preparing for external compositing and using transparent black
+for <b>background</b> and opaque black for <b>shadows</b> it is
+important that reflections also get an alpha channel.
+<p>
+The alpha component of the <b>refl_color</b> parameter defines
+how much the reflection is present in the alpha channel. 
+<p>
+Likewise the alpha component of the <b>indirect</b> parameter
+defines how much indirect light is seen in the alpha channel.
+<p>
+Neither of those have any function if the alpha of the background
+is 1.0, i.e. when using a background photo.
+<p>
+<a name="Best_of_both_worlds"></a>
+<h3 id="Best_of_Both_Worlds_Mode">Best-of-Both-Worlds Mode</h3>
+<p>
+If one need the synthetic objects to reflect the real objects but
+still want the flexibility of external compositing for shadows (i.e.
+one does not want to add in the background already when rendering)
+one can create a hybrid approach.
+<p>
+This is accomplished with the help of the <i>mip_rayswitch</i>
+shader. Use the shader to switch between using a transparent
+black (0 0 0 0) background for eye rays and using the camera mapped
+photo for other rays (e.g. reflection, refraction and final gathering).
+<p>
+<h3 id="Conclusion_and_Workflow_Tips">Conclusion and Workflow Tips</h3>
+<p>
+Here is a simple step-by-step workflow to render synthetic objects into a 
+background plate. It assumes one has
+<div class="pic">
+<img width="100%" src="images/prod-prereq.jpg" alt="Prerequisite stuff"><br />Prerequisite stuff
+</div>
+<br />
+<ul>
+
+<li> A background plate       
+<li> A mirror ball photo taken from the same camera angle
+      <a href="#Foot4" title="One can often get away with a low dynamic range mirror ball photo if one keeps it slightly underexposed."><sup>4</sup></a>
+</ul>
+           
+<p>
+Then perform as follows:
+<br />
+<ul>
+
+<li> Put <b>mip_rayswitch_environment</b> in the mental ray camera 
+      environment.
+<li> In its <b>background</b> slot, use a <b>mip_cameramap</b>
+      with the background plate in its <b>map</b> slot. 
+<li> In its <b>environment</b> slot, use <b>mip_mirrorball</b> with 
+      the mirror ball photo in its <b>map</b> slot.
+<li> Create a ground plane, and use <b>mip_matteshadow</b> as the
+      surface, shadow and photon shader on that ground plane. 
+<li> Use the <em>same</em> instance of <b>mip_cameramap</b> in its 
+      <b>background</b> parameter.
+<li> Add lights to mimic the &quot;real world&quot; lighting, or use 
+      final gathering based on the environment, or a combination thereof
+      to achieve the proper shading.
+<li> Tune any ambient occlusion by setting the <b>ambient</b> parameter
+      of <b>mip_matteshadow</b> and adjusting the <b>ao_distance</b>.
+<li> If the &quot;ground&quot; should catch general indirect lighting, enable
+      <b>catch_indirect</b> and connect the map in <b>background</b> 
+      to <b>indirect</b> as well.
+</ul>
+
+<div class="pic">
+<img width="100%" src="images/prod-shade-tree.jpg" alt="The shade tree"><br />The shade tree
+</div>
+<p>
+
+Add any CG objects with physically plausible shaders (such as the
+<b>mia_material</b> from the Architectural library). Render. Smile.
+<div class="pic">
+<img width="100%" src="images/prod-helicopter.jpg" alt="Render. Smile."><br />Render. Smile.
+</div>
+<p><hr><p><dl>Footnotes
+<a name="Foot1"></a><dt>1
+<dd>
+   When we use the term &quot;synthetic&quot; we mean additional objects
+   to be inserted in the scene, and &quot;real world&quot; for objects
+   that are already there.
+
+<a name="Foot2"></a><dt>2
+<dd>
+    The difference between <b>lights</b> and <b>illuminators</b> is that
+    the <b>lights</b> are only used to cause shadows on the background,
+    whereas the <b>illuminators</b> are used to throw actual <em>light</em>
+    on it. This means that the <b>lights</b> array should contain lights
+    which are already present in the background plate, and the 
+    <b>illuminators</b> array contains any additional lights introduced
+    by a CG element, for example the headlights of a CG car.
+
+<a name="Foot3"></a><dt>3
+<dd>
+    For example to add a specular
+    highlight to an illuminator by plugging in a <b>mib_illum_phong</b>
+    with it's diffuse color set to black.
+
+<a name="Foot4"></a><dt>4
+<dd>One can often get away with a low dynamic range mirror ball
+                photo if one keeps it slightly underexposed.
+</dl>
+<ul class="nav">
+<li><a href="production.html">home</a></li>
+<li><a href="prod_mirrorball.html">&laquo;&nbsp;prev</a></li>
+<li><a href="prod_mattecamera.html">next&nbsp;&raquo;</a></li>
+</ul>
+</body></html>

@@ -1,0 +1,232 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Math_color_invert
+{
+	input:
+		Color color = Color(1,1,1,1)
+		{			
+			display_name("Color");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "Original color." );
+		};
+
+	output:
+		Color result;
+
+	void main()
+	{
+		result   = Color(1,1,1,1) - color;
+		result.a = 1.0;
+	}
+}
+{
+	description( "Subtracts each input component from 1." );
+}
+;
+
+shader Math_color_expand
+{
+  input:
+		Color color = Color(0,0,0,1)
+		{		
+			display_name("Color");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "Original color." );
+		};
+		Color low   = Color(0,0,0,0)
+		{		
+			display_name("Low");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "Low value of the starting domain." );
+		};
+		Color high   = Color(1,1,1,1)
+		{		
+			display_name("High");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "High value of the starting domain." );
+		};
+   
+  output:
+    Color result;
+    
+    void main()
+    {
+		result = (color - low)/(high - low);
+    }
+}
+{
+	description( "Scales each component of the input from the domain "
+                 "[Low, High] to the range [0, 1]." );	
+}
+;
+
+shader Math_color_compress
+{
+  input:
+		Color color = Color(0,0,0,1)
+		{		
+			display_name("Color");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "Original color." );
+		};
+		Color low   = Color(0,0,0,0)
+		{		
+			display_name("Low");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "Low value of the target range." );
+		};
+		Color high   = Color(1,1,1,1)
+		{		
+			display_name("High");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "High value of the target range." );
+		};
+   
+  output:
+    Color result;
+    
+    void main()
+    {
+		result = color*(high - low) + low;
+    }
+}
+{
+	description( "Scales each component of the input from the domain [0,1] "
+                 "to the range [Low, High]." );
+}
+;
+
+shader Math_color_threshold
+{
+  input:
+		Color color = Color(0,0,0,1)
+		{		
+			display_name("Color");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "Original color." );
+		};
+	    Color threshold = Color(0,0,0,1)
+		{		
+			display_name("Threshold");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "Threshold value." );
+		};
+   
+  output:
+    Color result;
+    
+    void main()
+    {
+	result = color > threshold ? color : Color(0,0,0,0);
+    }
+}
+{
+	description( "For each component, returns the input if it exceeds the "
+	             "threshold and 0 otherwise.");
+}
+;
+
+shader Math_color_mix
+{
+	input:
+		Color color1 = Color(0,0,0,1)
+		{		
+			display_name("Color1");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "First color to mix." );
+		};
+		Color color2 = Color(1,1,1,1)
+		{		
+			display_name("Color2");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "Second color to mix." );
+		};
+		Color mix = Color(0.5, 0.5, 0.5, 0.5)
+		{		
+			display_name("Mix");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "Mixing weight to apply between the two colors." );
+		};
+
+	output:
+		Color result;
+
+	void main()
+	{
+		result = lerp(color1, color2, mix);
+	}
+}
+{
+	description( "Performs linear interpolation on the two input colors "
+	             "based on the mix ." );
+}
+;
+
+shader Math_color_modf
+{
+	input:
+		Color input = Color(0.0,0.0,0.0,0.0)
+		{
+			display_name("Color");
+			description("Color to split.");
+		};
+
+	output:
+		Color integral_output
+		{
+			description("Integral part of the input.");
+		};		
+		Color fractional_output
+		{
+			description("Fractional part of the input.");
+		};		
+
+	void main()
+	{
+		float4 integral_output_float;
+		fractional_output = modf(float4(input), integral_output_float);
+		integral_output = integral_output_float;
+	}
+}
+{
+	description( "Splits each component of the input color into "
+				 "its integral and fractional parts." );
+}
+;
+
+shader Math_color_sincos
+{
+	input:
+		Color input = Color(0.0,0.0,0.0,0.0)
+		{	
+			display_name("Color");
+			description("Color on which to calculate sine and cosine.");
+		};
+
+	output:
+		Color sine
+		{
+			description("Sine of the input.");
+		};
+		Color cosine
+		{
+			description("Cosine of the input.");
+		};
+
+	void main()
+	{
+		float4 sine_float;
+		float4 cosine_float;
+		sincos(float4(input), sine_float, cosine_float);
+		sine = sine_float;
+		cosine = cosine_float;
+	}
+}
+{
+	description( "Calculates the sine and cosine of each component of "
+				 "the input color." );
+}
+;

@@ -1,0 +1,37 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#include <mi_msl_shared.msl>
+
+shader Curve_wave {
+
+  input:
+	float t = texture_coordinate[0].x {
+		display_name("Input");
+	};
+	float frequency = 4 {
+		display_name("Frequency");
+		description("Wave frequency");
+	};
+	float phase = 0.0	{
+		display_name("Phase");
+		description("Offsets the wave");
+	};
+	
+  output:
+	float result;
+	Color graph_out;
+		
+	void main() {
+		result = cos(PI *( t * frequency*2 + phase))*.5 + .5;
+		graph_out = texture_coordinate[0].y < result ? MI_LOWER_COL : MI_UPPER_COL;
+	}
+}
+{
+	description("Generates a wave pattern based on a cosine function");
+};
+
+// declaration for curve shader pack backwards compatibility
+shader curve_wave : Curve_wave { };

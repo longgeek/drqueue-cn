@@ -1,0 +1,237 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Materials</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node19.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node21.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION18"></a>
+
+  <h2>Materials</h2>
+
+  <p>The material shaders <i>dgs_material</i> and
+  <i>dielectric_material</i> implement different physically based
+  models of reflection and refraction.</p>
+
+  <h3> Diffuse-glossy-specular Material</h3>
+
+  <p>The <i>dgs_material</i> material shader can simulate mirrors,
+  glossy paint or plastic, anisotropic glossy materials such as
+  brushed metal, diffuse materials such as paper, translucent
+  materials such as frosted glass, and any combination of these.
+  This shader cannot be used as a shadow shader because shadows can
+  only be computed along straight light rays, which does not agree
+  with the definition of DGS materials. Use global illumination to
+  illuminate objects in partial shadow from DGS objects.</p>
+
+  <a id="INDEX67"></a>
+<h5 class="anchor" id="mi_shader__dgs_material">dgs_material</h5>
+  <pre>
+    color "dgs_material" (
+        color           "diffuse",
+        color           "glossy",
+        color           "specular",
+        scalar          "shiny",
+        scalar          "shiny_u",
+        scalar          "shiny_v",
+        scalar          "transp",
+        scalar          "ior",
+        array light     "lights"
+        integer         "mode")
+</pre>
+
+<dl>
+  <dt>diffuse<dd> is added to the result for each light, after
+  multiplication with the color returned by the light and a weight
+  based on the dot product of the incident light direction and the
+  light direction.
+
+  <dt>glossy<dd> provides the color of glossy highlights.
+
+  <dt>specular<dd> provides the color of mirror reflections.
+
+  <dt>shiny<dd> determines the width of the isotropic glossy
+  reflection, in a manner similar to the Phong reflection exponent:
+  5 is very wide and 100 is very narrow. If shiny is nonzero, the
+  following five anisotropic parameters are ignored.
+
+  <dt>shiny_u<br>shiny_v<dd> are used for anisotropic
+  glossy reflection. The specify the width of the glossy reflection
+  is in the first derivative U and V directions. (Derivatives must
+  be enabled or specified on the polygons or free-form surfaces
+  that this shader is applied to.) The regular shiny parameter must
+  be undefined or set to 0.
+
+  <dt>transp<dd> specifies transparency (if ior is 1) or
+  refractivity (if ior is not 1). It also indirectly specifies
+  reflectivity, as <i>1 - transp</i>. Specular transmission is the
+  same as refraction, while glossy and diffuse transmission is
+  known as translucency.
+
+  <dt>ior<dd> is the index of refraction of the material. Metals
+  typically have higher index of refraction than glass.
+
+  <dt>lights<dd>is a list of light instances used for
+  <a href="node8.html#lightlists">light lists</a>.
+
+  <dt>mode<dd>controls which lights to use, see
+  <a href="node8.html#lightlists">light lists</a>.
+</dl>
+
+  <p>For isotropic reflection, use the shiny parameter and leave
+  the shiny_u and shiny_v parameters undefined. If the shiny
+  parameter is undefined or zero, the shader will check whether
+  shiny_u and shiny_v are defined and nonzero, and if so, compute
+  anisotropic reflection. The surface U direction is used as the
+  anisotropic brushing direction.</p>
+
+  <h3>Dielectric Material</h3>
+
+  <p>The <i>dielectric_material</i> shader is a physically based
+  material shader which can be used to simulate dielectric media
+  such as glass, water, and other liquids. The shader uses
+  Fresnel's formulas for dielectric interfaces. This means that
+  most light is transmitted through the surface for perpendicular
+  incident directions while most light is reflected by the surface
+  for grazing incident angles, simulating the behavior of real
+  dielectric materials. The shader also uses Beer's law for
+  absorption of light that passes through a medium. This means that
+  the light is subject to an exponential falloff as it is
+  transmitted between two surfaces with dielectric material.</p>
+
+  <p>Two types of dielectric interfaces are supported:
+  dielectric-air simulates the interface between a dielectric
+  material and air, such as glass-air, and dielectric-dielectric
+  simulates the interface between two dielectric materials, such as
+  glass-water.</p>
+
+  <p>Two achieve physically correct simulations it is important to
+  use the correct surface interfaces. When modeling a glass of
+  cognac three different interfaces are required: glass-air,
+  glass-cognac, and cognac-air. The dielectric material uses the
+  normals of the surface to distinguish the media on either side of
+  the interface. For a dielectric-air interface the normals point
+  into the air. For a dielectric-dielectric interface the normal
+  point into a dielectric material which is "outside". To use the
+  dielectric material the model normals must be oriented correctly
+  unless the ignore_normals parameter is set to true. This shader
+  cannot be used as a shadow shader.</p>
+
+  <a id="INDEX68"></a>
+<h5 class="anchor" id="mi_shader__dielectric_material">dielectric_material</h5>
+  <pre>
+    color "dielectric_material" (
+        color           "col",
+        scalar          "ior",
+        color           "col_out",
+        scalar          "ior_out",
+        boolean         "ignore_normals"
+        scalar          "phong_coef",
+        array lights    "lights",
+        integer         "mode")
+</pre>
+
+<dl>
+  <dt>col<dd> is the "persistence" coefficient which
+  corresponds to the fraction of light which is left after
+  traversing one unit of material. Thus 0.9 means that 10% of the
+  light is absorbed per unit length of the material. Lengths are
+  measured in world coordinates.
+
+  <dt>ior<dd> is the index of refraction of the dielectric material.
+
+  <dt>col_out<dd> if specified, the material is a
+  dielectric-dielectric interface and col_out is the persistence
+  coefficient of the outside dielectric material.
+
+  <dt>ior_out<dd> is used in combination with col_out to describe
+  the outside dielectric material.
+
+  <dt>ignore_normals<dd>: normally the decision whether a ray
+  enters or leaves the object is based on the direction of the
+  normal (towards or away from the incident ray). If the object is
+  poorly modeled and the normals cannot be trusted, this flag can
+  be set to make the dielectric material shader count the number of
+  times the ray has entered and left the object before instead of
+  relying on the normal direction.
+
+  <dt>pcoef<dd> is a phong coefficient used to compute
+  <i>normalized phong highlights</i> which again is used to
+  generate a fake impression of an area light source. If this
+  component is zero there will be no fake highlights and only the
+  reflected rays can create highlight effects if they hit something
+  bright.
+
+  <dt>lights<dd>is a list of light instances used for
+  <a href="node8.html#lightlists">light lists</a>.
+
+  <dt>mode<dd>controls which lights to use, see
+  <a href="node8.html#lightlists">light lists</a>.
+</dl>
+
+  <h3>Path Material</h3>
+
+  <p>The <i>path_material</i> shader implements path raytracing.
+  On contrary to the distributed raytracing, for each ray hit, at most
+  one ray is reflected or refracted when path raytracing is used.
+  With sufficiently large trace depth limits, most of the indirect
+  illumination effects are computed correctly. However, the results
+  are very noisy and an extremely high number of samples is required
+  for obtaining high quality images.</p>
+  
+  <p>
+  Note that finalgather and globillum settings have no effect
+  on the surfaces with <i>path_material</i>: the diffuse indirect 
+  illumination component
+  is computed by reflecting at most one ray according to a
+  Lambertian-distributed direction. 
+  There is no <i>path_material_photon</i> shader.
+  For rendering speedup, finalgather and photon emission
+  should be disabled. Higher trace depth setting than in the
+  scenes using photons may be required.
+  </p>
+
+  <a id="INDEX67a"></a>
+<h5 class="anchor" id="mi_shader__path_material">path_material</h5>
+<pre>
+    color "path_material" (
+        color           "diffuse",
+        color           "glossy",
+        color           "specular",
+        scalar          "shiny",
+        scalar          "shiny_u",
+        scalar          "shiny_v",
+        scalar          "transp",
+        scalar          "ior",
+        array light     "lights",
+        integer         "mode")
+</pre>
+
+   <p>
+   The parameters and where meanings are identical to those of the
+   <i><a href="node20.html#mi_shader__dgs_material">dgs_material</a></i>
+   shader.</p>
+
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node19.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node21.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

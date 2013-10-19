@@ -1,0 +1,70 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Contour Computation</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node129.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node131.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION128"></a>
+<h3>Contour Computation</h3>
+<p>A regular color image is created by recursively
+<a href="node76.html#INDEX181">sampling</a> the scene, that is, casting
+rays into the geometry. The same samples are used to generate the
+contours. With each sample, some user-specified information is
+stored by the user-specified <i>contour store function</i>,
+information that is used later for determining the locations,
+colors, and widths of the contours. The contour store function is
+called right after the material shader and saves information such
+as ray intersection point, the normal at the intersection point,
+object tag, material color, refraction level, etc.</p>
+<p>During recursive sampling, the decision whether to take
+additional samples is based on the comparison of two adjacent
+samples. New samples are taken if the color contrast is
+sufficiently large (as defined by the <tt>contrast</tt> for moving
+objects, or if a user-specified <i>contour contrast shader</i>
+returns <tt>miTRUE</tt>. The <a href="node40.html#INDEX85">contour
+contrast shader</a> can base its decision on any information that
+was stored by the contour store function for the two sample points.
+For example, the contour contrast function could return
+<tt>miTRUE</tt> if their depths or orientations differ much.</p>
+<p>When two samples are at minimum distance (according to the value
+of the <tt>max samples</tt> parameter), and their contour contrast
+is still high (that is, the contour contrast shader returns
+<tt>miTRUE</tt>), mental ray assumes that a contour must be drawn
+between the two samples and calls a user-specified <i>contour
+shader</i>. The contour shader computes the contour color and width
+depending on, for example, curvature (orientation difference), Z
+depth, Z depth difference, material color, or some other
+information saved by the contour store shader. The contour shader
+of the object closest to the camera is used. If no contour shader
+is specified for the material, it does not get a contour. The
+computed contour point data (contour color, width, etc.) for each
+point on the contour is stored in a temporary data structure.
+mental ray merges these contour points into straight contour line
+segments, each represented by its two endpoints.</p>
+<p>These contour line segments are received by a contour output
+shader in a postprocessing step. The contour output shader reads
+the contour segment endpoints and generates, for example, an image
+or a PostScript file.</p>
+<p>Contour rendering is not compatible with the rasterizer.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node129.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node131.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

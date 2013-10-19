@@ -1,0 +1,338 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// see max_texutil.cpp
+#define B 0x200
+#define RN 10000.0
+#define maxS_curve(t) ( t * t * (3.0 - 2.0 * t) )
+#define maxLerp(t, a, b) ( a + t * (b - a) )
+
+shader hlsl_Swirl_EvalNormal {
+ input:
+  Color SwirlColor = Color(0.0, 0.1, 0.2, 1.0) {
+    display_name("Swirl");
+  };
+  Color BaseColor = Color(0.9, 0.58, 0.3, 1.0) {
+    display_name("Base");
+  };
+  float Intensity = 5.0 {
+    display_name("Swirl Intensity");
+  };
+  float Twist = 0.75 {
+    display_name("Twist");
+  };
+  float ColorContrast = 0.2 {
+    display_name("Color Contrast");
+  };
+  float XCenter = -0.5 {
+    display_name("Center Position X");
+    hard_range(-10.0, 10.0);
+  };
+  float YCenter = -0.5 {
+    display_name("Center Position Y");
+    hard_range(-10.0, 10.0);
+  };
+  float Amount = 2.0 {
+    display_name("Swirl Amount");
+  };
+  const int ConstantDetail = 4 {
+    display_name("Constant Detail");
+    hard_range(0, 7);
+  };
+  float RandomSeed = 41108.601562 {
+    display_name("Random Seed");
+    hard_range(0.0, 65535.0);
+  };
+  // TODO: bool LockBackground
+  Shader Coords;
+  Shader SwirlMap;
+  Shader BaseMap;
+  const bool SwirlMapEnabled = false {
+    display_name("Swirl Map Enabled");
+  };
+  const bool BaseMapEnabled = false {
+    display_name("Base Map Enabled");
+  };
+  // TODO: int GBufferID
+
+  // textures
+  Texture2d noise_tables = "noise_out.dds" {
+    disable_filtering();
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+
+ output:
+  Color result;
+
+  // see max_support.cpp
+  float maxIntensity(in Color c) {
+    float f = (c.r + c.g + c.b) * 0.333333333;
+    return f;
+  } // maxIntensity
+
+  // see max_support.cpp
+  Color LimitColor(in Color c) {
+    Color local_result = c;
+    if (local_result.r < 0.0) local_result.r = 0.0;
+    else if (local_result.r > 1.0) local_result.r = 1.0;
+    if (local_result.g < 0.0) local_result.g = 0.0;
+    else if (local_result.g > 1.0) local_result.g = 1.0;
+    if (local_result.b < 0.0) local_result.b = 0.0;
+    else if (local_result.b > 1.0) local_result.b = 1.0;
+    return local_result;
+  } // LimitColor
+
+  // see max_texutil.cpp
+  void maxSetup(in float v,
+		inout int b0, inout int b1,
+		inout float r0, inout float r1) {
+    float t = v + RN;
+    int it = (int) t;
+    b0 = it - (it / B) * B; // ((int)t) & BM;
+    // (b0+1) & BM;
+    b1 = b0 + 1;
+    if (b1 >= B) b1 = 0;
+    r0 = (float)(t - (int) t);
+    r1 = r0 - 1.0; // what if r0 < 1.0?
+  } // maxSetup
+
+  // additional functions for texture lookup
+  int p(in int i1) {
+    // int x_pix = i1 % 114;
+    int y_pix = i1 / 114; // 0 <= y < 9
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    // return int((511.0 * tex2d(noise_tables, float2(x, y)).r + 0.5));
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    return int((c.r + 0.5));
+  } // p
+
+  float g3(in int i1, in int i2) {
+    // int x_pix = i1 % 114;
+    int y_pix = 27 + i1 / 114; // 27 <= y < 36
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    if (i2 == 0)
+      return c.r;
+    else if (i2 == 1)
+      return c.g;
+    else if (i2 == 2)
+      return c.b;
+    else {
+      error("g3(%d, %d)", i1, i2);
+      return 0.0;
+    }
+  } // g3
+
+  // see max_texutil.cpp
+  float maxNoise3(float vecx, float vecy, float vecz) {
+    int bx0 = 0;
+    int bx1 = 0;
+    float rx0 = 0.0;
+    float rx1 = 0.0;
+    maxSetup(vecx, bx0, bx1, rx0, rx1);
+    int by0 = 0;
+    int by1 = 0;
+    float ry0 = 0.0;
+    float ry1 = 0.0;
+    maxSetup(vecy, by0, by1, ry0, ry1);
+    int bz0 = 0;
+    int bz1 = 0;
+    float rz0 = 0.0;
+    float rz1 = 0.0;
+    maxSetup(vecz, bz0, bz1, rz0, rz1);
+    int i = p(bx0);
+    int j = p(bx1);
+    int b00 = p(i + by0);
+    int b10 = p(j + by0);
+    int b01 = p(i + by1);
+    int b11 = p(j + by1);
+    float sx = maxS_curve(rx0);
+    float sy = maxS_curve(ry0);
+    float sz = maxS_curve(rz0);
+    float u = 0.0;
+    float v = 0.0;
+    u = (rx0 * g3(b00 + bz0, 0) +
+	 ry0 * g3(b00 + bz0, 1) +
+	 rz0 * g3(b00 + bz0, 2));
+    v = (rx1 * g3(b10 + bz0, 0) +
+	 ry0 * g3(b10 + bz0, 1) +
+	 rz0 * g3(b10 + bz0, 2));
+    float a = maxLerp(sx, u, v);
+    u = (rx0 * g3(b01 + bz0, 0) +
+	 ry1 * g3(b01 + bz0, 1) +
+	 rz0 * g3(b01 + bz0, 2));
+    v = (rx1 * g3(b11 + bz0, 0) +
+	 ry1 * g3(b11 + bz0, 1) +
+	 rz0 * g3(b11 + bz0, 2));
+    float b = maxLerp(sx, u, v);
+    float c = maxLerp(sy, a, b);
+    u = (rx0 * g3(b00 + bz1, 0) +
+	 ry0 * g3(b00 + bz1, 1) +
+	 rz1 * g3(b00 + bz1, 2));
+    v = (rx1 * g3(b10 + bz1, 0) +
+	 ry0 * g3(b10 + bz1, 1) +
+	 rz1 * g3(b10 + bz1, 2));
+    a = maxLerp(sx, u, v);
+    u = (rx0 * g3(b01 + bz1, 0) +
+	 ry1 * g3(b01 + bz1, 1) +
+	 rz1 * g3(b01 + bz1, 2));
+    v = (rx1 * g3(b11 + bz1, 0) +
+	 ry1 * g3(b11 + bz1, 1) +
+	 rz1 * g3(b11 + bz1, 2));
+    b = maxLerp(sx, u, v);
+    float d = maxLerp(sy, a, b);
+    return maxLerp(sz, c, d);
+  } // maxNoise3
+
+  // see tex_swirl.cpp
+  Color maxSwirlFunc(in float u, in float v,
+		     // shader parameters
+		     in bool SwirlMapEnabled, in Color SwirlMap,
+		     in bool BaseMapEnabled, in Color BaseMap) {
+    Color local_result = Color(0.0, 0.0, 0.0, 0.0);
+    // local copies
+    float local_u = u;
+    float local_v = v;
+    // others
+    local_u += XCenter;
+    local_v += YCenter;
+    float rsq = local_u * local_u + local_v * local_v;
+    float twist = Twist;
+    float angle = twist * TWO_PI * rsq;
+    float sine = sin(angle);
+    float cosine = cos(angle);
+    float3 PP = float3(0.0, 0.0, 0.0);
+    PP.x = local_v * cosine - local_u * sine;
+    PP.y = local_v * sine + local_u * cosine;
+    PP.z = RandomSeed;
+    // compute VLfBm
+    float l = 1.0;
+    float o = 1.0;
+    float a = 0.0;
+    int i = 0;
+    int octaves = ConstantDetail;
+    float omega = ColorContrast;
+    float PPx = 0.0;
+    float PPy = 0.0;
+    float PPz = 0.0;
+    for (i = 0; i < octaves && i < 7; i++) {
+      PPx = PP.x * l;
+      PPy = PP.y * l;
+      PPz = PP.z * l;
+      a += o * maxNoise3(PPx, PPy, PPz);
+      l *= 2.0;
+      o *= omega;
+    } // for (i = 0; i < octaves; i++)
+    float offset = Amount;
+    float scale = Intensity;
+    float value = offset * scale * a;
+    Color r1 = Color(0.0, 0.0, 0.0, 0.0);
+    if (SwirlMapEnabled) {
+      r1 = SwirlMap;
+    } // if (SwirlMapEnabled)
+    else {
+      r1 = SwirlColor;
+    } // else [ if (SwirlMapEnabled) ]
+    Color r2 = Color(0.0, 0.0, 0.0, 0.0);
+    if (BaseMapEnabled) {
+      r2 = BaseMap;
+    } // if (BaseMapEnabled)
+    else {
+      r2 = BaseColor;
+    } // else [ if (BaseMapEnabled) ]
+    local_result.r = (r1.r * value) + (r2.r * (1.0 - value));
+    local_result.g = (r1.g * value) + (r2.g * (1.0 - value));
+    local_result.b = (r1.b * value) + (r2.b * (1.0 - value));
+    local_result = LimitColor(local_result);
+    local_result.a = 1.0;
+    return local_result;
+  } // maxSwirlFunc
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // uv-coords
+    float u = texture_coordinate[0].x;
+    float v = texture_coordinate[0].y;
+    float2 duv = float2(0.0, 0.0);
+    float2 d = float2(0.0, 0.0);
+    float3 dPdu = float3(0.0, 0.0, 0.0);
+    float3 dPdv = float3(0.0, 0.0, 0.0);
+    // try to call hlsl_base_UVGenerator
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Coords.call("output", "result", shader_return,
+		    "output", "duv", duv,
+		    "output", "d", d,
+		    "output", "dPdu", dPdu,
+		    "output", "dPdv", dPdv)) {
+      u = shader_return.r;
+      v = shader_return.g;
+    }
+    else {
+      duv = (abs(ddx(texture_coordinate[0]).xyz) +
+	     abs(ddy(texture_coordinate[0]).xyz)).xy;
+      if(duv.x == 0.0 && duv.y == 0.0) {
+	duv = float2(0.002, 0.002);
+      }
+      d = duv;
+      dPdu = texture_tangent [0];
+      dPdv = texture_binormal[0];
+    }
+    // call other shader parameters
+    Color SwirlMapColor = Color(0.0, 0.0, 0.0, 0.0);
+    bool useSwirlMap = false;
+    if (SwirlMapEnabled && SwirlMap.call("output", "result", SwirlMapColor)) {
+      useSwirlMap = true;
+    }
+    Color BaseMapColor = Color(0.0, 0.0, 0.0, 0.0);
+    bool useBaseMap = false;
+    if (BaseMapEnabled && BaseMap.call("output", "result", BaseMapColor)) {
+      useBaseMap = true;
+    }
+    // use uv-coords
+    float3 dM = float3(0.0, 0.0, 0.0);
+    float du = duv.x;
+    float dv = duv.y;
+    Color sample_result = Color(0.0, 0.0, 0.0, 0.0);
+    sample_result = maxSwirlFunc(u, v,
+				 // shader parameters
+				 SwirlMapEnabled, SwirlMapColor,
+				 BaseMapEnabled, BaseMapColor);
+    float m0 = maxIntensity(sample_result);
+    float m1 = 0.0;
+    float m2 = 0.0;
+    if ((du != 0.0) && (d.x != 0.0)) {
+      sample_result = maxSwirlFunc(u + d.x, v,
+				   // shader parameters
+				   SwirlMapEnabled, SwirlMapColor,
+				   BaseMapEnabled, BaseMapColor);
+      m1 = maxIntensity(sample_result);
+      dM.x = -(m1 - m0) / du;
+    } // if ((du != 0.0) && (du != 0.0))
+    else dM.x = 0.0;
+    if ((dv != 0.0) && (d.y != 0.0)) {
+      sample_result = maxSwirlFunc(u, v + d.y,
+				   // shader parameters
+				   SwirlMapEnabled, SwirlMapColor,
+				   BaseMapEnabled, BaseMapColor);
+      m2 = maxIntensity(sample_result);
+      dM.y = -(m2 - m0) / dv;
+    } // if ((dv != 0.0) && (dv != 0.0))
+    else dM.y = 0.0;
+    dM.z = 0.0;
+    dM.x *= 0.02;
+    dM.y *= 0.02;
+    dM.z *= 0.02;
+    result.r = dM.x * dPdu.x + dM.y * dPdv.x;
+    result.g = dM.x * dPdu.y + dM.y * dPdv.y;
+    result.b = dM.x * dPdu.z + dM.y * dPdv.z;
+  } // main
+};

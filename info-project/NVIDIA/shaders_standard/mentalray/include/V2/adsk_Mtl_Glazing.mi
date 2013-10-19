@@ -1,0 +1,510 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	mtarpini
+# Purpose:	Glazing Material 
+#
+# ---------------------------------------------
+# Exports:
+#
+# - adsk_Shd_Glazing_V2		(hidden)
+# - adsk_Mtl_Glazing_V2
+#
+#
+# Imports:
+#
+# - 3dsmax9
+# - adsk_Mtl_Spider
+# - adsk_Utility_shaders
+#
+# ---------------------------------------------
+# Description:
+#
+# Basically the workflow for the phen class implementation looks like this:
+#
+#   - a first low level phen, the appearance shader.
+#
+#   - a controller shader that takes the UI specs and outputs values to drive
+#     the exposed parameters in the appearence shader.
+#
+#   - the actual material class phen which encapsulates the above shaders.
+#
+#
+# ---------------------------------------------
+# History:
+#
+# June 21, 2007 - mtarpini, appearence shader
+# June 22, 2007 - mtarpini, material phen
+# July 10, 2007 - mtarpini, cleanup
+# Dec 10, 2007 - mtarpini, redesign
+# Feb 06, 2008 - laperrr, Updated UI name and Tooltips
+# Jan 02, 2009 - mtarpini, nodevisibility support
+#
+#
+#****************************************************************************
+
+min version "3.6"
+
+
+
+
+
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+# adsk_Shd_Glazing (the Apparence phen)
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+declare phenomenon
+	struct {
+        color   "result",         # main output
+        
+        color "diffuse_result",
+        color "diffuse_raw",
+        color "diffuse_level",
+        
+        color "spec_result",
+        color "spec_raw",
+        color "spec_level",
+        
+        color "refl_result",
+        color "refl_raw",
+        color "refl_level",
+        
+        color "refr_result",
+        color "refr_raw",
+        color "refr_level",
+        
+        color "tran_result",
+        color "tran_raw",
+        color "tran_level",
+        
+        color "indirect_result",
+        color "indirect_raw",
+        color "indirect_post_ao",
+        color "ao_raw",
+        
+        color "add_result",
+        
+        color  "opacity_result",
+        color  "opacity_raw",
+        scalar "opacity"
+    } 
+    "adsk_Shd_Glazing_V2"
+	(
+		#-------------------------------------
+		# Main Parameters
+		#-------------------------------------
+		struct "m"
+		{						
+			#----------------------------------
+			color	"refr_color",
+			color	"refl_color",
+			scalar  "brdf_0_degree_refl"
+		},
+    
+		#-------------------------------------
+		# Performance Tuning Parameters
+		#-------------------------------------
+		struct "p"
+		{
+			#----------------------------------      			
+	      	integer "refl_depth",			
+	      	integer "refr_depth"
+		},
+
+		#----------------------------------
+		# Lights and Mode Parameters
+		#----------------------------------
+		integer     "mode",
+		array light "lights"
+	)
+
+	apply material, photon, shadow
+	version 1
+	
+
+
+
+    #------------------------------------------------------------------------
+    # Visibility Track Support
+    #------------------------------------------------------------------------
+	shader "node_visibility__instance" "adsk_Utility_NodeVisibility" 
+	(
+		"input" 1 1 1 1, 		#this is controlled internally
+		"mode" 0
+	)
+	
+	shader "mia_optimizer" "adsk_Mia_Optimizer"
+	(
+		"material_type"         5, # Glazing (see enum in the optimizer shader code)
+		"reflectivity"          1.0,
+		"brdf_0_degree_refl"  = interface "m.brdf_0_degree_refl",
+		"brdf_90_degree_refl"   1.0,
+		"transparency"          1,
+		"refl_gloss"            1,
+		"refr_gloss"            1,
+		"refl_gloss_samples"    0,
+		"refr_gloss_samples"    0,
+		"refl_depth"          = interface "p.refl_depth",
+		"refr_depth"          = interface "p.refr_depth"
+	)
+	
+	#------------------------------------------------------------------------
+	#------------------------------------------------------------------------
+	# Arch & Design Shader (Main Shader)
+	#------------------------------------------------------------------------
+	shader "mia_material__instance" "mia_material_x"
+	(
+		#----------------------------------
+		"diffuse_weight" 1,
+		"diffuse" 0 0 0 1,
+		"diffuse_roughness" 0,
+
+		#----------------------------------
+		"reflectivity"         1.0,
+		"refl_color"         = interface "m.refl_color",
+		"refl_gloss"           1.0,
+		"refl_gloss_samples" = "mia_optimizer.refl_gloss_samples",
+		"refl_interpolate"   = "mia_optimizer.refl_interpolate",
+		"refl_hl_only"       = "mia_optimizer.refl_hl_only",
+		"refl_is_metal"        off,
+		
+		#----------------------------------
+		"transparency" 1, 
+		"refr_color" = interface "m.refr_color",
+		"refr_gloss" 1.0,
+		"refr_ior" 1.0,
+		"refr_gloss_samples" = "mia_optimizer.refr_gloss_samples",
+		"refr_interpolate"   = "mia_optimizer.refr_interpolate", 
+		"refr_translucency" off, 
+		"refr_trans_color" 0 0 0 0, 
+		"refr_trans_weight" 0, 
+		
+		#----------------------------------		
+		"anisotropy" 1, 
+		"anisotropy_rotation" 0, 
+		"anisotropy_channel" -1,
+		
+		#----------------------------------		
+		"brdf_fresnel" off, 
+		"brdf_0_degree_refl" = interface "m.brdf_0_degree_refl",
+		"brdf_90_degree_refl" 1.0, 
+		"brdf_curve" 5.0, 
+		"brdf_conserve_energy" on, 
+		
+		#----------------------------------		
+		"intr_grid_density"  = "mia_optimizer.intr_grid_density", 
+		"intr_refl_samples"  = "mia_optimizer.intr_refl_samples", 
+		"intr_refl_ddist_on" = "mia_optimizer.intr_refl_ddist_on", 
+		"intr_refl_ddist"    = "mia_optimizer.intr_refl_ddist", 
+		"intr_refr_samples"  = "mia_optimizer.intr_refr_samples", 
+		"single_env_sample"  = "mia_optimizer.single_env_sample", 
+		
+		#----------------------------------		
+		"refl_falloff_on"   = "mia_optimizer.refl_falloff_on", 
+		"refl_falloff_dist" = "mia_optimizer.refl_falloff_dist", 
+		"refl_falloff_color_on" off, 
+		"refl_falloff_color" 0 0 0 0, 
+		"refl_depth"        = "mia_optimizer.refl_depth", 
+		"refl_cutoff"       = "mia_optimizer.refl_cutoff", 
+		
+		#----------------------------------
+		"refr_falloff_on" = "mia_optimizer.refr_falloff_on",
+		"refr_falloff_dist" = "mia_optimizer.refr_falloff_dist",
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0 0 0 0,
+		"refr_depth"  = "mia_optimizer.refr_depth",
+		"refr_cutoff" = "mia_optimizer.refr_cutoff",
+
+		#----------------------------------
+		"indirect_multiplier" = "mia_optimizer.indirect_multiplier",
+		"fg_quality"          = "mia_optimizer.fg_quality",
+		"fg_quality_w"        = "mia_optimizer.fg_quality_w",
+		
+		#----------------------------------
+		"thin_walled" on,
+		"no_visible_area_hl" on,
+		
+		#----------------------------------	
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" on,
+		"hl_vs_refl_balance" 1,
+        "cutout_opacity" = "node_visibility__instance",			#nodevisibility hook
+		"additional_color" 0 0 0 1,
+
+		#----------------------------------
+		"mode" = interface "mode",
+		"lights" = interface "lights",
+
+		#----------------------------------
+		"multiple_outputs" off
+
+	)#end shader
+	
+	
+
+	
+	
+	#------------------------------------------------------------------------
+	# Phenomenon Root
+	#------------------------------------------------------------------------
+	root = "mia_material__instance"
+
+
+
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Glazing_V2"	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Glazing_V2", "category" "Material"
+		, "hidden"
+		)
+
+		#-------------------------------------
+		# Lights and Mode Parameters
+		#-------------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+	}
+
+end declare
+#---------------------------------------------------------------------------------
+# <- end, declare phenomenon
+#---------------------------------------------------------------------------------
+
+
+
+
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+# adsk_Mtl_Glazing (the Material phen)
+#---------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------
+declare phenomenon
+ 	material "adsk_Mtl_Glazing_V2"
+	(
+		#-------------------------------------
+		# Main Parameters
+		#-------------------------------------
+		struct "m"
+		{
+			#----------------------------------
+			boolean  "color_by_object",			
+			integer "transmittance_color",
+			color   "transmittance_map",
+			integer "no_levels",
+			
+			#----------------------------------			
+			scalar "reflectance",
+
+			#----------------------------------
+			boolean		"tint_enable" default off,
+			color		"tint_color" default 1.0 1.0 1.0  
+		},    
+
+		#-------------------------------------
+		# Performance Tuning Parameters
+		#-------------------------------------
+		struct "p"
+		{
+			#----------------------------------	      			
+	      	integer "refl_depth",			
+	      	integer "refr_depth"
+		},
+	
+		#-------------------------------------
+		# Internals
+		#-------------------------------------
+		struct "x"
+		{
+			#----------------------------------
+	      	integer "gbuffer_id"
+		},
+		
+		#----------------------------------
+		# Lights Parameters
+		#----------------------------------
+		integer "mode",
+		array light "lights"
+
+	)#end material
+
+
+
+	#------------------------------------------------------------------------
+	# Spider
+	#------------------------------------------------------------------------
+	shader "spider_instance" "adsk_Shd_Glazing_spider"
+	(
+		"no_levels" = interface "m.no_levels",
+		"color_by_object" = interface "m.color_by_object",
+		"transmittance_color" = interface "m.transmittance_color",
+		"transmittance_map" = interface "m.transmittance_map",
+		
+		"reflectance" = interface "m.reflectance"
+	)
+
+	#------------------------------------------------------------------------
+	# adsk_Shd_Glazing_V2
+	#------------------------------------------------------------------------	
+	shader "adsk_Shd_Glazing__instance" "adsk_Shd_Glazing_V2"
+	(	
+		#-------------------------------------
+		# Main Parameters
+		#-------------------------------------
+		"m"
+		{
+			#----------------------------------
+			"refr_color" = "spider_instance.refr_color",
+			"refl_color" = "spider_instance.refl_color",
+			"brdf_0_degree_refl" = "spider_instance.brdf_0_degree_refl"
+		},
+				
+		#-------------------------------------
+		# Performance Tuning Parameters
+		#-------------------------------------
+		"p"
+		{     	
+	      	"refl_depth" = interface "p.refl_depth",
+	      	"refr_depth" = interface "p.refr_depth"	      	
+		},
+		
+		#----------------------------------
+		# Lights Parameters
+		#----------------------------------
+		"mode" = interface "mode",
+		"lights" = interface "lights"	
+	)
+
+
+	#------------------------------------------------------------------------
+	# Render Elements support  ##############################################
+	#------------------------------------------------------------------------	
+	shader "max_mia_mat_renderelem__instance" "adsk_Utility_MiaDecomposer" 
+	(
+		"mia_material" "adsk_Shd_Glazing__instance",
+		"GBufferID" = interface "x.gbuffer_id"
+	)
+	
+	shader "Tint Enable|Shader" "adsk_Utility_Bool_to_Int"
+    (
+        "bool_in" = interface "m.tint_enable"  
+    )
+
+    shader "Tint Multiply|Shader" "mib_color_mix" 
+    (
+        "num" = "Tint Enable|Shader", 
+        "mode_0" 4, 
+        "mode_1" 0, 
+        "mode_2" 0, 
+        "mode_3" 0, 
+        "mode_4" 0, 
+        "mode_5" 0, 
+        "mode_6" 0, 
+        "mode_7" 0, 
+        "weight_0" 1, 
+        "weight_1" 0, 
+        "weight_2" 0, 
+        "weight_3" 0, 
+        "weight_4" 0, 
+        "weight_5" 0, 
+        "weight_6" 0, 
+        "weight_7" 0, 
+        "color_0"  = interface "m.tint_color", 
+        "color_1" 0 0 0 1, 
+        "color_2" 0 0 0 1, 
+        "color_3" 0 0 0 1, 
+        "color_4" 0 0 0 1, 
+        "color_5" 0 0 0 1, 
+        "color_6" 0 0 0 1, 
+        "color_7" 0 0 0 1, 
+        "color_base"  = "max_mia_mat_renderelem__instance"
+    )
+
+	#------------------------------------------------------------------------
+	#------------------------------------------------------------------------
+	# Material Connections
+	#------------------------------------------------------------------------
+	material "mat"
+						= "Tint Multiply|Shader"
+		shadow			= "adsk_Shd_Glazing__instance"
+		photon			= "adsk_Shd_Glazing__instance"
+	end material
+	root material "mat"
+
+
+
+	#------------------------------------------------------------------------
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Mtl_Glazing_V2"
+	{
+		#----------------------------------
+		control "Global" "Global" 
+		(
+			"uiName" "ProMaterials: Glazing V2", "category" "Material",          
+			"viewport_diffuse" "m.transmittance_map",
+			"viewport_specular" 1.0 1.0 1.0,
+			"viewport_shininess" 1,
+			"viewport_transparency" .62,
+			"hidden"
+		)
+
+		#-------------------------------------
+		#  Material Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Glazing Material Parameters", "openstate" "true")
+		{
+				
+			control "color_by_object" "boolean" ("hidden")
+
+			control "transmittance_color" "integer" ("enum", "nonConnectable", 	
+				"uiName" "Color (Transmittance)", 
+				"value" "0 Clear, 1 Green, 2 Gray, 3 Blue, 4 Blue-Green, 5 Bronze, 6 Custom Color",  
+				"range" 0 6)
+			control "transmittance_map"  "color" ("uiName"  "-> Custom Color", "value" 0.776 0.827 0.769, "helpText" "Use when 'Color (Transmittance): Custom' is selected")
+			control "no_levels" "integer" ("nonConnectable", "uiName" "Refraction Levels (N. Poly to Traverse)", "value" 2,  "range" 1 6,
+												"helpText" "Number of layers in the glazing")
+			control "reflectance" "scalar" ("nonConnectable", "uiName" "Reflectance", "value" 0.1, "range" 0.0 1.0)
+		}
+		
+ 		#-------------------------------------
+		# Performance Tuning Parameters
+ 		#-------------------------------------
+		control "p" "struct" ("uiName" "Performance Tuning Parameters", "openstate" "false")
+		{
+			#----------------------------------
+			control "refl_depth"  "integer" ("nonConnectable", "uiName"  "Reflection Max Trace Depth", "value" 0, "range" 0 20,
+												"helpText" "Number of times each ray is reflected. When set to zero, global render settings take precedence.")
+			control "refr_depth"  "integer" ("nonConnectable", "uiName"  "Refraction Max Trace Depth", "value" 0, "range" 0 20,
+												"helpText" "Number of times each ray is refracted. When set to zero, global render settings take precedence.")
+		}
+
+		#-------------------------------------
+		# Internal
+ 		#-------------------------------------
+		control "x" "struct" ("uiName" "Internals", "openstate" "false")
+		{
+			#----------------------------------
+			control "gbuffer_id"  "integer" (hidden, "nonConnectable", "uiName"  "Translator must link here to pass a different ID", "value" 7)
+		}
+	        
+		#-------------------------------------
+		# Lights and Mode Parameters
+		#-------------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+
+	}#end gui
+
+end declare
+#---------------------------------------------------------------------------------
+# <- end, declare phenomenon
+#---------------------------------------------------------------------------------

@@ -1,0 +1,30 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+shader max_Output {
+ input:
+    Shader  Map1;
+    bool    Map1Enabled;
+    Shader  Output;
+  
+ output:
+  Color result;
+
+  void main() {
+  
+    Color value = Color(0,0,0,0);
+	result      = Color(0,0,0,0);
+    
+    if (Map1Enabled /* && Map1 */)
+        Map1.call("output", "result", value);
+
+    result = value;
+
+    /* if (Output) */
+        Output.call("input", "inputColor", value, "output", "result", result); 
+  } // main
+};

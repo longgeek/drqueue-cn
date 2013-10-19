@@ -1,0 +1,637 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="Author" content="mental images GmbH">
+<meta name="Company" content="mental images">
+<meta name="Creator" content="hypertex">
+<meta name="CreatorVersion" content="1.0">
+<meta name="CreationDate" content="18 Feb 2010">
+<link rel="stylesheet" type="text/css" href="mental.css">
+<style type="text/css"> i {color:darkred} dfn {font-style:italic}
+var {font-weight:bold; color:black} </style><title>Motion Blur Shaders</title>
+</head><body>
+<ul class="nav">
+<li><a href="production.html">home</a></li>
+<li><a href="prod_intro.html">&laquo;&nbsp;prev</a></li>
+<li><a href="prod_card_opacity.html">next&nbsp;&raquo;</a></li>
+</ul>
+<h1>Motion Blur Shaders</h1>
+<div class="pic">
+<img width="100%" src="images/mblur.jpg" alt="Motion Blur"><br />Motion Blur
+</div>
+<p>
+
+<p>
+<h2 id="Introduction">Introduction</h2>
+<p>
+Real world objects photographed with a real world camera exhibit
+<i>motion blur</i>. When rendering in mental ray, one has several 
+choices for how to achieve these trade-offs. There are three 
+principally different methods:
+<br />
+<ul>
+
+<li> Raytraced 3d motion blur
+<li> Fast rasterizer (aka. &quot;rapid scanline&quot;) 3d motion blur
+<li> Post processing 2d motion blur
+</ul>
+
+<p>
+Each method has it's advantages and disadvantages:
+<p>
+<h3 id="Raytraced_3d_Motion_Blur">Raytraced 3d Motion Blur</h3>
+<p>
+This is the most advanced and &quot;full featured&quot; type of motion blur.
+For every spatial sample within a pixel, a number of temporal rays
+are sent. The number of rays are defined by the &quot;time contrast&quot; set
+in the options block, the actual number being  1 / &quot;time contrast&quot;
+(unless the special mode &quot;fast motion blur&quot; is enabled, which sends
+a single temporal sample per spatial sample<a href="#Foot1" title="&quot;Fast motion blur&quot; mode is enabled by setting &quot;time contrast&quot; to zero and having the upper and lower image sampling rates the same, i.e. something like &quot;samples 2 2&quot;. Read more about &quot;Fast motion blur&quot; mode at http://www.lamrug.org/resources/motiontips.html "><sup>1</sup></a>).
+<p>
+Since every ray is shot at a different time, <i>everything</i> is 
+motion blurred in a physically correct manner. A flat moving mirror
+moving in it's mirror plane will only show blur on it's edges -
+the mirror reflection itself will be stationary. Shadows, reflections,
+volumetric effects... everything is correctly motion blurred. Motion
+can be multi-segmented, meaning rotating object can have motion 
+blur &quot;streaks&quot; that go in an arc rather than a line.
+<p>
+But the trade-off is rendering time, since full ray tracing is 
+performed multiple times at temporal sampling locations, and
+every ray traced evaluates the full shading model of the sample.
+<p>
+With this type of motion blur, the render time for a motion blurred
+object increases roughly linearly with the number of temporal 
+samples (i.e. 1 / &quot;time contrast&quot;).
+<p>
+<h3 id="Fast_Rasterizer_(aka_&quot;Rapid_Scanline&quot;)_Motion_Blur">Fast Rasterizer (aka &quot;Rapid Scanline&quot;) Motion Blur</h3>
+<p>
+The rasterizer is the new &quot;scanline&quot; renderer introduced in mental
+ray 3.4, and it performs a very advanced subpixel tessellation which
+decouples <i>shading</i> and <i>surface sampling</i>.
+<p>
+The rasterizer takes a set of shading samples and allows a low 
+number of shading samples to be re-used as spatial samples. The 
+practical advantage is that fast motion blur (as well as extremely
+high quality anti aliasing, which is why one should generally use the
+rasterizer when dealing with hair rendering) is possible.
+<p>
+The trade-off is that the shading samples are re-used. This means
+that the flat mirror in our earlier example will actually smear
+the reflection in the mirror together with the mirror itself. In
+most practical cases, this difference is not really visually 
+significant.
+<p>
+The motion blur is still fully 3d, and the major advantage is that
+the rendering time does <i>not</i> increase linearly with the 
+number of samples per pixel, i.e. using 64 samples per pixel is
+<i>not</i> four times slower than 16 samples. The render time
+is more driven by the number of shading samples per pixel.
+<p>
+<h3 id="Post_Processing_2d_Motion_Blur">Post Processing 2d Motion Blur</h3>
+<p>
+Finally we have motion blur as a post process. It works by using
+pixel motion vectors stored by the rendering phase and &quot;smearing&quot;
+these into a visual simulation of motion blur.
+<p>
+Like using the rasterizer, this means that features such as 
+mirror images or even objects seen through foreground transparent
+object will &quot;streak&quot; together with the foreground object.
+Furthermore, since the motion frame buffer only stores one segment, 
+the &quot;streaks&quot; are always straight, never curved.
+<p>
+The major advantage of this method is rendering speed. Scene or
+shader complexity has no impact. The blur is applied as a mental
+ray &quot;output shader&quot;, which is executed after the main rendering
+pass is done. The execution time of the output shader depends on
+how many pixels need to be blurred, and how far each pixel needs
+to be &quot;smeared&quot;.
+<p>
+<h2 id="Considerations_when_Using_2d_Motion_Blur">Considerations when Using 2d Motion Blur</h2>
+<p>
+<h3 id="Rendering_Motion_Vectors">Rendering Motion Vectors</h3>
+<p>
+The scene must be rendered with the <i>motion vectors</i> 
+frame buffer enabled and filled with proper motion vectors. 
+This is accomplished by rendering with motion blur turned 
+<i>on</i>, but with a shutter length of <i>zero</i>. 
+<p>
+<pre>
+    shutter 0 0
+    motion on
+</pre>
+<p>
+Note the order: &quot;motion on&quot; must come after &quot;shutter 0 0&quot;. 
+<p>
+In older versions of mental ray the following construct was
+necessary:
+<p>
+<pre>
+    motion on
+    shutter 0 0.00001
+    time contrast 1 1 1 1
+</pre>
+<p>
+Which means:
+<br />
+<ul>
+
+<li> Setting a very very short but non-zero shutter length
+<li> Using a time contrast of 1 1 1 1
+</ul>
+
+<p>
+If there is a problem and no motion blur is visible, try the 
+above alternate settings.
+<p>
+<h3 id="Visual_Differences___Opacity_and_Backgrounds">Visual Differences - Opacity and Backgrounds</h3>
+<p>
+The 3d blur is a true rendering of the object as it moves
+along the time axis. The 2d blur is a <i>simulation</i> of this
+effect by taking a still image and <i>streaking</i> it along the
+2d on-screen motion vector.
+<p>
+It is important to understand that this yields slightly different
+results, visually.
+<p>
+For example, an object that moves a distance equal to
+<i>it's own width</i> during the shutter interval will
+effectively occupy each 
+point along it's trajectory 50 percent of the time. This means
+the motion blurred &quot;streak&quot; of the object will effectively be rendered 
+50 percent transparent, and any background behind it will show through
+accordingly.
+<p>
+In contrast, an object rendered with the 2d motion blur will be
+rendered in a stationary position, and then these pixels are later
+smeared into the motion blur streaks. This means that over the
+area the object originally occupied (before being smeared) it will
+still be completely opaque with no background showing through, and 
+the &quot;streaks&quot; will fade out in both directions from this location,
+allowing the background to show through on each side.
+<p>
+The end result is that moving objects appear slightly more &quot;opaque&quot;
+when using 2d blur vs true 3d blur. In most cases and for moderate
+motion, this is not a problem and is never perceived as a problem. 
+Only for extreme cases of motion blur will this cause any significant
+issues.
+<div class="pic">
+<img width="80%" src="images/3dblurB0-05.jpg" alt="3D blur"><br />3D blur<br /><img width="80%" src="images/2dblurB-025-05.jpg" alt="2D blur"><br />2D blur<br /></div>
+<p>
+<a name="timing"></a>
+<h3 id="Shutters_and_Shutter_Offsets">Shutters and Shutter Offsets</h3>
+<p>
+To illustrate this behavior of the mental ray shutter interval
+we use these images of a set of still cones and two moving 
+checkered balls that move such that on frame 0 they are over 
+the first cone, on frame 1 they are over the second cone, etc:
+<div class="pic">
+<img width="80%" src="images/t0.jpg" alt="Object at t=0"><br />Object at t=0<br /><img width="80%" src="images/t1.jpg" alt="Object at t=1"><br />Object at t=1<br /></div>
+<p>
+When using 3d motion blur, the mental ray virtual cameras 
+shutter open at the time set by &quot;shutter offset&quot; and closes
+at the time set by &quot;shutter&quot;. 
+<p>
+Here is the result with a shutter offset of 0 and a shutter of 0.5 - 
+the objects blur &quot;begins&quot; at t=0 and continues over to t=0.5:
+<div class="pic">
+<img width="100%" src="images/3dblurB0-05.jpg" alt="3d blur, shutter open at t=0 and close at t=0.5"><br />3d blur, shutter open at t=0 and close at t=0.5
+</div>
+<p>
+Now when using the <b>2d motion blur</b> it is important to 
+understand how it works. The frame is rendered at the &quot;shutter
+offset&quot; time, and then those pixels are streaked
+<i>both forwards and backwards</i> to create the blur effect,
+hence, with the same settings, this will be the resulting blur:
+<div class="pic">
+<img width="100%" src="images/2dblurB-0-05.jpg" alt="2d blur, shutter offset=0, mip_motionblur shutter=0.5"><br />2d blur, shutter offset=0, mip_motionblur shutter=0.5
+</div>
+<p>
+Note this behavior is <i>different</i> than the 3d blur case! If
+one need to mix renderings done with both methods, it is
+<b>important to use such settings to make the timing of the blur identical</b>.
+<p>
+This is achieved by changing the &quot;shutter offset&quot; time to the 
+desired <i>center time</i> of the blur (in our case t=0.25), like 
+this:
+<p>
+<pre>
+    shutter 0.25 0.25
+    motion on
+</pre>
+<div class="pic">
+<img width="100%" src="images/2dblurB-025-05.jpg" alt="2d blur, shutter offset=0.25, mip_motionblur shutter=0.5"><br />2d blur, shutter offset=0.25, mip_motionblur shutter=0.5
+</div>
+<p>
+Note how this matches the 3d blurs setting when shutter offset is 0. 
+If, however, the 3d blur is given the shutter offset of 0.25 and shutter 
+length 0.5 (i.e. a &quot;shutter 0.25 0.75&quot; statement), the result is this:
+<div class="pic">
+<img width="100%" src="images/3dblurB025-075.jpg" alt="3d blur, shutter open at t=0.25 and close at t=0.75"><br />3d blur, shutter open at t=0.25 and close at t=0.75
+</div>
+<p>
+Hence it is clear that when compositing renders done with different
+methods it is <i>very important</i> to keep this difference in timing
+in mind!
+<p>
+<h2 id="The_mip_motionblur_Shader">The mip_motionblur Shader</h2>
+<p>
+The <i>mip_motionblur</i> shader is a mental ray <i>output shader</i> for
+performing 2.5d<a href="#Foot2" title="Called &quot;2.5d&quot; since it also takes the Z-depth relationship between objects into account"><sup>2</sup></a> motion blur as a 
+post process.
+<p>
+<pre>
+    declare shader "mip_motionblur" (
+            scalar  "shutter",
+            scalar  "shutter_falloff",
+            boolean "blur_environment",        
+            scalar  "calculation_gamma",
+            scalar  "pixel_threshold",
+            scalar  "background_depth",
+            boolean "depth_weighting",
+            string  "blur_fb",
+            string  "depth_fb",
+            string  "motion_fb",
+            boolean "use_coverage"
+        )
+        version 1
+        apply output
+    end declare
+</pre>
+<p>
+<b>shutter</b> is the amount of time the shutter is &quot;open&quot;. In practice 
+this means that after the image has been rendered the pixels are smeared 
+into streaks in both the forward and backward direction, each a distance equal 
+to half the distance the object moves during the shutter time.
+<p>
+<b>shutter_falloff</b> sets the drop-off speed of the smear, i.e. how
+quickly it fades out to transparent. This tweaks the &quot;softness&quot; of the
+blur:
+<div class="pic">
+<img width="100%" src="images/fo1.jpg" alt="falloff = 1.0"><br />falloff = 1.0
+</div>
+<div class="pic">
+<img width="100%" src="images/fo2.jpg" alt="falloff = 2.0"><br />falloff = 2.0
+</div>
+<div class="pic">
+<img width="100%" src="images/fo4.jpg" alt="falloff = 4.0"><br />falloff = 4.0
+</div>
+<p>
+Notice how the highlight is streaked into an almost uniform line in 
+the first image, but tapers off much more gently in the last image.
+<p>
+It is notable that the <i>perceived length</i> of the motion blur
+diminishes with increased falloff, so one may need to compensate
+for it by increasing the shutter slightly.
+<p>
+Therefore, falloff is especially useful when wanting the effect 
+of over-bright highlights &quot;streaking&quot; convincingly: By using an inflated
+shutter length (above the cinematic default of 0.5) and a higher falloff,
+over-brights have the potential to smear in a pleasing fashion.
+<p>
+<b>blur_environment</b> defines if the camera environment (i.e.
+the background) should be blurred by the cameras movement or not.
+When <i>on</i>, pixels from the environment will be blurred, and
+when <i>off</i> it will not. Please note that camera driven
+environment blur <em>only</em> works if &quot;scanline&quot; is off in the 
+options block.
+<p>
+If the background is created by <i>geometry</i> in the scene, this
+setting does not apply, and the backgrounds blur will be that of
+the motion of said geometry.
+<p>
+<b>calculation_gamma</b> defines in what gamma color space blur 
+calculations take place. Since mental ray output shaders are performed 
+on written frame buffers, and these buffers (unless floating point) 
+already have any gamma correction applied, it is important that post
+effects are applied with the appropriate gamma.
+<p>
+If you render in linear floating point and plan to do the proper gamma
+correction at a later stage, set <b>calculation_gamma</b> to 1.0, 
+otherwise set it to the appropriate value. The setting can also be
+used to artistically control the &quot;look&quot; of the motion blur, in which
+a higher gamma value favors lightness over darkness in the streaks.
+<div class="pic">
+<img width="100%" src="images/mb-gamma.jpg" alt="Various gammas"><br />Various gammas
+</div>
+<p>
+
+<p>
+Notice how the low gamma examples seem much &quot;darker&quot;, and how the 
+blur between the green box and red sphere looks questionable. The
+higher gamma values cause a smoother blend and more realistic motion
+blur. However, it cannot be stressed enough, that if gamma correction 
+is applied <i>later in the pipeline</i> the calculation_gamma
+parameter should be kept at 1.0, unless one really desires the favoring
+of brightness in the blur as an artistic effect.
+<p>
+The <b>pixel_threshold</b> is a minimum motion vector length (measured 
+in pixels) an object must move before blur is added.
+If set to 0.0 it has no effect, and every object even with
+sub-pixel movement will have a slight amount of blur. While this is
+technically <i>accurate</i>, it may cause the image to be perceived as 
+overly blurry.
+<p>
+For example, a cockpit view from a low flying jet plane rushing away 
+towards a tropical island on the horizon may still add a some motion blur 
+to the island on the horizon itself even though its movement is very 
+slight. Likewise, blur is added even for an extremely slow pan across an 
+object. This can cause things to be perceived slightly &quot;out of focus&quot;, 
+which is undesirable.
+This can be solved by setting <b>pixel_threshold</b> to e.g. 1.0, which 
+in effect subtracts one pixel from the length of all motion vectors and
+hence causing all objects moving only one pixel (or less) between 
+frames not to have any motion blur at all. Naturally, this value should
+be kept very low (in the order of a pixel or less) to be anywhere near 
+realistic, but it can be set to higher value for artistic effects.
+<p>
+The <b>background_depth</b> sets a distance to the background, which
+helps the algorithm figure out the depth layout of the scene. The value
+should be about as large as the scene depth, i.e. anything beyond this
+distance from the camera would be considered &quot;far away&quot; by the algorithm.
+<p>
+If <b>depth_weighting</b> is off, a heuristic algorithm is used to
+depth sort the blur of objects. Sometimes the default algorithm can 
+cause blur of distant objects imposing on blurs of nearby objects. 
+Therefore an alternate algorithm is available by turning 
+<b>depth_weighting</b> on. 
+This causes objects closer to the camera than <b>background_depth</b> 
+to get an increasingly &quot;opaque&quot; blur than further objects, the closer
+objects blurs much more likely to &quot;over-paint&quot; further objects blurs.
+Since this may cause near-camera objects blurs to be unrealistically 
+opaque, the option defaults to being off. This mode is most useful when
+there is clear separation between a moving foreground object against
+a (comparatively) static background.
+<p>
+<b>blur_fb</b> sets the ID<a href="#Foot3" title="This parameter is of type string to support the named frame buffers introduced in mental ray 3.6. If named frame buffers are not used, the string will need to contain a number, i.e. &quot;3&quot; for frame buffer number 3. "><sup>3</sup></a> of the frame buffer to be blurred. 
+An empty string (&quot;&quot;) signifies the main color frame buffer. 
+The frame buffer referenced must be a RGBA color buffer and must be 
+written by an appropriate shader.
+<p>
+<b>depth_fb</b> sets the ID of the frame buffer from which to obtain
+depth information. An empty string (&quot;&quot;) signifies the main 
+mental ray z depth frame buffer. The frame buffer referenced must be a depth
+buffer and must be written by an appropriate shader.
+<p>
+<b>motion_fb</b> works identically to <b>depth_fb</b> but for the motion
+vector information, and the empty string here means the default mental ray motion 
+vector frame buffer. The frame buffer referenced must be a motion buffer and must 
+be written by an appropriate shader.
+<p>
+<b>use_coverage</b>, when on, utilizes information in the &quot;coverage&quot; channel 
+rather than the alpha channel when deciding how to utilize edge pixels that
+contain an anti-aliased mix between two moving objects.
+<p>
+<a name="usingpostblur"></a>
+<h2 id="Using_mip_motionblur">Using mip_motionblur</h2>
+<p>
+As mentioned before, the shader <i>mip_motionblur</i> requires the scene to be 
+rendered with motion vectors:
+<p>
+<pre>
+    shutter 0 0
+    motion on
+</pre>
+<p>
+The shader itself must also be added to the camera as an output shader:
+<p>
+<pre>
+   shader "motion_blur" "mip_motionblur" (
+      "shutter"          0.5,
+      "shutter_falloff"  2.0,
+      "blur_environment" on
+   )
+   camera "...."
+      output "+rgba_fp,+z,+m" = "motion_blur"
+      ...
+   end camera
+</pre>
+<p>
+The shader requires the depth (&quot;z&quot;) and motion (&quot;m&quot;) frame buffers and
+they should either both be interpolated (&quot;+&quot;) or neither (&quot;-&quot;). 
+The shader is optimized for using interpolated buffers but non-interpolated
+work as well.
+<p>
+If one wants to utilize the feature that the shader properly preserves 
+and streaks over-brights (colors whiter than white) the color frame buffer
+must be floating point (&quot;rgba_fp&quot;), otherwise it can be plain &quot;rgba&quot;.
+<p>
+<h3 id="Multiple_Frame_Buffers_and_Motion_Blur">Multiple Frame Buffers and Motion Blur</h3>
+<p>
+If one is working with shaders that writes to multiple frame buffers
+one can chain multiple copies of the <i>mip_motionblur</i> shader after 
+one another, each referencing a different <b>blur_fb</b>, allowing one 
+to blur several frame buffers in one rendering operation. Please note
+that only <i>color</i> frame buffers can be blurred!
+<p>
+Also please note that for compositing operations it is <em>not</em> 
+recommended to use a <b>calculation_gamma</b> other than 1.0
+because otherwise the compositing math may not work correctly.
+Instead, make sure to use proper gamma management in the compositing
+phase.
+<p>
+<h3 id="Good_Defaults">Good Defaults</h3>
+<p>
+Here are some suggested defaults:
+<p>
+For a fairly standard looking blur use <b>shutter</b> of 0.5 and a
+<b>shutter_falloff</b> of 2.0. 
+<p>
+For a more &quot;soft&quot; looking blur turn the shutter up to 
+<b>shutter</b> 1.0 but also increase the <b>shutter_falloff</b> 
+to 4.0. 
+<p>
+To match the blur of other mental ray renders, remember to set the
+mental ray shutter offset (in the options block) to half of that of
+the shutter length set in <i>mip_motionblur</i>. To match the
+motion blur to match-moved footage (where the key frames tend to
+lie in the center of the blur) use a shutter offset of 0.
+<p>
+<h2 id="The_mip_motion_vector_Shader">The mip_motion_vector Shader</h2>
+<p>
+Sometimes one wishes to do compositing work before applying motion blur,
+or one wants to use some specific third-party motion blur shader. For
+this reason the <i>mip_motion_vector</i> shader exists, the purpose of
+which is to export motion in pixel space (mental ray's standard motion 
+vector format is in world space) encoded as a color.
+<p>
+There are several different methods of encoding motion as a color and
+this shader supports the most common. 
+<p>
+Most third party tools expect the motion vector encoded as colors 
+where red is the X axis and green is the Y axis. 
+To fit into the confines of a color (especially when
+not using floating point and a color only reaches from black to white)
+the motion is scaled by a factor (here called <b>max_displace</b>) and
+the resulting -1 to 1 range is mapped to the color channels 0 to 1 
+range.
+<p>
+The shader also support a couple of different floating point output
+modes.
+<p>
+The shader looks as follows:
+<p>
+<pre>
+    declare shader "mip_motion_vector" (
+            scalar  "max_displace"    default 50.0,
+            boolean "blue_is_magnitude",
+            integer "floating_point_format",
+            boolean "blur_environment",        
+            scalar  "pixel_threshold",
+            string  "result_fb",
+            string  "depth_fb",
+            string  "motion_fb",
+            boolean "use_coverage"
+        )
+        version 2
+        apply output
+    end declare
+</pre>
+<p>
+The parameter <b>max_displace</b> sets the maximum encoded motion
+vector length, and motion vectors of this number of pixels (or above) 
+will be encoded as the maximum value that is possible to express within 
+the limit of the color (i.e. white or black).
+<p>
+To maximally utilize the resolution of the chosen image format, it
+is generally advised to use a <b>max_displace</b> of 50 for 8 bit
+images (which are not really recommended for this purpose) and a
+value of 2000 for 16 bit images. The shader outputs an informational
+statement of the maximum motion vector encountered in a frame to aid
+in tuning this parameter. Consult the documentation for your
+third party motion blur shader for more detail.
+<p>
+If the <b>max_displace</b> is zero, motion vectors are encoded
+relative to the image resolution, i.e. for an image 600 pixels wide
+and 400 pixels high, a movement of 600 pixels in positive X is encoded
+as 1.0 in the red channel, a movement 600 pixels in negative X is encoded 
+as 0.0. A movement in positive Y of 400 pixels is encoded as 1.0 in the
+blue channel etc<a href="#Foot4" title="This mode will not work with 8 bit images since they do not have sufficient resolution."><sup>4</sup></a>.
+<p>
+<b>blue_is_magnitude</b>, when on, makes the blue color channel 
+represent the magnitude of the blur, and the red and green only encodes
+the 2d direction only. When it is off, the blue channel is unused and
+the red and green channels encode both direction and magnitude. Again,
+consult your third party motion blur shader 
+documentation<a href="#Foot5" title="ReVisionFX &quot;Smoothkit&quot; expects vectors using blue_is_magnitude turned on, whereas their &quot;ReelSmart Motion Blur&quot; do not."><sup>5</sup></a>. 
+<p>
+If <b>floating_point_format</b> is nonzero the shader will write real, 
+floating point motion vectors into the red and green channels. They are <b>not</b> 
+normalized to the <b>max_displace</b> length, not clipped and will contain 
+<em>both positive and negative values</em>. When this option is turned on
+neither <b>max_displace</b> nor <b>blue_is_magnitude</b> has any effect.
+<p>
+Two different floating point output formats are currently supported:
+<br />
+<ul>
+
+<li> 1: The actual pixel count is written as-is in floating point.
+<li> 2: The pixel aspect ratio is taken into 
+         account<a href="#Foot6" title="Compatible with Autodesk Toxik."><sup>6</sup></a> 
+         such that the measurement of the distance the pixel moved 
+         is expressed in pixels in the Y direction, the X component will 
+         be scaled by the pixel aspect ratio. 
+</ul>
+
+<p>
+More floating point formats may be added in the future.
+<p>
+When <b>blur_environment</b> is on, motion vectors are generated for the
+empty background area controlled by the camera movement. This option does
+not work if the scanline renderer is used.
+<p>
+The <b>pixel_threshold</b> is a minimum motion vector length (measured 
+in pixels) an object must move before a nonzero vector is generated. 
+In practice, this length is simply subtracted from the motion vectors 
+before they are exported.
+<p>
+<b>result_fb</b> defines the frame buffer to which the result is written.
+If it is unspecified (the empty string) the result is written to the standard
+color buffer. However, it is more useful to define a separate frame buffer 
+for the motion vectors and put its ID here. That way both the beauty render 
+and the motion vector render are done in one pass. It should be a color buffer, 
+and should not contain anything since it's contents will be overwritten by 
+this shader anyway.
+<p>
+<b>depth_fb</b> sets the ID of the frame buffer from which to obtain
+depth information. An empty string (&quot;&quot;) signifies the main 
+mental ray z depth frame buffer. The frame buffer referenced must be a depth
+buffer and must be written by an appropriate shader.
+<p>
+<b>motion_fb</b> works identically to <b>depth_fb</b> but for the motion
+vector information, and the empty string here means the default mental ray motion 
+vector frame buffer. The frame buffer referenced must be a motion buffer and must 
+be written by an appropriate shader.
+<p>
+<h2 id="Using_mip_motion_vector">Using mip_motion_vector</h2>
+<p>
+The same considerations as when using <i>mip_motionblur</i> (page <a href="prod_motionblur.html#usingpostblur">usingpostblur</a>)
+about generating motion vectors, as well as the discussion on page <a href="prod_motionblur.html#timing">timing</a>
+above about the timing difference between post processing motion blur vs. 
+full 3d blur both apply.
+<p>
+Furthermore, one generally wants to create a separate frame buffer for the
+motion vectors, and save them to a file. Here is a piece of pseudo .mi syntax:
+<p>
+<pre>
+   options ...
+      ...
+      # export motion vectors
+      shutter 0 0
+      motion on
+      ...
+      # Create a 16 bit frame buffer for the motion vectors
+      frame buffer 0 "rgba_16" 
+   end options
+   ...
+   shader "motion_export" "mip_motion_vectors" (
+      "max_displace"     2000,
+      "blur_environment" on,
+      # our frame buffer
+      "result_fb"        "0"    
+   )
+   ...
+   camera "...."
+      # The shader needs z, m
+      output "+z,+m" = "motion_export"
+      # Write buffers
+      output "+rgba" "tif" "color_buffer.tif" 
+      output "fb0"   "tif" "motion_buffer.tif"
+      ...
+   end camera
+</pre>
+<p><hr><p><dl>Footnotes
+<a name="Foot1"></a><dt>1
+<dd>
+&quot;Fast motion blur&quot; mode is enabled by setting &quot;time contrast&quot; to
+zero and having the upper and lower image sampling rates the same, 
+i.e. something like &quot;samples 2 2&quot;. Read more about &quot;Fast motion
+blur&quot; mode at http://www.lamrug.org/resources/motiontips.html
+
+<a name="Foot2"></a><dt>2
+<dd>Called &quot;2.5d&quot; since it also takes
+the Z-depth relationship between objects into account
+<a name="Foot3"></a><dt>3
+<dd>
+    This parameter is of type <em>string</em> to support the named frame buffers
+    introduced in mental ray 3.6. If named frame buffers are not used, the 
+    string will need to contain a number, i.e. &quot;3&quot; for frame buffer 
+    number 3.
+
+<a name="Foot4"></a><dt>4
+<dd>This mode will not work with 8 bit images
+since they do not have sufficient resolution.
+<a name="Foot5"></a><dt>5
+<dd>ReVisionFX &quot;Smoothkit&quot; expects vectors using 
+<b>blue_is_magnitude</b> turned on, whereas their 
+&quot;ReelSmart Motion Blur&quot; do not.
+<a name="Foot6"></a><dt>6
+<dd>Compatible with Autodesk Toxik.
+</dl>
+<ul class="nav">
+<li><a href="production.html">home</a></li>
+<li><a href="prod_intro.html">&laquo;&nbsp;prev</a></li>
+<li><a href="prod_card_opacity.html">next&nbsp;&raquo;</a></li>
+</ul>
+</body></html>

@@ -1,0 +1,86 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+#import  <mi_msl_shared.msl>
+
+shader Component_ashikhmin_shirley
+{
+  input:
+    Color diffuse_color = Color(0.7, 0.7, 0.7, 1.0)
+    {		
+	display_name("Diffuse Color");
+	hard_range(Color(0,0,0,0),Color(1,1,1,1));
+	description( "The color used to tint the Diffuse Reflectance Color." );
+    };
+    Color specular_color = Color(0.2, 0.2, 0.2, 1.0)
+    {		
+	display_name("Specular Color");
+	hard_range(Color(0,0,0,0),Color(1,1,1,1));
+	description( "The color used to tint the Specular Reflectance "
+	"Color." );
+    };
+    float shininess_u = 50
+    {		
+	display_name("Shininess U");
+	soft_range(float(0),float(100));
+	description( "The width of specular highlights along the U axis of "
+	"the textures mapped to the surface." );
+    };
+    float shininess_v = 50
+    {	
+	display_name("Shininess V");
+	soft_range(float(0),float(100));
+	description( "The width of specular highlights along the V axis of "
+	"the textures mapped to the surface." );
+    };
+
+  output:
+    Color diffuse;
+    Color specular;
+
+    void main() 
+    {        
+	diffuse  = Color(0,0,0,0);
+	specular = Color(0,0,0,0);
+
+	float3 vdir = direction;
+	float3 tangent_u = texture_tangent_u[0];
+	float3 tangent_v = texture_tangent_v[0];
+
+	Color Rd = diffuse_color;
+	Color Rs = specular_color;
+
+	// enumerate lights
+	Light_iterator light;
+	foreach (light)
+	{
+	    float cos = saturate(light.dot_nl);
+	    if (cos > 0.0) {
+		Color d = mi_ashikhmin_shirley_diffuse(light.direction,
+			vdir, normal, Rd, Rs);
+
+		diffuse += d * cos * light.contribution;
+
+		Color s = mi_ashikhmin_shirley_specular(shininess_u,
+			shininess_v, light.direction, vdir, normal,
+			tangent_u, tangent_v, Rs);
+
+		specular += s * light.contribution * cos;
+	    }
+	}
+
+	// irradiance term
+	Irradiance_options irradiance_options;
+	//irradiance_options.set_importance(diffuse_albedo);
+	diffuse += diffuse_color/PI * irradiance(irradiance_options);
+
+	diffuse.a = 1.0;
+	specular.a = 1.0;
+    }
+}
+{
+    description( "An illumination model for anisotropic surfaces, "
+    "such as brushed metal or cloth." );
+}
+;

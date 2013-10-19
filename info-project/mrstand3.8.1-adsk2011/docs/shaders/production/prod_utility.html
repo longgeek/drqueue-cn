@@ -1,0 +1,293 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="Author" content="mental images GmbH">
+<meta name="Company" content="mental images">
+<meta name="Creator" content="hypertex">
+<meta name="CreatorVersion" content="1.0">
+<meta name="CreationDate" content="18 Feb 2010">
+<link rel="stylesheet" type="text/css" href="mental.css">
+<style type="text/css"> i {color:darkred} dfn {font-style:italic}
+var {font-weight:bold; color:black} </style><a name="miutility"></a>
+<title>Utility Shaders</title>
+</head><body>
+<ul class="nav">
+<li><a href="production.html">home</a></li>
+<li><a href="prod_rayswitch.html">&laquo;&nbsp;prev</a></li>
+<li><a href="prod_mirrorball.html">next&nbsp;&raquo;</a></li>
+</ul>
+<h1>Utility Shaders</h1>
+<p>
+<h2 id="Gamma/Gain_Nodes">Gamma/Gain Nodes</h2>
+<p>
+<pre>
+declare shader "mip_gamma_gain" (
+        color   "input",
+        scalar  "gamma"        default 1.0,
+        scalar  "gain"         default 1.0,
+        boolean "reverse"      default off,
+    )
+    apply texture, environment, lens
+    version 1
+end declare
+</pre>
+<p>
+This is a simple shader that applies a gamma and a gain (multiplication)
+if a color. Many similar shaders exists in various OEM integrations of
+mental ray, so this shader is primarily of interest for standalone 
+mental ray and for cross platform phenomena development.
+<p>
+If <b>reverse</b> is <em>off</em>, the shader takes the <b>input</b>,
+multiplies it with the <b>gain</b> and then applies a gamma
+correction of <b>gamma</b> to the color.
+<p>
+If <b>reverse</b> is <em>on</em>, the shader takes the <b>input</b>,
+applies a reverse gamma correction of <b>gamma</b> to the color,
+and then divides it with the <b>gain</b>; i.e. the exact inverse of
+the operation for when <b>reverse</b> is off.
+<p>
+The shader can also be used as a simple gamma lens shader, in which 
+case the <b>input</b> is not used, the eye ray color is used instead.
+<p>
+<h2 id="Render_Subset_of_Scene">Render Subset of Scene</h2>
+<p>
+This shader allows re-rendering a subset of the objects in a scene, 
+defined by material, geometric objects, or instance labels. It is
+the ideal &quot;quick fix&quot; solution when almost everything in a scene
+is perfect, and just this one little object or one material needs 
+a small tweak<a href="#Foot1" title="And the client is on his way up the stairs."><sup>1</sup></a>.
+<p>
+It is applied as a lens shader and works by first testing which 
+object an eye-ray hits, and {only if the object is part of the 
+desired subset is it actually shaded at all}.
+<p>
+Pixels of the background and other objects by default return
+transparent black (0 0 0 0), making the final render image ideal 
+for compositing directly on top of the original render.
+<p>
+So, for example, if a certain material in a scene did not turn out 
+satisfactory, one can simply:
+<ul>
+
+<li> Modify the material.
+<li> Apply this lens shader and choosing that material.
+<li> Render the image (at a fraction of the time of re-rendering the whole image).
+<li> Composite the result on top of the original render!
+</ul>
+
+<div class="pic">
+<img width="100%" src="images/subset-example.jpg" alt="An example of using <i>mip_render_subset</i> on one material"><br />An example of using <i>mip_render_subset</i> on one material
+</div>
+<p>
+Naturally, only pixels which see the material &quot;directly&quot; are 
+re-rendered, and not e.g. reflections in <em>other</em> objects 
+that show the material. 
+<p>
+The shader relies on the calling order used in ray tracing and does not work 
+correctly (and yields <em>no</em> benefit in render time) when using the rasterizer,
+because the rasterizer calls lens shaders <em>after</em> already shading the 
+surface(s).
+<p>
+<pre>
+declare shader "mip_render_subset" (
+        boolean "enabled"        default on,
+        array geometry "objects",
+        array integer  "instance_label",
+        material       "material",
+        boolean "mask_only"      default off,
+        color   "mask_color"     default 1 1 1 1,
+        color   "background"     default 0 0 0 0,
+        color   "other_objects"  default 0 0 0 0,
+        boolean "full_screen_fg" default on
+    )
+    apply lens
+    version 5
+end declare
+</pre>
+<p>
+<b>enabled</b> turns the shader on or off. When off, it does nothing,
+and does not affect the rendering in any way.
+<p>
+<b>objects</b>, <b>instance_label</b> and <b>material</b> are the
+constraints one can apply to find the subset of objects to shade. 
+If more than one constraint is present, all must be fulfilled, i.e. 
+if both a material and three objects are chosen, only the object that 
+actually have that material will be shaded.
+<p>
+If one do not want to shade the subset, but only find where it is on 
+screen, one can turn on <b>mask_only</b>. Instead of shading the
+objects in the subset, the <b>mask_color</b> is returned, and no
+shading whatsoever is performed, which is <em>very fast</em>.
+<p>
+Rays not hitting <em>any</em> objects return the <b>background</b> color,
+and rays hitting any object <em>not</em> in the subset return the 
+<b>other_objects</b> color.
+<p>
+Finally, the <b>full_screen_fg</b> decides if the FG preprocess 
+should apply to all objects, or only those in the subset. Since FG
+blends neighboring FG samples, it is probable that a given object
+may use information in FG points coming from nearby objects 
+not in the subset. This is especially true if the objects are 
+coplanar. Therefore it is advised to let the FG pre-pass &quot;see&quot; the 
+entire scene. 
+<p>
+Naturally, turning off this option and creating FG points only for 
+the subset of objects is <b>faster</b>, but there is a certain risk 
+of boundary artifacts, especially in animations. If the scene uses
+a saved FG map, this option can be left <em>off</em>.
+<p>
+
+<h2 id="Binary_Proxy">Binary Proxy</h2>
+<p>
+This shaders allows a very fast way to implement demand loaded geometry.
+It's main goal is performance, since it leapfrogs any form of translation
+or parsing by directly writing to a binary file format which can be
+sucked directly into RAM at render time. There are many other methods
+to perform demand loading in mental ray (assemblies, file objects,
+geometry shaders, etc.) but this may require specific support in the
+host application, and generally involves parsing or translation steps
+that can impact performance.
+<p>
+To use it, the shader is applied as a geometry shader in the scene. See
+the mental ray manual about geometry shaders.
+<p>
+<pre>
+declare shader
+    geometry "mip_binaryproxy" (
+        string "object_filename",
+        boolean "write_geometry",
+        geometry "geometry",        
+        scalar   "meter_scale", 
+        integer  "flags"
+    )
+    version 4
+    apply geometry
+end declare
+</pre>
+<p>
+<b>object_filename</b> is the filename to read (or write). By convention, 
+the file extension is &quot;.mib&quot; for &quot;mental images binary&quot;.
+<p>
+The shader has a &quot;read&quot; mode and a &quot;write&quot; mode: 
+<ul>
+
+<li> When the boolean <b>write_geometry</b> is on and the <b>geometry</b> 
+parameter points to an instance of an existing scene object, this object
+will be written to the .mib file named by <b>object_filename</b>. 
+<br />
+<li> When <b>write_geometry</b> is off, the <b>geometry</b> parameter is
+ignored (not used). Instead, a mental ray placeholder object is created
+by the shader which contains a callback that will load the actual geometry
+from the file on demand (generally when a ray hits it's bounding box,
+although mental ray may choose to load it for other reasons at other times).
+</ul>
+
+<p>
+The <b>meter_scale</b> allows the object to be interpreted in a unit 
+independent way. If this is 0.0, the feature is not used.  When used,
+the value should be the number of scene units that represent 
+one meter, i.e. if scene units are millimeters this would be 1000.0
+etc.
+<p>
+When writing (<b>write_geometry</b> is on), this value is simply 
+stored as meta data in the .mib file. When reading (<b>write_geometry</b> 
+is off) the object is scaled by the ratio of the value stored in the file
+and the value passed at &quot;read time&quot;, to account for the difference in
+unit, if any.
+<p>
+The <b>flags</b> parameter is for algorithm control and should in most
+cases be left to 0. It is a bit flag, with each bit having a specific 
+meaning. 
+<p>
+Currently used values are:
+<br />
+<ul>
+
+<li>[1] Force use of &quot;assemblies&quot; rather than &quot;placeholders&quot;. These are 
+         two slightly different internal techniques that mental ray uses to
+         demand-load objects. See the mental ray manual for more information. 
+         Note that assemblies only work with BSP2 acceleration, and that multiple 
+         instances of the same assembly cannot have different materials or 
+         object flags applied. This limitation does not exist for placeholders.
+<li>[2] &quot;Auto-assemblies&quot; mode. The shader uses assemblies if BSP2 acceleration is 
+         used, placeholders if not.
+<li>[4] Do not tessellate the object before writing it. The object is written in it's
+         raw format. The object must already be a mental ray primlist (miBox) for this
+         to work. When this bit is set, displacement will not be baked to the file.
+         When it is not set (the default) displacement <em>will</em> be baked<a href="#Foot2" title="Note that when baking displacement, a view-dependent approximation can not be used. This is because there is no view set up at the time when this shader executes, so the resulting tessellation will turn out very poor."><sup>2</sup></a>
+</ul>
+
+<p>
+All other bits should be kept zero, since they may become meaningful in future versions.
+<p>
+ {FG shooters}
+<p>
+This shader is used to &quot;shoot&quot; finalgather (FG) rays into the scene in a pre-defined
+way, hence it's name. Normally, without this shader, during the final gather precomputation
+stage, mental ray shoots eye rays through the camera into the scene, and FG points
+are calculated in the scene based on the location caused by how these eye rays are
+shot.
+<p>
+The advantage of this is that the density of FG points are related to image space, 
+and hence is automatically adaptive to exist in areas where they 
+are necessary. On top of this comes an adaptive calculation of the FG point density,
+creating the optimal solution for the image.
+<p>
+However, during animation <i>in which the camera moves</i> this means that the 
+location of where FG points are calculated will actually move along with the camera.  
+In an animation, this can potentially cause artifacts in certain situations - 
+especially if the camera moves <i>slowly</i>, or only moves a little (e.g. in
+a small pan, dolly, tilt, truck or crane move).
+<p>
+The &quot;FG Shooter&quot; shader exists to safeguard for this eventuality; it allows using
+a fixed (or a set of fixed) transformation matrices as the root location from which
+to &quot;shoot&quot; the eye rays that are used {during the final gather precomputation
+phase only}. This guarantees that even if the camera moves
+<p>
+<pre>
+declare shader "mip_fgshooter" (
+        integer "mode",
+        array transform "trans"
+    )
+    version 1
+    apply lens
+end declare
+</pre>
+<p>
+The <b>trans</b> parameter contains an array of transformation matrices, defining
+how the eye rays are shot during the final gather prepass. 
+Instead of using the camera to calculate the &quot;eye&quot; rays, they are shot from the
+0,0,0 point, mapping the screen plane to the unit square surrounding the point 
+0,0,-1 and then transformed by the passed matrix (or matrices) into world space.
+<p>
+The <b>mode</b> parameter defines how the matrix (or matrices) passed are displayed
+during the final gather prepass. Since how it is <em>displayed</em> impacts the 
+adaptivity, this has some functional implications.
+<br />
+<ul>
+
+<li> 0 breaks the render into &quot;subframes´´, each containing the image as seen from
+      a given position. This requires a higher final gather <i>density</i> to 
+      resolve the same number of details, but gives the best adaptivity.
+<li> 1 stacks the different results on top of each other. This does not require
+      any additional density, but the final gather adaptivity does not work as well.
+<li> 2 works like 1, but only visibly displays one pass (but all the others are calculated
+      exactly the same)
+</ul>
+
+<p><hr><p><dl>Footnotes
+<a name="Foot1"></a><dt>1
+<dd>And the client is on his way up the stairs.
+<a name="Foot2"></a><dt>2
+<dd>Note 
+         that when baking displacement, a view-dependent approximation can not be used. 
+         This is because there is no view set up at the time when this shader executes, 
+         so the resulting tessellation will turn out very poor.
+</dl>
+<ul class="nav">
+<li><a href="production.html">home</a></li>
+<li><a href="prod_rayswitch.html">&laquo;&nbsp;prev</a></li>
+<li><a href="prod_mirrorball.html">next&nbsp;&raquo;</a></li>
+</ul>
+</body></html>

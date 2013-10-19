@@ -1,0 +1,96 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Render Pass Preprocessing Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node136.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node138.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION135"></a>
+<h2>Render Pass Preprocessing Shaders</h2>
+<p><a id="INDEX508"></a><a id="INDEX509"></a> <a id="passprep"></a>
+Pass preprocessing shaders (prep shaders) access only a single pass file
+for reading and another for writing, but have access to all sample
+locations. Prep shaders are intended for "preparing" a pass file
+for later merging, by reading an existing pass file and writing a
+new one for later processing. For example, a prep shader may
+motion-blur on a subpixel sample level.</p>
+<p>Here is an example of a simple prep shader that replaces
+nonblank samples with a red-blue gradation:</p>
+<pre>
+    typedef struct {miColor color; miScalar depth;} Sample;
+
+    DLLEXPORT int myprep_version(void) {return(1);}
+
+    DLLEXPORT miBoolean myprep(
+        miColor         *dummy,
+        miState         *state,
+        void            *paras)
+    {   
+        int             xl, yl, xs, ys, xres, yres, x, y;
+        Sample          s;
+    
+        mi_renderpass_resolution(&amp;xl, &amp;yl, &amp;xs, &amp;ys, &amp;xres, &amp;yres, state, 0,0);
+        mi_info("pos %d %d, size %d %d, res %d %d", xl, yl, xs, ys, xres,yres);
+
+        for (y=0; y &lt; yres; y++) {
+            for (x=0; x &lt; xres; x++) {
+                if (!mi_renderpass_sample_get(&amp;s, sizeof(s), state, 0, x, y)) {
+                    mi_error("%4d %4d: PREP READ ERROR", x, y);
+                    continue;
+                }
+                s.color.r = 1.0 * y / yres;
+                s.color.b = 1.0 * x / xres;
+                s.color.g = 0;
+                s.color.a = 1;
+                if (!mi_renderpass_sample_put(&amp;s, sizeof(s), state, 0, x, y))
+                    mi_error("%4d %4d: PREP WRITE ERROR", x, y);
+            }
+            if (!((y+1) % ys))
+                for (x=0; x &lt; xres+xs-1; x+=xs) {
+                    mi_renderpass_samplerect_flush(state, 0, x, y - y%ys);
+                    mi_renderpass_samplerect_flush(state, 1, x, y - y%ys);
+                }
+        }
+        return(miTRUE);                             
+    }                                                   
+</pre>
+<p>The shader loops over all samples in order. Ordering is not
+required, and useful prep shaders will generally have some
+unordered access patterns, but performance and memory behavior
+improves if accesses, especially write accesses (<i><a href="node151.html#INDEX778">mi_renderpass_sample_put</a></i>) roughly
+work by rectangle. Rectangles are the rectangular
+<a href="node101.html#INDEX371">raster space</a> units that can be seen
+when attaching the <i>imf_disp</i> viewer to a running mental ray.
+(Rectangles overlap.) Samples are stored in pass files in rectangle
+blocks.</p>
+<p>Normally mental ray will read and write entire rectangles, and
+keep them in memory until the prep shader returns. If the pass file
+is very large, this can require a lot of memory. The
+<i><a href="node151.html#INDEX780">mi_renderpass_samplerect_flush</a></i>
+function is available to remove rectangles from memory. It can be
+applied to the pass file being read (second argument is 0) and to
+the pass file being written (second argument is 1). Flushed read
+rectangles can be re-read, but flushed write rectangles can never
+be altered again. This is why prep shaders should prefer ordering
+their write accesses over ordering their read accesses.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node136.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node138.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

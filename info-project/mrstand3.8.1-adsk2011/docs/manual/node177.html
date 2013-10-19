@@ -1,0 +1,161 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Hardwired OpenGL Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node176.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node178.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION175"></a>
+<h3>Hardwired OpenGL Shaders</h3>
+<p>
+<span class="depr">Deprecated</span>
+<p>
+OpenGL 1.x does not support native vertex or
+<a href="node168.html#INDEX851">fragment shader</a>s, unlike the
+forthcoming OpenGL 2.0 standard. (There are extensions for OpenGL
+1.5 that will not be considered here.) This means that rendering
+must entirely rely on C/C++ code in the shader support library,
+which is optional for <a href="node178.html#INDEX854">NVIDIA</a>.
+The shader prefix for OpenGL is <tt>gl_</tt>, and since C/C++
+functions in shader support libraries have an extra <tt>mi</tt>
+prefix, all OpenGL shader function names begin with <tt>migl_</tt>.
+For example, the OpenGL equivalent of the software shader
+<i>mib_illum_phong</i> must be called
+<i>migl_mib_illum_phong</i>.</p>
+<p>Since shader graphs and subshaders are not available for OpenGL,
+it is not possible to separately implement the subshaders of a
+Phenomenon and have OpenGL 1.4 put them together the way
+<a href="node173.html#INDEX853">Cg</a> can. Instead, mental ray will call
+the root shader of the Phenomenon, and recursively evaluate its
+subshaders. Here is a sample implementation of an OpenGL shader
+that implements the software material shader
+<i>mib_illum_phong</i>:</p>
+<pre>
+    #include "mi_opengl.h"
+
+    extern "C" DLLEXPORT int migl_mib_illum_phong_version(void) { return(2); }
+
+    extern "C" DLLEXPORT miBoolean migl_mib_illum_phong(
+        miColor                *result,
+        miOgl_render           *render,
+        struct mib_illum_phong *paras)
+    {
+        miColor     ambc, ambi, diff, spec;
+        miTag       *light;         /* tag of light instance */
+        int         n_l;            /* number of light sources */
+        int         i_l;            /* offset of light sources */
+        int         m;              /* light mode: 0=all, 1=incl, 2=excl */
+        miScalar    expo;           /* Phong exponent (cosine power) */
+
+        ambc  = render-&gt;eval(&amp;paras-&gt;ambience);
+        ambi  = render-&gt;eval(&amp;paras-&gt;ambient);
+        diff  = render-&gt;eval(&amp;paras-&gt;diffuse);
+        spec  = render-&gt;eval(&amp;paras-&gt;specular);
+        expo  = render-&gt;eval(&amp;paras-&gt;exponent);
+
+        *result = diff;
+
+        m     = render-&gt;eval(&amp;paras-&gt;mode);
+        n_l   = render-&gt;eval(&amp;paras-&gt;n_light);
+        i_l   = render-&gt;eval(&amp;paras-&gt;i_light);
+        light = render-&gt;eval( paras-&gt;light) + i_l;
+
+        glLightModeli (GL_LIGHT_MODEL_COLOR_CONTROL,
+                       GL_SEPARATE_SPECULAR_COLOR);
+        glLightModelfv(GL_LIGHT_MODEL_AMBIENT, (float *)&amp;ambc);
+        glMaterialfv  (GL_FRONT_AND_BACK, GL_AMBIENT,   (float *)&amp;ambi);
+        glMaterialfv  (GL_FRONT_AND_BACK, GL_DIFFUSE,   (float *)&amp;diff);
+        glMaterialfv  (GL_FRONT_AND_BACK, GL_SPECULAR,  (float *)&amp;spec);
+        glMaterialf   (GL_FRONT_AND_BACK, GL_SHININESS, expo);
+        render-&gt;lights_enable(render, n_l, light);
+
+        return(miTRUE);
+    }
+</pre>
+<p>Like for software shaders, a version number is provided. Like
+software shaders, it is necessary to use an <i>mi_eval</i>
+equivalent since subshaders will be called. These subshaders must
+return a constant value, which will not change for different
+samples. The extra <i>miOgl_render</i> class that provides useful
+OpenGL support functions is defined by the OpenGL driver library
+<tt>mi_opengl.so</tt>, which also provides the <tt>mi_opengl.h</tt>
+include file that defines the available methods.</p>
+<p><tt>mi_opengl.so</tt> also provides the <i>lights_enable</i>
+function, which accepts a list of light shader instances. It will
+register these light sources with the OpenGL hardware by calling
+the light shader for each one. These light shaders are also part of
+the OpenGL shader support library, like the material shader. Note
+that OpenGL hardware generally supports only a small number of
+lights, typically eight.</p>
+<pre>
+    extern "C" DLLEXPORT int migl_mib_light_point_version(void) { return(1); }
+
+    extern "C" DLLEXPORT miBoolean migl_mib_light_point(
+        miColor                 *result,
+        miOgl_render            *render,
+        struct mib_light_point  *paras)
+    {
+        miColor   col     = render-&gt;eval(&amp;paras-&gt;color);
+        miBoolean atten   = render-&gt;eval(&amp;paras-&gt;atten);
+        const int lgt_idx = render-&gt;light_index();
+
+        glLightfv(lgt_idx, GL_AMBIENT,       black);
+        glLightfv(lgt_idx, GL_DIFFUSE,       (float *)&amp;col);
+        glLightfv(lgt_idx, GL_SPECULAR,      (float *)&amp;col);
+        glLightf (lgt_idx, GL_SPOT_CUTOFF,   180.0f);
+        glLightf (lgt_idx, GL_SPOT_EXPONENT, 128.0f);
+
+        if (miTRUE == atten) {
+            GLfloat k = 1.0f /
+                (render-&gt;eval(&amp;paras-&gt;start) + render-&gt;eval(&amp;paras-&gt;stop));
+            glLightf(lgt_idx, GL_LINEAR_ATTENUATION, k);
+        }
+
+        // We need to load the camera transformation, since we are in
+        // object space
+        glPushMatrix();
+        glLoadMatrixf(render-&gt;cam_trafo());
+        oglLight light;
+        if (!render-&gt;light_get(&amp;light))
+            return miFALSE;
+
+        float pos[4];
+        pos[0] = light.org.x;
+        pos[1] = light.org.y;
+        pos[2] = light.org.z;
+        pos[3] = 1.0f;
+        glLightfv(lgt_idx, GL_POSITION, pos);
+        glPopMatrix();
+
+        *result = col;
+        return miTRUE;
+    }
+</pre>
+<p>Lights must be set in world space, and the OpenGL driver library
+provides a method <i>cam_trafo</i> that returns the camera matrix
+which can be loaded on the modelview matrix stack. The information
+about the position, direction and other characteristics of the
+light can be retrieved with the <i>light_get</i> method. The
+current light index can be set and restored with the
+<i>light_index</i> method.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node176.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node178.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

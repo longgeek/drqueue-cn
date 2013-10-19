@@ -1,0 +1,529 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="Author" content="mental images GmbH">
+<meta name="Company" content="mental images">
+<meta name="Creator" content="hypertex">
+<meta name="CreatorVersion" content="1.0">
+<meta name="CreationDate" content="18 Feb 2010">
+<link rel="stylesheet" type="text/css" href="mental.css">
+<style type="text/css"> i {color:darkred} dfn {font-style:italic}
+var {font-weight:bold; color:black} </style><title>General Utility Shaders</title>
+</head><body>
+<ul class="nav">
+<li><a href="architectural.html">home</a></li>
+<li><a href="arch_camera.html">&laquo;&nbsp;prev</a></li>
+<li><a href="arch_util.html">next&nbsp;&raquo;</a></li>
+</ul>
+<h1>General Utility Shaders</h1>
+<p>
+<a name="mi_shader__mia_roundcorners"></a>
+<h2 id="Round_Corners">Round Corners</h2>
+<p>
+CG has a tendency to look &quot;unrealistic&quot; because edges of objects are
+geometrically sharp, whereas all edges in the real world are slightly
+rounded, chamfered, worn or filleted in some manner. This rounded edge
+tends to &quot;catch the light&quot; and create highlights that make edges
+more visually appealing.
+<p>
+The <i>mia_roundcorners</i> shader can create an illusion of 
+&quot;rounded edges&quot; at render time.
+This feature is primarily intended to speed up modeling, where things
+like a table top need not be created with actual filleted or chamfered
+edges.
+<div class="pic">
+<img width="80%" src="images/round-off.jpg" alt="No round corners"><br />No round corners<br /><img width="80%" src="images/round-on.jpg" alt="Round corners"><br />Round corners<br /></div>
+<p>
+The shader perturbs the normal vector, and should be applied where
+bump maps are normally used, e.g. in the <b>bump</b> parameter
+if the <i>mia_material</i>.
+<p>
+The function is not a displacement, it is merely a shading effect
+(like bump mapping) and is best suited for straight edges and simple
+geometry, not advanced highly curved geometry.
+<p>
+<pre>
+declare shader vector "mia_roundcorners" (
+        scalar "radius",
+        boolean "allow_different_materials",
+        shader  "bump",
+        integer "bump_mode",
+        vector  "bump_vector",
+    )
+    version 3
+    apply texture
+end declare	
+</pre>
+<p>
+The <b>radius</b> parameter defines the radius of the rounding effect,
+in world space units.
+<p>
+When <b>allow_different_materials</b> is <em>off</em>, the rounding
+effect happens only against faces with the same material. If it is
+<em>on</em> the rounding effect happens against any face of any material.
+<p>
+The <b>bump</b> parameter is a passthrough to any other bump shader
+that handles additional bumping of the surface, for example 
+<b>mib_bump_map2</b> or similar.
+<em>This parameter is only used if <b>bump_mode</em> is 0.</b>
+<p>
+To better support OEM integration, the new parameters <b>bump_mode</b> 
+and <b>bump_vector</b> was introduced. 
+<p>
+<b>bump_mode</b> defines the coordinate space of the <b>bump_vector</b>, 
+as well as that of the return value of the shader itself (which is also a vector), 
+and if it is interpreted as a &quot;normal vector perturbation&quot; or a whole new
+&quot;normal vector&quot;`. 
+<p>
+The following values are legal:
+<ul>
+
+<li> 0: compatible mode. The old <b>bump</b> parameter is used in place of <b>bump_vector</b>. 
+         The return value is 0,0,0, and the shader actually perturbs the normal vector itself.
+<li> 1: &quot;add&quot; mode in &quot;internal&quot; space
+<li> 2: &quot;add&quot; mode in world space
+<li> 3: &quot;add&quot; mode in object space
+<li> 4: &quot;add&quot; mode in camera space
+<li> 5: &quot;set&quot; mode in &quot;internal&quot; space
+<li> 6: &quot;set&quot; mode in world space
+<li> 7: &quot;set&quot; mode in object space
+<li> 8: &quot;set&quot; mode in camera space
+</ul>
+
+<p>
+The &quot;add&quot; modes mean that the vector contains a <em>normal perturbation</em>, i.e.
+a modification that is &quot;added&quot; to the current normal. The &quot;set&quot; mode means that
+the actual normal is <em>replaced</em> by the incoming vector, interpreted in the
+aforementioned coordinate space. Equally for output, an &quot;add&quot; mode implies that
+the shader returns a perturbation vector intended to be added to the current normal,
+and &quot;set&quot; mode implies that it returns a whole normal vector. In neither case does
+the shader actually modify the current normal by itself.
+<p>
+<a name="mi_shader__mia_envblur"></a>
+<a name="Environment_Blur"></a>
+<h2 id="Environment_Blur">Environment Blur</h2>
+<p>
+<h3 id="Shader_Functionality_and_Parameters">Shader Functionality and Parameters</h3>
+<p>
+The <i>mia_envblur</i> shader works by accepting some <em>other</em> environment 
+shader as input, which would usually be a shader that performs an 
+environment lookup in an HDRI environment map. When the render starts,
+it performs a one-time setup and rasterizes the result of this environment 
+shader in a special format into an internal pyramidal filter structure. 
+<p>
+Then, when rendering proceeds, the shader can perform an extremely efficient 
+blurring operation in this environment map in way that looks very similar to 
+shooting an <em>extremely large</em> amount of glossy reflection rays into it; 
+i.e. it yields a <em>perfectly smooth</em> result - quickly.
+<p>
+<pre>
+declare shader "mia_envblur" (
+        shader  "environment",
+        scalar  "blur"               default 0.0,
+        boolean "mia_material_blur"  default on,
+        integer "resolution"         default 200
+    )
+    version 1
+    apply environment, texture
+end declare
+</pre>
+<p>
+<b>environment</b> is the actual environment shader looked up by this shader. If
+this is not specified, the global camera environment is used.
+<p>
+<b>blur</b> is the amount of blur (range 0.0 to 1.0) applied on the image. If
+this is 0.0, the internal bitmap is bypassed and the <em>environment</em> shader
+is looked up directly, as if the <i>mia_envblur</i> shader was not there. 
+<p>
+The blur amount can be automatically calculated setting
+<i>mia_material_blur</i> to <em>on</em>. Any reflective environment 
+lookup performed by <i>mia_material</i> will cause the appropriate
+blur in <i>mia_envblur</i>. Leave <b>blur</b> at 0.0 in this case. 
+This feature is described in more detail on page <a href="arch_util.html#Automatic_Blur">Automatic Blur</a>.
+<p>
+<b>resolution</b> is the resolution of the internal pyramidal data 
+structure used for the filtering. The default value of 200 means that a
+map of 200 x 200 samples are taken and stored, for subsequent filtering. 
+This should be set high enough to resolve the smallest feature in the
+environment map. 200 is generally enough for any still image - animations 
+need higher resolutions (1000).
+<p>
+It is important to remember that <i>mia_envblur</i> does a <em>one time</em> 
+rasterization of the <b>environment</b> shader at start up time. 
+This means that that shader must be constant across the scene, 
+and cannot be a complicated position-dependent blend of environment 
+shaders. The environment can still change <em>over time</em>, 
+since the rasterization step is performed anew each frame.
+<p>
+<h3 id="Use_Cases">Use Cases</h3>
+<p>
+The environment blur shader <i>mia_envblur</i> is intended to increase quality
+and performance of renderings that are largely reflecting the 
+mental ray <em>environment</em> (i.e. that do <em>not</em> primarily 
+reflect other <em>objects</em>).
+<p>
+The shader is primarily useful in product visualization renderings that
+are surrounded by an HDRI environment map for reflections, and also
+for visual effects work where one wants to help integrate CG objects
+in a real scene with the help of HDRI reflections, and want a smooth
+yet fast lookup.
+<p>
+The shader is <em>not</em> as useful for interior architectural renderings,
+since in those (enclosed) scenes, most reflection rays are bound to hit
+other objects; the purpose of this shader is to help reflection rays
+that do <em>not</em> hit other objects, i.e. the largest benefit is in an
+&quot;open&quot; scene<a href="#Foot1" title="It is also very useful combined with using refl_falloff_dist in mia_material."><sup>1</sup></a>.
+<div class="pic">
+<img width="100%" src="images/envblur-1.jpg" alt="Object reflecting an environment map"><br />Object reflecting an environment map
+</div>
+<p>
+Here an example object is reflecting an environment map<a href="#Foot2" title="The &quot;Galileo's tomb&quot; probe from www.debevec.org, which contains many small bright areas that tend to be troublesome in this context."><sup>2</sup></a> with no
+glossiness (i.e. perfect mirror reflection). This looks fine, because there
+is no quasi-random sampling performed. 
+<p>
+But what is we want to make a glossy reflection? If one simply uses the 
+glossy reflection of <i>mia_material</i> one receives the following result:
+<div class="pic">
+<img width="100%" src="images/envblur-2.jpg" alt="Glossy reflection with 8 samples"><br />Glossy reflection with 8 samples
+</div>
+<p>
+It is obvious that the default 8 glossy reflection samples are nowhere near
+enough, especially with an environment map with such high contrasts in it. 
+Trying with 100 glossy samples (at a large performance hit) the result is:
+<div class="pic">
+<img width="100%" src="images/envblur-3.jpg" alt="Glossy reflection with 100 samples"><br />Glossy reflection with 100 samples
+</div>
+<p>
+This is better, but still nowhere near a &quot;smooth&quot; glossy reflection. The
+100 samples made the rendering an order of magnitude slower, and it is still
+not enough! What can we do?
+<p>
+What we want to is <em>not</em> look up the environment multiple times. Not 8 
+times, nor 100 times, but <em>once</em>, except we want that lookup to 
+<em>already contain the desired blur</em>! 
+<p>
+This is accomplished by enabling the <b>single_env_sample</b> parameter of <i>mia_material</i>
+and then apply <i>mia_envblur</i> as our environment shader and our &quot;original&quot; 
+environment map as the <b>environment</b> parameter of <i>mia_envblur</i>.
+<p>
+Going back to our original 8 glossy samples, the following result can 
+be rendered, very quickly:
+<div class="pic">
+<img width="100%" src="images/envblur-4.jpg" alt="Glossy reflections using <i>mia_envblur</i>"><br />Glossy reflections using <i>mia_envblur</i>
+</div>
+<p>
+<a name="Automatic_Blur"></a>
+This looks much better, and renders much faster, but the level of blur is 
+constant. A much more advanced way is to let <i>mia_envblur</i> derive the blur
+to apply by enabling <i>mia_material_blur</i>.
+<p>
+Assume we have applied the following map to the <b>refl_gloss</b> parameter of
+the <i>mia_material</i>:
+<div class="pic">
+<img width="100%" src="images/envblur-5m.jpg" alt="Glossiness map"><br />Glossiness map
+</div>
+<p>
+The resulting render, with the help of <i>mia_envblur</i> will be this:
+<div class="pic">
+<img width="100%" src="images/envblur-5.jpg" alt="Mapped glossiness via <i>mia_material_blur</i>"><br />Mapped glossiness via <i>mia_material_blur</i>
+</div>
+<p>
+Please note that <i>mia_envblur</i> shader only supports <em>isotropic</em> lookups, 
+and will ignore any anisotropy parameters of <i>mia_material</i> when using it like this.
+<p>
+Also, do not forget to use the <b>single_env_sample</b> feature; just blurring the environment
+map is often not enough to combat the noise. 
+<p>
+Keep in mind that <em>other objects</em> will still reflect in the traditional
+manner with multiple samples, and this feature only applies to environment lookups.
+Therefore it can be very advantageous to use <b>refl_falloff_dist</b> to limit &quot;actual&quot;
+reflections to nearby objects only, and let the environment take over for distant
+objects<a href="#Foot3" title="This is particularly true in a visual effects context."><sup>3</sup></a>:
+<div class="pic">
+<img width="80%" src="images/envblur-6a.jpg" alt="No <b>refl_falloff_dist</b>"><br />No <b>refl_falloff_dist</b><br /><img width="80%" src="images/envblur-6b.jpg" alt="<b>refl_falloff_dist</b> used"><br /><b>refl_falloff_dist</b> used<br /></div>
+<p>
+In the right image the legs of the horse only reflect very near to the floor, 
+and conversely the horse only reflects the very nearest parts of the floor - 
+the rest is environment reflections. This yields a faster result than actually 
+tracing those reflections, and cuts down on the noise in the image.
+<p>
+<a name="mi_shader__mia_light_surface"></a>
+<a name="Light_Surface"></a>
+<h2 id="Light_Surface">Light Surface</h2>
+<p>
+<h3 id="Shader_Functionality_and_Parameters">Shader Functionality and Parameters</h3>
+<p>
+The <i>mia_light_surface</i> shader is primarily intended to help creating
+physically plausible renders of the &quot;visible&quot; portion of
+a light source - the actual tube in a fluorescent tube, the
+actual bulb in a light bulb, etc. while still using a 
+traditional CG &quot;light&quot; to create the illumination of
+the scene (see the use cases described below).
+<div class="pic">
+<img width="100%" src="images/selfill-demo.jpg" alt="An example of using <i>mia_light_surface</i>"><br />An example of using <i>mia_light_surface</i>
+</div>
+<p>
+
+<p>
+In the image above, actual illumination comes from a long
+thin rectangular area light, which is set not to cause
+any specular highlights. The visible &quot;glow&quot; of the
+fluorescent tube is set be visible in reflections (and
+hence become our much more accurate &quot;highlight&quot;) but
+still be invisible to FG rays, so it will not be incorrectly 
+picked up as additional light.
+<p>
+The <i>mia_light_surface</i> shader can either provide a color all by itself, 
+or derive the color from an existing (set of) light(s) in 
+the scene.
+<p>
+The shader itself only returns a color and does not do any 
+<em>other shading</em> per se. A tip is to use it plugged into 
+the <b>additional_color</b> of <i>mia_material</i>.
+<p>
+These are the parameters of the <i>mia_light_surface</i> shader:
+<p>
+<pre>
+declare shader "mia_light_surface" (
+        color		"color"        default 1 1 1,
+        scalar      "intensity"    default 1.0,
+        scalar      "fg_contrib"   default 0.0,
+        scalar      "refl_contrib" default 0.0,
+        boolean     "use_lights",
+        scalar      "lights_multiplier" default 1.0, 
+        vector      "lights_eval_point" default 0.0 0.0 0.0,
+        array light "lights"
+    )
+    version 3
+    apply texture
+end declare
+</pre>
+<p>
+<b>color</b> is the overall color, and applies both to built in
+light or light derived from light sources.
+<p>
+<b>intensity</b> is the intensity of the &quot;built in&quot; light, i.e.
+the surface will appear to the camera to have an intensity of  
+<b>color</b> multiplied by <b>intensity</b> (assuming
+<b>use_lights</b> is off - see below).
+<p>
+<b>fg_contrib</b> is how much of the light that is visible 
+to FG rays, and <b>refl_contrib</b> how much that is visible 
+to reflection rays.
+<p>
+When <b>use_lights</b> is on, the lights listed in the <b>lights</b> array
+are polled and their intensity (multiplied by the <b>lights_multiplier</b>)
+is <em>added</em> to the output dictated by the <em>intensity</em> parameter; i.e.
+if L is the output of all lights in the <em>lights</em> list, 
+the final output color of the shader is:
+<p>
+<samp>color&nbsp;*&nbsp;(L&nbsp;*&nbsp;lights_multiplier&nbsp;+&nbsp;intensity)</samp>
+
+<p>
+When <b>lights_eval_point</b> is 0,0,0 the intensity of the light
+is evaluated (with shadows disabled) at the point in 3D space that is being
+shaded. Since this may vary in an undesirable way for a light that has an
+IES profile, one can specify an explicit point at which the light color
+is evaluated. This point is in the coordinate space of <em>the light</em>.
+<p>
+<h3 id="Use_Cases">Use Cases</h3>
+<p>
+<h4 id="Illumination_in_General">Illumination in General</h4>
+<p>
+In the real world every light emitting object is visible, has an area, and emits light
+from that area. When using FG, <em>mental ray</em> will treat any surface that adds light
+energy into the scene as if it was a light source. However, to get the best possible
+quality out of this, one need very high FG settings, with long render times.
+<p>
+Light sources in computer graphics can be either point sources or 
+area lights, and the area lights themselves may, or may not, be visible 
+in the rendering. In most cases It is simply more efficient to use actual 
+light sources:
+<div class="pic">
+<img width="100%" src="images/selfill-1.jpg" alt="Emitting FG, Not emitting FG, And using a point light"><br />Emitting FG, Not emitting FG, And using a point light
+</div>
+<p>
+The image above shows 3 patches that are all using the <i>mia_light_surface</i> above a 
+checkered plane. The leftmost patch has it's <b>fg_contrib</b> set 
+to 1.0 (and is hence illuminating the floor), the other two has it set to 0.0. 
+But the rightmost patch has a point light hidden behind it.
+<p>
+At close distances (or with very large light sources, like the entire 
+outdoor sky) FG can illuminate objects just fine with very good 
+quality. At long distances or with small sources, using an explicit light 
+source is much more efficient.
+<p>
+<i>mia_light_surface</i> gives separate control if the object should be &quot;seen&quot; by 
+reflection rays or FG rays (and how much) via the 
+<b>fg_contrib</b> and <b>refl_contrib</b> parameters. 
+This image uses a slightly reflective checkered plane to 
+illustrate this. No light sources are used behind these patches:
+<div class="pic">
+<img width="100%" src="images/selfill-2.jpg" alt="Visibility to FG and reflections"><br />Visibility to FG and reflections
+</div>
+<p>
+The leftmost patch is visible both to FG (illuminates the plane) and 
+reflection (reflects in the floor). The center patch does not 
+illuminate (<b>fg_contrib</b> is zero) and the rightmost does
+not reflect (<b>refl_contrib</b> is zero).
+<p>
+<h4 id="Highlights_vs__Reflections">Highlights vs. Reflections</h4>
+<p>
+In the real world, the visible light emitting objects are both 
+visible to any camera photographing the scene, as well as reflect 
+(glossily) in other objects. In computer graphics, light sources 
+tend to be invisible to the camera, and their reflections are 
+&quot;cheated&quot; with the help of &quot;highlights&quot; by material shaders.
+<p>
+The <i>mia_material</i> supports a protocol for light sources to tell it 
+if they should generate highlights or not. This is implemented by
+most OEM applications light sources, look for flags 
+like &quot;Affect Specular&quot; or &quot;Emit Specular&quot; or similar on 
+the lights.
+<div class="pic">
+<img width="100%" src="images/selfill-3.jpg" alt="Light hidden behind patch with various flags."><br />Light hidden behind patch with various flags.
+</div>
+<p>
+There is a light hidden behind each of the patches in the image
+above. The leftmost is emitting both specular- and diffuse light.
+The middle one is only emitting specular light, and the rightmost
+is only emitting diffuse light. Furthermore, the rightmost patch
+has it's <b>fg_contrib</b> set to zero.
+<p>
+As we can see, the leftmost patch creates too much illumination,
+since we get illumination both from the light and from the patch.
+The center patch generates the strange effect of a small 
+&quot;highlight&quot; (our light source is just a point light) inside the
+reflection of what we are trying to sell as &quot;the visible light&quot;.
+<p>
+In this case this effect is distracting, so we want it disabled
+- like we have done on the light on the right. That is the way
+to go; let the surface handle the reflection, not the 
+illumination, and let the light handle the illumination, not
+the reflection (i.e. no traditional &quot;specular highlight&quot;).
+<p>
+An alternative, when using area lights, is to allow the area
+light to create the specular highlights:
+<div class="pic">
+<img width="100%" src="images/selfill-4.jpg" alt="Area light specular highlights can also &quot;work&quot;"><br />Area light specular highlights can also &quot;work&quot;
+</div>
+<p>
+This illustrates the alternative. The leftmost patch again uses
+a point light with specular on. This is what we do <em>not</em>
+want, since it looks strange. The other two patches use an area
+light. The middle patch has the area lights specularity turned
+off and the patch has <b>refl_contrib</b> set to 1.0, the
+right has the lights specular enabled, and a 
+<b>refl_contrib</b> of zero.
+<p>
+As we can see, both variants on the right side &quot;work&quot;, so
+it is a matter of choice which method is used for area lights.
+<p>
+However, the middle method tends to be preferred, because
+often one is using a geometrically simple area light (sphere,
+rectangle, etc.) in place of an <em>object</em> that is actually
+geometrically complex (a neon sign, for example). In those
+cases one <em>definitely</em> want to use the method in which
+the object is reflected, and the light does <em>not</em>
+emit specular light:
+<div class="pic">
+<img width="100%" src="images/selfill-4b.jpg" alt="Complex geometry require real reflections"><br />Complex geometry require real reflections
+</div>
+<p>
+Both neon signs use a rectangular area light for their illumination,
+and both cast nice area shadows (as witnessed by the small spheres). 
+But the sign on the left has a blatantly rectangular &quot;reflection&quot;,
+which does not make any sense. For this use, definitely use the method
+on the right side, with the lights specularity off, and the surface's
+<b>refl_contrib</b> nonzero.
+<p>
+<h4 id="Complex_Light_Distribution">Complex Light Distribution</h4>
+<p>
+In a real world luminaire, complex interactions between the bulb, the
+reflector, and various occluders determine the final distribution of
+light flying off into the scene. 
+<p>
+Naturally, one do not want to consider all those minute details just
+to make a rendering of a desk lamp, and indeed, the problem comes pre-solved 
+in the form of measured data (i.e. IES or EULUMDAT files).
+<p>
+The <i>mia_light_surface</i> shader can get its intensity from a light. This saves the
+user the time of keeping the intensity and color of the &quot;visible 
+surface&quot; in sync with the intensity and color of the light source.
+If the <b>use_lights</b> is on and some light is passed in the 
+<b>lights</b> parameter, this happens automatically.
+<p>
+This works fine for isotropic point lights and similar, but when
+using measured light data, one can run into an issue: 
+<div class="pic">
+<img width="100%" src="images/selfill-5.jpg" alt="Picking up intensity/color from the lights"><br />Picking up intensity/color from the lights
+</div>
+<p>
+The above scene contains three spheres. Lets assume they are the
+models of the light bulbs of some desk lamp. They each contain a
+light that has an IES profile fitting that <em>luminaire</em> applied.
+<p>
+The leftmost sphere uses <i>mia_light_surface</i> with a manual setting, i.e. 
+<b>use_lights</b> is off. The user is responsible for making
+sure the intensity and color of the surface is &quot;correct&quot;,
+as well as manually keeping it in sync with any animated
+intensity changes etc.
+<p>
+The center sphere uses <b>use_lights</b>, but we get a very
+strange effect from it; half our lightbulb is dark. This is because
+the IES profile we chose only emits light in the down direction.
+Since the light source is in the center of the sphere, only the 
+lower half of the sphere will gather any intensity values off
+the light!
+<p>
+Clearly this is not desirable; the IES profile is a compound 
+effect applying to the <em>entire luminaire</em>, and should not be 
+&quot;painted&quot; onto the light bulb itself!
+<p>
+The solution is to use <b>lights_eval_point</b> as is done
+on the rightmost sphere. Here a point just in front of the light
+is picked (in the lights own coordinate space) as the &quot;evaluation
+point&quot;. Each point on the sphere (regardless of its location)
+will have the intensity &quot;measured&quot; at that point in space. 
+<p>
+This gives the sphere a color that automatically follows any
+intensity- and color-changes of the light, yet is uniform 
+across the surface of the sphere. This sphere will reflect
+correctly in a more plausible way than a traditional &quot;highlight&quot;
+would.
+<p>
+In conclusion: The <i>mia_light_surface</i> shader allows...
+<br />
+<ul>
+
+<li> ...creating a surface as a &quot;stand in&quot; for an existing light, that &quot;looks&quot; bright, 
+       without emitting additional light into the scene.
+<li> ...controlling the amount of reflection and light actually introduced into the scene.
+<li> ...driving the appearance of the surface from an existing light source.
+<li> ...more physically correct &quot;highlights&quot; by replacing them with glossy
+      reflections of actual high-intensity objects.
+</ul>
+
+<div class="pic">
+<img width="100%" src="images/selfill-demo2.jpg" alt="Another example using <i>mia_light_surface</i>"><br />Another example using <i>mia_light_surface</i>
+</div>
+<p>
+
+<p><hr><p><dl>Footnotes
+<a name="Foot1"></a><dt>1
+<dd>It is also very useful combined with using 
+<b>refl_falloff_dist</b> in <i>mia_material</i>.
+<a name="Foot2"></a><dt>2
+<dd>The
+&quot;Galileo's tomb&quot; probe from www.debevec.org, which contains many small 
+bright areas that tend to be troublesome in this context.
+<a name="Foot3"></a><dt>3
+<dd>This is particularly true in a visual effects context.
+</dl>
+<ul class="nav">
+<li><a href="architectural.html">home</a></li>
+<li><a href="arch_camera.html">&laquo;&nbsp;prev</a></li>
+<li><a href="arch_util.html">next&nbsp;&raquo;</a></li>
+</ul>
+</body></html>

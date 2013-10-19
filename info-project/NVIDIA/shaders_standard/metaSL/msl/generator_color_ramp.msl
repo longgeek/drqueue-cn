@@ -1,0 +1,80 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Generator_color_ramp
+{
+  input:
+	struct Color_input 
+	{
+		Color  color;
+		float location;
+	};
+	enum interpolation_style_enum {
+		Step = 0,
+		Linear = 1,
+		Smooth = 2
+	};
+
+	float location = 0.5
+	{
+		display_name("Location");
+		soft_range(float(0),float(1));
+		description( "The location to sample from within the specified "
+					 "ramp." );
+	};
+    Color_input inputs[] = {Color_input(Color(0), 0.0f), Color_input(Color(1),1.0f)}
+    {
+		description( "Array in which each entry contains a color and a "
+		             "location for it in the range [0, 1].");
+    };
+
+	interpolation_style_enum interpolation_style = Step
+	{
+		display_name("Interpolation Style");
+		soft_range(0,2);
+		hard_range(0,2);
+		description( "Indicates which interpolation method (step, linear, or "
+		             "smooth) to use." );
+	};
+   
+  output:
+    Color result;
+    
+  void main()
+  {
+	int i, b, e;
+	float rl;
+  
+	b = e = 0;
+	// Assume that locations are sorted
+	for(i=1;i<inputs.count;i++)
+	{
+		b = i-1;
+		e = i;
+		if( location >= inputs[b].location &&
+			location <  inputs[e].location )
+			break;
+	}
+		
+	if( interpolation_style == 0 ) // Step
+		result = inputs[b].location;
+	else if( interpolation_style == 1 ) // Linear
+	{
+		rl = (location - inputs[b].location)/
+				(inputs[e].location - inputs[b].location);
+		result = lerp(inputs[e].color, inputs[b].color, rl);
+	}
+	else if( interpolation_style == 2 ) // Smooth
+	{
+		rl = smoothstep(inputs[b].location, inputs[e].location, location);
+		result = lerp(inputs[e].color, inputs[b].color, rl);
+	}
+  }
+}
+{
+	description( "Generates a smooth color ramp between colors based "
+	             "on location of the input in the range [0, 1]." );
+}
+;

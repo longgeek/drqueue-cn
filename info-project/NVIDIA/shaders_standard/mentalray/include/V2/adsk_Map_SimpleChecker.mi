@@ -1,0 +1,216 @@
+#*****************************************************************************
+# Copyright 2007 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	Pierre-Felix Breton
+# Purpose:	Simplified checker map based on the 3ds max checker map
+#
+# History:
+#
+# 2007 feb 15th - pfbreton, initial implementation
+# 
+#****************************************************************************/
+
+min version "3.4"
+
+#------------------------------------------------------------------------
+# Phenomenon
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Map_Simple_Checker_V2" 
+  (
+      #-------------------------------------
+			# Main parameters
+			#-------------------------------------
+      struct "m" 
+      {
+      	color "Color1",
+      	color "Color2",
+      	scalar "Soften"
+      },
+      
+		#-------------------------------------
+    # UV Generator Parameters
+    # 		hidden in applications like revit 
+    #     provided as added value and exposed in 3ds max or maya directly 
+    #			Current issues:
+    #							- The Real World Scale option has no use inside a shader since the code in the MAX UI compensates for the UV Scale and the phenom has no control over that
+    #							- The WAngle is expressed in RAD while its expressed in DEG in the MAX UI
+    #             - Tiling and Mirror Flags don't seem to "connect" when inside a phenomenon
+    #
+    #			Note:  	Currently, minimal set of UI controls are exposed to allow basic placement.  
+    #							Futher work is needed and bug fiex needed to make it fully functionnal
+    #-------------------------------------
+      struct "u" 
+      {
+      	scalar "UScale",
+      	scalar "VScale",
+      	scalar "UOffset",
+      	scalar "VOffset",
+      	scalar "WAngle",
+      	boolean "UWrap",
+      	boolean "VWrap",
+      	#boolean "UMirror",
+      	#boolean "VMirror"
+      	# boolean "RealWorldMapSize"  #The Real World Map Size Option has no use inside a phenom, since a lot of locig is burried in the max UI.
+      	integer "MapChannel",
+     	integer "UVWSource"  #ExplicitMapChannel|VertexCOlorChannel|PlanarFromObjectXYZ|PlanarFromWorldXYZ The uv source is type integer.
+      },
+      integer "mode",
+      array light "lights"
+      	
+   )#end phenomenon
+
+#-------------------------------------
+# Get the right ratio for V
+# (for non squared bitmap)
+#-------------------------------------
+
+shader "MetersToInternalInverseU|shader" "adsk_scale_meters_to_internal_inverse"
+	(
+		"meterValue" = interface "u.UScale"
+	)
+
+shader "MetersToInternalInverseV|shader" "adsk_scale_meters_to_internal_inverse"
+	(
+		"meterValue" = interface "u.VScale"
+	)
+
+shader "MetersToInternalInverseUOffset|shader" "adsk_scale_meters_to_internal"
+	(
+		"meterValue" = interface "u.UOffset"
+	)
+
+shader "MetersToInternalInverseVOffset|shader" "adsk_scale_meters_to_internal"
+	(
+		"meterValue" = interface "u.VOffset"
+	)
+	
+#-------------------------------------
+# UV Generator 
+#-------------------------------------
+shader "UVGen|Shader" "adsk_base_UVGenerator" 
+	(
+		"MapSlotType" 0, 																				#Texture|Environment
+		"EnvType" 0, 																						#Screen|Spherical|Cylindrical|ShrinkWrap|Screen
+		"UVWSource" = interface "u.UVWSource", 						#ExplicitMapChannel|VertexCOlorChannel|PlanarFromObjectXYZ|PlanarFromWorldXYZ
+		
+		"MapChannel" = interface "u.MapChannel", 
+		#------------------------
+		"ShowMapOnBack" on, 
+		"RealWorldMapSize" on,  																	#The Real World Map Size Option has no use inside a phenom, since a lot of locig is burried in the max UI.
+		#-------------------------
+		"UOffset" = "MetersToInternalInverseUOffset|shader", 
+		"UScale" = "MetersToInternalInverseU|shader", 
+		"UWrap" = interface "u.UWrap",      										#Tile Flag in 3ds max UI
+		"UMirror" off, #= interface "u.UMirror", 
+		#-------------------------
+		"VOffset" = "MetersToInternalInverseVOffset|shader",
+		"VScale" = "MetersToInternalInverseV|shader", 
+		"VWrap" = interface "u.VWrap",													#Tile Flag in 3ds max UI	
+		"VMirror" off, #= interface "u.VMirror", 
+		#---------------------
+		"UAngle" 0, 																						#Rotation Expressed in Rads	
+		"VAngle" 0, 																						#Rotation Expressed in Rads
+		"WAngle" = interface "u.WAngle", 												#Rotation Expressed in Rads
+		"UVAxis" 0, 
+		#---------------------
+		"Blur" 1.0, 
+		"BlurOffset" 0, 
+		#-----------------------
+		"Clip" off, 
+		"Noise" off, 
+		"Animate" off, 
+		"Amount" 1, 
+		"Size" 1, 
+		"Level" 1, 
+		"Phase" 0, 
+		#-----------------------
+		"XCanvasSize" 0, 
+		"YCanvasSize" 0
+	)#end shader
+
+#------------------------------------------------------------------------
+# Checker Map Shader
+#------------------------------------------------------------------------
+shader "Map_Checker|Texmap|Shader" "adsk_Tex_Checker" 
+	(
+		"Parameters" 
+		{
+			"Soften" = interface "m.Soften", 
+			"Color1" = interface "m.Color1", 
+			"Color2" = interface "m.Color2", 
+			"Map1Enabled" off, 
+			"Map2Enabled" off, 
+			"Coords" "UVGen|Shader"
+			}, 
+		"ExtraParameters" 
+		{
+			"GBufferID" 0	
+		}
+
+	)#end shader
+
+#------------------------------------------------------------------------
+#  Connections
+#------------------------------------------------------------------------
+root = "Map_Checker|Texmap|Shader"
+apply texture
+
+#------------------------------------------------------------------------
+# UI
+#------------------------------------------------------------------------
+
+	gui "gui_adsk_Map_Simple_Checker_V2"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "Simple Checker Map (adsk)", "category" "Texture", "hidden" )
+	
+		#-------------------------------------
+		#  Map Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Simple Checker Map Parameters")
+		{
+			#----------------------------------
+			control "Color1" "color" ("uiName" "Color 1","value" 0.2 0.2 0.2 1.0)
+			control "Color2" "color" ("uiName" "Color 2","value" .8 .8 .8 1.0)
+			control "Soften" "float" ("nonConnectable", "uiName" "Soften", "value" 0, "range" 0 10)
+     
+		}#end control
+		
+		
+		#-------------------------------------
+    # UV Generator Parameters
+    # 		hidden in applications like revit 
+    #     provided as added value and exposed in 3ds max or maya directly 
+    #			Current issues:
+    #							- The Real World Scale option has no use inside a shader since the code in the MAX UI compensates for the UV Scale and the phenom has no control over that
+    #							- The WAngle is expressed in RAD while its expressed in DEG in the MAX UI
+    #             - Tiling and Mirror Flags don't seem to "connect" when inside a phenomenon
+    #
+    #			Note:  	Currently, minimal set of UI controls are exposed to allow basic placement.  
+    #							Futher work is needed and bug fiex needed to make it fully functionnal
+    #-------------------------------------
+		control "u" "struct" ("uiName" "Texture Coordinates Parameters")
+    {  
+			control "UScale" "float" ("nonConnectable", "uiName" "U Tiling Scale", "value" 1.0, "range" 0 1000000000000000000)
+			control "VScale" "float" ("nonConnectable", "uiName" "V Tiling Scale", "value" 1.0, "range" 0 1000000000000000000)
+			control "UOffset" "float" ("nonConnectable", "uiName" "U Offset", "value" 0)
+			control "VOffset" "float" ("nonConnectable", "uiName" "V Offset", "value" 0)
+			control "WAngle" "float" ("nonConnectable", "uiName" "Angle", "value" 0, "range" 0 6.283185253783088)
+			control "MapChannel" "integer" ("nonConnectable", "uiName" "Map Channel", "value" 1, "range" 1 99)
+		  #control "UWrap"  "boolean" ("nonConnectable", "uiName"  "U Tile", "value" 1) 
+		  #control "VWrap"  "boolean" ("nonConnectable", "uiName"  "V Tile", "value" 1) 
+		  #control "UMirror"  "boolean" ("nonConnectable", "uiName"  "U Mirror", "value" 0) 
+		  #control "VMirror"  "boolean" ("nonConnectable", "uiName"  "V Mirror", "value" 0) 
+		  # control "RealWorldMapSize"  "boolean" ("nonConnectable", "uiName"  "Use Real-World Scale", "value" on)  #The Real World Map Size Option has no use inside a phenom, since a lot of locig is burried in the max UI.
+		}	#end control
+		
+		
+	  #----------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+
+	}#end gui
+
+end declare #end declare phenomenon

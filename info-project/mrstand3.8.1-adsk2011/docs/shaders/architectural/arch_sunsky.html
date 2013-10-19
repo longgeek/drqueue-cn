@@ -1,0 +1,1047 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="Author" content="mental images GmbH">
+<meta name="Company" content="mental images">
+<meta name="Creator" content="hypertex">
+<meta name="CreatorVersion" content="1.0">
+<meta name="CreationDate" content="18 Feb 2010">
+<link rel="stylesheet" type="text/css" href="mental.css">
+<style type="text/css"> i {color:darkred} dfn {font-style:italic}
+var {font-weight:bold; color:black} </style><title>Sun and Sky</title>
+</head><body>
+<ul class="nav">
+<li><a href="architectural.html">home</a></li>
+<li><a href="arch_mtl.html">&laquo;&nbsp;prev</a></li>
+<li><a href="arch_camera.html">next&nbsp;&raquo;</a></li>
+</ul>
+<h1>Sun and Sky</h1>
+<h2 id="Introduction">Introduction</h2>
+<p>
+The <em>mental ray</em> physical sun  sky shaders are designed to 
+enable physically plausible daylight simulations and very accurate
+renderings of daylight scenarios. 
+<p>
+<h3 id="Analysis_use">Analysis use</h3>
+<p>
+The shader library provides tools for lighting analysis.
+A shader for the standard CIE sky model (both clear and overcast) is available.
+This shader is grayscale (no color) and intended for analysis purposes rather
+than generating visually pleasing images. See page <a href="arch_sunsky.html#ciesky">ciesky</a> for details. 
+The <i>mia_physicalsky</i> shader supports analysis related parameters from the Perez sky model,
+as well as explicit illuminance parameter for the <i>mia_physicalsun</i>.
+<p>
+<h3 id="General_overview">General overview</h3>
+<p>
+The <i>mia_physicalsun</i> and <i>mia_physicalsky</i> are intended to be used <em>together</em>,
+with the <i>mia_physicalsun</i> shader applied to a <em>directional light</em> that
+represents the sun light, and the <i>mia_physicalsky</i> shader used as the
+scenes camera environment shader. The environment shader should
+be used to illuminate the scene with the help of Final Gathering
+(which must be enabled) and bounced light from the sun can be
+handled either by final gather diffuse bounces, or via GI (photons).
+<p>
+For improving quality in indoor shots, the sky can be combined 
+with the <i>mia_portal_light</i> shader described on page 
+<a href="arch_sunsky.html#Sky_Portals">Sky Portals</a>.
+<p>
+<a name="Units"></a>
+<h2 id="Units">Units</h2>
+<p>
+The sun and sky work in true photometric units, but the output
+can be converted to something else with the <b>rgb_unit_conversion</b> parameter.
+<p>
+If it is set to 1 1 1, both the values returned by the 
+<em>mental ray</em> shader API functions <em>mi_sample_light</em> 
+(for the sunlight) and <em>mi_compute_avg_radiance</em> 
+(for the skylight), when sent through the <em>mi_luminance</em>
+function, can be considered as photometric <em>illuminance</em>
+values in <em>lux</em>.
+<p>
+Since the intensity of the sun outside the atmosphere is calibrated as
+a 5900 degrees Kelvin blackbody radiator providing an illuminance of 
+127500 lux, this is <em>very bright</em> when seen compared to a more 
+&quot;classical&quot; rendering where light intensities generally range from 0 to 1. 
+<p>
+The <b>rgb_unit_conversion</b> parameter is applied as a multiplier and
+could be set to a value below 1.0 (e.g. 0.001 0.001 0.001) to 
+convert the raw lux value to something more &quot;manageable&quot;.
+<p>
+For convenience, the special <b>rgb_unit_conversion</b> value of 0 0 0 is internally
+set so that 80000 lux (approximately the amount of light on a sunny day)
+equals the classical light level of 1.0.
+<p>
+An interesting alternative is to set <b>rgb_unit_conversion</b> to 0.318 0.318 0.318. 
+Then the final rendered pixels in the image (when rendered with 
+<i>mia_material</i> or shaders following that shading convention and when 
+sent through the <em>mi_luminance</em> function) are 
+true photometric <em>luminance</em> values in
+<em>candela per square meter</em><a href="#Foot1" title="The value 0.318 (1/pi) originates from the illuminance/luminance ratio of a theoretically perfect Lambertian reflector."><sup>1</sup></a>.
+<p>
+These true luminance values then fit perfectly as input to the
+photographic tone mapper described on page <a href="arch_camera.html#Tone_Mapper">Tone Mapper</a>,
+with its <b>cm2_factor</b> set at 1.0.
+<p>
+
+<h2 id="Important_Note_on_Fast_SSS_and_SunSky">Important Note on Fast SSS and SunSky</h2> 
+<p>
+To use the <em>mental ray</em> fast SSS shaders together with the 
+high dynamic range indirect sun and skylight, it is very important 
+to turn <em>on</em> the <b>Indirect</b> parameter so the SSS shader 
+can scatter the skylight (which is considered indirect).
+<p>
+It is equally important to turn <em>off</em> the <b>Screen composit</b> 
+parameter (otherwise the output of the SSS shaders are clamped to a 
+low dynamic range and will appear to render black).
+<p>
+<h2 id="Common_Parameters">Common Parameters</h2>
+<p>
+Some parameters exist both in the <i>mia_physicalsun</i> and <i>mia_physicalsky</i> and 
+all do the same thing. For physical correctness, it is necessary to 
+keep these parameter <em>in sync</em> with each other in 
+both the sun and sky. 
+For example, a sun with a different <em>haze</em> 
+value than the sky cannot be guaranteed to be physically plausible.
+<p>
+
+The most important common parameters are those that drive the entire 
+shading- and colorization model:
+<br />
+<ul>
+
+<li> <b>haze</b> sets the amount of haze in the air. The range is 
+       from 0 (a completely clear day) to 15 (extremely overcast, or 
+       sandstorm in Sahara). 
+       The haze influences the intensity and color of the sky and horizon, 
+       intensity and color of sunlight, softness of the suns shadows, 
+       softness of the glow around the sun, and the strength of the 
+       aerial perspective.
+<div class="pic">
+<img width="80%" src="images/sunsky/sunsky-5-haze-0.jpg" alt="Haze=0"><br />Haze=0<br /><img width="80%" src="images/sunsky/sunsky-5-haze-3.jpg" alt="Haze=3"><br />Haze=3<br /></div>
+<div class="pic">
+<img width="80%" src="images/sunsky/sunsky-5-haze-8.jpg" alt="Haze=8"><br />Haze=8<br /><img width="80%" src="images/sunsky/sunsky-5-haze-15.jpg" alt="Haze=15"><br />Haze=15<br /></div>
+<br />
+<li> <b>redblueshift</b> gives artistic control over the &quot;redness&quot; of
+       the light. The default value of 0.0 is the physically correct 
+       value<a href="#Foot2" title="Calculated for a 6500K whitepoint."><sup>2</sup></a>, but 
+       can be changed with this parameter which ranges from 
+       -1.0 (extremely blue) to 1.0 (extremely red).
+<div class="pic">
+<img width="80%" src="images/sunsky/sunsky-9-redness-minus-03.jpg" alt="Redness=-0.3"><br />Redness=-0.3<br /><img width="80%" src="images/sunsky/sunsky-9-redness-plus-03.jpg" alt="Redness=+0.3"><br />Redness=+0.3<br /></div>
+<br />
+<li> <b>saturation</b> is also an artistic control, where 1.0 is the
+       physically calculated saturation level. The parameter ranges from
+       0.0 (black and white) to 2.0 (extremely boosted saturation)
+</ul>
+
+<p>
+<a name="mi_shader__mia_physicalsun"></a>
+<h2 id="Sun_Parameters">Sun Parameters</h2>
+<p>
+The <i>mia_physicalsun</i> is responsible for the color and intensity of the sunlight,
+as well as emitting photons from the sun.
+The shader should be applied as <em>light shader</em> and <em>photon emission shader</em>
+on a <em>directional light source</em> 
+(it does not work on any other light type).
+<p>
+<pre>
+declare shader "mia_physicalsun" (
+        boolean "on"                   default on,
+        scalar  "multiplier"           default 1.0,
+        color   "rgb_unit_conversion"  default 0.0001 0.0001 0.0001,
+        scalar  "haze"                 default 0.0,
+        scalar  "redblueshift"         default 0.0,
+        scalar  "saturation"           default 1.0,
+        scalar  "horizon_height"       default 0.0,
+        scalar  "shadow_softness"      default 1.0,
+        integer "samples"              default 8,
+        vector  "photon_bbox_min",
+        vector  "photon_bbox_max",
+        boolean "automatic_photon_energy",
+        boolean "y_is_up",
+        integer "illuminance_mode"           default 0,
+        scalar  "direct_normal_illuminance"  default 0.0
+    )
+    version 6
+    apply light
+end declare
+</pre>
+<p>
+As mentioned above, the <i>mia_physicalsun</i> contains several of the common parameters that
+are exposed in the <i>mia_physicalsky</i> as well (<b>haze</b>, <b>redblueshift</b> etc.). 
+The value of these parameters for the <i>mia_physicalsun</i> should match those in the <i>mia_physicalsky</i>.
+The parameters specific to the <i>mia_physicalsun</i> are as follows:
+<br />
+<ul>
+
+<br />
+<li> <b>samples</b> is the number of shadow samples for the soft shadows. If it
+is set to 0, no soft shadows are generated.
+<br />
+<li> <b>shadow_softness</b> is the softness for the soft shadows. A value of 1.0 is the
+value which matches the softness of real solar shadow most accurately. Lower
+values makes the shadows <em>sharper</em> and higher <em>softer</em>.
+<br />
+<li> When <b>photon_bbox_min</b> and <b>photon_bbox_max</b> are left set to 0,0,0 the photon bounding box will
+be calculated automatically by the shader. 
+If these are set, they define a bounding box
+<em>in the coordinate system of the <b>light</em></b> within which photons are aimed.
+This can be used to &quot;focus&quot; GI photons on a particular area-of-interest. For
+example, if one has modelled a huge city as a backdrop, but is only rendering
+the interior of a room, <em>mental ray</em> will by default shoot photons over
+the entire city and maybe only a few will find their way into the room. 
+With the 
+<b>photon_bbox_max</b> and <b>photon_bbox_min</b> parameters 
+one can focus the photon emission of the <i>mia_physicalsun</i>
+to only aim at the window in question, greatly speeding up and enhancing the
+quality of the interior rendering.
+<br />
+<li> <b>automatic_photon_energy</b> enables automatic photon energy calculation. When this is <em>on</em>,
+the light source does not need to have a valid energy value that matches that
+of the sun (it does, however, need a nonzero energy value or photon emission
+is disabled by <em>mental ray</em>). The correct energy and color of the photons
+will be automatically calculated. If this parameter is <em>off</em>, the photons
+will have the energy defined by the lights energy value.
+<br />
+<li> If <b>illuminance_mode</b> is zero, the default solar intensity used (calculated internally
+based on the <b>haze</b>, solar angle, optical airmass, etc.) which is compatible with
+previous versions of the library. 
+If <b>illuminance_mode</b> is 1, the sun light will have the direct normal illuminance (in lux)
+set by the <b>direct_normal_illuminance</b> parameter. The color of the sunlight is still driven by the
+<b>haze</b> as before, only the intensity is modified.
+<p>
+</ul>
+
+<p>
+<a name="mi_shader__mia_physicalsky"></a>
+<h2 id="Sky_Parameters">Sky Parameters</h2>
+<p>
+The <i>mia_physicalsky</i> shader is responsible for creating the color gradient 
+that represent the atmospheric skydome, which is then used to light
+the scene with the help of Final Gathering and/or 
+sky portals (page <a href="arch_sunsky.html#Sky_Portals">Sky Portals</a>).
+The <i>mia_physicalsky</i>, when used as an environment shader, also show the 
+sky to the camera and in reflections.
+<p>
+<i>mia_physicalsky</i> also creates a <em>virtual ground plane</em> that exists 
+&quot;below&quot; the model. This makes it unnecessary to actually 
+model geometry all the way to the horizon line - the
+<em>virtual ground plane</em> provides both the visuals and the bounce-light 
+from such ground.
+<p>
+<pre>
+declare shader "mia_physicalsky" (
+        boolean "on"                  default on,
+        scalar  "multiplier"          default 1.0,
+        color   "rgb_unit_conversion" default 0.0001 0.0001 0.0001,
+        scalar  "haze"                default 0.0,
+        scalar  "redblueshift"        default 0.0,
+        scalar  "saturation"          default 1.0,
+        scalar  "horizon_height"      default 0.0,
+        scalar  "horizon_blur"        default 0.1,
+        color   "ground_color"        default 0.2 0.2 0.2,
+        color   "night_color"         default 0 0 0,
+        vector  "sun_direction",
+        light   "sun",   
+        # The following parameters are only useful
+        # when the shader is used as environment
+        scalar  "sun_disk_intensity"  default 1.0,
+        scalar  "sun_disk_scale"      default 4.0,
+        scalar  "sun_glow_intensity"  default 1.0,
+        boolean "use_background",
+        shader  "background",
+        # For the lens/volume shader mode
+        scalar  "visibility_distance",
+        boolean "y_is_up",
+        integer "flags",
+        integer "sky_luminance_mode" default 0,
+        scalar  "zenith_luminance"               default 0.0,
+        scalar  "diffuse_horizontal_illuminance" default 0.0,
+        # Perez model luminance distribution parameters
+        scalar  "a",
+        scalar  "b",
+        scalar  "c",
+        scalar  "d",
+        scalar  "e"
+    )
+    version 5
+    apply environment, texture, lens, volume
+end declare
+</pre>
+<br />
+<ul>
+
+<li> <b>on</b> turns the shader on or off. The default is <em>on</em>.
+<br />
+<li> <b>multiplier</b> is a scalar multiplier for the light output. 
+The default is 1.0.
+<br />
+<li> <b>rgb_unit_conversion</b> allows setting the units, described in more detail 
+       above. The special value of 0 0 0 matches 80000 lux (light level
+       on a sunny day) to the output value 1, suitable for low dynamic 
+       range rendering.
+<br />
+<li> <b>horizon_height</b> sets the &quot;level&quot; of the horizon. 
+      The default value of 0.0 puts the horizon at standard &quot;height&quot;.
+      But since the horizon is <em>infinitely</em> far away 
+      this can cause trouble joining up with any <em>finite</em> geometry
+      that is supposed to represent the ground. It can also cause issues
+      rendering locations that are supposed to be at a high altitude, 
+      like mountain tops or the top of New York skyscrapers where the 
+      horizon <em>really is</em> visibly &quot;below&quot; the viewer.
+<br />
+      This parameter allows tuning the position of the horizon. 
+      Note that the horizon doesn't actually exist at any specific 
+      &quot;height&quot; in 3D space - it is a shading effect for rays that go 
+      below a certain <em>angle</em>. This parameter tweaks this angle.
+      The total range available range is somewhat extreme, reaching 
+      from -10.0 (the horizon is &quot;straight down&quot;) to 10.0 (the horizon is 
+      at the zenith)! In practice, only much smaller values are actually useful, 
+      like for example -0.2 to push the horizon down just below the edge of a 
+      finite visible ground plane.
+<br />
+      Note: The <b>horizon_height</b> affects not only the visual representation
+      of the horizon in the <i>mia_physicalsky</i> shader, but also the color of the
+      <i>mia_physicalsun</i> itself, i.e. the point where the sun &quot;sets&quot; will indeed 
+      change for a nonzero <b>horizon_height</b>.
+<br />
+<li> <b>horizon_blur</b> sets the &quot;blurriness&quot; with which the horizon is rendered. 
+       At 0.0 the horizon is completely sharp. Generally low values 
+       (lower than 0.5) are used, but the full range is up to 10.0 for
+       a horizon which only consists of blur and no actual horizon at all.
+<div class="pic">
+<img width="80%" src="images/sunsky/sunsky-7-horizon-0.jpg" alt="<b>horizon_height</b>=0.0, <b>horizon_blur</b>=0.0"><br /><b>horizon_height</b>=0.0, <b>horizon_blur</b>=0.0<br /><img width="80%" src="images/sunsky/sunsky-7-horizon-minus-06.jpg" alt="<b>horizon_height</b>=-0.3, <b>horizon_blur</b>=0.2"><br /><b>horizon_height</b>=-0.3, <b>horizon_blur</b>=0.2<br /></div>
+<br />
+<li> <b>ground_color</b> is the color of the <em>virtual ground plane</em>. Note that this
+      is a diffuse reflectance value (i.e. albedo). The ground will appear
+      as if it was a Lambertian reflector with this diffuse color, lit by
+      the sun and sky <em>only</em>, does <em>not</em> receive any 
+      shadows. 
+<div class="pic">
+<img width="80%" src="images/sunsky/sunsky-A-red-ground.jpg" alt="Red ground"><br />Red ground<br /><img width="80%" src="images/sunsky/sunsky-A-green-ground.jpg" alt="Green ground"><br />Green ground<br /></div>
+<br />
+      Note in the above images how bounce-light from the ground tints
+      the walls of the house. Also note that the virtual ground plane
+      does <em>not</em> receive shadows.
+<br />
+      Many sky models neglect the influence from bounce light from the 
+      ground, assuming only the sky is illuminating the scene. To compare 
+      the output if the <i>mia_physicalsky</i> with e.g. the IES sky model one must 
+      therefore set the <b>ground_color</b> to black.
+<br />
+<li> <b>night_color</b> is the minimum color of the sky - the sky will never become
+      darker than this value. It can be useful for adding things like
+      moon, stars, high altitude cirrus clouds that are lit long after
+      sunset etc. 
+      As the sun sets and the sky darkens, the contribution from 
+      <b>night_color</b> is unaffected and remains as the &quot;base light level&quot;.
+<br />
+<li>  <b>sun_direction</b> is the direction of the sun disk when specified
+       manually. If the <b>sun</b> parameter is used, this parameter is 
+       ignored.
+<br />
+<li>  <b>sun</b> is the way to automatically set the sun direction. It
+       should be the tag of the light instance that contains the directional
+       light that represents the sun - i.e. the same light that has the <i>mia_physicalsun</i>
+       shader. This will make the visible sun disk automatically follow the
+       direction of the actual sunlight.
+<br />
+<li> <em>Aerial Perspective</em> is a term used by painters to convey how
+      distant objects are perceived as hazier and tinted towards the blue end
+      of the spectrum. <i>mia_physicalsky</i> emulates this with the <b>visibility_distance</b> parameter.
+      When nonzero, it defines the &quot;10 distance&quot;, i.e. the distance at 
+      which approximately 10 of haze is visible at a <b>haze</b> level of 0.0.
+<br />
+      To use this effect, the shader must be applied as either a <em>lens</em>
+      or <em>camera volume</em> shader.
+<br />
+<li> <b>y_is_up</b> defines what constitutes &quot;up&quot;. Some OEM integrations
+      of <em>mental ray</em> considers the Z axis &quot;up&quot; and hence this parameter
+      should be <em>off</em> - others consider the Y axis &quot;up&quot; and in 
+      that case this parameter should be <em>on</em>.
+<br />
+<li>  <b>flags</b> is for future expansion, testing and internal algorithm 
+       control. Should be set to zero.
+<br />
+<li>  If <b>sky_luminance_mode</b> is zero, the luminance of the sky is calculated automatically based 
+       on the <b>haze</b> level, sun position, etc, and is compatible with the previous 
+       version of the shader.
+<br />
+       However, if <b>sky_luminance_mode</b> is nonzero, the luminance distribution across the sky dome
+       will follow the <em>Perez</em> model, which is driven by five parameters named
+       <b>a</b>, <b>b</b>, <b>c</b>, <b>d</b> and <b>e</b>. So to use this
+       mode you must have a valid set of Perez coefficients. {The color distribution
+       across the sky dome is still driven by the <b>haze</b> parameter!}
+<br />
+       If <b>sky_luminance_mode</b> is 1, the luminance of the sky can either be defined by setting the
+       <b>zenith_luminance</b> parameter (a candela per square meter measurement) <em>or</em> by setting
+       a known <b>diffuse_horizontal_illuminance</b> value (in lux) - <em>not both</em>.
+<br />
+       If <b>sky_luminance_mode</b> is 2, the zenith luminance is calculated from the CIE Clearsky model.
+</ul>
+
+<p>
+It is important to note that the <i>mia_physicalsky</i> shader treats rays differently.
+Direct rays from the camera, as well as reflection and refraction rays see
+the &quot;entire&quot; effect, including the &quot;sun disk&quot; described below. But since
+the lighting already has a direct light that represents the sun (using the
+<i>mia_physicalsun</i> shader) the sun disk is not visible to the finalgather rays
+<a href="#Foot3" title="This would otherwise cause noise in the Final Gathering solution and too much light added to the scene."><sup>3</sup></a>.
+<p>
+These parameters do not affect the Final Gathering result, only the &quot;visible&quot;
+result, i.e. what the camera sees and what is seen in reflection and refraction:
+<br />
+<ul>
+
+<li> <b>sun_intensity</b> and <b>glow_intensity</b> is the intensity of the visible sun disk and it's glow,
+      which can be used to tune the &quot;look&quot; of the sun.
+<div class="pic">
+<img width="80%" src="images/sunsky/sunsky-8-size-4-glow-5.jpg" alt="<b>glow_intensity</b>=5"><br /><b>glow_intensity</b>=5<br /><img width="80%" src="images/sunsky/sunsky-8-size-4-glow-point-1.jpg" alt="<b>glow_intensity</b>=0.1"><br /><b>glow_intensity</b>=0.1<br /></div>
+<br />
+<li> <b>sun_scale</b> sets the size of the visible sun disk. The value 1.0 is the 
+          &quot;physically correct&quot; size, but due to the fact that people tend to
+          misjudge the proper size of the sun in photographs, the default is 
+          the slightly more visually pleasing 4.0
+<div class="pic">
+<img width="80%" src="images/sunsky/sunsky-8-size-1.jpg" alt="<b>sun_scale</b>=1"><br /><b>sun_scale</b>=1<br /><img width="80%" src="images/sunsky/sunsky-8-size-4.jpg" alt="<b>sun_scale</b>=4"><br /><b>sun_scale</b>=4<br /></div>
+<br />
+<li> When <b>use_background</b> is enabled but no <b>background</b> has been set, the background of
+      the rendering will be transparent black, i.e. suitable for external compositing.
+      If a <b>background</b> shader is supplied, the background of the rendering will
+      come from <em>that</em> shader (for example a texture shader that looks up a 
+      background photograph of a real location or similar). 
+      In either case the <i>mia_physicalsky</i> will still be visible in refractions 
+      and reflections. 
+<p>
+</ul>
+
+<p>
+<a name="ciesky"></a>
+<h2 id="CIE_Sky_model">CIE Sky model</h2>
+<p>
+The CIE sky model is a standard model utilized in lighting analysis. It is a colorless
+(grayscale) model, and is hence not suitable for making "nice images", but it has
+the advantage of following a standardized (known) luminance distribution.
+<p>
+<pre>
+declare shader "mia_ciesky" (
+        boolean "on"                  default on,
+        color   "rgb_unit_conversion" default 0.0001 0.0001 0.0001,
+        # Luminance parameters
+        boolean "auto_luminance"                 default on,
+        scalar  "zenith_luminance"               default 0.0,
+        scalar  "diffuse_horizontal_illuminance" default 0.0,
+        # CIE specific parameters. 0 = clear sky, 1 = overcast
+        scalar  "overcast"            default 0.0,
+        # Sun direction
+        vector  "sun_direction",
+        light   "sun",   
+        # Y vector
+        boolean "y_is_up",
+    )
+    version 1
+    apply environment, texture
+end declare
+</pre>
+<p>
+The shader shares many parameters with the <i>mia_physicalsky</i> and they work the same, this includes 
+parameters <b>on</b>, <b>rgb_unit_conversion</b>, <b>sun_direction</b> and <b>y_is_up</b>. See page
+<a href="arch_sunsky.html#mi_shader__mia_physicalsky">mi_shader__mia_physicalsky</a> for details.
+<p>
+The following parameters are unique to the <em>mia_ciesky</em> shader:
+<br />
+<ul>
+
+<br />
+<li> <b>auto_luminance</b>. When on, the luminance of the sky can either be defined 
+        by setting the <b>zenith_luminance</b> parameter (a candela per square meter measurement) 
+        <em>or</em> by setting a known <b>diffuse_horizontal_illuminance</b> value (in lux) - <em>not both</em>.
+<br />
+<li> When <b>overcast</b> is zero, the <em>CIE Clear Sky</em> model is used. 
+      When <b>overcast</b> is 1.0, the <em>CIE Overcast</em> model is used. 
+      In-between values is a linear interpolation of the two models.
+</ul>
+
+<p>
+<a name="Sky_Portals"></a>
+<h2 id="Sky__and_Environment_Portals">Sky- and Environment Portals</h2>
+<p>
+<h3 id="The_Problem">The Problem</h3>
+<p>
+A classic problem in computer graphics is lighting a scene solely through
+indirect light, like from a sky, or other &quot;environment&quot; light from
+an acquired HDRI or similar. 
+<p>
+This is accomplished in mental ray using Final Gathering (henceforth
+abbreviated as FG), and is done by tracing a large number of 
+&quot;FG rays&quot; to see which hit the environment (or other lit surfaces). 
+Since this is a <em>large</em> number of rays, the results are cached 
+(for performance) at <em>FG points</em> and the result is interpolated, 
+&quot;smoothing&quot; the result.
+<p>
+This all works very well when there is a lot of fairly uniform light
+that is &quot;seen&quot; by the FG rays. In general, FG gives the best result
+when the light levels in a scene is fairly uniform; it works well
+to illuminate an outdoors scene by the sky (most FG rays &quot;see&quot;
+the sky), and it works well to bounce secondary light in a room in 
+which most surfaces are lit by direct lights (most FG rays &quot;see&quot;
+some already-lit surface).
+<p>
+However, a scene of a dark room with <em>no</em> lights, and a single
+window <em>only</em> exposed to the sky is more problematic:
+<div class="pic">
+<img width="100%" src="images/portal-1.jpg" alt=""><br />
+</div>
+<p>
+
+<p>
+In the image on the right, almost all FG rays will &quot;see&quot; blackness
+and only a select few will be able to &quot;escape&quot; through the narrow
+window to hit the sky. To resolve this accurately one need to shoot
+very many FG rays, which has a negative impact on performance.
+<p>
+A further difference is that in the first two scenes (the outdoor scene
+and the well-lit interior) there are already direct lights which cause
+high-quality direct shadows, which resolves the details in the scene; 
+FG is only used for additional bounce- or sky-lighting, and doesn't provide
+the bulk of the lighting. Therefore, any &quot;over-smoothing&quot; caused by the
+interpolation of FG points is drowned out by other lights (or can
+be resolved with AO in <i>mia_material</i>).
+<p>
+But the rightmost scene does not have that luxury, <em>all</em> light is
+indirect skylight. Any over-smoothing due to interpolation will be clearly 
+visible, which means that one needs <em>both</em> a high FG ray count 
+<em>and</em> a high FG point density to create a pleasing render, which
+gives longer render times.
+<p>
+A common technique used by many people doing interior renderings is to
+put an area light in the window, to provide the sky-lighting rather
+than rely on FG to &quot;find&quot; the sky. But this gives rise to the question
+&quot;how bright and what color should this light be?&quot;.
+<p>
+<h3 id="The_Solution">The Solution</h3>
+<p>
+To solve <em>all</em> these issues the concept of a <em>portal light</em> is 
+introduced. The portal light is a (rectangular) area light
+which is placed in the window, which obtains it's proper intensity
+and color from the sky <em>outside</em> the window (i.e. an environment
+shader, like <i>mia_physicalsky</i> or similar) and how much of that sky that is
+&quot;seen&quot;<a href="#Foot4" title="The subtended solid angle of the window as seen from the shading point."><sup>4</sup></a>.
+<p>
+Practically, this makes the portal light behave as a &quot;FG concentrator&quot;
+so instead of having to send thousands of FG rays around the scene
+to &quot;find&quot; the window, the portal light actually <em>blocks</em> FG rays,
+and instead converts light from beyond the window to direct light, 
+with high-quality area shadows with no interpolation related issues 
+possible.
+<p>
+FG will now see a <em>well lit</em> room rather than a <em>black</em> 
+room, and can be performed at much lower FG ray counts. Furthermore,
+since the light from the window is now <em>direct</em>, we gain
+one extra light bounce &quot;for free&quot;.
+<p>
+<a name="mi_shader__mia_portal_light"></a>
+<h4 id="mia_portal_light">mia_portal_light</h4>
+<p>
+The <i>mia_portal_light</i> shader should be applied both as light- and photon
+emitter shader on a <em>rectangular area light</em>. The mental ray
+light instance must be set to be <em>visible</em> (this is a
+technical requirement for the portal light to be able to &quot;block&quot;
+final gather rays. If the light actually <em>is</em> visible or
+not in the rendering is instead handled by the shader).
+<p>
+Furthermore, the mental ray light instance must be set up such
+that the rectangular area light is extended in the X/Y plane
+of the lights own coordinate space, and any transformation of
+the light must be handled with the light instance's 
+transform<a href="#Foot5" title="This is how most OEM application already sets up the mental ray area light instances."><sup>5</sup></a>.
+<p>
+The following parameters exist:
+<p>
+<pre>
+declare shader "mia_portal_light" (
+        boolean "on"                     default on,
+        scalar  "multiplier"             default 1.0,
+        color   "tint_color"             default 1 1 1,
+        boolean "reverse"                default off,
+        scalar  "cutoff_threshold"       default 0.005,
+        boolean "shadows"                default true,
+        boolean "use_custom_environment" default off,
+        shader  "custom_environment",
+        boolean "visible"                default off,
+        boolean "lookup_using_fg_rays"   default on,
+        scalar  "shadow_ray_extension"   default 0.0,
+        boolean "emit_direct_photons"    default off,
+        color   "transparency"           default 1 1 1
+    )
+    version 9
+    apply light, emitter
+end declare
+</pre>
+<p>
+<b>on</b> enables or disables the light.
+<p>
+<b>multiplier</b> sets the intensity and <b>tint_color</b> modifies the light 
+color. When it is white, and the <b>multiplier</b> is 1.0, the light emitted 
+is equal in intensity (and color) to the environment light that FG would have 
+seen if allowed to send many thousands of FG rays<a href="#Foot6" title="For FG filter 0, the unbiased mode."><sup>6</sup></a>.
+<p>
+The light normally shines in the positive Z direction of the light 
+instance's coordinate space. If <b>reverse</b> is on, it shines 
+in the negative Z direction.
+<p>
+<b>cutoff_threshold</b> is a performance optimization option. Any light
+below this level is ignored, and no shadow rays are traced (which is what
+consumes the bulk of the render time of an area light). Of course, this
+makes the scene <em>slightly</em> darker since light is ignored, but can save a lot
+of excess render time.
+<p>
+<b>shadows</b> can turn shadows on and off.
+<p>
+If <b>use_custom_environment</b> is <em>off</em>, the shader looks in 
+the global camera environment for the color of the light. 
+If it is <em>on</em>, it calls the shader passed as 
+<b>custom_environment</b> to find the color.
+<p>
+Tip: While the shader is intended to be a portal to an environment, one
+can also treat it as a &quot;light card&quot; shader by putting a shader returning
+a solid color as the <b>custom_environment</b>, for example
+using <b>mib_blackbody</b> creates a light card with a given color 
+temperature.
+<p>
+If <b>use_custom_environment</b> is on but no <b>custom_environment</b>
+is actually passed, the shader behaves as a white light card.
+<p>
+<b>visible</b> defines if the light emitting surface is visible or not.
+When <em>off</em>, eye rays, reflection rays etc. go straight through so 
+the portal light itself remains unseen (and we still &quot;see&quot; out the 
+window). When <em>on</em>, the actual light emitting surface becomes
+visible to eye rays, reflection rays etc (and one do not &quot;see&quot; out
+the window any more, although one still &quot;see&quot; the environment shaders
+result). The <em>on</em> mode is useful when using <i>mia_portal_light</i> as a light
+card shader. 
+<p>
+When <b>lookup_using_fg_rays</b> is <em>off</em>, the environment
+shader is looked up with a normal call to <em>mi_trace_environment()</em>.
+However, some shaders behave differently if they are called by an FG ray
+or by another ray (the <i>mia_physicalsky</i> shader, for example, does not show the
+&quot;image&quot; of the visible sun to FG rays). Since the idea of <i>mia_portal_light</i> is
+to act as an &quot;FG concentrator&quot; it should therefore follow that
+behavior. So when <b>lookup_using_fg_rays</b> is <em>on</em>, it
+calls the environment with the ray type set to miRAY_FINALGATHER,
+so that shaders that switch behavior based on this can return the
+color appropriate for a FG ray.
+<p>
+If <b>shadow_ray_extension</b> is zero, the shader begins tracing
+shadow rays &quot;at&quot; the light. When positive, the shadow rays actually
+start that distance &quot;outdoors&quot;. So if there is a large object just
+<em>outside</em> the window, it's shadow will be taken into account.
+Conversely, a negative value allows the shadow rays to begin that
+distance <em>inside</em> the window, which can allow them to &quot;skip&quot;
+over troublesome geometry near the window (flowers, curtains) that
+would otherwise just introduce noise into the shadows.
+<p>
+If <b>emit_direct_photons</b> is on, the light only shoots
+direct photons, and does not actually emit any direct light 
+at all. 
+<p>
+The <b>transparency</b> parameters has two functions.
+<ul>
+
+<li> When <b>visible</b> is <em>on</em>, it is a multiplier
+to the &quot;visible color&quot; of the area light. When this is
+<em>white</em>, the directly &quot;visible&quot; color is the one
+dictated by the laws of physics for a surface that emits
+that amount of light. 
+<br />
+Changing the parameter away from <em>white</em> allows one 
+to artificially change the balance between the visible 
+result (which is changed by changing this parameter) and 
+the intensity of the emitted light (which is <em>not</em> 
+affected by this parameter). This can be useful to avoid
+noise 
+<br />
+<li> If  <b>visible</b> is <em>off</em> it defines the 
+transparency of the area light.
+<br />
+This allows the <i>mia_portal_light</i> shader to double as a &quot;gel&quot; on the 
+window, to subdue the intensity of what is seen outdoors, which 
+otherwise tends to appear overexposed and blown out. The actual 
+emitted light intensity is not affected by this, nor does this 
+affect the intensity of other light rays travelling through the 
+window, it only affects what is visible to the eye, in refractions 
+or reflections.
+</ul>
+
+<p>
+<h3 id="Examples">Examples</h3>
+<p>
+In this section we will examine the benefits of using the portal lights
+compared to what has been possible in previous versions of <em>mental ray</em>.
+<p>
+We are using the following scene<a href="#Foot7" title="Large parts of the example scene geometry is provided courtesy of Giorgio Adolfo Krenkel."><sup>7</sup></a>:
+<div class="pic">
+<img width="100%" src="images/portal-start.jpg" alt="Our scene, using the portal lights, GI and FG."><br />Our scene, using the portal lights, GI and FG.
+</div>
+<p>
+
+<p>
+The scene is only lit by the sun and sky, there are no light sources inside the
+room of any kind. 
+<p>
+<h4 id="Without_Portal_Lights">Without Portal Lights</h4>
+<p>
+To clearly demonstrate what is direct and indirect light in the scene, 
+we here show the scene with portals, GI and FG turned off:
+<div class="pic">
+<img width="100%" src="images/portal-direct-only.jpg" alt="The direct lighting of our scene"><br />The direct lighting of our scene
+</div>
+<p>
+
+<p>
+The above image shows the isolated direct light. This means that this
+result is what FG will &quot;see&quot; - an extremely high-contrast scene consisting
+of complete blackness, the hotspot of the direct sunlight on the floor, and
+the very bright sky, and sun-lit ground outside - a sub-optimal input
+to the FG algorithm.
+<p>
+If we turn on FG on relatively low settings we get:
+<div class="pic">
+<img width="100%" src="images/portal-fg-draft-1.jpg" alt="FG with 50 rays and density 0.1"><br />FG with 50 rays and density 0.1
+</div>
+<p>
+
+<p>
+This image wins no beauty awards. It is splotchy, the shelves seem to
+&quot;float&quot; away from the wall, but most surprisingly, it's very dark. 
+Why is that?
+<p>
+The reason is the high contrast input. FG contains a filter that is intended
+to avoid a speckled result if some stray FG rays hit a single extremely bright
+object, so the filter removes the brightest rays. But our scene really 
+<em>is</em> high contrast, and we actually <em>expect</em> some rays to be much 
+brighter than others.
+<div class="pic">
+<img width="100%" src="images/portal-fg-draft-2.jpg" alt="Using FG filter = 0"><br />Using FG filter = 0
+</div>
+<p>
+
+<p>
+In our case the filter actually is fighting what we are trying to do. We can 
+turn off the filter, as in the image above, which helps our light distribution
+some, but not the splotches, nor the &quot;disconnect&quot; of the shelves to the wall.
+<p>
+Since we are using <i>mia_material</i>, we have a built in ambient occlusion to help 
+in exactly these situations. However, turning that up only helps partially:
+<div class="pic">
+<img width="100%" src="images/portal-fg-draft-3.jpg" alt="Adding AO - helps a bit"><br />Adding AO - helps a bit
+</div>
+<p>
+
+<p>
+The lone solution available in the past was to simply increase the quality 
+of the FG settings. And naturally, we are using <em>very low</em> settings, 
+so the bad quality is not surprising at this stage. Lets turn up the knobs:
+<div class="pic">
+<img width="80%" src="images/portal-fg-medium.jpg" alt="FG with 250 rays and density 0.8"><br />FG with 250 rays and density 0.8<br /><img width="80%" src="images/portal-fg-high.jpg" alt="FG with 500 rays and density 1.5"><br />FG with 500 rays and density 1.5<br /></div>
+<p>
+Yes, increasing the number of rays and the density <em>helps</em> but it
+hurts our render time a lot. Even at the high setting we are still not
+near the optimal result. We would have to go even higher to resolve
+all the detail!
+<p>
+Lets back down from the high FG settings for a moment and concentrate
+on light transport. The scene is still very dark, because we are only
+getting a single FG bounce, and since the lighting from the sky is
+<em>indirect</em> we get <em>no</em> bounce of that light! Meaning: In this
+scene, the sunlight is bouncing once, but the skylight is not bouncing
+at all!
+<p>
+Lets turn up the number of bounces to 3:
+<div class="pic">
+<img width="100%" src="images/portal-fg-3-bounces.jpg" alt="FG with 3 bounces"><br />FG with 3 bounces
+</div>
+<p>
+
+<p>
+This gave us more light. Due to the fact we stepped back from our &quot;high&quot;
+FG settings, the lighting isn't smooth and lacks any detail.
+<p>
+Using FG multi-bounce is just one of the ways <em>mental ray</em> can transport
+light in a scene. The alternative is to use Photons (GI). But keep in mind that
+when Photons are enabled, FG goes back to a single bounce, letting photons
+handle all the remaining bounces:
+<div class="pic">
+<img width="100%" src="images/portal-fg-photons.jpg" alt="FG with GI (Photons)"><br />FG with GI (Photons)
+</div>
+<p>
+
+<p>
+Now something odd happened; the color shifted towards yellow. Why is that?
+This is because the sky does not generate any photons. So we now have multiple
+good-quality bounces of the <em>sun</em>, but we are back to <em>zero</em>
+bounces of the sky! 
+<p>
+<h4 id="With_Portal_Lights">With Portal Lights</h4>
+<p>
+Now lets turn to the portal lights. First lets turn all FG and GI off, and
+simply add a portal light to the window with it's default settings. The
+resulting image is this:
+<div class="pic">
+<img width="100%" src="images/portal-portal-only.jpg" alt="The portal light only, no FG or Photons"><br />The portal light only, no FG or Photons
+</div>
+<p>
+
+<p>
+Color wise this looks very similar to our early FG results above, but the 
+<em>level of detail</em> is much higher. Since no interpolation is going on,
+the shelves sit securely on the walls. All shadows contain the subtlest
+of details.
+<p>
+Since this is now <em>direct</em> light it will be picked up by FG when that
+is turned on. Let us compare what FG would &quot;see&quot; with, and without the portal lights:
+<div class="pic">
+<img width="80%" src="images/portal-direct-only.jpg" alt="Without portal lights"><br />Without portal lights<br /><img width="80%" src="images/portal-portal-fg-sees.jpg" alt="With portal lights"><br />With portal lights<br /></div>
+<p>
+The left is the super-high contrast result FG would &quot;see&quot; without portals, 
+but the right is a fairly well balanced scene. And not only is it already filled 
+with subtle direct light - the sky itself is actually <em>invisible</em> to FG, so 
+it never has to carry the burden of hitting a high contrast area<a href="#Foot8" title="Although FG rays that directly hit the pool of light on the floor caused by the sun will indeed see a high contrast."><sup>8</sup></a> and the problem with the final gather filter
+pretty much disappears.
+<p>
+The second feature of the portal lights being <em>direct</em> is that if we turn FG
+back on, we now get once bounce of light &quot;for free&quot;:
+<div class="pic">
+<img width="100%" src="images/portal-portal-fg-free-bounce.jpg" alt="One free bounce of sky lighting, courtesy of the portal lights"><br />One free bounce of sky lighting, courtesy of the portal lights
+</div>
+<p>
+
+<p>
+Notice how the wall inside the window now has some bounce light on it from the
+sky light, even though  we are using FG with a single bounce!
+<div class="pic">
+<img width="80%" src="images/portal-portal-fg-3-bounces.jpg" alt="Using portal lights and 3 diffuse bounces"><br />Using portal lights and 3 diffuse bounces<br /><img width="80%" src="images/portal-portal-fg-photons.jpg" alt="Using GI (Photons)"><br />Using GI (Photons)<br /></div>
+<p>
+Turning on multiple diffuse bounces (on the left) makes the image come alive. Turning on GI
+(Photons) now yields a much more balanced image
+<em>because the portal lights actually shoot photons</em>!
+No longer is there the big skewing in favor of bounced sun light,
+the sky light will bounce equally well in the form of photons.
+<p>
+<em>Finally</em>, turning on one of the indoor lights, and utilizing the portal lights
+<b>transparency</b> parameter to combat the overexposure of the outdoor view, we
+get a final image:
+<div class="pic">
+<img width="100%" src="images/portal-portal-final.jpg" alt="A final image"><br />A final image
+</div>
+<p>
+
+<p>
+In conclusion: The portal lights help...
+<br />
+<ul>
+
+<li> ...reducing render time (by reducing the need for using extremely high FG settings).
+<li> ...maintain the light balance in the scene (by converting environment light to photons, 
+         which can bounce around indoors just as well as sun light).
+<li> ...increase the <em>quality</em> of the sky lighting, making smooth areas smooth and 
+         blotch-free, as well as revealing the most minute detail with full fidelity.
+<li> ...<em>dramatically</em> reduce scene set-up time (by requiring little to no tweaking,
+         always generating the &quot;optimal&quot; image out-of-the-box).
+</ul>
+
+<div class="pic">
+<img width="100%" src="images/portal-final-closeup.jpg" alt="The subtle interplay of skylight, courtesy of the portal lights"><br />The subtle interplay of skylight, courtesy of the portal lights
+</div>
+<p>
+
+<a name="Photometric_Lights"></a>
+<h2 id="Photometric_Lights">Photometric Lights</h2>
+<p>
+<h3 id="The_Problem">The Problem</h3>
+<p>
+One difficulty in using base mental ray shaders to render a physically 
+correct scenes with GI (using photons), is in balancing the
+photon energy and the direct light correctly. The reason for this is that the 
+intensity is generally specified as an intensity for some given direction (for
+example the peak intensity on a spotlight), but the <em>energy</em> is the sum
+of (or technically, the integral) of all such intensities in all directions.
+<p>
+So for example for a spotlight, for the same peak intensity, you would need
+<em>different</em> photon energies depending on the width of the spotlight cone, 
+and depending on the shape of the intensity distribution within that cone. 
+And while this can be calculated for a mathematically defined intensity 
+distribution (such as a spotlight cone) what about an arbitrary distribution
+as defined by a light profile?
+<p>
+Furthermore, to ensure optimal convergence of the photon solution for a light 
+which <em>varies</em> its intensity based on the direction of light 
+(e.g. a spotlight or a light using a light profile),
+instead of emitting photons of different energy in different directions, one
+should emit photons of similar energy in different <em>densities</em>.
+So the amount of energy-per-area (the density of photon energy) at a given 
+point must match the direct light arriving at that point.
+<p>
+<h3 id="The_Solution">The Solution</h3>
+<p>
+To solve <em>all</em> these issues, we introduce the <em>mia_photometric_light</em>.
+It takes all the guesswork out of balancing the photon energy with the light
+intensity by peforming a numerical integration of the chosen intensity 
+distribution to calculate the proper photon energy automatically, as well as
+takes care of adapting the photon density to the distribution, all automatically.
+<p>
+To use it, simply use the <em>same</em> instance of the shader as both 
+light and photon shader on a light source. The light must have an 
+<b>origin</b> (i.e. the shader does not work on an infinite light 
+source). The light must be set to emit photons, and must be given
+a nonzero energy value (although the actual value will be overriden
+by the shader, a nonzero energy value is required, or mental ray 
+will not emit any photons at all for the light). The <b>exponent</b>
+should always be 2. If the light is a spotlight, a <b>spread</b>
+value should be used. See the <em>mental ray</em> manual about lights.
+<p>
+<pre>
+shader "myLight" "mia_photometric_light" (
+    "on" true,
+    "color" 1 1 1,
+    ...
+)
+light "theLight" = "myLight"
+	emitter = "myLight"
+	origin 0 0 0
+	energy 1 1 1
+	exponent 2
+	caustic photons 20000
+	globillum photons 20000
+end light
+</pre>
+<p>
+The shader is declared as follows:
+<p>
+<pre>
+declare shader "mia_photometric_light" (
+       boolean "on"           default on,
+       scalar  "multiplier"   default 1.0,
+       color   "color"        default 1.0 1.0 1.0,
+       # How to define the light intensity
+       #   0 = using a manual peak intensity in cd
+       #   1 = using a total amount of lumen 
+       #   2 = using the information stored in the IES file
+       integer      "intensity_mode",
+       scalar       "manual_peak_intensity_cd",
+       scalar       "manual_flux_lm",
+       # How to define the light distribution
+       #   0 = Isotropic spherical distribution
+       #   1 = Spotlight distribution
+       #   2 = using the information stored in the IES file
+       integer      "distribution_mode"   default 0,
+       scalar       "spotlight_cosine_bias",
+       lightprofile "profile",                  
+       # Scene and lighting unit management 
+       scalar      "units_to_meter_scale" default 1.0,
+       scalar      "cm2_factor"           default 1.0
+    )
+    version 2
+    apply   light, emitter
+end declare
+</pre>
+<p>
+<b>on</b> turns the light on or off. 
+<p>
+<b>multiplier</b> allows tweaking the intensity like a dimmer. 
+Only when this is 1.0 will the intensity settings mentioned below 
+be accurate.
+<p>
+<b>color</b> is the color of the light. Only if this is a 
+normalized color (i.e. that the <em>mi_luminance()</em> of the color
+is 1.0) will the intensity settings mentioned below be accurate.
+Fortunately, functions such as <em>mib_cie_d</em> and 
+<em>mib_blackbody</em> do return normalized colors.
+<p>
+<b>intensity_mode</b> guides what parameter and in what unit
+the light intensity is defined:
+<ul>
+
+<li> When <b>intensity_mode</b> is 0, the peak intensity of the 
+      light is defined (in candela) by the 
+      <b>manual_peak_intensity_cd</b> parameter.
+<li> When <b>intensity_mode</b> is 1, the overall flux of the light 
+      is defined (in lument) by the
+       <b>maual_flux_lm</b> parameter.
+<li> When <b>intensity_mode</b> is 2, the intensity is directly derived 
+      directly from the values stored in the IES profile
+      assigned to the <em>profile</em> parameter.
+</ul>
+
+<p>
+<b>distribution_mode</b> defines how the light is distributed in 
+different directions:
+<br />
+<ul>
+
+<li> When <b>distribution_mode</b> is 0, the light is isotropic, i.e. it
+      shines exactly the same in all directions.
+<li> When <b>distribution_mode</b> is 1, the light is a spotlight. The
+      light must have a <b>spread</b> parameter to define the width of the
+      beam. The distribution of light within the cone follows a cosine
+      function, raised to the power of the 
+      <b>spotlight_cosine_bias</b> parameter. Hence, a bias below 1.0
+      will push light towards the edges of the cone, and a bias above 1.0
+      will push light towards the center of the cone.
+<li> When <b>distribution_mode</b> is 2, the intensity distribution
+      of the light is derived from the values stored in the IES profile
+      assigned to the <em>profile</em> parameter. 
+      Note that it is legal to combine this <em>distribution mode</em>
+      with either of the manual <em>intensity modes</em> 0 or 1. 
+      In those cases, the IES profile is used in relative mode, trying
+      to accomodate the desired intensity but still accomodate the
+      directional distribution of the IES file.      
+</ul>
+
+<p>
+Since physical lighting in real world units is highly scale dependent, the 
+<b>units_to_meter_scale</b> defines how many scene units goes into one
+meter. E.g. if one scene unit is one millimeter, this would be 1000.
+<p>
+Finally, the <b>cm2_factor</b> is 
+the conversion factor between pixel values and candela per square 
+meter luminance values. 
+In short, this should match the <b>cm2_factor</b> of the 
+<em>mia_exposure_photographic</em> shader to yield a 
+photographically correct render, intensity wise. See also 
+page <a href="arch_sunsky.html#Units">Units</a>.
+<p><hr><p><dl>Footnotes
+<a name="Foot1"></a><dt>1
+<dd>The value 0.318 (1/pi)
+originates from the illuminance/luminance ratio of a theoretically
+perfect Lambertian reflector.
+<a name="Foot2"></a><dt>2
+<dd>Calculated for a 6500K whitepoint.
+<a name="Foot3"></a><dt>3
+<dd>This would otherwise cause noise in the Final Gathering
+solution and too much light added to the scene.
+<a name="Foot4"></a><dt>4
+<dd>The subtended solid angle of the window as seen
+from the shading point.
+<a name="Foot5"></a><dt>5
+<dd>This is how most OEM application already 
+sets up the mental ray area light instances.
+<a name="Foot6"></a><dt>6
+<dd>For FG filter 0,
+the unbiased mode.
+<a name="Foot7"></a><dt>7
+<dd>Large parts of the example
+scene geometry is provided courtesy of Giorgio Adolfo Krenkel.
+<a name="Foot8"></a><dt>8
+<dd>
+Although
+FG rays that directly hit the pool of light on the floor caused by the sun will
+indeed see a high contrast.
+</dl>
+<ul class="nav">
+<li><a href="architectural.html">home</a></li>
+<li><a href="arch_mtl.html">&laquo;&nbsp;prev</a></li>
+<li><a href="arch_camera.html">next&nbsp;&raquo;</a></li>
+</ul>
+</body></html>

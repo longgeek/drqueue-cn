@@ -1,0 +1,77 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// declaration for shader hlsl_RGBMultiplier_EvalNormal, created Mon Feb 16 11:56:49 2009
+
+shader hlsl_RGBMultiplier_EvalNormal {
+    // Version 1
+
+#define ALPHA_FROM_1 0
+#define ALPHA_FROM_2 1
+#define ALPHA_FROM_MULT 2
+
+output:
+    Color	result;
+
+input:
+    Color       Color1;
+    Color       Color2;
+    Shader      Map1;
+    Shader      Map2;
+    bool        Map1Enabled;
+    bool        Map2Enabled;
+    int         AlphaFrom;
+
+    void main() {
+       // Bump mode 
+
+       // TODO: newTexInfo.faceMapFlag = add_info->faceMapFlag;
+
+       if((Map1Enabled) && (Map2Enabled)) 
+       {
+           float m0= 1.0f;
+           Color p0= Color(0.);
+           float m1= 1.0f;
+           Color p1= Color(0.);
+
+           // Call maps to get normals and mono outputs
+           if (!Map1.call("output", "result", p0, "output", "mono_result", m0, 
+                          "input", "evalNormal", true))
+           {
+                // If this fails, the shader has no mono output
+                Map1.call("output", "result", p0, "input", "evalNormal", true);
+           }
+           if (!Map2.call("output", "result", p1, "output", "mono_result", m1, 
+                          "input", "evalNormal", true))
+           {
+                // If this fails, the shader has no mono output
+                Map1.call("output", "result", p1, "input", "evalNormal", true);
+           }
+
+           result.r = p0.r * m1 + p1.r * m0;
+           result.g = p0.g * m1 + p1.g * m0;
+           result.b = p0.b * m1 + p1.b * m0;
+       }
+       else {
+           Color col= Color(0.);
+
+           if(Map1Enabled) {
+               Map1.call("output", "result", col, "input", 
+                   "evalNormal", true);
+           }
+           else if(Map2Enabled) {
+               Map2.call("output", "result", col, "input", 
+                   "evalNormal", true);
+           }
+           else {
+               result = float4(0,0,0,0);
+               return;
+           }
+
+           result = col;
+           return;
+       }        
+    } // main
+}; // end shader hlsl_RGBMultiplier_EvalNormal

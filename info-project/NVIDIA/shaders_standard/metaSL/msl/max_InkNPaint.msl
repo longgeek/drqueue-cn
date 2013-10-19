@@ -1,0 +1,622 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#include <max_common.msl>
+
+shader max_InkNPaint {
+ input:
+#ifdef HLSL_OPTIMIZE
+  // the 3DS Max translator doesn't use '_' but ' ' !!!
+
+  // basic
+  const bool fog_bg=false;
+  const bool bump_map_on=false;
+  const bool dsp_map_on=false;
+  const bool face_map_on=false;
+  const bool two_side_on=true;
+  const bool faceted_on=false;
+  float bump_map_amt=30;
+  float dsp_map_amt=20;
+  Shader bump_map;
+  Shader dsp_map;
+  const bool pixel_grid_on=false;
+  const bool opaque_alpha_on=false;
+  // paint
+  const bool paint_on=false; //lighted
+  Color paint_color=Color(0.309804, 0.647059, 0.823529, 1);
+  float paint_map_amt=100;
+  const bool paint_map_on=false;
+  Shader paint_map;
+  const int paint_levels=2;
+  const bool shade_amt_on=true; //shaded
+  float shade_amt=70.;
+  Color shade_color=Color(0.156863, 0.313726, 0.392157, 1);
+  float shade_color_map_amt=100.;
+  const bool shade_color_map_on=false;
+  Shader shade_color_map;
+  float spec_gloss=50;
+  const bool spec_on=false; //highlight
+  Color spec_color=Color( 1, 1, 1, 1);
+  float spec_map_amt=100;
+  const bool spec_map_on=false;
+  Shader spec_map;
+  // ink
+  const bool ink_on=true;
+  const bool ink_width_clamp_on=false;
+  const bool ink_auto_vary_on=false;
+  const int ink_quality=1;
+  float min_ink_width=2;
+  float max_ink_width=4;
+  const bool self_overlap_ink_on=true;
+  const bool self_underlap_ink_on=false;
+  const bool out_ink_on=true;
+  const bool internal_ink=false;
+  const bool matid_ink_on=true;
+  const bool smgroup_edge_ink_on=true;
+  const bool matid_adj_req_on=true;
+  Color self_overlap_ink_color=Color( 0, 0, 0, 1);
+  Color self_underlap_ink_color=Color( 0, 0, 0, 1);
+  Color color1=Color( 0, 0, 0, 1);
+  Color internal_ink_color=Color( 0, 0, 0, 1);
+  Color matid_ink_color=Color( 0, 0, 0, 1);
+  Color smgroup_edge_ink_color=Color( 0, 0, 0, 1);
+  float intersect_bias=0;
+  float self_overlap_bias=10;
+  float self_underlap_bias=10;
+  float matid_intersect_bias=0;
+  Shader width_map;
+  Shader out_ink_map;
+  Shader smgroup_edge_map;
+  Shader matid_map;
+  Shader self_underlap_ink_map;
+  Shader self_overlap_ink_map;
+  const bool width_map_on=false;
+  const bool out_ink_map_on=false;
+  const bool smgroup_edge_map_on=false;
+  const bool matid_map_on=false;
+  const bool self_underlap_ink_map_on=false;
+  const bool self_overlap_ink_map_on=false;
+  float out_ink_map_amt=100;
+  float smgroup_edge_map_amt=100;
+  float matid_map_amt=100;
+  float width_map_amt=100;
+  float self_overlap_ink_map_amt=100;
+  float self_underlap_ink_map_amt=100;
+#else
+  struct basic_parameters_struct {
+    bool fog_bg;
+    bool bump_map_on;
+    bool dsp_map_on;
+    bool face_map_on;
+    bool two_side_on;
+    bool faceted_on;
+    float bump_map_amt;
+    float dsp_map_amt;
+    Shader bump_map;
+    Shader dsp_map;
+    bool pixel_grid_on;
+    bool opaque_alpha_on;
+  };
+  basic_parameters_struct basic_parameters = 
+    basic_parameters_struct(false,
+			    false,
+			    false,
+			    false,
+			    true,
+			    false,
+			    30,
+			    20,
+			    Shader(),
+			    Shader(),
+			    false,
+			    false	); 
+  // the 3DS Max translator doesn't use '_' but ' ' !!!
+  struct paint_parameters_struct {
+    bool paint_on; //lighted
+    Color paint_color;
+    float paint_map_amt;
+    bool paint_map_on;
+    Shader paint_map;
+    int paint_levels;
+    bool shade_amt_on; //shaded
+    float shade_amt;
+    Color shade_color;
+    float shade_color_map_amt;
+    bool shade_color_map_on;
+    Shader shade_color_map;
+    float spec_gloss;
+    bool spec_on; //highlight
+    Color spec_color;
+    float spec_map_amt;
+    bool spec_map_on;
+    Shader spec_map;
+  };
+  paint_parameters_struct paint_parameters = 
+    paint_parameters_struct(false,
+			    Color(0.309804, 0.647059, 0.823529, 1),
+			    100.,
+			    false,
+			    Shader(),
+			    2, 
+			    true,
+			    70.,
+			    Color(0.156863, 0.313726, 0.392157, 1),
+			    100.,
+			    false,
+			    Shader(),
+			    50., 
+			    false,
+			    Color( 1, 1, 1, 1),
+			    100, 
+			    false,
+			    Shader());
+  // the 3DS Max translator doesn't use '_' but ' ' !!!
+  struct ink_parameters_struct {
+    bool ink_on;
+    bool ink_width_clamp_on;
+    bool ink_auto_vary_on;
+    int ink_quality;
+    float min_ink_width;
+    float max_ink_width;
+    bool self_overlap_ink_on;
+    bool self_underlap_ink_on;
+    bool out_ink_on;
+    bool internal_ink;
+    bool matid_ink_on;
+    bool smgroup_edge_ink_on;
+    bool matid_adj_req_on;
+    Color self_overlap_ink_color;
+    Color self_underlap_ink_color;
+    Color color1;
+    Color internal_ink_color;
+    Color matid_ink_color;
+    Color smgroup_edge_ink_color;
+    float intersect_bias;
+    float self_overlap_bias;
+    float self_underlap_bias;
+    float matid_intersect_bias;
+    Shader width_map;
+    Shader out_ink_map;
+    Shader smgroup_edge_map;
+    Shader matid_map;
+    Shader self_underlap_ink_map;
+    Shader self_overlap_ink_map;
+    bool width_map_on;
+    bool out_ink_map_on;
+    bool smgroup_edge_map_on;
+    bool matid_map_on;
+    bool self_underlap_ink_map_on;
+    bool self_overlap_ink_map_on;
+    float out_ink_map_amt;
+    float smgroup_edge_map_amt;
+    float matid_map_amt;
+    float width_map_amt;
+    float self_overlap_ink_map_amt;
+    float self_underlap_ink_map_amt;
+  };
+  ink_parameters_struct ink_parameters =
+    ink_parameters_struct(true, 
+			  false,
+			  false, 
+			  1, 
+			  2., 
+			  4.,
+			  true,
+			  false,
+			  true,
+			  false,
+			  true,
+			  true,
+			  true,
+			  Color( 0, 0, 0, 1),
+			  Color(0,0,0,1),
+			  Color(0,0,0,1),
+			  Color(0,0,0,1),
+			  Color(0,0,0,1),
+			  Color(0,0,0,1),
+			  0.,
+			  10.,
+			  10.,
+			  0.,
+			  Shader(),
+			  Shader(),
+			  Shader(),
+			  Shader(),
+			  Shader(),
+			  Shader(),
+			  false,
+			  false,
+			  false,
+			  false,
+			  false,
+			  false,
+			  100,
+			  100,
+			  100,
+			  100,
+			  100,
+			  100	);
+  struct ExtraParameters_struct {
+    int GBufferId;
+  };
+  ExtraParameters_struct ExtraParameters = ExtraParameters_struct(0);
+#endif
+
+ output:
+  Color result;
+
+  //max wide accumulation function for illumination
+  void IllumAccumulate(out float totalLightColor,
+		       out float totalSpecular, 
+		       out float lightdot, 
+		       in bool highlight, 
+		       in float spec_gloss)
+  {  
+    totalLightColor=0.;
+    totalSpecular=0.;
+    lightdot=0.;
+    float3 reflDir;
+    float3 lightDir;
+    float dot_nl2;
+    float cos;
+    float tmp_lightColor;
+    
+    // light loop
+    Light_iterator light;
+    foreach (light) 
+    {
+      tmp_lightColor=0.;
+      cos = saturate(light.dot_nl);
+      if (cos > 0.0) 
+	{
+	  Color tmp = cos * light.contribution;
+	  tmp_lightColor=Intens(tmp);
+	  totalLightColor+=tmp_lightColor;
+	}
+      //do specular
+      if(highlight && tmp_lightColor >0.) 
+	//TODO cpp && light->affects & AFFECTS_SPECULAR
+	{
+	  reflDir = reflect(direction, normal);
+	  float c= dot(light.direction,reflDir);
+	  if(c >0.)
+	    {
+	      float shininess =  spec_gloss/100.;
+	      float phongexp = pow(2.,shininess*10.);
+	      c = pow(c,phongexp);
+	      totalSpecular += c;
+	    }
+	}
+      
+      
+      /* the dot_nl needs to be computed manually, 
+	 directional and spot
+	 lights all need to render the same */
+      /* also need to compute this even if the light 
+         does not illuminate
+	 surface) */
+      /* DONE??  {
+	 mi_query ( miQ_INST_ITEM, state, light_inst, &lgtTag );
+	 mi_query(miQ_LIGHT_ORIGIN, state, lgtTag, &lightPosLocal);
+
+	 light_instance_save = state->light_instance;
+	 state->light_instance = light_inst;
+	 mi_point_from_light(state, &lightPos, &lightPosLocal);
+	 state->light_instance = light_instance_save;
+
+	 }
+      */
+      lightDir = light.direction;//position - light.position;
+      //normalize(lightDir);
+      dot_nl2 = dot(normal, lightDir);
+      lightdot += (dot_nl2+1)/2;
+    }
+  }
+
+  //
+  //Ink function, computes outlines
+  //
+
+  bool Ink(inout Color res, in float totalLightColor,in float totalSpecular,in float lightdot) 
+  {
+    //relies on trace, would not work on gpu
+    return false;
+  } // Ink
+
+  //
+  //Paint function, computes general surface shading
+  //
+  void Paint(inout Color res,in Color paramFinalLightedColor, in Color finalShadeColor, 
+	     in Color finalHighlightColor, in float totalLightColor,
+	     in float totalSpecular,in float lightdot) 
+  {
+    int i;
+    Color finalLightedColor=Color(0.);
+    Color c;
+
+    if(PAINT_PARAS(paint_on))
+      {
+	finalLightedColor=paramFinalLightedColor;
+      }
+    else
+      {
+	//trace environment TODO: some black magic for shadows
+	Color bg;
+	Ray ray_dx(float3(0), float3(0));
+	Ray ray_dy(float3(0), float3(0));
+	Ray ray = Ray(position, direction);
+	Trace_options trace_options;
+	trace_options.set_ray_type("environment");
+	trace(ray, ray_dx, ray_dy, trace_options, "result", bg) ;
+	res = bg;
+	return;
+      }
+
+    //	if(shade_amt_on)
+    //shading the surface
+    //precalculation
+
+    //limit number of levels for GPU
+    int my_paint_levels = min(6,PAINT_PARAS(paint_levels));
+    Color max_c, min_c, range_c, delta_c;
+    max_c= finalLightedColor;
+    if (PAINT_PARAS(shade_amt_on))
+      {
+	min_c.rgb = finalLightedColor.rgb * PAINT_PARAS(shade_amt)/100.;
+      } 
+    else 
+      {
+	min_c.rgb = finalShadeColor.rgb;
+      }
+    range_c.rgb = max_c.rgb - min_c.rgb;
+    delta_c.rgb = range_c.rgb / ((float)my_paint_levels-1);
+
+    /*array variant, does not work on SM3 GPU
+      Color C[6]; 
+      float F[6];
+      C[0]=finalLightedColor;
+      F[0] = 1.0f;
+      for (i = 1; i < my_paint_levels; i++) 
+      {
+      C[my_paint_levels - i].rgb = (float)(i-1) * delta_c.rgb + min_c.rgb;
+      F[my_paint_levels - i] = ((i-1) * 1.0f / (my_paint_levels-1) + .01f);
+      }
+      //end precalc
+      c.rgb = finalLightedColor.rgb;
+      for (i = my_paint_levels; i > 0; i--) 
+      {
+      if (totalLightColor < F[i-1]) 
+      {
+      float breakfloat;
+      c.rgb = C[i-1].rgb;
+      break;
+      }
+      }
+    */
+    //no array variant for GPU
+    Color C0,C1,C2,C3,C4,C5;
+    float F0,F1,F2,F3,F4,F5;
+    C0 = finalLightedColor;
+    F0 = 1.0f;
+    for (i = 1; i < my_paint_levels; i++) 
+      {
+	int svalue=my_paint_levels - i;
+	switch( svalue)
+	  {
+	  case 0:
+	    C0.rgb = (float)(i-1) * delta_c.rgb + min_c.rgb;
+	    F0 = ((i-1) * 1.0f / (my_paint_levels-1) + .01f);
+	    break;
+	  case 1:
+	    C1.rgb = (float)(i-1) * delta_c.rgb + min_c.rgb;
+	    F1 = ((i-1) * 1.0f / (my_paint_levels-1) + .01f);
+	    break;
+	  case 2:
+	    C2.rgb = (float)(i-1) * delta_c.rgb + min_c.rgb;
+	    F2 = ((i-1) * 1.0f / (my_paint_levels-1) + .01f);
+	    break;
+	  case 3:
+	    C3.rgb = (float)(i-1) * delta_c.rgb + min_c.rgb;
+	    F3 = ((i-1) * 1.0f / (my_paint_levels-1) + .01f);
+	    break;
+	  case 4:
+	    C4.rgb = (float)(i-1) * delta_c.rgb + min_c.rgb;
+	    F4 = ((i-1) * 1.0f / (my_paint_levels-1) + .01f);
+	    break;
+	  case 5:
+	    C5.rgb = (float)(i-1) * delta_c.rgb + min_c.rgb;
+	    F5 = ((i-1) * 1.0f / (my_paint_levels-1) + .01f);
+	    break;
+	  }
+      }
+    c.rgb = finalLightedColor.rgb;
+    bool endloop = false;
+    for (i = my_paint_levels-1; i >= 0; i--) 
+      {
+	switch( i)
+	  {
+	  case 0:
+	    if (totalLightColor < F0) 
+	      {
+		float breakfloat;
+		c.rgb = C0.rgb;
+		endloop=true;
+	      }
+	    break;
+	  case 1:
+	    if (totalLightColor < F1) 
+	      {
+		float breakfloat;
+		c.rgb = C1.rgb;
+		endloop=true;
+	      }
+	    break;
+	  case 2:
+	    if (totalLightColor < F2) 
+	      {
+		float breakfloat;
+		c.rgb = C2.rgb;
+		endloop=true;
+	      }
+	    break;
+	  case 3:
+	    if (totalLightColor < F3) 
+	      {
+		float breakfloat;
+		c.rgb = C3.rgb;
+		endloop=true;
+	      }
+	    break;
+	  case 4:
+	    if (totalLightColor < F4) 
+	      {
+		float breakfloat;
+		c.rgb = C4.rgb;
+		endloop=true;
+	      }
+	    break;
+	  case 5:
+	    if (totalLightColor < F5) 
+	      {
+		float breakfloat;
+		c.rgb = C5.rgb;
+		endloop=true;
+	      }
+	    break;
+	  }
+	if(endloop)
+	  break; //found correct color
+      }
+    
+    //highlight
+    if(PAINT_PARAS(spec_on) && totalSpecular >.25)
+      {
+	c.rgb = finalHighlightColor.rgb;
+      }
+    res.rgb = c.rgb;
+    
+  } // Paint
+
+
+  void main() 
+  {
+    result = Color(0.0, 0.0, 0.0, 1.0);
+
+    if( ! BASIC_PARAS(two_side_on) && backside && ray_type != "refract" ) 
+      //cpp TODO : &&  ! inst->sceneData->forceDoubleSided && (
+      //(state->type < miPHOTON_TRANSMIT_SPECULAR) ||   (state->type > miPHOTON_TRANSMIT_DIFFUSE))
+      {
+	Ray ray_dx(float3(0), float3(0));
+	Ray ray_dy(float3(0), float3(0));
+	Ray ray = Ray(position, direction);
+	Trace_options trace_options;
+	trace_options.set_ray_type("transparent");
+	trace(ray, ray_dx, ray_dy, trace_options, "result", result) ;
+      }
+    else
+      {
+
+	/*cpp 
+	  contextInfo.texture_eval_type = mi_MAX_EVAL_COLOR;
+	  contextInfo.evalContext = mi_MAX_MTL_CONTEXT;
+	  contextInfo.faceMapFlag = paras->basic.face_map_on;
+	*/
+	float3 OrigNormal = normal; 
+	bool bumped=false;
+	if(BASIC_PARAS(faceted_on))
+	  {
+	    bumped = true;
+	    //cpp: state->normal = state->normal_geom;
+	  }
+	/*
+	  Set up bump mapping 
+	*/
+	if(BASIC_PARAS(bump_map_on))
+	  {
+	    
+
+	    Color bumpvalue=Color(normal,1);
+	    if(BASIC_PARAS(bump_map).call("output", "result", bumpvalue) )
+	      {
+		float3 dn= bumpvalue.rgb*BASIC_PARAS(bump_map_amt)/100.;
+		normal = normalize(dn+normal);
+		//dotnd  is dependent
+		bumped=true;
+		//state->dot_nd = mi_vector_dot ( &state->normal, &state->dir ); 
+	      }
+	  }
+
+	/*
+	  Let's get the lighting caracteristics
+	*/
+
+	float totalLightColor = 0;
+	float totalSpecular = 0;
+	float lightdot = 0;
+	IllumAccumulate(totalLightColor,
+			totalSpecular,
+			lightdot,
+			PAINT_PARAS(spec_on),
+			PAINT_PARAS(spec_gloss));
+	
+	/*
+	  if(bumped)
+	  {
+	  bumped=miFALSE;
+	  state->normal = OrigNormal;
+	  state->dot_nd = mi_vector_dot ( &state->normal, &state->dir ); 
+	  }
+	*/	
+	Color finalLightedColor=PAINT_PARAS(paint_color);
+	Color finalShadeColor=PAINT_PARAS(shade_color);
+	Color finalHighlightColor=PAINT_PARAS(spec_color);
+	bool painting = false;
+	if(INK_PARAS(ink_on) && Ink(result,totalLightColor,totalSpecular,lightdot) )
+	  {
+	    painting = false;
+	  }
+	else
+	  {
+	    Color colorReturn= Color(0);
+	    painting = true;
+	    if(PAINT_PARAS(paint_map_on))
+	      {
+	        if(PAINT_PARAS(paint_map).call("output", "result", colorReturn) )
+		  {
+		    finalLightedColor=PAINT_PARAS(paint_color)*
+		      (100.-PAINT_PARAS(paint_map_amt))/100. +
+		      colorReturn*PAINT_PARAS(paint_map_amt)/100.;
+		  }
+	      }
+	    if(PAINT_PARAS(shade_color_map_on))
+	      {
+	        if(PAINT_PARAS(shade_color_map).call("output", "result", colorReturn) )
+		  {
+		    finalShadeColor=PAINT_PARAS(shade_color)*
+		      (100.-PAINT_PARAS(shade_color_map_amt))/100. +
+		      colorReturn*PAINT_PARAS(shade_color_map_amt)/100.;
+		  }
+	      }
+	    if(PAINT_PARAS(spec_map_on))
+	      {
+	        if(PAINT_PARAS(spec_map).call("output", "result", colorReturn) )
+		  {
+		    finalHighlightColor=PAINT_PARAS(spec_color)*
+		      (100.-PAINT_PARAS(spec_map_amt))/100. +
+		      colorReturn*PAINT_PARAS(spec_map_amt)/100.;
+		  }
+	      }
+	    //TODO map eval for highlight
+	    result = Color(1.,1.,0.,1.);
+	    Paint(result,finalLightedColor,finalShadeColor,finalHighlightColor,
+		  totalLightColor,totalSpecular,lightdot);
+	    if(BASIC_PARAS(opaque_alpha_on))
+	      {
+		result.a=1.0;
+	      }
+	  }
+      }
+  } // main
+};

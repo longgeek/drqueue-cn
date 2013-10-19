@@ -1,0 +1,37 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Comp_color_select
+{
+  input:
+    int select = 0
+	{		
+		display_name("Selected Color");
+		description( "The input value to be used among the available options." );
+	};
+    Color colors[] = {Color(0,0,0,1), Color(1,1,1,1)}
+    {
+		description( "The input colors." );
+    };
+   
+  output:
+    Color result;
+    
+    void main()
+    {
+		result = Color(0,0,0,0);
+		for (int i=0; i<colors.count; i++) {
+			if (i==select) {
+				result = colors[i];
+				break;
+			}
+		}
+	}
+}
+{
+	description( "An operation that selects among many input values." );
+}
+;
+

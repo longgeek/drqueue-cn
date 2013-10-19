@@ -1,0 +1,957 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+#define NUM_SHADERS 10
+#define NUM_SHADERS_MINUS_ONE 9
+#define NUM_BLEND_MODES 25
+
+
+//undefine to enable input structs
+#define HLSL_OPTIMIZE
+#ifdef HLSL_OPTIMIZE
+#define PARAS(x) x
+#else
+#define PARAS(x) MaxCompositeParams.x
+#endif
+
+
+shader max_Composite {
+ input:
+
+#ifdef HLSL_OPTIMIZE
+  Shader mapList[NUM_SHADERS] = {Shader(),
+                                 Shader(),
+                                 Shader(),
+                                 Shader(),
+                                 Shader(),
+                                 Shader(),
+                                 Shader(),
+                                 Shader(),
+                                 Shader(),
+                                 Shader()};
+  bool mapEnabled[NUM_SHADERS] =  { false,
+                                    false,
+                                    false,
+                                    false,
+                                    false,
+                                    false,
+                                    false,
+                                    false,
+                                    false,
+                                    false};
+  float mask[NUM_SHADERS] =  { 0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0};
+  bool maskEnabled[NUM_SHADERS] = {false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false};
+  float opacity[NUM_SHADERS] = {0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0,
+                               0.0};
+  int blendMode[NUM_SHADERS] = {0,
+                               0,
+                               0,
+                               0,
+                               0,
+                               0,
+                               0,
+                               0,
+                               0,
+                               0};
+
+    
+
+  int ExtraParameters_GBufferID  = 0{
+  };
+
+#else
+
+    struct MaxCompositeParams_struct{
+
+        Shader mapList[NUM_SHADERS];
+        bool mapEnabled[NUM_SHADERS];
+        float mask[NUM_SHADERS];
+        bool maskEnabled[NUM_SHADERS];
+        float opacity[NUM_SHADERS];
+        int blendMode[NUM_SHADERS];
+    };
+
+     MaxCompositeParams_struct MaxCompositeParams =
+        MaxCompositeParams_struct({Shader(),
+                                   Shader(),
+                                   Shader(),
+                                   Shader(),
+                                   Shader(),
+                                   Shader(),
+                                   Shader(),
+                                   Shader(),
+                                   Shader(),
+                                   Shader()},
+                                  {false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false},
+                                  {0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0},
+                                  {false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false,
+                                   false},
+                                  {0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0,
+                                   0.0},
+                                  {0,
+                                   0,
+                                   0,
+                                   0,
+                                   0,
+                                   0,
+                                   0,
+                                   0,
+                                   0,
+                                   0});
+
+     struct ExtraParameters {
+    int GBufferID;
+  }; // ExtraParameters
+  ExtraParameters ep = ExtraParameters(0);
+
+#endif
+  // Additional inputs
+  bool evalNormal; // Bump mode
+
+ output:
+  Color result;
+
+  Color color_burn(in Color fg, in Color bg)
+  {
+      Color burn_result = Color(0, 0, 0, 0);
+      if(fg.r != 0.0)
+      {
+          burn_result.r = max(1.0 - (1.0 - bg.r)/fg.r, 0.0);
+      }
+
+      if(fg.g != 0.0)
+      {
+          burn_result.g = max(1.0 - (1.0 - bg.g)/fg.g, 0.0);
+      }
+
+      if(fg.b != 0.0)
+      {
+          burn_result.b = max(1.0 - (1.0 - bg.b)/fg.b, 0.0);
+      }
+
+      if(fg.a != 0.0)
+      {
+          burn_result.a = max(1.0 - (1.0 - bg.a)/fg.a, 0.0);
+      }
+      return burn_result;
+  }
+
+  Color color_dodge(in Color fg, in Color bg)
+  {
+      Color dodge_result = Color(1.0, 1.0, 1.0, 1.0);
+      if(fg.r != 1.0)
+      {
+           dodge_result = min(bg.r/(1.0 - fg.r), 1.0);
+      }
+
+      if(fg.g != 1.0)
+      {
+           dodge_result = min(bg.g/(1.0 - fg.g), 1.0);
+      }
+
+        if(fg.b != 1.0)
+      {
+           dodge_result = min(bg.b/(1.0 - fg.b), 1.0);
+      }
+
+         if(fg.a != 1.0)
+      {
+           dodge_result = min(bg.a/(1.0 - fg.a), 1.0);
+      }
+
+         return dodge_result;
+  }
+
+  Color overlay(in Color fg, in Color bg)
+  {
+      Color overlay_result = 2.0*fg*bg;
+      if(bg.r > 0.5)
+      {
+          overlay_result.r = 1.0-2.0*(1.0-fg.r)*(1.0-bg.r);
+      }
+
+      if(bg.g > 0.5)
+      {
+          overlay_result.g = 1.0-2.0*(1.0-fg.g)*(1.0-bg.g);
+      }
+
+        if(bg.b > 0.5)
+      {
+          overlay_result.b = 1.0-2.0*(1.0-fg.b)*(1.0-bg.b);
+      }
+
+      if(bg.a > 0.5)
+      {
+          overlay_result.a = 1.0-2.0*(1.0-fg.a)*(1.0-bg.a);
+      }
+
+      return clamp(overlay_result, 0.0, 1.0);
+  }
+
+  Color softlight(in Color fg, in Color bg)
+  {
+      Color softlight_result = bg*(bg+2.0*fg*(1.0-bg));
+      if(fg.r > 0.5)
+      {
+          softlight_result.r = bg.r + (2.0*fg.r-1.0)*sqrt(bg.r) - bg.r;
+      }
+
+      if(fg.g > 0.5)
+      {
+          softlight_result.g = bg.g + (2.0*fg.g-1.0)*sqrt(bg.g) - bg.g;
+      }
+
+      if(fg.b > 0.5)
+      {
+          softlight_result.b = bg.b + (2.0*fg.b-1.0)*sqrt(bg.b) - bg.b;
+      }
+
+      if(fg.a > 0.5)
+      {
+          softlight_result.a = bg.a + (2.0*fg.a-1.0)*sqrt(bg.a) - bg.a;
+      }
+      return clamp(softlight_result, 0.0, 1.0);
+  }
+
+  Color hardlight(in Color fg, in Color bg)
+  {
+      Color hardlight_result = 2.0*fg*bg;
+      if(fg.r > 0.5)
+      {
+          hardlight_result.r = 1.0-2.0*(1.0-fg.r)*(1.0-bg.r);
+      }
+
+      if(fg.g > 0.5)
+      {
+          hardlight_result.g = 1.0-2.0*(1.0-fg.g)*(1.0-bg.g);
+      }
+
+      if(fg.b > 0.5)
+      {
+          hardlight_result.b = 1.0-2.0*(1.0-fg.b)*(1.0-bg.b);
+      }
+
+       if(fg.a > 0.5)
+      {
+          hardlight_result.a = 1.0-2.0*(1.0-fg.a)*(1.0-bg.a);
+      }
+
+       return clamp(hardlight_result, 0.0, 1.0);
+  }
+
+  Color pinlight(in Color fg, in Color bg)
+  {
+      Color pinlight_result = bg;
+      if(fg.r > 0.5 && fg.r > bg.r ||
+         fg.r < 0.5 && fg.r < bg.r)
+      {
+          pinlight_result.r = fg.r;
+      }
+
+      if(fg.g > 0.5 && fg.g > bg.g ||
+         fg.g < 0.5 && fg.g < bg.g)
+      {
+          pinlight_result.g = fg.g;
+      }
+
+      if(fg.b > 0.5 && fg.b > bg.b ||
+         fg.b < 0.5 && fg.b < bg.b)
+      {
+          pinlight_result.b = fg.b;
+      }
+
+      if(fg.a > 0.5 && fg.a > bg.a ||
+         fg.a < 0.5 && fg.a < bg.a)
+      {
+          pinlight_result.a = fg.a;
+      }
+      return pinlight_result;
+  }
+
+  Color hard_mix(in Color fg, in Color bg)
+  {
+      Color hard_mix_result = Color(1.0, 1.0, 1.0, 1.0);
+      if(fg.r + bg.r <= 1.0)
+          hard_mix_result.r = 0.0;
+      if(fg.g + bg.g <= 1.0)
+          hard_mix_result.g = 0.0;
+      if(fg.b + bg.b <= 1.0)
+          hard_mix_result.b = 0.0;
+      if(fg.a + bg.a <= 1.0)
+          hard_mix_result.a = 0.0;
+      return hard_mix_result;
+  }
+
+  float rotate(in float a, in float b, in float c)
+  {
+      float ret = a;
+      float delta = c - b;
+      if( ret < b )
+      {
+          float diff = c - ret;
+          int f = int(diff/delta);
+          ret += delta*f;
+      }
+
+      if(ret > c)
+      {
+          float diff = ret - b;
+          int f = int(diff/delta);
+          ret -= delta*f;
+      } 
+     // while(ret < b) ret += delta;
+     // while(ret > c) ret -= delta;
+      return ret;
+  }
+
+  #define MIN_COLOR_DELTA 0.00001
+
+   float CalcHue( in Color c )
+   {
+      float min_ =  min(c.r,min(c.g,c.b));
+      float max_ = max(c.r, max(c.g,c.b));
+      float delta =  max_ - min_;
+      if ( delta < MIN_COLOR_DELTA )
+      {
+          return 0.0f;
+      }
+      float h = 0.0;
+
+      if (c.r == max_)
+      {
+          h = (c.g - c.b) / delta;
+      }
+      else if (c.g == max_)
+      {
+         h = 2 + (c.b - c.r) / delta;
+      }
+      else 
+      {
+          h = 4 + (c.r - c.g) / delta;
+      }
+
+      return rotate( h * 60.0, 0.0, 360.0);
+   }
+
+   void RGBtoHSL( in Color cin, inout Color cout ) 
+   {
+      cout.r = CalcHue( cin );
+      cout.g = CalcSat( cin );
+      cout.b = CalcLum( cin );
+   }
+
+   float hue_to_rgb(in float v1, in float v2, in float H)
+   {
+      H = rotate( H, 0.0f, 1.0f );
+
+      if ( (6.0f * H) < 1.0 ) 
+          return v1 + (v2 - v1) * 6 * H;
+      else if ( (2.0f * H) < 1.0 ) 
+          return v2;
+	  else if ( (3.0f * H) < 2.0 )
+          return v1 + (v2 - v1) * ((2.0f/3.0f)-H) * 6;
+      else  
+          return v1;
+   }
+
+   void HSLtoRGB( in Color cin, inout Color cout ) 
+   {
+      cout = float4(0, 0, 0, 0);
+      float H = cin.r;
+      float S =  cin.g;
+      float L = cin.b;
+
+      float Q =  L < 0.5 ? (L * (1.0f + S)) 
+                               : (L + S - L*S);
+      float P = 2.0 * L - Q ;
+      float Hk = H / 360.0f;
+  
+      cout.r =  hue_to_rgb( P, Q, Hk + 1.0f/3.0f );
+      cout.g =  hue_to_rgb( P, Q, Hk             );
+      cout.b =  hue_to_rgb( P, Q, Hk - 1.0f/3.0f );
+      cout = saturate(cout);
+   }
+
+   float CalcLum( in Color c )
+   {
+       return clamp( (max(c.r,max(c.g,c.b)) + min(c.r, min(c.g,c.b))) / 2.0f, 0.0f, 1.0f );
+   }
+
+   float CalcSat( in  Color c ) 
+   {
+       float min_ = min(c.r, min(c.g,c.b));
+       float max_ = max(c.r,max(c.g,c.b));
+       float lum_ = CalcLum(c);
+       if (min_ == max_ || lum_ == 0)
+           return 0;
+       else
+        if (lum_ <= 0.5f)
+           return clamp((max_ - min_) / (2.0f * lum_), 0.0f, 1.0f);
+        else
+           return clamp((max_ - min_) / (2.0f - 2.0f * lum_), 0.0f, 1.0f);
+   }
+
+   Color hue(in Color fg, in Color bg)
+   {
+       Color hue_result = Color(0, 0, 0, 0);
+       Color rgb = Color(0, 0, 0, 0);
+       rgb.r = CalcHue(fg);
+       rgb.g = CalcSat(bg);
+       rgb.b = CalcLum(bg);
+
+       HSLtoRGB(rgb, hue_result);
+       hue_result.a = fg.a;
+       return hue_result;     
+   }
+
+   Color saturation(in Color fg, in Color bg)
+   {
+       Color s_result = Color(0, 0, 0, 0);
+       Color rgb = Color(0, 0, 0, 0);
+       rgb.r = CalcHue(bg);
+       rgb.g = CalcSat(fg);
+       rgb.b = CalcLum(bg);
+       HSLtoRGB(rgb, s_result);
+       s_result.a = fg.a;
+       return s_result;    
+   }
+
+   Color blend_color(in Color fg, in Color bg)
+   {
+       Color b_result = Color(0, 0, 0, 0);
+       Color rgb = Color(0, 0, 0, 0);
+       rgb.r = CalcHue(fg);
+       rgb.g = CalcSat(fg);
+       rgb.b = CalcLum(bg);
+       HSLtoRGB(rgb, b_result);
+       b_result.a = fg.a;
+       return b_result;    
+   }
+
+   Color blend_value(in Color fg, in Color bg)
+   {
+       Color v_result = Color(0, 0, 0, 0);
+       Color rgb = Color(0, 0, 0, 0);
+       rgb.r = CalcHue(bg);
+       rgb.g = CalcSat(bg);
+       rgb.b = CalcLum(fg);
+       HSLtoRGB(rgb, v_result);
+       v_result.a = fg.a;
+       return v_result;    
+   }
+
+
+ 
+  //no function pointers in metasl so we do it the old fashion way
+  Color blend(in int blend_mode, in Color fg, in Color bg)
+  {
+      Color blend_result = Color(0, 0, 0, 0);
+      switch(blend_mode)
+      {
+      case 0://normal
+          blend_result = fg;
+          break;
+      case 1://average
+          blend_result = (fg + bg)/2.0;
+          break;
+      case 2://addition
+          blend_result = fg + bg;
+          break;
+      case 3://subtraction
+          blend_result = bg - fg;
+          break;
+      case 4://darken
+          blend_result = min(fg, bg);
+          break;
+      case 5://multiply
+          blend_result = fg * bg;
+          break;
+      case 6://burn
+          blend_result = color_burn(fg, bg);
+          break;
+      case 7://linear burn
+          blend_result = max(fg + bg - 1.0, Color(0.0));
+          break;
+      case 8://Lighten
+          blend_result = max(fg, bg);
+          break;
+      case 9://screen
+          blend_result = fg + bg - fg * bg;
+          break;
+      case 10://color dodge
+          blend_result = color_dodge(fg, bg);
+          break;
+      case 11://linear dodge
+          blend_result = min(fg+bg, Color(1.0));
+          break;
+      case 12://spotlight
+          blend_result = min(2.0*fg*bg, Color(1.0));
+          break;
+      case 13://spotlight blend
+          blend_result = min(fg*bg+bg, Color(1.0));
+          break;
+      case 14://overlay
+          blend_result = overlay(fg, bg);
+          break;
+      case 15:
+          blend_result = softlight(fg, bg);
+          break;
+      case 16:
+          blend_result = hardlight(fg, bg);
+          break;
+      case 17:
+          blend_result = pinlight(fg, bg);
+          break;
+      case 18:
+          blend_result = hard_mix(fg, bg);
+          break;
+      case 19://difference
+           blend_result = abs(fg-bg);
+          break;
+      case 20://exclusion
+          blend_result = fg + bg - 2.0 * fg * bg;
+          break;
+      case 21://hue
+          blend_result = hue(fg, bg);
+          break;
+      case 22://saturation
+          blend_result = saturation(fg, bg);
+          break;
+      case 23://color
+          blend_result = blend_color(fg, bg);
+          break;
+      case 24://value
+          blend_result = blend_value(fg, bg);
+          break;
+      default:break;
+      }
+      return blend_result;
+  }
+
+  float blend_over(in float fg, in float fg_alpha,
+                   in float bg, in float bg_alpha,
+                   in float blended, in float alpha)
+ // Alpha should be ( fgAlpha + (1 - fgAlpha) * bgAlpha )
+ {
+	 // This is an "over" mode of composition, same as Combustion
+	 // and photoshop uses.
+	 // On blending mode: http://www.pegtop.net/delphi/articles/blendmodes/index.htm
+	 // Since everything is clamped between [0,1], there is no need to clamp
+	 // this color.
+	 return (	  blended	* (fg_alpha *      bg_alpha)
+				+ fg        * (fg_alpha * (1 - bg_alpha))
+				+ bg        * ((1 - fg_alpha) * bg_alpha)) / alpha ;
+  }
+
+                    
+
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+
+    if(evalNormal)
+    {
+   
+        float3 p = float3(0, 0, 0);
+        float3 d = float3(0, 0, 0);
+        Color col = Color(0, 0, 0, 0);
+        bool c = false;
+        Color result_color = Color(0, 0, 0, 0);
+        float3 result_deriv = float3(0, 0, 0);
+        int map_blend_mode = 0;
+        for(int i =NUM_SHADERS_MINUS_ONE; i >= 0; i--)
+        {
+            bool map_enabled = PARAS(mapEnabled)[i];
+            float map_opacity = PARAS(opacity)[i];
+            bool map_mask_enabled = PARAS(maskEnabled)[i];
+            float map_mask = PARAS(mask)[i];
+            if(map_enabled == true &&
+               map_opacity != 0.0)
+            {
+                Color bg_color = result_color;
+                float3 bg_deriv = result_deriv;
+
+                Color fg_color = Color(0, 0, 0, 0);
+                float3 fg_deriv = float3(0, 0, 0);
+
+                Color fg_tmp_deriv = Color(0, 0, 0, 0);
+                Color fg_tmp_color = Color(0, 0, 0, 0);
+
+               switch(i)
+                {
+                case 0:
+                    PARAS(mapList)[0].call("input", "evalNormal", true,
+                                    "output", "result", fg_tmp_deriv);
+                    PARAS(mapList)[0].call("input", "evalNormal", false,
+                                    "output", "result", fg_tmp_color);
+                    map_blend_mode = PARAS(blendMode)[0];
+                    break;
+                case 1:
+                    PARAS(mapList)[1].call("input", "evalNormal", true,
+                                    "output", "result", fg_tmp_deriv);
+                    PARAS(mapList)[1].call("input", "evalNormal", false,
+                                    "output", "result", fg_tmp_color);
+                    map_blend_mode = PARAS(blendMode)[1];
+                    break;
+                case 2:
+                    PARAS(mapList)[2].call("input", "evalNormal", true,
+                                    "output", "result", fg_tmp_deriv);
+                    PARAS(mapList)[2].call("input", "evalNormal", false,
+                                    "output", "result", fg_tmp_color);
+                    map_blend_mode = PARAS(blendMode)[2];
+                    break;
+                case 3:
+                    PARAS(mapList)[3].call("input", "evalNormal", true,
+                                    "output", "result", fg_tmp_deriv);
+                    PARAS(mapList)[3].call("input", "evalNormal", false,
+                                    "output", "result", fg_tmp_color);
+                    map_blend_mode = PARAS(blendMode)[3];
+                    break;
+                case 4:
+                    PARAS(mapList)[4].call("input", "evalNormal", true,
+                                    "output", "result", fg_tmp_deriv);
+                    PARAS(mapList)[4].call("input", "evalNormal", false,
+                                    "output", "result", fg_tmp_color);
+                    map_blend_mode = PARAS(blendMode)[4];
+                    break;
+                case 5:
+                    PARAS(mapList)[5].call("input", "evalNormal", true,
+                                    "output", "result", fg_tmp_deriv);
+                    PARAS(mapList)[5].call("input", "evalNormal", false,
+                                    "output", "result", fg_tmp_color);
+                    map_blend_mode = PARAS(blendMode)[5];
+                    break;
+                case 6:
+                    PARAS(mapList)[6].call("input", "evalNormal", true,
+                                    "output", "result", fg_tmp_deriv);
+                    PARAS(mapList)[6].call("input", "evalNormal", false,
+                                    "output", "result", fg_tmp_color);
+                    map_blend_mode = PARAS(blendMode)[6];
+                    break;
+                case 7:
+                    PARAS(mapList)[7].call("input", "evalNormal", true,
+                                    "output", "result", fg_tmp_deriv);
+                    PARAS(mapList)[7].call("input", "evalNormal", false,
+                                    "output", "result", fg_tmp_color);
+                    map_blend_mode = PARAS(blendMode)[7];
+                    break;
+                case 8:
+                    PARAS(mapList)[8].call("input", "evalNormal", true,
+                                    "output", "result", fg_tmp_deriv);
+                    PARAS(mapList)[8].call("input", "evalNormal", false,
+                                    "output", "result", fg_tmp_color);
+                    map_blend_mode = PARAS(blendMode)[8];
+                    break;
+                 case 9:
+                    PARAS(mapList)[9].call("input", "evalNormal", true,
+                                    "output", "result", fg_tmp_deriv);
+                    PARAS(mapList)[9].call("input", "evalNormal", false,
+                                    "output", "result", fg_tmp_color);
+                    map_blend_mode = PARAS(blendMode)[9];
+                    break;
+                 default:break;
+                }//end shader call switch
+               fg_color = fg_tmp_color;
+               fg_deriv = fg_tmp_deriv.rgb;
+
+               if(fg_color.a != 1.0 && fg_color.a != 0.0)
+               {
+                   fg_color.rgb /= fg_color.a;
+               }
+
+               float o = map_opacity / 100.0;
+               fg_color.a *= o;
+
+               if(map_mask_enabled == true)
+               {
+                   fg_color.a *= map_mask;
+               }
+
+               if(result_color.a == 0)
+               {
+                   result_color = fg_color;
+                   result_deriv = float3(0, 0, 0);
+               }
+               else
+               {
+                   Color color_blended = blend(map_blend_mode, 
+                                                fg_color, bg_color);
+                   // Compute interpolated texture colors, three each for foreground 
+                   // and background.
+				   // The distance across which we interpolate is scaled down 
+                   // by a constant factor.
+				   // This gives a derivative that is more accurate locally.
+				   // The magnitude of the final derivate must be scaled up 
+                   // by an inverse factor
+                   float magic_number = 0.1f;
+                   float step_scale = magic_number;
+                   float step_scale_inv = 1.0/magic_number;
+
+
+                   Color fg_interp_x = clamp(fg_color-fg_deriv.x*step_scale, 0.0, 1.0);
+                   Color fg_interp_y = clamp(fg_color-fg_deriv.y*step_scale, 0.0, 1.0);
+                   Color fg_interp_z = clamp(fg_color-fg_deriv.z*step_scale, 0.0, 1.0);
+                   fg_interp_x.a = fg_interp_y.a = fg_interp_z.a = 0.0;
+
+                   Color bg_interp_x = clamp(bg_color-fg_deriv.x*step_scale, 0.0, 1.0);
+                   Color bg_interp_y = clamp(bg_color-fg_deriv.y*step_scale, 0.0, 1.0);
+                   Color bg_interp_z = clamp(bg_color-fg_deriv.z*step_scale, 0.0, 1.0);
+                   bg_interp_x.a = bg_interp_y.a = bg_interp_z.a = 0.0;
+
+                   // Compute the interpolated composite color 
+                   // for each pair of interpolated texture colors
+                   Color color_blended_interp_x = blend(map_blend_mode, 
+                       fg_interp_x, bg_interp_x);
+                   Color color_blended_interp_y = blend(map_blend_mode, 
+                       fg_interp_y, bg_interp_y);
+                   Color color_blended_interp_z = blend(map_blend_mode, 
+                       fg_interp_z, bg_interp_z);
+
+                   float grey_interp_x = (color_blended_interp_x.r + 
+                                          color_blended_interp_x.g + 
+                                          color_blended_interp_x.b)/3.0;
+
+                   float grey_interp_y = (color_blended_interp_y.r + 
+                                          color_blended_interp_y.g + 
+                                          color_blended_interp_y.b)/3.0;
+
+                   float grey_interp_z = (color_blended_interp_z.r + 
+                                          color_blended_interp_z.g + 
+                                          color_blended_interp_z.b)/3.0;
+
+                   float grey_origin = (color_blended.r +
+                                        color_blended.g +
+                                        color_blended.b)/3.0;
+			       
+                   // Compute the derivative as the difference between the 
+                   //original and interpolated composite colors
+                   float3 deriv_blended = float3(grey_origin-grey_interp_x,
+                                               grey_origin-grey_interp_y,
+                                               grey_origin-grey_interp_z);
+
+                   // See composite.cpp in maxsdk/samples for information on blending.
+                   deriv_blended *= step_scale_inv;//scale back up
+
+                   float alpha = fg_color.a + (1.0 - fg_color.a) * bg_color.a;
+
+ 				  /// NOTE: fgDeriv.a and bgDeriv.a are ignored, 
+                   // alpha value from color channel is used instead
+                  result_deriv.x = blend_over(fg_deriv.x, fg_color.a, 
+                      bg_deriv.x, bg_color.a, deriv_blended.x, alpha);
+                  result_deriv.y = blend_over(fg_deriv.y, fg_color.a, 
+                      bg_deriv.y, bg_color.a, deriv_blended.y, alpha);
+                  result_deriv.z = blend_over(fg_deriv.z, fg_color.a, 
+                      bg_deriv.z, bg_color.a, deriv_blended.z, alpha);
+
+                  result_color.r = blend_over(fg_color.r, fg_color.a,  
+                      bg_color.r, bg_color.a, color_blended.r, alpha);
+                  result_color.g = blend_over(fg_color.g, fg_color.a,  
+                      bg_color.g, bg_color.a, color_blended.g, alpha);
+                  result_color.r = blend_over(fg_color.b, fg_color.a,  
+                      bg_color.b, bg_color.a, color_blended.b, alpha);
+
+                  result_color.a = alpha;
+               }
+
+               
+            }
+        }//end for
+
+		// NOTE: Don't premultiply the bump value
+        result.rgb = result_deriv;
+    }//perturb normal
+    else
+    {
+         Color res = Color(0, 0, 0, 0);
+        Color tres = Color(0, 0, 0, 0);
+        Color mask_result = Color(0, 0, 0, 0);
+        float o_m_a = 0.0f;
+        int map_blend_mode = 0;
+
+        for(int i = NUM_SHADERS_MINUS_ONE; i >=0; i--)
+        {
+            bool map_enabled = PARAS(mapEnabled)[i];
+            float map_opacity = PARAS(opacity)[i];
+            bool map_mask_enabled = PARAS(maskEnabled)[i];
+            float map_mask = PARAS(mask)[i];
+            if(map_enabled == true &&
+               map_opacity != 0.0)
+            {
+                switch(i)
+                {
+                case 0:
+                    PARAS(mapList)[0].call(
+                                    "input", "evalNormal", evalNormal,
+                                    "output", "result", tres);
+                     map_blend_mode = PARAS(blendMode)[0];
+                    break;
+                case 1:
+                    PARAS(mapList)[1].call(
+                                    "input", "evalNormal", evalNormal,
+                                    "output", "result", tres);
+                     map_blend_mode = PARAS(blendMode)[1];
+                    break;
+                case 2:
+                    PARAS(mapList)[2].call(
+                                    "input", "evalNormal", evalNormal,
+                                    "output", "result", tres);
+                     map_blend_mode = PARAS(blendMode)[2];
+                    break;
+                case 3:
+                    PARAS(mapList)[3].call(
+                                    "input", "evalNormal", evalNormal,
+                                    "output", "result", tres);
+                     map_blend_mode = PARAS(blendMode)[3];
+                    break;
+                case 4:
+                    PARAS(mapList)[4].call(
+                                    "input", "evalNormal", evalNormal,
+                                    "output", "result", tres);
+                     map_blend_mode = PARAS(blendMode)[4];
+                    break;
+                case 5:
+                    PARAS(mapList)[5].call(
+                                    "input", "evalNormal", evalNormal,
+                                    "output", "result", tres);
+                     map_blend_mode = PARAS(blendMode)[5];
+                    break;
+                case 6:
+                    PARAS(mapList)[6].call(
+                                    "input", "evalNormal", evalNormal,
+                                    "output", "result", tres);
+                     map_blend_mode = PARAS(blendMode)[6];
+                    break;
+                case 7:
+                    PARAS(mapList)[7].call(
+                                    "input", "evalNormal", evalNormal,
+                                    "output", "result", tres);
+                     map_blend_mode = PARAS(blendMode)[7];
+                    break;
+                case 8:
+                    PARAS(mapList)[8].call(
+                                    "input", "evalNormal", evalNormal,
+                                    "output", "result", tres);
+                     map_blend_mode = PARAS(blendMode)[8];
+                    break;
+                 case 9:
+                    PARAS(mapList)[9].call(
+                                    "input", "evalNormal", evalNormal,
+                                    "output", "result", tres);
+                     map_blend_mode = PARAS(blendMode)[9];
+                    break;
+                 default:break;
+                }
+
+                              
+                if(tres.a != 1.0 && tres.a != 0.0)
+                {
+                    tres.rgb /= tres.a;
+                }
+
+                if(map_mask_enabled == true)
+                {
+                    tres.a *= map_mask;
+                }
+
+                float o = map_opacity/100.0;
+                tres.a *= o;
+
+            	// If background is invisible, we set the background to the foreground.
+                if(res.a == 0)
+                {
+                    res = tres;
+                }
+                else
+                {
+                    Color front = tres;
+                    Color blended = blend(map_blend_mode, front, res);
+                    float alpha = front.a + (1 - front.a)*res.a;
+                    res.r = ((blended.r * (front.a * res.a) +
+                              front.r * (front.a * ( 1.0 - res.a)) +
+                              res.r * ((1 - front.a) * res.a))/alpha);
+                    res.g = ((blended.g * (front.a * res.a) +
+                              front.g * (front.a * ( 1.0 - res.a)) +
+                              res.g * ((1 - front.a) * res.a))/alpha);
+                    res.b = ((blended.b * (front.a * res.a) +
+                              front.b * (front.a * ( 1.0 - res.a)) +
+                              res.b * ((1 - front.a) * res.a))/alpha);
+                    res.a = alpha;
+                }
+
+
+
+            }
+        }
+        result = res;
+
+        if(result.a != 1.0)
+        {
+            result.rgb *= result.a;
+        }
+    }
+  } // main
+};

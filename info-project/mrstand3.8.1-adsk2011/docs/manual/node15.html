@@ -1,0 +1,118 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Light Sources</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="raydiff.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node16.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h2 id="fo:directlight">Direct Lighting</h2>
+<p>
+Traditional rendering algorithms are using a fast but approximate solution
+to compute illumination in a scene that is based on individual idealized
+<a href="#fo:lightsource">light sources</a> which normally don't match the
+real-world. mental ray supports these types of lights, along with commonly
+used techniques for shadow effects like
+<a href="node18.html#fo:shadowmaps">shadow mapping</a>. To overcome the
+limitations of the conventional approaches, mental ray provides extensions
+towards more physically correct modeling and practical usage, like
+<a href="node16.html#fo:arealight">area light sources</a>, or
+<a href="node17.html#fo:lightprofile">light profiles</a> which allow to
+reproduce the emission properties of manufactured lamps in the renderer.
+<p>
+Recent developments in high-dynamic-range photography offer a convenient
+workflow to illuminate a scene just from images taken in a real-world
+environment. mental ray has built-in support for this type of rendering
+called <a href="ibl.html#fo:ibl">image-based lighting</a>, and can compute
+results of any desired quality which look much more realistic.
+</p>
+
+
+<a id="SECTION13"></a>
+<h2 id="fo:lightsource">Light Sources</h2>
+
+<p>A light source illuminates the objects in a scene. Light sources
+in mental ray are programmable and consist of a light source name,
+a named <a href="node120.html#INDEX471">light shader</a> function,
+and an optional origin and direction (at least one of the two must
+be present), plus various light-specific parameters such as
+shadowmap and photon information. A light profile may also be among
+the light-specific parameters. Light shaders accept shader
+parameters that depend on the shader.</p>
+<p>The <a href="node80.html#INDEX249">light</a>s available in a
+scene are defined outside <a href="node79.html#INDEX242">material</a>s.
+They may be attached to scene
+entities like object instances, or directly referenced inside
+materials. Many existing material shaders have a parameter of type
+<code class="mi">"light array"</code> that allows referencing a
+list of light instances by name. The material shader then applies
+the <b><a id="INDEX17"></a>illumination</b> from
+these lights to the shaded surface, no matter to which object the
+shader is attached to. To implement light-object relations
+independent of the actual material the shaders can also obtain a
+list of lights associated with the object instance in the scene
+description (see <a href="node90.html#light_lists">Light Lists</a>).
+<p>
+The shading function for light sources may be either a user written
+function linked at run time, or it may be one of the generic shaders
+coming with mental ray. Applications which integrate mental ray may
+provide custom light shaders to define the intended rendering behavior.
+<p>
+Some shaders accept a boolean parameter <tt>shadow</tt> that
+turns shadow casting on or off for that light source, and a
+floating point <tt>factor</tt> that is the shadow factor. The
+shadow factor controls penetration of opaque objects. The
+computation of shadows is a responsibility of
+<a href="node120.html#INDEX471">light shader</a>s in mental ray; in order
+to compute transparent shadows this may involve the cooperation of
+<a href="node121.html#INDEX481">shadow shader</a>s attached to
+semi-transparent shadow-casting objects.</p>
+<p>For example, the <tt>mib_light_spot</tt> shader in the base
+shader library implements a spot light. It has a <tt>color</tt>
+parameter that must be set to the color of the light, as three
+scalars for the red, green, and blue components. It also allows a
+boolean <tt>shadow</tt> parameter that enables shadows cast from
+this light if its value is <tt>on</tt>, and a <tt>factor</tt>
+parameter that controls shadow penetration, ranging from
+<tt>0.0</tt> for black shadows to <tt>1.0</tt> for invisible
+shadows. The shader also accepts a boolean <tt>atten</tt> parameter
+that turns distance attenuation on or off, and two scalar
+parameters <tt>start</tt> and <tt>stop</tt> that specify the range
+over which the attenuation falls off if <tt>atten</tt> is
+<tt>on</tt>. The spot light mode requires an origin, a direction,
+and a spread value in the light definition in the scene description
+file. The spread value in the light definition and the
+<tt>cone</tt> parameter of the shader together define the spot
+characteristics of the light. The <tt>cone</tt> parameter specifies
+the angle of the inner solid cone and the spread statement
+specifies the outer falloff cone. The spot casts a cone of light
+with a softened edge where the intensity falls off to zero between
+the cone and spread angles. This and most other shaders specify
+angles not in degrees but in the cosine of one-half of the opening
+angle to improve performance: 1.0 is an opening angle of 0 degrees
+(a laser beam too narrow to see), 0.707 specifies an opening angle
+of approximately 90 degrees (because
+<span class="math">cos(90&frasl;2)&nbsp;&asymp;&nbsp;0.707</span>) and 0.0
+specifies an opening angle of 180 degrees.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="raydiff.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node16.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

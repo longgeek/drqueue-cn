@@ -1,0 +1,569 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+// #define MI_NOISE
+// #define NO_STRUCTS
+
+
+shader Landscape {
+input:
+    Color Base_Color = Color(0.7, 0.6, 0.4, 1.0) {
+    };
+    Color Overlay_Color = Color(0.2, 0.4, 0.2, 1.0) {
+    };
+    float Blur = 0.3 {
+        hard_range(0.0, 1.0);
+    };
+    bool Relative_to_Object = false {
+    };
+    bool Relative_to_World = true {
+    };
+    float3 Base_Plane_Normal = float3(0.0, 0.0, 1.0) {
+    };
+    float Base_Plane_Distance = 0.0 {
+    };
+
+    bool  Texture_Active = false;
+    float Texture_Influence = 1.0f;
+    bool  Texture_Use_Alpha_Component = false;
+    bool  Texture_Use_Red_Component   = true;
+    bool  Texture_Use_Green_Component = true;
+    bool  Texture_Use_Blue_Component  = true;
+
+    bool  Height_Active = true;
+    float Height_Influence = 1.0f;
+    bool  Height_Upside_Down = false;
+    float Height_Height = 20.0f;
+    float Height_Spread = 2.0f;
+
+    bool  Slope_Active = true;
+    float Slope_Influence = 1.0f;
+    bool  Slope_Upside_Down = false;
+    float Slope_Angle = 40.0f;
+
+    bool  Positional_Noise_Active = false;
+    float Positional_Noise_Influence = 1.0f;
+    float Positional_Noise_Scale = 1.0f;           // size
+    float Positional_Noise_Roughness = 0.0f;       // splotch
+    float Positional_Noise_Coverage       = 0.0f;  // coverage
+    float Positional_Noise_Vertical_Scale = 1.0f;  // yscale
+
+    bool  Shape_Based_Noise_Active = false;
+    float Shape_Based_Noise_Influence = 2.0f;
+    float Shape_Based_Noise_Scale     = 5.0f;     // size
+    float Shape_Based_Noise_Roughness = 0.5f;      // splotch
+    float Shape_Based_Noise_Coverage  = 0.0f;       // coverage
+    float Shape_Based_Noise_Vertical_Scale = 1.0f; // yscale
+
+    bool  Stain_Active    = false;
+    float Stain_Influence = 1.0f;
+    float Stain_Thickness = 0.0f;
+
+#ifdef MI_NOISE
+    Texture2d mi_noise_table = "mi_noise.dds"
+    {
+        description( "The texture containing the noise table." );
+        disable_filtering();
+        // hidden();
+        texture_coord_u("clamp");
+        texture_coord_v("clamp");
+    };
+#endif
+
+output:
+    Color result;
+
+member:
+    struct frac_s
+    {
+        int     octaves;
+        float	lacunarity;
+        float	h;
+        float	coefficient[10];
+        float	frequency[10];  
+    };
+
+    struct shader_data {
+        // From orient.c, but only one rotational matrix is used, so no struct
+        float3x3 orient_t;
+        // Normalized Base_Plane_Normal
+        float3   plane_eq;
+        // fractionals
+        frac_s positional_frac;
+        frac_s surface_frac; 
+    };
+
+#ifdef USE_CONSTRUCTOR
+    shader_data instance_data;
+#endif
+
+#ifdef MI_NOISE
+// used to index into a linear array as if it was a [3][3] array
+#define IDX2(a,b) (a+b*3)
+// used to index into a linear array as if it was a [3][3][3] array
+#define IDX3(a,b,c) (a + b*3 + c*9)
+
+// mi_noise_3d
+#define TABLE_SIZE      0x8000		/* must be power of 2 */
+#define INOISE3(ix,iy,iz) noise_table(((ix)*1341 + (iy) * 719 + (iz) * 2031) % (TABLE_SIZE))  
+
+      float noise_table(int i) {
+        int x = i % 256;
+        int y = i / 256;
+        float fx = (2.0 * float(x) + 1.0) / (2.0 * 256.0);
+        float fy = (2.0 * float(y) + 1.0) / (2.0 * 128.0);
+        Color c = tex2D(mi_noise_table, float2(fx,fy));
+        return c.r;
+      }
+
+      // simplified version of the noise() function in libnoise.cpp
+      float landscape_noise(in int dimn,
+		       in float  x,
+		       in float  y,
+		       in float  z) {
+        int i = 0;
+        int j = 0;
+        int k = 0;
+        int ix = 0;
+        int iy = 0;
+        int iz = 0;
+        int loopc = 0;
+        int loopcx = 0;
+        int loopcy = 0;
+        int loopcz = 0;
+        float xx = 0.0;
+        float yy = 0.0;
+        float zz = 0.0;
+        float val = 0.0;
+        float u[9] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+        float du[9] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+        float fr[3] = { 0.0, 0.0, 0.0 };
+        float dyz[9] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+        float dz[3] = { 0.0, 0.0, 0.0 };
+        float fxdyz[9] = { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 };
+        float fxdz[3] = { 0.0, 0.0, 0.0 };
+        float fydz[3] = { 0.0, 0.0, 0.0 };
+        float fx = 0.0;
+        float fy = 0.0;
+        float fz = 0.0;
+
+        // make them positive to avoid funny behavior around 0.0
+        if (x < -39999) x = -39998 - x; else x += 40000;
+        if (y < -39999) y = -39998 - y; else y += 40000;
+        if (z < -39999) z = -39998 - z; else z += 40000;
+        ix = (int)(xx = x - .5);
+        iy = (int)(yy = y - .5);
+        iz = (int)(zz = z - .5);
+        // fractional parts of the coordinates
+        fr[0] = xx - ix;
+        fr[1] = yy - iy;
+        fr[2] = zz - iz;
+        loopc  = 3;
+        loopcx = loopc;
+        loopcy = dimn >= 2 ? loopc : 1;
+        loopcz = dimn >= 3 ? loopc : 1;
+        // build the table of random values
+        // for (i=0; i < loopcz; ++i, ++iz)
+        //   for (iy=(int)yy, j=0; j < loopcy; ++j, ++iy)
+        //     for (ix=(int)xx, k=0; k < loopcx; ++k, ++ix)
+        //       dxyz[IDX3(i,j,k)] = INOISE3(ix, iy, iz);
+
+        // we don't use the loop above (see comments below for dxyz)
+
+        // compute b-spline blending fns u[][] as functions of input point
+        // coords du[][] = d/dx (u[][] Everything is a tensor product so
+        // we have only one "derivative" per dimension
+        for (i=0; i < dimn; ++i) {
+          xx = 1.0 - fr[i];
+          u[IDX2(0,i)] = xx * xx * .5;
+          du[IDX2(0,i)] = -xx; // remember: partial wrt fr[i], not xx
+          xx = fr[i] - .5;
+          u[IDX2(1,i)] = -xx * xx + .75;
+          du[IDX2(1,i)] = -2 * xx;
+          u[IDX2(2,i)] = fr[i] * fr[i] * .5;
+          du[IDX2(2,i)] = fr[i];
+        }
+        // compute the value of the spline function at the input point
+        // innermost loop computes the x, next outer the y, outermost the z
+        for (xx=0, i=0; i < loopcz; ++i) {
+          for (dz[i]=0, j=0; j < loopcy; ++j) {
+	    for (dyz[IDX2(i,j)]=0, k=0; k < loopcx; ++k) {
+	      // dyz[IDX2(i,j)] += u[IDX2(k,0)] * dxyz[IDX3(i,j,k)];
+
+	      // instead of using the array dxyz and filling it in a loop
+	      // above we replace the line above with a direct call to
+	      // INOISE3(...) and adjust the parameters because ix, iy,
+	      // and iz would have been increased by the missing loop.
+
+	      dyz[IDX2(i,j)] += u[IDX2(k,0)] * INOISE3(ix+k, iy+j, iz+i);
+	    } // for (..., k = 0; ...)
+	    if (dimn >= 2) dz[i] += u[IDX2(j,1)] * dyz[IDX2(i,j)];
+          } // for (..., j = 0; ...)
+          if (dimn >= 3) xx += u[IDX2(i,2)] * dz[i];
+        } // for (..., i = 0; ...)
+        // the "answer" lies in different variables depending on the dimension
+        val = dimn == 1 ? dyz[IDX2(0,0)] : dimn == 2 ? dz[0] : xx;
+        return(val);
+      }
+
+      // see libnoise.cpp
+      float mi_noise_3d(in float3 p) {
+        return (landscape_noise(3, p.x, p.y, p.z));
+      }
+
+#else
+    // TEMPORARY HACK IMPLEMENTATION AWAITING ACTUALLY IMPLEMENTING mi_noise_*()
+    float mi_noise_3d(in float3 point)
+    {
+       return abs(sin(point.x) * sin(point.y) * sin(point.z));
+    }
+#endif
+
+    // Local functions
+    void frac_init ( out frac_s frac, float lacunarity, float h, int octaves )
+    {
+        frac.octaves     = octaves;
+
+        // if (( frac.lacunarity != lacunarity ) || ( frac.h != h ))
+        {
+            int i;
+            float total;
+
+            frac.lacunarity = lacunarity;
+            frac.h = h;
+
+            for (i = 0; i < octaves; i++) 
+            {
+                float f = pow(lacunarity, (float) i);
+
+                frac.frequency[i]   = f;
+                frac.coefficient[i] = pow(f, -h);
+            }
+
+            /* Scale, so that the energy of the sum is 1 */
+
+            total = 0;
+
+            for (i = 0; i < octaves; i++)
+                total += frac.coefficient[i] * frac.coefficient[i];
+
+            for (i = 0; i < octaves; i++)
+                frac.coefficient[i] /= total;
+        }
+    }  
+
+
+    float frac_scalar(frac_s frac, float3 p)
+    {
+        int i;
+        float t;
+
+        t = 0.0;
+
+        for (i=0; i < frac.octaves; i++) {
+            float3 fp = p;
+
+            fp *= frac.frequency[i];
+            t  += frac.coefficient[i] * (2.0 * mi_noise_3d(fp) - 1.0);
+        }
+
+        return ( float )t;
+    }
+
+
+    float height_influence(
+        in     shader_data data,
+        inout  float  potential,	        
+        in     float3 point)
+    {
+        float  value;
+
+        if (( Height_Active ) && ( Height_Influence != 0.0f )) 
+        {
+            float  dist; /* distance of point to baseplane */
+
+            float3 localpoint = point * data.orient_t;
+
+            dist = localpoint.y - Base_Plane_Distance;
+
+            value = range_scale ( dist,
+                Height_Height - Height_Spread, 
+                Height_Height + Height_Spread, 
+                -1, 1);
+
+            value     *= Height_Influence;
+            potential += Height_Influence;
+
+            if ( Height_Upside_Down )
+                value *= -1.0;
+
+            return value;
+        }
+        else
+            return 0;
+    }
+
+    float slope_influence(
+        in     shader_data data,
+        inout float potential,
+        float3      thenormal)
+    {
+        float value;
+
+        if (( Slope_Active ) && ( Slope_Influence != 0.0f )) 
+        {
+            float angle;
+
+            float3 localnormal = thenormal * data.orient_t;
+
+            angle = acos ( -localnormal.y )/PI*180.0 + Slope_Angle - 180.0;
+            value = range_scale ( angle, -90, 90, -1, 1 );
+            value *= Slope_Influence;
+
+            potential += Slope_Influence;
+
+            if ( Slope_Upside_Down )
+                value *= -1.0;
+
+            return value;
+        }
+        else
+            return 0;
+    }
+
+    float positional_influence(
+        in     shader_data data,
+        inout float potential,
+        float3 point)
+    {
+        float value;
+
+        if (( Positional_Noise_Active ) && ( Positional_Noise_Influence != 0.0f ))
+        {
+            float3 localpoint = point * data.orient_t;
+            localpoint.y = ( localpoint.y - Base_Plane_Distance) / 
+                             Positional_Noise_Vertical_Scale;
+            localpoint /= Positional_Noise_Scale;
+
+            value = (2.0 * frac_scalar (data.positional_frac, localpoint)) 
+                  + Positional_Noise_Coverage;
+
+            value     *= Positional_Noise_Influence;
+            potential += Positional_Noise_Influence;
+
+            return value;          
+        }
+        else
+            return 0;
+    }
+
+    float surface_influence(
+        in     shader_data data,
+        inout float potential,
+        float3      thenormal)
+    {
+        float value;
+
+        if (( Shape_Based_Noise_Active ) && ( Shape_Based_Noise_Influence != 0.0f ))
+        {
+            float3 localnormal = normal * data.orient_t;
+
+            localnormal.y /= Shape_Based_Noise_Vertical_Scale;            
+            localnormal /= sin( Shape_Based_Noise_Scale * PI/180.0);
+
+            value = ( 2.0 * frac_scalar (data.surface_frac, normal)) 
+                           + Shape_Based_Noise_Coverage;
+
+            value      *= Shape_Based_Noise_Influence;
+            potential  += Shape_Based_Noise_Influence;
+
+            return value;
+        }
+        else
+            return 0;
+    }
+
+    float image_influence(
+        inout float potential,
+        inout Color thecolor)
+    {
+        float value = 0;
+
+        if (( Texture_Active ) && ( Texture_Influence != 0.0f )) 
+        {
+            if (Texture_Use_Alpha_Component)
+                value += (2.0 * thecolor.a - 1.0);
+
+            if (Texture_Use_Red_Component)
+                value += (2.0 * thecolor.r - 1.0);
+
+            if (Texture_Use_Green_Component)
+                value += (2.0 * thecolor.g - 1.0);
+
+            if (Texture_Use_Blue_Component)
+                value += (2.0 * thecolor.b - 1.0);
+
+            value      *= Texture_Influence;
+            potential  += Texture_Influence;
+
+            return value;
+        }
+        else
+            return 0;
+    }
+
+    float stain_influence(inout float potential)
+    {
+        float value;
+
+        if (( Stain_Active ) && ( Stain_Influence != 0.0f )) 
+        {
+            float d;
+            bool  is_stained;
+
+#if 0 // TODO: Work around bug "Error accessing state function 24"
+            if (get_ray_data("lume::stained", is_stained) && is_stained )
+            {
+                d = ray_length;                
+                value = range_scale (d, 0, Stain_Thickness, -1, 1);
+            }
+            else
+#endif
+                value = 0;
+
+            value      *= Stain_Influence;
+            potential  += Stain_Influence;
+
+            return value;
+        }
+        else
+            return 0;
+    }
+
+
+    float total_influence (in shader_data data, out Color result)
+    {
+        float  influence;
+        float  pi;
+        float3 local_point;
+        float3 local_normal;
+
+        if (Relative_to_World) {
+            local_point  = transform_point("internal", "world", position);
+            local_normal = transform_vector("internal", "world", normal);
+        }
+
+        if (Relative_to_Object) {
+            local_point  = transform_point("internal", "object", position);
+            local_normal = transform_vector("internal", "object", normal);
+        }
+
+        local_normal = normalize(local_normal);
+
+        pi = influence = 0;
+
+        result = Overlay_Color;
+
+        influence += height_influence	  ( data, pi, local_point );
+        influence += slope_influence	  ( data, pi, local_normal );
+        influence += positional_influence ( data, pi, local_point );
+        influence += surface_influence    ( data, pi, local_normal );
+        influence += image_influence	  ( pi, result );
+        influence += stain_influence	  ( pi );
+
+        if (pi != 0.0)
+            return influence / pi;
+        else
+            return 0;
+    }
+
+    float range_scale(float x,
+        float orig_min, float orig_max,
+        float target_min, float target_max)
+    {
+        if (x < orig_min)
+            return target_min;
+
+        if (x > orig_max)
+            return target_max;
+
+        if (x == orig_min)
+            return target_min;
+
+        return target_min + (x - orig_min) / (orig_min - orig_max) *
+            (target_min - target_max);
+    }
+
+    float influence_to_alpha ( in float influence )
+    {
+        return ( float )range_scale(influence, -Blur, Blur, 0, 1);  
+    }
+
+    void init_function(out shader_data data)
+    {
+        // Save normalized version
+        data.plane_eq = normalize(Base_Plane_Normal);
+
+        // info("In the constructor"); // TODO: Test/debug
+
+        // From orient.c orient_init()
+        /* 
+        ** Create a transform that rotates the canonical up vector ( 0, 1, 0 ) into the
+        ** axis defined by the direction "normal"
+        */
+        float cosa, sina;
+        float cosb, sinb;
+
+        cosb = ( float )sqrt ( data.plane_eq.x * data.plane_eq.x + 
+                               data.plane_eq.z * data.plane_eq.z );
+        sinb = data.plane_eq.y;
+        cosa = ( cosb != 0.0f ) ? data.plane_eq.x / cosb : 1.0f;
+        sina = ( cosb != 0.0f ) ? data.plane_eq.z / cosb : 0.0f;
+
+        data.orient_t = float3x3(
+            cosa * sinb, cosa * cosb, -sina,
+            -cosb,       sinb,         0,   
+            sina * sinb, sina * cosb,  cosa
+        );
+
+        // From lumeGetPositionTLS 
+
+        float lacunarity = 2.0;
+        int    octaves = 10;
+
+        float h = (1.0 - Positional_Noise_Roughness) * 2.0;
+        frac_init(data.positional_frac, lacunarity, h, octaves );
+
+        // From lumeGetSurfaceTLS 
+        h = (1.0 - Shape_Based_Noise_Roughness) * 2.0;        
+        frac_init(data.surface_frac, lacunarity, h, octaves );
+    }
+
+// TODO: There is a bug in constructor usage preventing this currently
+#ifdef USE_CONSTRUCTOR
+    Landscape()
+    {
+        init_function(instance_data);
+    }
+#endif
+
+    void main() {
+#ifndef USE_CONSTRUCTOR
+        shader_data data;
+        init_function(data);
+
+        float influence = total_influence ( data, result );
+#else
+        float influence = total_influence ( instance_data, result );
+#endif
+        result.a        = influence_to_alpha ( influence );
+        float oneMinusA = 1.0f - result.a;
+
+        result.rgb = Base_Color.rgb * oneMinusA + result.rgb * result.a;
+        result.a   = Base_Color.a   * oneMinusA + result.a;
+    } // main
+};

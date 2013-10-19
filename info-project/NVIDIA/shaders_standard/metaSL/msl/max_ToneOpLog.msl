@@ -1,0 +1,258 @@
+/******************************************************************************
+ * Copyright 1986-2008 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision: 1.4 $
+
+// switch for the HW vs. SW version
+#define USE_HW_VERSION
+
+// see max_toneop.cpp
+#define UPPER_MESOPIC_LIMIT 5.62f
+#define LOWER_MESOPIC_LIMIT 5.62e-3f
+#define SMALL 0.001
+
+shader max_ToneOpLog {
+ input:
+#ifdef USE_HW_VERSION
+  Texture2d env_tex = "max_ToneOpLog.exr" {
+    display_name("Texture");
+  };
+  float2 texture_uv {
+		default_to_state("texture_coordinate", "texture_space");
+  };
+#endif
+    
+  bool active = true {
+    display_name("Active");
+  };
+  float physicalScale = 1500.0 {
+    display_name("PhysicalScale");
+    soft_range(Scalar(1.0), Scalar(3000.0));
+  };
+  bool chromaticAdaptation = false {
+    display_name("ChromaticAdaptation");
+  };
+  bool colorDifferentiation = false {
+    display_name("ColorDifferentiation");
+  };
+  Color whiteColor = Color(1.0, 1.0, 1.0, 1.0) {
+    display_name("WhiteColor");
+    soft_range(Color(0.0, 0.0, 0.0, 0.0), Color(1.0, 1.0, 1.0, 1.0));
+  };
+  float brightness = 65.0 {
+    display_name("Brightness");
+    soft_range(Scalar(1.0), Scalar(100.0));
+  };
+  float contrast = 50.0 {
+    display_name("Contrast");
+    soft_range(Scalar(1.0), Scalar(100.0));
+  };
+  float midTones = 1.0 {
+    display_name("MidTones");
+    soft_range(Scalar(0.0), Scalar(1.0));
+  };
+  bool daylight = true {
+    display_name("Daylight");
+  };
+  bool exterior = true {
+    display_name("Exterior");
+  };
+  bool useLegacyAlgorithm = false {
+    display_name("UseLegacyAlgorithm");
+  };
+
+ output:
+  Color result;
+
+  // see max_toneop.cpp
+  float approximateScotopicLuminance(Color value) {
+    // this approximation was borrowed from Greg Larson
+    return 0.062 * value.r + 0.608 * value.g + 0.330 * value.b;
+  }
+
+  // see max_toneop.cpp
+  float calcBrightness(in Color value) {
+    return (abs(value.r) * 0.263 +
+	    abs(value.g) * 0.655 +
+	    abs(value.b) * 0.082);
+  } // calcBrightness
+
+  void max_ToneOpLog_ScaleToRGB(// result
+				inout Color local_result,
+				// state
+				// shader parameters
+				in float inst_m_inputScaleFactor,
+				in bool inst_chromaticAdaptation,
+				in Color inst_m_whiteConstancyFactor,
+				in bool inst_colorDifferentiation,
+				in bool inst_mapComponentsIndependently,
+				in float inst_m_a,
+				in float inst_m_b,
+				in float inst_m_c) {
+    Color col = Color(0.0, 0.0, 0.0, 0.0);
+    col.r = local_result.r * inst_m_inputScaleFactor;
+    col.g = local_result.g * inst_m_inputScaleFactor;
+    col.b = local_result.b * inst_m_inputScaleFactor;
+    col.a = local_result.a;
+    // adjust color to simulate chromatic adaptation
+    if (inst_chromaticAdaptation) {
+      col.r *= inst_m_whiteConstancyFactor.r;
+      col.g *= inst_m_whiteConstancyFactor.g;
+      col.b *= inst_m_whiteConstancyFactor.b;
+    } // if (inst_chromaticAdaptation)
+    float luminance = calcBrightness(col);
+    // adjust color to simulate color discrimination
+    if (inst_colorDifferentiation && luminance < UPPER_MESOPIC_LIMIT) {
+      float sluminance = approximateScotopicLuminance(col);
+      if (luminance <= LOWER_MESOPIC_LIMIT) {
+	// scotopic response only
+	col.r = sluminance;
+	col.g = sluminance;
+	col.b = sluminance;
+      } // if (luminance <= LOWER_MESOPIC_LIMIT)
+      else {
+	// linear interpolation between a pure scotopic response at
+	// the low end of the mesopic range and a pure photopic
+	// response at the high end of the mesopic range.
+	float w = ((luminance - LOWER_MESOPIC_LIMIT) /
+		   (UPPER_MESOPIC_LIMIT - LOWER_MESOPIC_LIMIT));
+	col.r *= w;
+	col.g *= w;
+	col.b *= w;
+	col.r += sluminance * (1.0 - w);
+	col.g += sluminance * (1.0 - w);
+	col.b += sluminance * (1.0 - w);
+      } // else [ if (luminance <= LOWER_MESOPIC_LIMIT) ]
+    } // if (inst_colorDifferentiation && luminance < UPPER_MESOPIC_LIMIT)
+    if (inst_mapComponentsIndependently) {
+      // apply logarithmic tone mapping to each color component separately
+      if(col.r > 0) col.r *= inst_m_a / (inst_m_b * col.r + inst_m_c);
+      else col.r = 0;
+      if(col.g > 0) col.g *= inst_m_a / (inst_m_b * col.g + inst_m_c);
+      else col.g = 0;
+      if(col.b > 0) col.b *= inst_m_a / (inst_m_b * col.b + inst_m_c);
+      else col.b = 0;
+      local_result = col;
+    } // if (inst_mapComponentsIndependently)
+    else {
+      if (luminance > 0) {
+	float I = inst_m_a / (inst_m_b * luminance + inst_m_c);
+	col.r *= I;
+	col.g *= I;
+	col.b *= I;
+	local_result = col;
+      } // if (luminance > 0)
+      else {
+	local_result.r = 0;
+	local_result.g = 0;
+	local_result.b = 0;
+      } // else [ if (luminance > 0) ]
+    } // else [ if (inst_mapComponentsIndependently) ]
+  } // max_ToneOpLog_ScaleToRGB
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+#ifdef USE_HW_VERSION
+    // instead of tracing a ray into the scene we use a texture !!!
+    // TMP
+    Vector3 v = Matrix3x3(internal_to_camera) * direction;
+    Vector2 texture;
+    texture.x = 0.5 + v.x; // / (Scalar) image_x_resolution;
+    texture.y = 0.5 - v.y; // / (Scalar) image_y_resolution;
+    // TMP
+    //result = tex2d(env_tex,texture);
+    //[James:] change for texture coordinate
+		result = tex2d(env_tex,texture_uv );
+		// Copied from d3dx9math.h
+  	// To get rid of the INF texels from a FP16 texture
+		float D3DX_16F_MAX = (6.550400e+004);    // max value of FP16	
+		if(result.r > D3DX_16F_MAX)
+		{
+			result.r = D3DX_16F_MAX;
+		}
+		if(result.g > D3DX_16F_MAX)
+		{
+			result.g = D3DX_16F_MAX;
+		}
+		if(result.b > D3DX_16F_MAX)
+		{
+			result.b = D3DX_16F_MAX;
+		}
+#else
+    // trace a ray into the scene
+    Color eye_contrib = Color(0.0, 0.0, 0.0, 0.0);
+    Ray ray;
+    Ray ray_dx; // ignore for the moment
+    Ray ray_dy; // ignore for the moment
+    String gather_output_name;
+    Trace_options trace_options;
+    ray = Ray(origin, direction);
+    trace_options.set_ray_type("eye");
+    if (trace_immediate(ray, ray_dx, ray_dy, trace_options,
+			gather_output_name, eye_contrib)) {
+      result += eye_contrib;
+    } // if (trace_immediate(...))
+    else {
+      result += trace_environment(ray);
+    } // else [ if (trace_immediate(...)) ]
+#endif
+    // active?
+    if (active) {
+      bool applyToneOp = true; // not really used yet
+      if (applyToneOp) {
+	// init function
+	float inst_m_inputScaleFactor = physicalScale / PI;
+	bool inst_mapComponentsIndependently = !useLegacyAlgorithm;
+	float bb = brightness < 0.0 ? 0.0 : brightness * 0.7;
+	float ordersOfMag = 5.0;
+	float powerBot = daylight && exterior ? 4.0 : 2.0;
+	float res = 100.0 / ordersOfMag;
+	float mag = floor(50.0 / res);
+	float power = bb / 20.0 - ordersOfMag - powerBot + mag;
+	float stepsize = 9.0 / res;
+	float step = 50.0 - mag * res;
+	float inst_m_c = 0.02 * contrast * 2; // multiplied by two !!!
+	float inst_m_b = pow(10.0, power) * (1.0 + stepsize * step);
+	float inst_m_a = inst_m_b * (1.0 + inst_m_c);
+	inst_m_c /= pow(2.0, midTones - 1.0);
+	inst_m_b *= PI;
+	Color inst_m_whiteConstancyFactor = whiteColor;
+	if (chromaticAdaptation) {
+	  float luminance = calcBrightness(inst_m_whiteConstancyFactor);
+	  inst_m_whiteConstancyFactor.r = 
+	    ((inst_m_whiteConstancyFactor.r > SMALL) ? 
+	     luminance / inst_m_whiteConstancyFactor.r : luminance / SMALL);
+	  inst_m_whiteConstancyFactor.g =
+	    ((inst_m_whiteConstancyFactor.g > SMALL) ?
+	     luminance / inst_m_whiteConstancyFactor.g : luminance / SMALL);
+	  inst_m_whiteConstancyFactor.b =
+	    ((inst_m_whiteConstancyFactor.b > SMALL) ?
+	     luminance / inst_m_whiteConstancyFactor.b : luminance / SMALL);
+	} // if (d.chromaticAdaptation)
+	// TODO: check if we are called as lens shader
+	max_ToneOpLog_ScaleToRGB(// result
+				 result,
+				 // state
+				 // shader parameters
+				 inst_m_inputScaleFactor,
+				 chromaticAdaptation,
+				 inst_m_whiteConstancyFactor,
+				 colorDifferentiation,
+				 inst_mapComponentsIndependently,
+				 inst_m_a,
+				 inst_m_b,
+				 inst_m_c);
+      } // if (applyToneOp)
+    } // if (d.active)
+  } // main
+
+} 
+{ 
+#ifdef USE_HW_VERSION
+  shader_type( "environment" ); 
+#else
+  shader_type("lens");
+#endif
+};

@@ -1,0 +1,299 @@
+<root>
+  <version major="2" minor="0"/>
+  <metasl_code file_name="hlsl_base_XYZGenerator.msl"/>
+  <metasl_code file_name="max_Water.msl"/>
+
+  <phenomenon name="max_Water_Phen">
+    <input name="NumWaveSets" type="const int" display_name="NumWaveSets" value="3">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="NumWaveSets"/>
+      </annotation>
+    </input>
+    <input name="WaveRadius" type="float" display_name="WaveRadius" value="1000">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="WaveRadius"/>
+      </annotation>
+    </input>
+    <input name="WaveLenMin" type="float" display_name="WaveLenMin" value="50">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="WaveLenMin"/>
+      </annotation>
+    </input>
+    <input name="WaveLenMax" type="float" display_name="WaveLenMax" value="50">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="WaveLenMax"/>
+      </annotation>
+    </input>
+    <input name="Amplitude" type="float" display_name="Amplitude" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Amplitude"/>
+      </annotation>
+    </input>
+    <input name="Phase" type="float" display_name="Phase" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Phase"/>
+      </annotation>
+    </input>
+    <input name="Distribution" type="int" display_name="Distribution" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Distribution"/>
+      </annotation>
+    </input>
+    <input name="RandomSeed" type="int" display_name="RandomSeed" value="30159">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="RandomSeed"/>
+      </annotation>
+    </input>
+    <input name="Color1" type="Color" display_name="Color1" value="1 1 1 1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Color1"/>
+      </annotation>
+    </input>
+    <input name="Color2" type="Color" display_name="Color2" value="0 0 0 1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Color2"/>
+      </annotation>
+    </input>
+    <input name="Map1" type="Shader" display_name="Map1" value="">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Map1"/>
+      </annotation>
+    </input>
+    <input name="Map2" type="Shader" display_name="Map2" value="">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Map2"/>
+      </annotation>
+    </input>
+    <input name="Map1On" type="const bool" display_name="Map1On" value="false">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Map1On"/>
+      </annotation>
+    </input>
+    <input name="Map2On" type="const bool" display_name="Map2On" value="false">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Map2On"/>
+      </annotation>
+    </input>
+    <input name="noise_table" type="texture2D" display_name="noise_table" value="water_noise_out.dds"/>
+    <input name="evalNormal" type="const bool" display_name="evalNormal" value="false">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="evalNormal"/>
+      </annotation>
+    </input>
+    <input name="CoordinateSystem" type="const int" display_name="CoordinateSystem" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="CoordinateSystem"/>
+      </annotation>
+    </input>
+    <input name="Offset" type="float3" display_name="Offset" value="0 0 0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Offset"/>
+      </annotation>
+    </input>
+    <input name="Tiling" type="float3" display_name="Tiling" value="100 100 100">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Tiling"/>
+      </annotation>
+    </input>
+    <input name="Angle" type="float3" display_name="Angle" value="0 0 0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Angle"/>
+      </annotation>
+    </input>
+    <input name="Blur" type="float" display_name="Blur" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Blur"/>
+      </annotation>
+    </input>
+    <input name="BlurOffset" type="float" display_name="BlurOffset" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="BlurOffset"/>
+      </annotation>
+    </input>
+    <output name="result" type="Color" display_name="result">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="result"/>
+      </annotation>
+    </output>
+
+    <node name="hlsl_base_XYZGenerator_1" class="hlsl_base_XYZGenerator">
+      <input name="CoordinateSystem" value="0">
+        <attachment target_name="CoordinateSystem"/>
+      </input>
+      <input name="Offset" value="0 0 0">
+        <attachment target_name="Offset"/>
+      </input>
+      <input name="Tiling" value="100 100 100">
+        <attachment target_name="Tiling"/>
+      </input>
+      <input name="Angle" value="0 0 0">
+        <attachment target_name="Angle"/>
+      </input>
+      <input name="Blur" value="1">
+        <attachment target_name="Blur"/>
+      </input>
+      <input name="BlurOffset" value="0">
+        <attachment target_name="BlurOffset"/>
+      </input>
+      <output name="result"/>
+      <output name="xtra_dP"/>
+      <output name="xtra_bumpDP_0"/>
+      <output name="xtra_bumpDP_1"/>
+      <output name="xtra_bumpDP_2"/>
+      <gui_data width="2.1" height="3.1" open_width="2.1" open_height="3.1" position="0 0" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".max_Water_Phen_1\Offset" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".max_Water_Phen_1\Blur" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\Angle" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".max_Water_Phen_1\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\BlurOffset" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\Tiling" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".max_Water_Phen_1\xtra_bumpDP_0" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".max_Water_Phen_1\xtra_bumpDP_1" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".max_Water_Phen_1\xtra_bumpDP_2" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".max_Water_Phen_1\xtra_dP" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".max_Water_Phen_1\CoordinateSystem" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="max_Water_1" class="max_Water">
+      <input name="NumWaveSets" value="3">
+        <attachment target_name="NumWaveSets"/>
+      </input>
+      <input name="WaveRadius" value="1000">
+        <attachment target_name="WaveRadius"/>
+      </input>
+      <input name="WaveLenMin" value="50">
+        <attachment target_name="WaveLenMin"/>
+      </input>
+      <input name="WaveLenMax" value="50">
+        <attachment target_name="WaveLenMax"/>
+      </input>
+      <input name="Amplitude" value="1">
+        <attachment target_name="Amplitude"/>
+      </input>
+      <input name="Phase" value="0">
+        <attachment target_name="Phase"/>
+      </input>
+      <input name="Distribution" value="0">
+        <attachment target_name="Distribution"/>
+      </input>
+      <input name="RandomSeed" value="30159">
+        <attachment target_name="RandomSeed"/>
+      </input>
+      <input name="Color1" value="1 1 1 1">
+        <attachment target_name="Color1"/>
+      </input>
+      <input name="Color2" value="0 0 0 1">
+        <attachment target_name="Color2"/>
+      </input>
+      <input name="Map1" value="">
+        <attachment target_name="Map1" is_reference="true"/>
+      </input>
+      <input name="Map2" value="">
+        <attachment target_name="Map2" is_reference="true"/>
+      </input>
+      <input name="Map1On" value="false">
+        <attachment target_name="Map1On"/>
+      </input>
+      <input name="Map2On" value="false">
+        <attachment target_name="Map2On"/>
+      </input>
+      <input name="Coords" value="">
+        <attachment target_name="result" target_node="hlsl_base_XYZGenerator_1" is_reference="true"/>
+      </input>
+      <input name="noise_texture" value="water_noise_out.dds">
+        <attachment target_name="noise_table"/>
+      </input>
+      <input name="evalNormal" value="false">
+        <attachment target_name="evalNormal"/>
+      </input>
+      <output name="result">
+        <attachment target_name="result"/>
+      </output>
+      <gui_data width="2.8" height="3.8" open_width="2.8" open_height="3.8" position="0.404686 0.27689" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".max_Water_Phen_1\Color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\Color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\Phase" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\Map1" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\Map2" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\Coords" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\WaveRadius" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\RandomSeed" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\Amplitude" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\WaveLenMax" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\Distribution" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\Map1On" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\noise_texture" type_name="texture2D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\NumWaveSets" type_name="const int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\WaveLenMin" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\Map2On" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".max_Water_Phen_1\evalNormal" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+  </phenomenon>
+
+  <node name="max_Water_Phen_1" class="max_Water_Phen">
+    <input name="NumWaveSets" value="3"/>
+    <input name="WaveRadius" value="1000"/>
+    <input name="WaveLenMin" value="50"/>
+    <input name="WaveLenMax" value="50"/>
+    <input name="Amplitude" value="1"/>
+    <input name="Phase" value="0"/>
+    <input name="Distribution" value="0"/>
+    <input name="RandomSeed" value="30159"/>
+    <input name="Color1" value="1 1 1 1"/>
+    <input name="Color2" value="0 0 0 1"/>
+    <input name="Map1" value=""/>
+    <input name="Map2" value=""/>
+    <input name="Map1On" value="false"/>
+    <input name="Map2On" value="false"/>
+    <input name="noise_table" value="water_noise_out.dds"/>
+    <input name="evalNormal" value="false"/>
+    <input name="CoordinateSystem" value="0"/>
+    <input name="Offset" value="0 0 0"/>
+    <input name="Tiling" value="100 100 100"/>
+    <input name="Angle" value="0 0 0"/>
+    <input name="Blur" value="1"/>
+    <input name="BlurOffset" value="0"/>
+    <output name="result"/>
+    <gui_data width="3.3" height="4.3" open_width="3.3" open_height="4.3" position="0 0" view_translation="0 0" view_scale="0.1" open_state="closed" selected_state="false">
+      <preview_data>
+        <preview_data_element name="\Color1" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\Color2" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\Angle" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        <preview_data_element name="\Phase" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\Tiling" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        <preview_data_element name="\Blur" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\noise_table" type_name="texture2D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\BlurOffset" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\CoordinateSystem" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\Distribution" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\WaveRadius" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\RandomSeed" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\Map1" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\Map2" type_name="Shader" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\NumWaveSets" type_name="const int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\Map1On" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\WaveLenMax" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\Map2On" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\WaveLenMin" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\noise_texture" type_name="texture2D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\Offset" type_name="float3" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        <preview_data_element name="\evalNormal" type_name="const bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\Amplitude" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <render_data>
+    <light_list/>
+    <scene_ambient color="0 0 0 0"/>
+  </render_data>
+</root>

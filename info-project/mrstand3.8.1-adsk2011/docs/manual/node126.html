@@ -1,0 +1,210 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Output Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node125.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node127.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION124"></a>
+<h2>Output Shaders</h2>
+
+<p><a id="INDEX492"></a> Output shaders are
+functions that are run after rendering has finished. They modify
+the resulting image or images. Typical uses are output filters and
+compositing operations. Output shaders can directly access all
+rendered <a href="node144.html#INDEX617">frame buffer</a>s and make
+modifications to these frame buffers, but they do not return a
+result like other shaders do. They still get a result pointer as
+their first argument, for symmetry with the other types of shaders,
+but this pointer should not be used.</p>
+<!--
+<p>In version 2.x of mental ray, output shaders had a
+different prototype (there was no result pointer argument) and a
+different state called <tt>miOutstate</tt>, which contained frame
+buffers but very few other state variables, so output shaders could
+not use any shader interface function that required an argument of
+type <tt>miState</tt>. For backwards compatibility, these shaders
+are still supported, but not recommended and not described in this
+book. mental ray distinguishes old-style output shaders by a null
+or missing version number in the declaration. Old-style output
+shaders did not support <a href="node159.html#INDEX832">shader
+initialization</a> and cleanup and the <i><a href=
+"node138.html#INDEX522">mi_eval</a></i> family of functions; new
+ones do. <b>It is important</b> to specify a non-null <a href=
+"node114.html#INDEX439">shader version</a> number in the
+declaration of output shaders! If none is specified, mental ray
+issues a warning and calls the output shader with an
+<tt>miOutstate</tt>, which will probably crash it.</p>
+-->
+<p>All <a href="node126.html#INDEX492">output shader</a>s must be
+declared like any other type of shader, and the same types of
+arguments can be declared. This includes textures and lights.
+Non-procedural textures can be looked up using functions like
+<i><a href="node150.html#INDEX741">mi_lookup_color_texture</a></i>
+and <i><a href="miquery.html#api:mi_query">mi_query</a></i>. Lights can
+also be looked up with <i><a href="miquery.html#api:mi_query">mi_query</a></i>.
+Since rendering has completed, it is not possible to look up procedural
+textures or to use tracing functions such as <i>mi_sample_light</i>.</p>
+<p>Here is a simple output shader that depth-fades the rendered
+image towards total transparency:</p>
+<pre>
+    struct out_depthfade {
+        miScalar   tnear;   /* no fade closer than this */
+        miScalar   tfar;    /* farther objects disappear */
+    };
+
+    DLLEXPORT miBoolean out_depthfade(
+        void                 *result,
+        miState              *state,
+        struct out_depthfade *paras)
+    {
+        int         x, y;
+        miColor     color;
+        miScalar    depth, fade;
+        miScalar    tnear, tfar;
+        miImg_image *fb_color, *fb_depth;
+
+        tnear    = *mi_eval_scalar(&amp;paras-&gt;tnear);
+        tfar     = *mi_eval_scalar(&amp;paras-&gt;tfar);
+        fb_color = mi_output_image_open(state, miRC_IMAGE_RGBA);
+        fb_depth = mi_output_image_open(state, miRC_IMAGE_Z);
+
+        for (y=0; y &lt; state-&gt;camera-&gt;y_resolution; y++) {
+                if (mi_par_aborted())
+                        break;
+                for (x=0; x&lt;state-&gt;camera-&gt;x_resolution; x++) {
+                        mi_img_get_color(fb_color, &amp;color, x, y);
+                        mi_img_get_depth(fb_depth, &amp;depth, x, y);
+
+                        if (depth &gt;= tfar || depth == 0.0)
+                                color.r=color.g=color.b=color.a = 0;
+                        else if (depth &gt; tnear) {
+                                fade = (tfar - depth) / (tfar - tnear);
+                                color.r *= fade;
+                                color.g *= fade;
+                                color.b *= fade;
+                                color.a *= fade;
+                        }
+                        mi_img_put_color(fb_color, &amp;color, x, y);
+                }
+        }
+        mi_output_image_close(state, miRC_IMAGE_Z);
+        mi_output_image_close(state, miRC_IMAGE_RGBA);
+
+        return(miTRUE);
+    }
+</pre>
+<p>Note the call to <i><a href="node156.html#INDEX820">mi_par_aborted</a></i>,
+which stops the shader if the user has instructed mental ray to stop whatever
+it is doing. This call was inserted in the line loop because it should be
+called periodically, but not too often to avoid slowing it down.
+The parameter names <i>tnear</i> and <i>tfar</i> have been chosen
+instead of <i>near</i> and <i>far</i> to avoid conflicts with older
+compilers that pre-define those constants for internal use.
+<p>This shader is stored in a file <tt>out_depthfade.c</tt> and
+installed in the .mi file with a <a href="node71.html#INDEX158">code</a>
+statement and a <a href="node112.html#INDEX420">declaration</a>:</p>
+<pre>
+    code "out_depthfade.c"
+    declare shader
+        "out_depthfade" (scalar "near", scalar "far")
+        version 1
+    end declare
+</pre>
+<p>It is actually more efficient to precompile the shader, store it
+in a DSO file, and use the <tt>link</tt> statement instead of
+<tt>code</tt>. See the introductory <a href="node99.html#shaders">shaders</a>
+section for details. The declaration should appear before the first reference
+to the shader in a <tt>camera</tt> statement. Note the non-null version
+statement. The shader is referenced in an <tt>output</tt> statement in the
+camera:</p>
+<pre>
+    camera "cam"
+    $ifdef "RAY36"
+<div class="news">        framebuffer "main"
+            datatype "rgba"
+            filetype "tif"
+            filename "out.tif"
+        framebuffer "depth"
+            datatype "z"
+
+        output "out_depthfade"
+            ("near" 10.0, "far" 100.0)
+</div>    $else
+        output "rgba,z" "out_depthfade"
+            ("near" 10.0, "far" 100.0)
+
+        output "tif" "out.tif"
+    $endif
+         ...
+     end camera
+</pre>
+<p> Note, the marked section shows how to use
+the new .mi syntax to create a named frame buffer with or without image file
+output and output shader calls. Ordering of the statements is not important,
+in contrast to previous syntax.</p>
+<p>The <tt>framebuffer</tt> statements request both a color (<tt>rgba</tt>)
+and a depth (<tt>z</tt>) standard frame buffer to be created and rendered by
+mental ray. After rendering has finished, the output shader will be called
+which can access the existing buffers and change their pixel values. Finally,
+the frame buffer(s) which are marked for file output will be written to image
+files. Note, that the execution order of multiple output shaders is determined
+by the order of <tt>output</tt> statements on the camera.</p>
+<p> Note, that
+a depth frame buffer is not filtered (or not interpolated) by default, but
+the min depth within the pixel is stored. To enable depth values to be
+filtered a <tt>filtering on</tt> statement need to be added to the frame buffer
+definition (see <a href="node77.html#mi:framebuffer">Frame Buffers</a>).
+Without the depth frame buffer definition, all depth values returned by
+<i><a href="node144.html#INDEX625">mi_img_get_depth</a></i> would be 0.0.</p>
+
+<p><span class="depr">Deprecated</span>
+For old-style syntax, ordering of statements is more important. The output
+shader statement appears before the output file statement. This will ensure
+that the output shader can change the frame buffer content before it is written
+to the image file <tt>out.tif</tt>. It is possible to insert another file
+<a href="node77.html#INDEX227">output statement</a> before the output shader
+statement; in this case two files would be written, one with and one without
+depth fading.</p>
+<p><span class="depr">Deprecated</span>
+Note also that the output shader has a type string <tt>"rgba,z"</tt>. This
+string tells mental ray to render both an RGBA and a Z (depth) frame buffer.
+The RGBA buffer would have been rendered anyway because the file
+<a href="node77.html#INDEX227">output statement</a> requires it, but the depth
+buffer would not have been rendered without the <tt>z</tt> in the type string.
+In this case, all depth values returned by
+<i><a href="node144.html#INDEX625">mi_img_get_depth</a></i> would be 0.0.
+<a id="INDEX493"></a>By default, depth buffers are not interpolated; instead
+the min depth within the pixel is used. If the depths should be interpolated,
+use the output type <tt>"rgba,+z"</tt>.</p>
+
+<p>This example shader does not anti-alias very well because there is only one
+depth value per pixel. The shader makes pixels at a depth value of 0.0 totally
+transparent, to fade edges of objects correctly that have no other object
+behind them. By definition,
+<i><a href="node144.html#INDEX625">mi_img_get_depth</a></i> returns 0.0 for a
+position <i>x, y</i> if no object was hit at that pixel.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node125.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node127.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

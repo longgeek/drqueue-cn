@@ -1,0 +1,40 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+shader max_Tint {
+ input:
+    Color  Red   = Color(1,0,0,1);
+    Color  Green = Color(0,1,0,1);
+    Color  Blue  = Color(0,0,1,1);
+    Shader Map1;
+    const  bool Map1Enabled = true;
+
+  // Additional inputs
+  bool evalNormal; // Bump mode
+ output:
+  Color result;
+
+  void main() {
+      result = evalNormal?Color(0,0,0,0):Color(1,1,1,1);
+
+      if (Map1Enabled) 
+          if (evalNormal)
+              Map1.call( "input", "evalNormal", true, 
+                         "output", "result",    result);
+          else
+              Map1.call( "output", "result",    result);
+
+      if (evalNormal) // Bump mode simple returns the input!
+          return;
+
+      // Tint the result
+      result = result.r * Red +
+               result.g * Green +
+               result.b * Blue;
+      result.a = 1.0f;
+  } // main
+};

@@ -1,0 +1,103 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Displacement Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node126.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node128.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION125"></a>
+<h2>Displacement Shaders</h2>
+<p><a id="INDEX494"></a> Displacement shaders are
+called during geometry tessellation if the material of a polygonal
+or free-form surface object specifies a <tt>displace</tt> shader.
+Whenever the tessellator introduces or copies a vertex, the
+displacement shader is called and expected to return a scalar value
+that tells the tessellator to move the vertex by this distance
+along its normal vector. If 0 is returned, the vertex remains
+unchanged. If the object specifies displacement approximations,
+curvature introduced by displacement can lead to further
+subdivision. Here is an example:</p>
+<pre>
+    struct mydisplace {
+        miTag             tex;
+        miScalar          factor;
+    };
+
+    miBoolean mydisplace(
+        miScalar          *result,
+        miState           *state,
+        struct mydisplace *paras)
+    {
+        miColor           color;
+
+        mi_lookup_color_texture(&amp;color, state,
+                                *mi_eval_tag(&amp;paras-&gt;tex),
+                                &amp;state-&gt;tex_list[0]);
+
+        *result += (color.r + color.g + color.b) / 3 *
+                                *mi_eval_scalar(&amp;paras-&gt;factor);
+        return(miTRUE);
+    }
+</pre>
+<p>Note that the shader adds its displacement to the result instead
+of storing it. This allows chaining displacement shaders in
+<a href="node66.html#INDEX146">shader list</a>s. Shaders in shader
+lists get called in sequence, each adding its contribution to the
+result of the previous. mental ray calls the first displacement
+shader of the list with a result that is initialized to 0.</p>
+<p>Displacement shaders may also change the vector
+<code>state&rarr;normal</code> along which the displacement will
+take place, or change <code>state&rarr;point</code>, which is the
+original vertex position that the displacement is added to.
+However, note that mental ray does not check that surfaces
+resulting from such arbitrary displacements are free of
+self-intersections.</p>
+<p>mental ray requires that an object that is displaced with a
+displacement shader must contain a <b><a id="INDEX495"></a>max displace</b>
+statement that specifies the
+maximum displacement of the object. This is the largest absolute
+value that any displacement shader may return. For example, if the
+max displace value is 2.5, then no displacement shader may move the
+surface more than 2.5 units in any direction. For typical
+displacement shaders that return a value but do not change
+<code>state&rarr;point</code>, this means that the displacement
+shader must return a value in the range [-2.5, 2.5]. mental ray
+will print warning messages if the shader returns a value outside
+this interval because this can cause geometry to be clipped.</p>
+<p>mental ray also allows the displacement shader to store a
+<a href="node32.html#INDEX62">motion vector</a> in
+<code>state&rarr;motion</code>. This vector will be interpreted as
+the motion of the displaced point relative to the original point on
+the undisplaced base surface. This allows
+<a href="node32.html#INDEX60">motion blur</a>ring of the displacement, if
+the displacement changes rapidly between frames. This requires that
+motion blurring is enabled, and that the object has motion vectors
+or motion transformations (the displacement motion is <i>added</i>
+to the motion of the underlying surface).</p>
+<p>mental ray makes first derivatives available in the state for
+displacement shaders. Also, the result pointer passed to
+displacement shaders when displacing
+<a href="node189.html#INDEX993">subdivision surface</a>s now points to
+cleared memory; this is useful for displacement shader chains where
+each shader adds to the result of the previous shader.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node126.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node128.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,828 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Free-Form Surface Geometry</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="primlists.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node86.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION83"></a>
+<h3 id="mi:surf">Free-Form Surface Geometry</h3>
+
+<p>Free-form surfaces are polynomial patches of any degree up to
+twenty-one. <a href="#FOOTNOTE11">[11]</a> Supported basis types
+include <a href="node85.html#INDEX303">B&eacute;zier</a>,
+<a href="node85.html#INDEX304">Taylor</a>,
+<a href="node85.html#INDEX302">B-spline</a>,
+<a href="node85.html#INDEX305">cardinal</a>, and basis-matrix form. Any
+type can be rational or non-rational. Patches can be explicitly or
+automatically connected to one another, or may be defined to
+contain explicitly defined points or curves in their
+<a href="node89.html#INDEX334">approximation</a>. Various approximation
+types including (regular) parametric, spatial, curvature-dependent,
+view-dependent, and combinations of these, as well as
+<a href="node89.html#INDEX337">fine approximation</a>, which can generate
+microtriangle tessellations very efficiently. Surfaces may be bounded by a
+<a href="node85.html#INDEX317">trimming curve</a>, and may contain holes.</p>
+<p>Surface geometry, like polygonal geometry, is defined by a
+series of sections. An object containing only surface geometry
+follows this broad outline:</p>
+<pre>
+    object "<i>object_name</i>"
+        <dfn>[</dfn> visible <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>
+        <dfn>[</dfn> shadow <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>
+        <dfn>[</dfn> shadowmap <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>
+        <dfn>[</dfn> trace <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>  
+        <dfn>[</dfn> reflection <dfn>[</dfn> <i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> refraction <dfn>[</dfn> <i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> transparency <dfn>[</dfn> <i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> select <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>
+        <dfn>[</dfn> tagged <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>
+        <dfn>[</dfn> caustic <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>
+        <dfn>[</dfn> globillum <dfn>[</dfn> on<dfn>|</dfn>off <dfn>] ]</dfn>
+        <dfn>[</dfn> face <dfn>[</dfn>front<dfn>|</dfn>back<dfn>|</dfn>both<dfn>] ]</dfn>
+        <dfn>[</dfn> caustic <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> globillum <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> box <dfn>[</dfn><i>min<sub>x</sub> min<sub>y</sub> min<sub>z</sub> max<sub>x</sub> max<sub>y</sub> max<sub>z</sub></i><dfn>] ]</dfn>
+        <dfn>[</dfn> motion box <dfn>[</dfn><i>min<sub>x</sub> min<sub>y</sub> min<sub>z</sub> max<sub>x</sub> max<sub>y</sub> max<sub>z</sub></i><dfn>] ]</dfn>
+        <dfn>[</dfn> max displace <i>value</i> <dfn>]</dfn>
+        <dfn>[</dfn> samples <i>min max</i> <dfn>]</dfn>
+        <dfn>[</dfn> data null<dfn>|</dfn>"<i>data_name</i>" <dfn>]</dfn>
+        <dfn>[</dfn> tag <i>label_number</i><sub>int</sub> <dfn>]</dfn>
+        <dfn>[</dfn> <i>basis_list</i> <dfn>]</dfn>
+        group
+            <i>vector_list</i>
+            <i>vertex_list</i>
+            <dfn>[</dfn> <i>list of curves</i> <dfn>]</dfn>
+            <i>surface</i>
+            <dfn>[</dfn> <i>list of surface derivative requests</i> <dfn>]</dfn>
+            <dfn>[</dfn> <i>list of texture or vector surfaces</i> <dfn>]</dfn>
+            ... # more surfaces
+            <dfn>[</dfn> <i>list of approximation statements</i> <dfn>]</dfn>
+            <dfn>[</dfn> <i>list of connection statements</i> <dfn>]</dfn>
+        end group
+    end object
+</pre>
+<p>Curves, surfaces, approximations, and connections may be
+interspersed as long as names are defined before they are used. For
+example, a curve must come before the surface it is trimming, and
+an approximation must come after the surface to be approximated.
+Texture and vector texture surfaces must always directly follow the
+surface they apply to. The individual sections are:</p>
+<ul>
+<li>
+The <i>basis_list</i> must be specified at the beginning of the
+object definition, just before the group begins. Bases defined in
+this section are referenced by name in the curve and surface
+definitions to specify their degrees and types (B&eacute;zier,
+B-spline, etc.).</li>
+<li>
+The <i>vector_list</i> in the group is a list of
+<span class="number">(x , y , z)</span> vectors used to build control points
+later. This section is the same as the vector section used to build vertices
+for polygonal geometry.</li>
+<li>
+The <i>vertex_list</i> that follows the vector list builds
+control points out of the vectors. This also works like the vertex
+list for polygonal geometry, except that no normals and texture
+vertices can be defined here (no <tt>n</tt>, <tt>t</tt>, <tt>d</tt>, or
+<tt>u</tt> statements may appear). Normals are defined implicitly by the
+surface, and textures are defined by <i>texture surfaces</i> instead as
+described below. Surface derivatives are generated if <tt>derivative</tt>
+keywords are present. Rational curves and surfaces specify additional weights
+at each vertex reference (see below).</li>
+<li>
+<i>Curves</i> may be defined and used as
+<a href="node85.html#INDEX317">trimming curve</a>s,
+<a href="node85.html#INDEX318">hole curve</a>s, and
+<a href="node85.html#INDEX319">special curve</a>s. This section is
+optional; if no trimming curve is defined surfaces are untrimmed
+and end at the boundaries specified by the ranges of the bases
+used. Trimming a surface means to cut away portions that fall
+outside an outer boundary curve; holes cut away portions inside the
+hole curve. Special curves are curves that are always included in
+the tessellation; they can be used to define features like sharp
+creases that need to be tessellated consistently. Surfaces may also
+be connected along trimming curves.</li>
+<li>
+The surface geometry list consists of <tt>surface</tt>
+statements, much like polygonal geometry that consists of
+<tt>p</tt> and <tt>c</tt> statements. A surface is defined by a
+<tt>surface</tt> statement, optionally followed by
+<a href="node88.html#INDEX333">surface derivative</a> request statements
+and one or more <tt>texture surface</tt> or <tt>vector surface</tt>
+statements.</li>
+<li>
+<i>Approximation</i> statements give additional information
+about how a surface and its trimming, hole, and special curves are
+to be approximated with triangles. Various modes such as
+parametric, regular parametric, curvature-dependent, and
+view-dependent approximations can be selected, along with the
+precision. If there are approximation statements in the
+<tt><a href="node76.html#INDEX0">options</a></tt> statement (see
+Options, Tessellation Quality above), they override any
+approximation statements in the objects.</li>
+</ul>
+
+<p>For a description of vector lists and vertex lists, refer to
+page <a href="node83.html#vector">vector</a>.</p>
+
+<h4 id="mi:base">Bases</h4>
+
+<p>When surfaces and curves are present within an
+<a href="node83.html#mi:group">object group</a>, it is mandatory that at least
+one <a href="node85.html#INDEX0">basis</a> has been defined within the object.
+Bases define the degree and type of polynomials (denoted by
+<span class="math">N<sub>i,n</sub></span> below) to be used in the description
+of curves or surfaces. Curves and surfaces reference bases by name. Every
+surface needs two bases, one for the U and one for the V parameter direction.
+Both can have a different degree, but must have the same type (for example,
+rational B&eacute;zier in U and Cardinal in V is not allowed). There are five
+basis types:</p>
+
+<a id="INDEX302"></a><a id="INDEX303"></a><a id="INDEX304"></a>
+<a id="INDEX305"></a><a id="INDEX306"></a><a id="INDEX307"></a>
+<pre>
+    basis "<i>basis_name</i>" [ rational ] taylor <i>degree</i><sub>int</sub>  
+    basis "<i>basis_name</i>" [ rational ] bezier <i>degree</i><sub>int</sub>  
+    basis "<i>basis_name</i>" [ rational ] cardinal  
+    basis "<i>basis_name</i>" [ rational ] bspline <i>degree</i><sub>int</sub>  
+    basis "<i>basis_name</i>" [ rational ] matrix <i>degree</i><sub>int</sub> <i>stepsize</i><sub>int</sub> <i>basis_matrix</i>  
+</pre>
+<p>A parametric representation may be either non-rational or
+rational as indicated by the <tt>rational</tt> flag. Rational
+curves and surfaces specify additional weights at each control
+point. This flag is optional; it can also be specified in the
+curves and surfaces that reference the basis.</p>
+<p>The <i>degree</i> specifies the degree of the polynomials used
+in the description of curves or surfaces. Recall that the degree of
+a polynomial is the highest power of the parameter occurring in its
+definition. When bases of degree 1 are used control points are
+connected with straight lines. Cardinal bases always have degree 3.
+The degree and the type combined determine the length of the
+<b><a id="INDEX308"></a>parameter vector</b> and
+the number of control points needed for the surface. The meaning of
+the parameter vector differs for the different basis types. This is
+described in detail below.</p>
+<p>The supported polynomial types for curves and surfaces are
+<tt>bezier</tt>, <tt>bspline</tt>, <tt>taylor</tt>,
+<tt>cardinal</tt> and <tt>matrix</tt>.</p>
+<p>When a curve or surface is being evaluated and a transition from
+one segment or patch to the next occurs, the set of control points
+(the `evaluation window') used is incremented by the
+<i>stepsize</i>. The appropriate <i>stepsize</i> depends on the
+representation type expressed through the basis matrix and on the
+degree.</p>
+<p>Consider a curve with <i>k</i> control points
+{<span class="math">v<sub>1</sub> , &hellip; , v<sub>k</sub></span>}.
+If the curve is of degree <span class="math">n</span>, then
+<span class="math">n+1</span> control points are needed for each polynomial
+segment. If the <i>stepsize</i> is given as <span class="math">s</span>, then
+the <span class="math">(1+i)</span>th polynomial segment will use the control
+points {<span class="math">v<sub>is+1</sub> , &hellip; , v<sub>is+n+1</sub></span>}.
+For example, for B&eacute;zier curves <span class="math">s=n</span>, whereas
+for Cardinal curves <span class="math">s=1</span>. For surfaces,
+the above description applies independently to each parametric
+dimension.</p>
+<p>The <i>basis_matrix</i> specifies the basis functions used to evaluate a
+parametric representation. For a basis of degree <span class="math">n</span>
+the matrix must be of size <span class="math">(n+1)&times;(n+1)</span>.
+The matrix is laid out in the order
+<span class="math">b<sub>00</sub> , b<sub>01</sub> , &hellip; ,
+b<sub>0n</sub> , &hellip; , b<sub>nn</sub></span>. Note that the
+generalization to the rational case for all representations is
+admitted in all cases.</p>
+<p>As an example, an object containing a nonrational B&eacute;zier
+surface of degree 3 in one parameter direction and degree 1 in the
+other parameter direction needs two bases defined at the beginning
+of the object like this:</p>
+<pre>
+     object "mysurface"  
+        visible  
+        basis "bez1" bezier 1  
+        basis "bez3" bezier 3  
+        group  
+            ...  
+</pre>
+<p>The surface definition will reference the two bases by their
+names, <tt>bez1</tt> and <tt>bez3</tt>.</p>
+
+<h4 id="mi:surface">Surfaces</h4>
+
+<p>A surface specifies a name and a list of control points. For both
+parametric dimensions it specifies a <a href="node85.html#INDEX0">basis</a>,
+a global <b><a id="INDEX309"></a>parameter range</b>, and a parameter list.
+Optionally, it specifies <a href="node88.html#INDEX333">surface
+derivative</a> requests, <a href="node19.html#INDEX35">texture
+surface</a>s, <a href="node85.html#INDEX317">trimming curve</a>s,
+<a href="node85.html#INDEX318">hole curve</a>s,
+<a href="node85.html#INDEX319">special curve</a>s and
+<a href="node85.html#INDEX320">special point</a>s. Special curves and
+points are included as edges and vertices in the
+<a href="node89.html#INDEX334">approximation</a> (triangulation) of the
+surface.</p>
+<pre>
+        surface "<i>surface_name</i>" "<i>material_name</i>"  
+            "<i>u_basis_name</i>"<i>range u_param_list</i>  
+            "<i>v_basis_name</i>"<i>range v_param_list</i>  
+            <i>hom_vertex_ref_list</i>  
+            [ <i>derivative_request</i> ]  
+            [ <i>texture_surface_list</i> ]  
+            [ <i>surface_specials_list</i> ]  
+</pre>
+<p>If the enclosing object has the <tt>tagged</tt> flag set, a
+label integer must be given instead of a material name (see page
+<a href="node83.html#mi:tagged">tagged</a>). This changes the first
+line of the preceding syntax block to:</p>
+<pre>
+        surface "<i>surface_name</i>"<i>label_number</i><sub>int</sub>  
+</pre>
+<p>The bases used in the definition of the surface must have been
+defined in the <i>basis list</i> of the object. They are referenced
+by their <i>basis_name</i>s. Their <i>range</i>s consist of two
+floating-point numbers specifying the minimum and maximum parameter
+values used in the respective direction.</p>
+
+<p id="mi:surface_parms">
+The <i>parameter_list</i>s in the basis specifications define the number of
+patches of the surface and the number of control points. For bases of the
+types <tt>taylor</tt>, <tt>bezier</tt>, <tt>cardinal</tt> and <tt>matrix</tt>
+such a <i>parameter_list</i> consists of a strictly increasing list of at
+least two floating-point numbers. For <tt>bspline</tt> bases the
+<i>parameter_list</i>s specify the knot vector. If the
+<a href="node85.html#INDEX302">B-spline</a> basis to be used is of degree
+<span class="math">n</span>, the knot vector (
+<span class="math">x<sub>0</sub> , &hellip; , x<sub>q</sub></span>) must have
+at least <span class="math">q+1=2(n+1)</span> elements. Knot values represent
+a monotone sequence of floating-point numbers but are not necessarily strictly
+increasing, i.e. <span class="math">x<sub>i</sub> &le; x<sub>i+1</sub></span>.
+Moreover, they must satisfy the following conditions:</p>
+<pre>
+    (1) <span class="math">x<sub>0</sub> &lt; x<sub>n+1</sub></span>
+    (2) <span class="math">x<sub>q&minus;n&minus;1</sub> &lt; x<sub>q</sub></span>
+    (3) <span class="math">x<sub>i</sub> &lt; x<sub>i+n</sub></span> for <span class="math">0 &lt; i &lt; q&minus;n&minus;1</span>
+    (4) <span class="math">x<sub>n</sub> &le; t<sub>min</sub> &lt; t<sub>max</sub> &le; x<sub>q&minus;n</sub></span>
+</pre>
+<p>where [<span class="math">t<sub>min</sub> , t<sub>max</sub></span>]
+is the range over which the <a href="node85.html#INDEX302">B-spline</a>
+is to be evaluated. Equation (1) demands that no more than
+<span class="math">n + 1</span> parameters at the beginning of the parameter
+list may have the same value. Equation (2) is the same restriction for the end
+of the parameter list. Equation (3) says that in the middle of the parameter
+list, at most <span class="math">n</span> consecutive parameters may have the
+same value. To generate closed B-spline curves, it is often necessary to write
+a parameter list where the first <span class="math">n</span> and last
+<span class="math">n</span> parameters in the list produce initial and final
+curve segments that should not become part of the curve; in this case
+equation (4) allows choosing a start and end parameter in the range bounded
+by the first and last parameter of the parameter list.</p>
+<p>The number of control points per direction can be derived from the number
+of parameters <i>p</i>, the degree of the basis <i>n</i>, and the step size
+<i>s</i>. Their total number can be calculated by multiplying the numbers taken
+from the following table for each of the U and V directions.</p>
+<div align="center">
+<table class="table">
+<tr>
+<th>type</th>
+<th>min # of parameters</th>
+<th># of control points</th>
+</tr>
+<tr>
+<td><tt>Taylor</tt></td>
+<td><i>2</i></td>
+<td><span class="math">(p&minus;1) &middot; (n+1)</span></td>
+</tr>
+<tr>
+<td><tt>B&eacute;zier</tt></td>
+<td><i>2</i></td>
+<td><span class="math">(p&minus;1) &middot; n + 1</span></td>
+</tr>
+<tr>
+<td><tt>Cardinal</tt></td>
+<td><i>2</i></td>
+<td><span class="math">p + 2</span></td>
+</tr>
+<tr>
+<td><tt>Basis matrix</tt></td>
+<td><i>2</i></td>
+<td><span class="math">(p&minus;2) &middot; s + n + 1</span></td>
+</tr>
+<tr>
+<td><tt>B-spline</tt></td>
+<td><i>2(n+1)</i></td>
+<td><span class="math">p&minus;n&minus;1</span></td>
+</tr>
+</table>
+</div>
+<p>Note that only certain numbers of control points are possible;
+for example, if the U basis is a degree-3 B&eacute;zier, the number
+of control points in the U direction can be 4, 7, 10, 13, and so
+on, but not 3 or 5. For <a href="node85.html#INDEX302">B-spline</a>
+bases of degree 3 the minimum number of parameters is 8
+corresponding to 4 control points.</p>
+<p>Each vertex reference in the <i>hom_vertex_ref_list</i> is an
+integer index into the vertex list of the current group in the
+object (index 0 is the first vertex). When the surface is rational,
+<b><a id="INDEX310"></a>homogeneous coordinates</b>
+must be given with the <b><a id="INDEX311"></a>control point</b>s,
+by appending a floating-point
+weight to every vertex reference integer in the
+<i>hom_vertex_ref_list</i>. There are two methods for specifying
+weights: either a simple floating-point number that must contain a
+decimal point to distinguish it from an integer index, or the
+keyword <tt>w</tt> followed by a weight value that need not contain
+a decimal point. The <tt>w</tt> keyword method is recommended
+because it eliminates the requirement that numbers contain decimal
+points, so translators can use <tt>%g</tt> format specifiers.
+Weights are used only if the surface is rational and ignored
+otherwise. If a weight in a rational surface is missing, it
+defaults to 1.0.</p>
+<p>The surface specials list is used to define
+<a href="node85.html#INDEX317">trimming curve</a>s,
+<a href="node85.html#INDEX318">hole curve</a>s,
+<a href="node85.html#INDEX319">special curve</a>s, and
+<a href="node85.html#INDEX320">special point</a>s (vertex references). A
+surface may be further modified by approximation and connection
+statements, as described below.</p>
+<p>For example, an object with a simple degree-3 B&eacute;zier
+surface can be written as:</p>
+<pre>
+     object "mysurface"
+          visible
+          basis "bez3" bezier 3
+          group
+               0.314772   -3.204608  -7.744229   # vector 0
+               0.314772   -2.146943  -6.932366
+               0.314772   -1.089277  -6.120503
+               0.314772   -0.031611  -5.308641
+               -0.660089  -2.650739  -8.465791   # vector 4
+               -0.660089  -1.593073  -7.653928
+               -0.660089  -0.535407  -6.842065
+               -0.660089  0.522259   -6.030203
+               -1.634951  -2.096869  -9.187352   # vector 8
+               -1.634951  -1.039203  -8.375489
+               -1.634951  0.018462   -7.563627
+               -1.634951  1.076128   -6.751764
+               -2.609813  -1.543000  -9.908914   # vector 12
+               -2.609813  -0.485334  -9.097052
+               -2.609813  0.572332   -8.285189
+               -2.609813  1.629998   -7.473326
+
+               v 0     v 1     v 2     v 3       # vertices
+               v 4     v 5     v 6     v 7
+               v 8     v 9     v 10    v 11
+               v 12    v 13    v 14    v 15
+
+               surface "surf1" "material"
+                       "bez3"  0.0 1.0   0.0 1.0
+                       "bez3"  0.0 1.0   0.0 1.0
+                       0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
+          end group
+     end object
+</pre>
+<p>First, 16 vectors are defined, each of which is used to build
+one vertex (control point). Next, a surface is defined that uses
+basis <tt>bez3</tt> for both the U and V parameter directions.
+Since the surface is built from only one 4 &times; 4 B&eacute;zier
+patch, the <a href="node85.html#INDEX308">parameter vector</a>
+after the basis range has only length 2. If there had been two
+patches in the U direction and three in the V direction, the bases
+would have been referenced as</p>
+<pre>
+                       "bez3"  0.0 1.0 0.0 0.5 1.0
+                       "bez3"  0.0 1.0 0.0 0.33333 0.66667 1.0
+</pre>
+<p>Alternatively, the parameter vector may be given as</p>
+<pre>
+                       "bez3"  0.0 2.0 0.0 1.0 2.0
+                       "bez3"  0.0 3.0 0.0 1.0 2.0 3.0
+</pre>
+<p>by changing the <a href="node85.html#INDEX309">parameter
+range</a> of the basis. This has no influence on the geometry of
+the surface, but generates UV <a href="node108.html#INDEX409">texture
+coordinate</a>s in a different
+range (here, [0.0, 2.0] &times; [0.0, 3.0]). However, a different
+parameterization does affect the texture surface range (see below),
+and the range of trimming, hole, and special curves (which do not
+define their own ranges but borrow the range from the surface they
+apply to).</p>
+<p>The optional <i>surface_specials_list</i> that completes the
+surface definition is a sequence of trimming curves, hole curves,
+special curves, and special points as described in the next
+section.</p>
+
+<h4 id="mi:surface_derivs">Surface Derivatives</h4>
+
+<p>mental ray can automatically generate <b><a id="INDEX312"></a>surface
+derivative</b> vectors if requested. First derivatives describe the UV
+parametric gradient of a surface; second derivatives describe the curvature.
+They are computed and stored only if requested by <i>derivative_request</i>
+statements in the surface definition:</p>
+<pre>
+    derivative <i>number</i><sub>int</sub> [ <i>number</i><sub>int</sub> ]  
+</pre>
+<p>There can be one or more <tt>derivative</tt> statements that request first
+and/or second derivatives. Valid values for <i>number</i> are 1 and 2, for
+first and second derivatives, respectively.</p>
+<p>mental ray does not use derivative vectors but makes them available to
+shaders. First derivatives are presented as two vectors (<i>dS du</i> and
+<i>dS dv</i>, with S being the surface and the derivatives evaluated at the
+current point in parameter space); second derivatives are presented as three
+vectors (
+<i>d<sup>2</sup>S&nbsp;du<sup>2</sup></i>,
+<i>d<sup>2</sup>S&nbsp;dv<sup>2</sup></i>, and
+<i>d<sup>2</sup>S&nbsp;du&nbsp;dv</i>).
+This is the same format that can be explicitly given for polygonal data using
+the <tt>d</tt> keyword in vertices. Surfaces always compute the vertex
+derivatives analytically, explicit vertex derivatives given by <tt>d</tt>
+keywords are ignored.</p>
+
+<h4 id="mi:surface_texture">Texture Surfaces</h4>
+
+<p>A plain <tt>surface</tt> statement defines the geometry of the
+surface. If a texture is to be mapped on the surface, it is
+necessary to include <a href="node19.html#INDEX35">texture
+surface</a>s. A texture surface defines a mapping from raw UV
+coordinates to <a href="node108.html#INDEX409">texture
+coordinate</a>s as used by shaders. A vector texture is a variation
+of a texture surface that additionally defines a pair of basis
+vectors; it is used for <a href="node115.html#INDEX453">bump
+mapping</a>.</p>
+<p>The texture or vector texture directly following a surface
+defines <a href="node85.html#INDEX314">texture space</a> number 0,
+the next defines texture space number 1, and so on, exactly like
+the first <tt>t</tt> statement after the <tt>v</tt> statement in a
+vertex used for building polygonal geometry defines texture space
+number 0, the next <tt>t</tt> defines texture space number 1, and
+so on. Basically, texture and vector texture surfaces replace the
+<tt>t</tt> statements used by polygonal geometry, because attaching
+textures to control points that usually are not part of the surface
+is not useful.</p>
+<p>Texture spaces is what ends up in the <code>state&rarr;tex_list</code>
+array where it can be accessed by texture shaders to decide which texture
+is mapped which way. Texture space 0 is the first entry in that array, which
+is used by the shader for the first texture listed in the texture list in the
+material definition. In general, there is one texture space per texture on a
+material, although shaders making nonstandard use of texture spaces could be
+written.</p>
+<p>The syntax for texture surfaces is a simplified version of
+geometric surfaces. The <i>texture_surface_list</i> in the grammar
+summary at the beginning of the "Surfaces" section above expands to
+zero or more copies of the following block:</p>
+<pre>
+    [ volume ] [ vector ] texture  
+        "<i>u_basis_name</i>"<i>u_param_list</i>  
+        "<i>v_basis_name</i>"<i>v_param_list</i>  
+        <i>vertex_ref_list</i>  
+</pre>
+<p>Unlike geometric surfaces, no surface name and material name is given. Bases
+are given like in geometric surfaces. Texture surfaces use the ranges of the
+geometric surface they are attached to, they are not repeated in the texture
+surface basis statements. The <i>vertex_ref_list</i> follows the same rules as
+the geometric surface's <i>vertex_ref_list</i>. Texture surfaces have no
+specials such as trimming curves or holes.</p>
+<p>The optional <tt>volume</tt> keyword in the texture surface definition
+disables seam compensation. It should be used for 3D textures where each
+texture vector should be used verbatim. If the <tt>volume</tt> flag is missing,
+the tessellator detects textures that span the geometric seam on closed
+surfaces, and prevents rewinding. Consider a sphere with a 2D texture that
+is shifted slightly in the U parameter direction: a triangle might have
+<span class="math">u<sub>0</sub> = 0.0</span> on one side and
+<span class="math">u<sub>1</sub> = 0.1</span> on the other side. If the
+texture is shifted towards higher <span class="math">u</span> coordinates by
+<i>0.05</i>, <span class="math">u<sub>0</sub></span> and
+<span class="math">u<sub>1</sub></span> will map to
+<a href="node108.html#INDEX409">texture coordinate</a>s
+<span class="math">t<sub>0</sub> = 0.95</span> and
+<span class="math">t<sub>1</sub> = 0.05</span>, assuming an otherwise normal UV
+mapping. Even though <span class="math">u<sub>0</sub> &lt; u<sub>1</sub></span>,
+<span class="math">t<sub>0</sub> &gt;&gt; t<sub>1</sub></span>, causing a
+fast "rewind" of the texture. Seam compensation corrects
+<span class="math">t<sub>1</sub></span> to <i>1.05</i>. This is undesirable for
+3D textures, which should have the <tt>volume</tt> keyword set. Most problems
+with strangely shifted textures are caused by inappropriately used or missing
+<tt>volume</tt> keywords.</p>
+<p>The optional <tt>vector</tt> keyword in the texture surface definition is
+a flag that causes <b><a id="INDEX313"></a>bump basis vectors</b> to be
+calculated during tessellation. This flag must be used if the texture surface
+is used for a bump map that expects to find bump basis vectors in the geometry.
+However, this is not a frequently used requirement  - the standard mental ray
+shaders don't depend on them, for example.</p>
+<p>This is an example for the simplest of all texture surfaces, a bilinear mapping:
+</p>
+<pre>
+     object "mysurface" 
+         visible 
+         basis "bez1" bezier 1 
+         basis "bez3" bezier 3 
+         group 
+
+             # ... 16 vectors used for the surface
+             0.0  0.0  0.0       # vector number 16 
+             0.0  1.0  0.0       # vector number 17 
+             1.0  0.0  0.0       # vector number 18 
+             1.0  1.0  0.0       # vector number 19 
+
+             # ... 16 vertices used for the surface
+             v 16                # vertex number 16 
+             v 17                # vertex number 17 
+             v 18                # vertex number 18 
+             v 19                # vertex number 19 
+
+             surface "surf1" "material" 
+                 "bez3"    0.0 1.0    0.0 1.0  
+                 "bez3"    0.0 1.0    0.0 1.0  
+                 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15  
+
+             texture 
+                 "bez1"    0.0 1.0 
+                 "bez1"    0.0 1.0 
+                 16 17 18 19 
+         end group 
+     end object 
+</pre>
+<p>This texture surface defines a bilinear mapping from the UV coordinates
+computed during surface tessellation to the
+<a href="node108.html#INDEX409">texture coordinate</a>s. To define other than
+bilinear mappings, the texture surface needs to have more control points than
+just one at every corner of the surface. Whenever the surface tessellator
+generates a triangle vertex, it uses the UV coordinate of that vertex to look
+up the texture surface and interpolate the <a href="node108.html#INDEX409">texture
+coordinate</a> from the nearest four points of the texture surface. The
+resulting <a href="node108.html#INDEX409">texture coordinate</a> is stored
+with the vertex and becomes available in <code>state&rarr;tex_list</code> when
+the material shader is called because a ray has hit the surface.</p>
+<p>If more than one texture surface is given, one
+<a href="node108.html#INDEX409">texture coordinate</a> is computed for each
+texture surface and stored in sequence in the generated triangle vertices.
+Each texture surface is said to define a "<b><a id="INDEX314"></a>texture
+space</b>". They are available in the <code>state&rarr;tex_list</code> array
+in the same order. The number and order of texture surfaces should agree with
+the number and order of textures given in the texture list in the material
+definition. (Note that not all material shaders support multiple textures.)
+</p>
+<p>If the material name of a surface is empty (two consecutive double quotes),
+the surface uses the material from the closest instance (this is called
+<a href="node90.html#INDEX344">material inheritance</a>).</p>
+
+<h4 id="mi:curve">Curves</h4>
+
+<p>Curves are two-dimensional parametric curves when they are referenced by
+surfaces. They are used as <a href="node85.html#INDEX317">trimming curve</a>s,
+<a href="node85.html#INDEX318">hole curve</a>s, and
+<a href="node85.html#INDEX319">special curve</a>s. They must be defined
+before the surface which references them. Curves are three-dimensional
+parametric curves when referenced by space curves. A curve is defined as:
+</p>
+<pre>
+        curve "<i>curve_name</i>" "<i>basis_name</i>"  
+            <i>parameter_list</i>  
+            <i>hom_vertex_ref_list</i>  
+            [ special <i>special_point_list</i> ]  
+</pre>
+<p>The <i>parameter_list</i> of a curve is a list of monotonically
+increasing floating-point numbers that define the number of
+segments of the curve and the number of control points. Curve
+parameter lists work very much the same way as surface parameter
+lists except that no range needs to be provided, because they are
+supplied by the surfaces that reference the curve under
+consideration as explained in the next section. For details on
+parameter lists, see the sections on bases and surfaces above.</p>
+<p>Each vertex reference in the <i>hom_vertex_ref_list</i> is an
+integer index into the vertex list of the current group in the
+object (index 0 is the first vertex), optionally followed by the
+keyword <tt>w</tt> and a weight value. (For backwards
+compatibility, the <tt>w</tt> keyword may be omitted if the weight
+is a floating-point value containing a decimal point.) Weights are
+used only if the curve is rational, they are ignored otherwise. If
+a weight in a rational curve is missing, it defaults to 1.0. The
+vertices indexed by the integers in the <i>hom_vertex_ref_list</i>
+should have no normals or textures (no <tt>n</tt> and <tt>t</tt>
+statements), and the third component of the vector ( <tt>v</tt>
+statement) should be <i>0.0</i> because curves are defined in UV
+space, not 3D space.</p>
+<p><a id="INDEX315"></a> The optional
+<i>special_point_list</i> specifies points that are included in the
+approximation of the curve. After the <tt>special</tt> keyword, a
+sequence of integers follows that index into the vertex list, just
+like the integers in the <i>hom_vertex_ref_list</i>. The first
+component of the vector is used as the <i>t</i> parameter; it
+forces the point on the curve at parameter value <i>t</i> to become
+part of the curve approximation. Of course <i>t</i> must be in the
+range of parameters allowed by the surface definition.</p>
+<h4>Trimming, Hole, and Special Curves; Special Points</h4>
+<p>A surface may reference curves to trim the surface, to cut holes
+into it, and to specify "<b><a id="INDEX316"></a>special curve</b>s" that
+become part of the tessellation of the surface. Special points in surfaces
+work like special points in curves, except that they provide a point in the
+parameter range of the surface, that is, a two-dimensional UV
+coordinate, rather than a one-dimensional curve parameter. They
+specify single points on the surface that are to be included in the
+tessellation. As all curves and points are in UV space, the third
+component of the vectors provided for them is ignored. None of the
+above types of curves and points may exceed the range of <i>(0.0,
+1.0)</i> at any point.</p>
+<p>No two curves may intersect each other, and no curve may self-intersect.
+This is an important point because trimming curves and holes that are not
+closing or intersecting themselves or other loops can produce unexpected
+tessellation results.</p>
+<p>Trimming, hole, and special curves and special points are defined at the
+end of the surface definition. The curves are composed of segments from the
+list of curves of the surface's group. The <i>surface_specials_list</i> given
+in the previous section is a list of zero or more of the following four
+items:</p>
+<a id="INDEX317"></a><a id="INDEX318"></a><a id="INDEX319"></a>
+<a id="INDEX320"></a>
+<pre>
+    trim "<i>curve_name</i>"<i>min max</i>  
+        ...  
+    hole "<i>curve_name</i>"<i>min max</i>  
+        ...  
+    special "<i>curve_name</i>"<i>min max</i>  
+        ...  
+    special <i>vertex</i><sub>int</sub>  
+        ...  
+</pre>
+<p>The dots indicate that each trim, hole, and special statement
+may be followed by more than one curve segment or vertex,
+respectively. All listed segments are concatenated to form a single
+curve.</p>
+<p>The <i>vertex</i> integers specify vertices from the vertex
+section of the current group in the current object. Such a vertex
+specifies the UV coordinate of the special point that is to be
+included in the tessellation.</p>
+<p>Each of the three types of curves references a curve that has
+been defined earlier with a <tt>curve</tt> statement. If a single
+<tt>trim</tt>, <tt>hole</tt>, or <tt>special</tt> statement is
+followed by more than one curve, the resulting trimming, hole, or
+special curve is pieced together by concatenating the given curves.
+The <i>min</i> and <i>max</i> parameters allow using only part of
+the curve referenced. <i>min</i> and <i>max</i> must be in the
+range of the parameter vector of the curve which in turn must be
+mapped into the <a href="node85.html#INDEX309">parameter range</a>
+of the surface. The <i>min</i> and <i>max</i> parameters of two
+different curve pieces are independent, they only depend on the
+curve parameter lists. For example, a trimming curve can be built
+from two curves, using the first three quarters of the first curve
+and the last three quarters of the second curve:</p>
+<pre>
+    curve "trim1"
+            "bez1" 0.0 1.0 2.0 3.0 4.0
+            0 1 2 3 4
+
+    curve "trim2"
+            "bez1" 0.0 1.0 2.0
+            3 5 0
+
+    surface "patch1" "mtl"
+            "bez3" 0.0 1.0        0.0 1.0
+            "bez3" 0.0 1.0        0.0 1.0
+            6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21
+            trim "trim1" 0.0 3.0
+                 "trim2" 0.5 2.0
+</pre>
+<p>Both <a href="node85.html#INDEX317">trimming curve</a>s use the
+basis <tt>bez1</tt>, which is assumed to be a degree-1 linear
+curve. Hence, <tt>trim1</tt> connects the UV vertices 0, 1, 2, 3,
+and 4 with straight lines, and <tt>trim2</tt> connects the vertices
+3, 5, and 0. If these two curves are put together by the
+<tt>trim</tt> statement in the surface definition, all parts of the
+surface that fall outside the polygon formed by the UV vertices 0,
+1, 2, 3, and 5 are trimmed off. The <tt>trim2</tt> curve includes
+vertex 0 to close the trimming curve. Holes and
+<a href="node85.html#INDEX319">special curve</a>s are constructed exactly
+the same way. Trimming curves and holes must form closed loops but
+special curves are not restricted in this way.</p>
+<p>Note that trimming and hole curves must be listed in the correct
+order, outside in. If there is an outer trimming curve, it must be
+listed first, followed by the holes. If a hole has a hole, the
+inner hole must be listed after the outer hole. Since curves may
+never intersect, there is always an unambiguous order - if a curve
+A encloses curve B, A must be listed before B. Curves that do not
+enclose one another can be listed in any order.</p>
+<p>This example omits the vector and vertex parts of the group in
+the object. Here is an example that defines a complete object
+containing a surface with a <a href="node85.html#INDEX317">trimming
+curve</a> that precisely follows the outer boundary. A trimming
+curve that follows the outer surface boundary does not actually
+clip off any part of the surface, but it is still useful if
+surfaces are to be connected, because connections work on trimming
+curves.</p>
+<pre>
+     object "mysurface" 
+         visible 
+         basis "bez1" bezier 1 
+         basis "bez3" bezier 3 
+         group 
+
+             # ... 16 vectors used for the surface
+             0.0  0.0  0.0    # vector number 16 
+             1.0  0.0  0.0    # vector number 17 
+             1.0  1.0  0.0    # vector number 18 
+             0.0  1.0  0.0    # vector number 19 
+
+             # ... 16 vertices used for the surface
+             v 16             # vertex number 16 
+             v 17             # vertex number 17 
+             v 18             # vertex number 18 
+             v 19             # vertex number 19 
+
+             curve "trim1" 
+                 "bez1" 0.0  0.25  0.5  0.75  1.0 
+                 16  17  18  19  16 
+
+             surface "surf1" "material" 
+                 ... 
+                 trim "trim1"  0.0  1.0 
+         end group 
+     end object 
+</pre>
+<p>The trimming curve in the example is linear, using a degree-1 B&eacute;zier
+basis. This means that the <a href="node85.html#INDEX308">parameter vector</a>
+has five equally-spaced parameters, one for each corner in counter-clockwise
+order and back to the first corner to close the trimming curve. Trimming and
+holes always require a closed curve or sequence of curves (they can be pieced
+together by multiple curves as long as the pieces form a closed loop together).
+The results are undefined if trimming or hole loops are not closed, or
+intersect.</p>
+<p>If the trimming curve would be a degree-3 B&eacute;zier going through four
+corner points, a parameter vector with <span class="math">3&middot;5+1=16</span>
+parameters would be required (again, the <i>5</i> is the number of corners
+visited including the return to the first to close the curve).</p>
+<p>For details on the parameter vector following the basis name in the
+definition of the curve, refer to section <a href="node85.html#curve">curve</a>.
+The bases and parameter vectors for curves and surfaces follow the same rules,
+except that curves have no explicit range; they always use the implicit range
+given by the parameter list.</p>
+
+<h4>Connections and Edge Merging</h4>
+
+<p><a id="connect"></a><a id="INDEX321"></a> <a id="INDEX322"></a>
+Free-form surfaces may be connected to each other using the <tt>connect</tt>
+statements, respectively.</p>
+<p>The <tt>connect</tt> statement is "manual" in that it requires an explicit
+specification of the parts of two surfaces to be connected. These parts refer
+to intervals of <i>trimming curves</i> or <i>hole curves</i> of these surfaces,
+see section <a href="node85.html#curve">curve</a>. A <i>connection</i> is
+defined as:</p>
+<pre>
+    connect "<i>surface_name<sub>1</sub></i>" "<i>curve_name<sub>1</sub></i>" <i>min<sub>1</sub> max<sub>1</sub></i>
+            "<i>surface_name<sub>2</sub></i>" "<i>curve_name<sub>2</sub></i>" <i>min<sub>2</sub> max<sub>2</sub></i>
+</pre>
+<p>This statement closes the gap between two surfaces
+<i>surface_name<sub>1</sub></i> and <i>surface_name<sub>2</sub></i> by
+connecting their trimming curves <i>curve_name<sub>1</sub></i> and
+<i>curve_name<sub>2</sub></i>.The curves are connected only in the range (
+<i>min<sub>1</sub></i>...<i>max<sub>1</sub></i>) and (
+<i>min<sub>2</sub></i>...<i>max<sub>2</sub></i>), respectively. They share the
+same points, but normals, textures etc. are evaluated on the individual
+surfaces. Only surfaces that have trimming curves can be connected by an
+explicit connect statement. Trimming curves used in connections must satisfy
+three conditions:</p>
+<ul>
+<li>As always, the trimming curve or sequence of trimming curves must be closed.</li>
+<li>It does not matter whether the trimming curve is oriented clockwise or
+counterclockwise, but if a sequence of trimming curves is used all pieces must
+have the same direction.</li>
+<li>The trimming curves along the connected range must run in the same direction
+in 3D space.</li>
+</ul>
+<p>The range values <i>min<sub>1,2</sub></i> and <i>max<sub>1,2</sub></i> must
+not exceed the range of the trimming curve segment as referenced by a
+<tt>trim</tt> statement of the corresponding surface. The minimum
+value must be less than the maximum value; it is not possible to
+satisfy the third condition by inverting the range.</p>
+<p>Best results are obtained if the curves to be connected are
+close to each other in world space and have at least approximately
+the same length. The <tt>connect</tt> statement is not meant to be
+a replacement for proper modeling. For carefully modeled surfaces
+these techniues will not be necessary most of the time. Their
+purpose is to close small cracks between adjacent surfaces that are
+already not too far from each other. Topologically complex
+situations with several connections meeting in a point are beyond
+its scope.</p>
+<p>
+<a id="FOOTNOTE11">[11]</a> The algorithms used impose no inherent limit.
+The limit may be increased in future versions.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="primlists.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node86.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Assembly</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node91.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node92.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h3 id="mi:assembly">Assemblies</h3>
+<p>
+Assemblies provide an encapsulation for entire subscenes. The key feature
+of assemblies is on-demand loading and unloading, which reduces memory
+consumption and allows faster rendering. An assembly subscene contains
+a complete scene sub-graph consisted of objects, instances, groups,
+textures, userdata, shaders, materials and other elements. Cameras,
+options and lights defined in assembly are ignored.</p>
+<p>Assemblies can either be defined in separate files, or created
+procedurally.</p>
+<p>Assembly is created or loaded when its bounding box is hit by a ray or
+when the bounding box overlaps a tile in the rasterizer renderer. For this
+reason, mental ray needs to know the bounding box of an assembly, which
+should be as tight as possible for the best performance and memory
+consumption.</p>
+<p>Assemblies are instantiated similar to objects. The main scene
+should contain a stub with the following syntax:</p>
+<pre>
+    assembly "assembly_name"
+        box [<i>x<sub>min</sub> y<sub>min</sub> z<sub>min</sub> x<sub>max</sub> y<sub>max</sub> z<sub>max</sub></i>]
+        [ motion box [<i>x<sub>min</sub> y<sub>min</sub> z<sub>min</sub> x<sub>max</sub> y<sub>max</sub> z<sub>max</sub></i>] ]
+        file "<i>file_name</i>"
+    end assembly
+</pre>
+<p>The individual parameters are:</p>
+<ul>
+<li>
+The <tt>box</tt> statement specifies a bounding box for the assembly,
+<b>in the space of the assembly</b>. It is the union of all bounding boxes
+of all geometric objects defined in the assembly and transformed to the
+assembly space. The <tt>box</tt> parameter must always be specified since
+it is not possible to compute the bounding box without loading the assembly.
+</li>
+<li>
+The <tt>motion box</tt> is similar to the box, but contains the minimum and
+maximum components of all <a href="node32.html#IDEX62">motion vector</a>s and
+transforms. For assemblies with motion, the motion box <b>has to be</b> be
+specified. Unlike object motion bounding box, the assembly motion bounding
+box should take into account not only object motion vectors, but also motion
+transforms inside of the assembly.</li>
+<li>
+The <tt>file</tt> statement specifies the name of the file where the subscene
+is stored in. A list of directories for looking up the file can be specified
+with a <a href="node245.html#cli:assembly">command line option</a>, with a
+<a href="node72.html#reg:assembly">registry variable</a>, or with the
+<tt>MI_ASSEMBLY_PATH</tt>
+<a href="configuration.html#env:assembly">environment variable</a>.</li>
+</ul>
+<p>Unlike objects, assemblies do not have <code>trace</code>,
+<code>visible</code> and similar flags. Those flags need to be defined on an
+<code>instance</code> of an assembly.</p>
+<p>An assembly file uses the usual mental ray scene file syntax, with one
+exception: instead of the <tt>render</tt> directive, an assembly files ends
+with a <tt>root</tt> statement to specify a single group which will be
+attached to the main scene DAG when an assembly is loaded:</p>
+<pre>
+    root "group_name"
+</pre>
+<p>
+For compatibility reasons, a <code>render</code> statement can be used
+instead of the root statement (in which case camera and options are ignored).</p>
+<p>
+Assemblies can also be created procedurally, detailed description is given
+in the <a href="assembly_api.html#api:assembly">Assembly API</a> section.</p>
+<p>
+Materials defined in an assembly should reference lights defined in the
+main scene only. This requirement is due to the fact that the rendering kernel
+would not be aware of them until all of the assemblies are loaded in order to
+apply lights on an object from a different assembly or from the main scene.</p>
+<p>
+Transforms, flags, materials and light lists can be inherited from the main
+scene to an assembly.</p>
+<p>
+An entire assembly is unloaded automatically if mental ray is running low
+on physical memory. However, a scene could consist of few assemblies only.
+Especially for scenes using ray tracing and global illumination, the spatial
+coherency of traced rays is very low. This could lead to frequent loading and
+unloading of assemblies, which is computationally expensive. In order to
+improve the performance, it is strongly recommended to use placeholder objects
+inside of the assemblies. If placeholder objects are used and mental ray is
+running low on memory, mental ray would first unload the results of placeholder
+object callbacks, but keep the assembly structure. Individual objects are much
+faster to recreate than entire assemblies.</p>
+<p>
+For assemblies loaded from files mental ray provides on demand loading of
+individual objects automatically. For procedurally created assemblies, it is
+strongly recommended to write geometry shaders with assembly callbacks in such
+a way that object placeholder callbacks are registered.</p>
+<p>
+Nested assemblies are currently not supported.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node91.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node92.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,202 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+shader mib_color_mix {
+ input:
+  int num = 0 {
+  };
+  int mode_0 = 0 {
+  };
+  int mode_1 = 0 {
+  };
+  int mode_2 = 0 {
+  };
+  int mode_3 = 0 {
+  };
+  int mode_4 = 0 {
+  };
+  float weight_0 = 0.0 {
+  };
+  float weight_1 = 0.0 {
+  };
+  float weight_2 = 0.0 {
+  };
+  float weight_3 = 0.0 {
+  };
+  float weight_4 = 0.0 {
+  };
+  Color color_0 = Color(0.0, 0.0, 0.0, 0.0) {
+  };
+  Color color_1 = Color(0.0, 0.0, 0.0, 0.0) {
+  };
+  Color color_2 = Color(0.0, 0.0, 0.0, 0.0) {
+  };
+  Color color_3 = Color(0.0, 0.0, 0.0, 0.0) {
+  };
+  Color color_4 = Color(0.0, 0.0, 0.0, 0.0) {
+  };
+  Color color_base = Color(0.0, 0.0, 0.0, 0.0) {
+  };
+ output:
+  Color result;
+
+  void color_mix (// in
+		  in int mode,
+		  in Color color,
+		  in float weight,
+		  // inout
+		  inout float r,
+		  inout float g,
+		  inout float b,
+		  inout float a) {
+    float w = 0.0;
+    switch(mode) {
+    default:
+    case 0:
+      w = (1 - color.a) * weight;
+      r = r * w + color.r * weight;
+      g = g * w + color.g * weight;
+      b = b * w + color.b * weight;
+      a = a * w + color.a * weight;
+      break;
+
+    case 1:
+      w = 1 - weight;
+      r = r * w + color.r * weight;
+      g = g * w + color.g * weight;
+      b = b * w + color.b * weight;
+      a = a * w + color.a * weight;
+      break;
+
+    case 2:
+    case 3:
+      r += color.r * weight;
+      g += color.g * weight;
+      b += color.b * weight;
+      a += color.a * weight;
+      break;
+
+    case 4:
+    case 5:
+      r *= color.r * weight;
+      g *= color.g * weight;
+      b *= color.b * weight;
+      a *= color.a * weight;
+      break;
+
+    case 6:
+      r *= weight;
+      g *= weight;
+      b *= weight;
+      a  = color.a;
+      break;
+    } // switch(mode)
+    if (mode == 3 || mode == 5) {
+      if (r < 0.0) r = 0.0;
+      else if (r > 1.0) r = 1.0;
+      if (g < 0.0) g = 0.0;
+      else if (g > 1.0) g = 1.0;
+      if (b < 0.0) b = 0.0;
+      else if (b > 1.0) b = 1.0;
+      if (a < 0.0) a = 0.0;
+      else if (a > 1.0) a = 1.0;
+    } // if (mode == 3 || mode == 5)
+  } // color_mix
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    Color base = color_base;
+    float r = base.r;
+    float g = base.g;
+    float b = base.b;
+    float a = base.a;
+    int n = num;
+    if (n > 8) n = 8;
+    n = n - 1; // actually the original loop uses i in [0, ..., 7]
+    // init variables
+    int mode = 0;
+    Color color = Color(0.0, 0.0, 0.0, 0.0);
+    float weight = 0.0;
+    // instead of a loop (as in basemux.cpp) ...
+    if (n >= 0) {
+      mode = mode_0;
+      color = color_0;
+      weight = weight_0;
+      color_mix(// in
+		mode, color, weight,
+		// inout
+		r, g, b, a);
+    } // if (n >= 0)
+    if (n >= 1) {
+      mode = mode_1;
+      color = color_1;
+      weight = weight_1;
+      color_mix(// in
+		mode, color, weight,
+		// inout
+		r, g, b, a);
+    } // if (n >= 1)
+    if (n >= 2) {
+      mode = mode_2;
+      color = color_2;
+      weight = weight_2;
+      color_mix(// in
+		mode, color, weight,
+		// inout
+		r, g, b, a);
+    } // if (n >= 2)
+    if (n >= 3) {
+      mode = mode_3;
+      color = color_3;
+      weight = weight_3;
+      color_mix(// in
+		mode, color, weight,
+		// inout
+		r, g, b, a);
+    } // if (n >= 3)
+    if (n >= 4) {
+      mode = mode_4;
+      color = color_4;
+      weight = weight_4;
+      color_mix(// in
+		mode, color, weight,
+		// inout
+		r, g, b, a);
+    } // if (n >= 4)
+/*    if (n >= 5) {
+      mode = mode_5;
+      color = color_5;
+      weight = weight_5;
+      color_mix(// in
+		mode, color, weight,
+		// inout
+		r, g, b, a);
+    } // if (n >= 5)
+    if (n >= 6) {
+      mode = mode_6;
+      color = color_6;
+      weight = weight_6;
+      color_mix(// in
+		mode, color, weight,
+		// inout
+		r, g, b, a);
+    } // if (n >= 6)
+    if (n >= 7) {
+      mode = mode_7;
+      color = color_7;
+      weight = weight_7;
+      color_mix(// in
+		mode, color, weight,
+		// inout
+		r, g, b, a);
+    } // if (n >= 7)*/
+    result.r = r;
+    result.g = g;
+    result.b = b;
+    result.a = a;
+  } // main
+};

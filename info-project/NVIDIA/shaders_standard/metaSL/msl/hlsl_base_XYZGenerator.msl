@@ -1,0 +1,347 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// see max_stdxyz.cpp
+#define XYZ_COORDS 0
+#define UVW_COORDS 1
+#define UVW2_COORDS 2
+#define XYZ_WORLD_COORDS 3
+
+// see max_proto.h
+#define mi_MAX_MTL_CONTEXT 0
+#define mi_MAX_LGT_CONTEXT 1
+#define mi_MAX_ENV_CONTEXT 2
+
+shader hlsl_base_XYZGenerator {
+ input:
+  int CoordinateSystem = 0 {
+    display_name("Source");
+    hard_range(0, 3);
+  };
+  float3 Offset = float3(0.0, 0.0, 0.0) { // offs
+    display_name("Offset");
+    hard_range(float3(0.0, 0.0, 0.0), float3(500.0, 500.0, 500.0));
+  };
+  float3 Tiling = float3(100.0, 100.0, 100.0) {
+    display_name("Tiling");
+    hard_range(float3(1.0, 1.0, 1.0), float3(500.0, 500.0, 500.0));
+  };
+  float3 Angle  = float3(0.0, 0.0, 0.0) { // ang
+    display_name("Angle");
+    hard_range(float3(0.0, 0.0, 0.0), float3(TWO_PI, TWO_PI, TWO_PI));
+  };
+  float Blur = 1.0 { // blur
+    display_name("Blur");
+    hard_range(0.01, 100.0);
+  };
+  float BlurOffset = 0.0 { // blurOffs
+    display_name("Blur offset");
+    hard_range(-0.1, 10.0);
+  };
+
+ output:
+  Color result;
+  float3 xtra_dP;
+  float3 xtra_bumpDP_0;
+  float3 xtra_bumpDP_1;
+  float3 xtra_bumpDP_2;
+
+  // see max_matrix.cpp
+  void maxPointTransform(inout float3 r, in float3 v, in float4x3 m) {
+    r.x = (m[0][0] * v.x +
+	   m[1][0] * v.y +
+	   m[2][0] * v.z +
+	   m[3][0]);
+    r.y = (m[0][1] * v.x +
+	   m[1][1] * v.y +
+	   m[2][1] * v.z +
+	   m[3][1]);
+    r.z = (m[0][2] * v.x +
+	   m[1][2] * v.y +
+	   m[2][2] * v.z +
+	   m[3][2]);
+  } // maxPointTransform
+
+  // see max_matrix.cpp
+  void maxVectorTransform(inout float3 r, in float3 v, in float4x3 m) {
+    r.x = (m[0][0] * v.x +
+	   m[1][0] * v.y +
+	   m[2][0] * v.z);
+    r.y = (m[0][1] * v.x +
+	   m[1][1] * v.y +
+	   m[2][1] * v.z);
+    r.z = (m[0][2] * v.x +
+	   m[1][2] * v.y +
+	   m[2][2] * v.z);
+  } // maxVectorTransform
+
+  void maxTranslate(inout float4x3 r, in float3 v) {
+    r[3][0] = v.x;
+    r[3][1] = v.y;
+    r[3][2] = v.z;
+  } // maxTranslate
+
+  // see max_matrix.cpp
+  void maxRotateX(inout float4x3 r, in float ang) {
+    float s = sin(ang);
+    float c = cos(ang);
+    float tmp;
+    float3 t;
+    int i = 0;
+    for (i = 3; i >= 0; i--) {
+      t = r[i];
+      tmp = t[1]*c - t[2]*s;
+      t[2] = t[1]*s + t[2]*c;
+      t[1] = tmp;
+      // write back to matrix
+      r[i][2] = t[2];
+      r[i][1] = t[1];
+    } // for (i = 3; i >= 0; i--)
+  } // maxRotateX
+
+  // see max_matrix.cpp
+  void maxRotateY(inout float4x3 r, in float ang) {
+    float s = sin(ang);
+    float c = cos(ang);
+    float tmp;
+    float3 t;
+    int i = 0;
+    for (i = 3; i >= 0; i--) {
+      t = r[i];
+      tmp = t[2]*c - t[0]*s;
+      t[0] = t[2]*s + t[0]*c;
+      t[2] = tmp;
+      // write back to matrix
+      r[i][0] = t[0];
+      r[i][2] = t[2];
+    } // for (i = 3; i >= 0; i--)
+  } // maxRotateY
+
+  // see max_matrix.cpp
+  void maxRotateZ(inout float4x3 r, in float ang) {
+    float s = sin(ang);
+    float c = cos(ang);
+    float tmp;
+    float3 t;
+    int i = 0;
+    for (i = 3; i >= 0; i--) {
+      t = r[i];
+      tmp = t[0]*c - t[1]*s;
+      t[1] = t[0]*s + t[1]*c;
+      t[0] = tmp;
+      // write back to matrix
+      r[i][0] = t[0];
+      r[i][1] = t[1];
+    } // for (i = 3; i >= 0; i--)
+  } // maxRotateZ
+
+  // see max_context.cpp
+  void maxContext_DerivativesMtl(// state,
+				 // context
+				 // out
+				 out float dsdx,
+				 out float dsdy,
+				 out float dtdx,
+				 out float dtdy) {
+    dsdx = 0.0;
+    dsdy = 0.0;
+    dtdx = 0.0;
+    dtdy = 0.0;
+    // TODO
+  } // maxContext_DerivativesMtl
+
+  void max_tri_vectors_CameraVerts(out float3 v0,
+				   out float3 v1,
+				   out float3 v2) {
+    v0 = 0.0;
+    v1 = 0.0;
+    v2 = 0.0;
+    // TODO
+  } // max_tri_vectors_CameraVerts
+
+  // see max_context.cpp
+  void maxContext_Dpos(out float3 dposdx, out float3 dposdy) {
+    // miVector v0, v1, v2;
+    // miVector dt1, dt2;
+    // TODO: cache
+    // maxContext_DerivativesMtl(state, cacheState, context, &dsdx, &dsdy,
+    //		                 &dtdx, &dtdy);
+    float dsdx = 0.0;
+    float dsdy = 0.0;
+    float dtdx = 0.0;
+    float dtdy = 0.0;
+    maxContext_DerivativesMtl(dsdx, dsdx, dtdx, dtdx);
+    // max_tri_vectors_CameraVerts(state, &v0, &v1, &v2);
+    float3 v0 = float3(0.0, 0.0, 0.0);
+    float3 v1 = float3(0.0, 0.0, 0.0);
+    float3 v2 = float3(0.0, 0.0, 0.0);
+    max_tri_vectors_CameraVerts(v0, v1, v2);
+    float3 dt1 = float3(0.0, 0.0, 0.0);
+    float3 dt2 = float3(0.0, 0.0, 0.0);
+    dt1.x = v1.x - v0.x;
+    dt1.y = v1.y - v0.y;
+    dt1.z = v1.z - v0.z;
+    dt2.x = v2.x - v0.x;
+    dt2.y = v2.y - v0.y;
+    dt2.z = v2.z - v0.z;
+    float3 cache_dposdx = float3(0.0, 0.0, 0.0);
+    float3 cache_dposdy = float3(0.0, 0.0, 0.0);
+    cache_dposdx.x = dsdx * dt1.x + dtdx * dt2.x;
+    cache_dposdx.y = dsdx * dt1.y + dtdx * dt2.y;
+    cache_dposdx.z = dsdx * dt1.z + dtdx * dt2.z;
+    cache_dposdy.x = dsdy * dt1.x + dtdy * dt2.x;
+    cache_dposdy.y = dsdy * dt1.y + dtdy * dt2.y;
+    cache_dposdy.z = dsdy * dt1.z + dtdy * dt2.z;
+    dposdx = cache_dposdx;
+    dposdy = cache_dposdy;
+    return;
+  } // maxContext_Dpos
+
+  // see max_context.cpp
+  float3 maxContext_DPMtl() {
+    // TODO: cache
+    float3 dposdx = float3(0.0, 0.0, 0.0);
+    float3 dposdy = float3(0.0, 0.0, 0.0);
+    // maxContext_Dpos(state, cacheState, context, &dposdx, &dposdy);
+    maxContext_Dpos(// out
+		    dposdx, dposdy);
+    float3 cache_DP = float3(0.0, 0.0, 0.0);
+    cache_DP.x = abs(dposdx.x) + abs(dposdy.x);
+    cache_DP.y = abs(dposdx.y) + abs(dposdy.y);
+    cache_DP.z = abs(dposdx.z) + abs(dposdy.z);
+    return cache_DP;
+  } // maxContext_DPMtl
+
+  // see max_matrix.cpp
+  void maxScale(inout float4x3 r, in float3 v) {
+    int i = 0;
+    for (i = 2; i >= 0; i--) {
+      r[i][0] *= v.x;
+      r[i][1] *= v.y;
+      r[i][2] *= v.z;
+    } // for (i = 2; i >= 0; i--) {
+  } // maxScale
+
+  // see max_context.cpp
+  float3 maxContext_DP(in int contextType) {
+    switch (contextType) {
+    case mi_MAX_ENV_CONTEXT:
+      error("TODO: mi_MAX_ENV_CONTEXT");
+      return float3(0.0, 0.0, 0.0);
+    case mi_MAX_MTL_CONTEXT:
+      // return maxContext_DPMtl(state, state, context);
+      return maxContext_DPMtl();
+    case mi_MAX_LGT_CONTEXT:
+      // Is this right?
+      return float3(0.0, 0.0, 0.0);
+    }
+    // Bogus I'm sure
+    return float3(0.0, 0.0, 0.0);
+  } // maxContext_DP
+
+  // max_stdxyz.cpp
+  float3 maxEvalXYZMap() {
+    int inst_chan = 0; // ignore for now !!!
+    float3 v = float3(0.0, 0.0, 0.0);
+    int evalContext = mi_MAX_MTL_CONTEXT;
+    switch (CoordinateSystem) {
+    case XYZ_COORDS:
+      v = transform_point("internal", "object", position);
+      break;
+
+    case XYZ_WORLD_COORDS:
+      v = transform_point("internal", "world", position);
+      break;
+
+    case UVW_COORDS:
+      v = texture_coordinate[0].xyz;
+      break;
+
+    case UVW2_COORDS:
+      v = texture_coordinate[3].xyz;
+      break;
+
+    default:
+      error("TODO");
+      v = float3(0.0, 0.0, 0.0);
+      break;
+    } // switch (paras_coordSystem)
+    return v;
+  } // maxEvalXYZMap
+
+  // see max_stdxyz.cpp
+  float3 maxEval_dXYZMap(// state
+			 // paras
+			 in int paras_coordSystem,
+			 // inst
+			 in float4x3 inst_tm) {
+    float3 r = float3(0.0, 0.0, 0.0);
+    float3 v = float3(0.0, 0.0, 0.0);
+    switch (paras_coordSystem) {
+    case XYZ_COORDS:
+      float3 world_position = transform_point("internal", "world", position);
+      v = abs(ddx(world_position)) + abs(ddy(world_position));
+      break;
+    case XYZ_WORLD_COORDS:
+      float3 camera_position = transform_point("internal", "camera", position);
+      v = abs(ddx(camera_position)) + abs(ddy(camera_position));
+      v = transform_vector("camera", "internal", v);
+      v = transform_vector("internal", "world", v);
+      break;
+    case UVW_COORDS:
+    case UVW2_COORDS:
+      v = (abs(ddx(texture_coordinate[0]).xyz) +
+	   abs(ddy(texture_coordinate[0]).xyz));
+      break;
+    default:
+      error("TODO: default");
+      break;
+    }
+    float3 tmp = float3(0.0, 0.0, 0.0);
+    maxVectorTransform(tmp, v, inst_tm);
+    r = tmp;
+    r.x = r.x * Blur + BlurOffset;
+    r.y = r.y * Blur + BlurOffset;
+    r.z = r.z * Blur + BlurOffset;
+    return r;
+  } // maxEval_dXYZMap
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    xtra_dP = float3(0.0, 0.0, 0.0);
+    xtra_bumpDP_0 = float3(0.0, 0.0, 0.0);
+    xtra_bumpDP_1 = float3(0.0, 0.0, 0.0);
+    xtra_bumpDP_2 = float3(0.0, 0.0, 0.0);
+    // use object space
+    float3 xyz_coords = maxEvalXYZMap();
+    // max_base_XYZGenerator
+    float3 inst_offs = Offset;
+    float3 inst_ang = Angle;
+    float3 inst_scl = Tiling;
+    float4x3 inst_tm = float4x3(1.0, 0.0, 0.0,  // see max_matrix.cpp
+				0.0, 1.0, 0.0,  // maxIdentity(...)
+				0.0, 0.0, 1.0,
+				0.0, 0.0, 0.0);
+    maxTranslate(inst_tm, inst_offs);
+    maxRotateX(inst_tm, inst_ang.x);
+    maxRotateY(inst_tm, inst_ang.y);
+    maxRotateZ(inst_tm, inst_ang.z);
+    maxScale(inst_tm, inst_scl);
+    float3 inst_bumpDP_0 = inst_tm[0];
+    float3 inst_bumpDP_1 = inst_tm[1];
+    float3 inst_bumpDP_2 = inst_tm[2];
+    inst_bumpDP_0 = normalize(inst_bumpDP_0);
+    inst_bumpDP_1 = normalize(inst_bumpDP_1);
+    inst_bumpDP_2 = normalize(inst_bumpDP_2);
+    xtra_dP = maxEval_dXYZMap(CoordinateSystem, inst_tm);
+    xtra_bumpDP_0 = inst_bumpDP_0;
+    xtra_bumpDP_1 = inst_bumpDP_1;
+    xtra_bumpDP_2 = inst_bumpDP_2;
+    float3 tmp = float3(0.0, 0.0, 0.0);
+    maxPointTransform(tmp, xyz_coords, inst_tm);
+    result.rgb = tmp.xyz;
+    result.a = 1.0;
+  } // main
+};

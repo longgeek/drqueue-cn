@@ -1,0 +1,540 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Upgrading from mental ray 3.6 to 3.7</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+<style type="text/css"></style>
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="upgrading.html">&laquo;&nbsp;prev</a></li>
+<li><a href="upgrading36.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<div class="toc">
+<dl>
+<dt>Upgrading from mental ray 3.6 to 3.7</dt>
+<dd>
+<dl>
+<dt><a href="#whatsnew">What's new in Version 3.7</a></dt>
+<dt><a href="#mi">Scene Description Language</a></dt>
+<dt><a href="#shader">Shader Writing and Integration</a></dt>
+<dt><a href="#incompatible">Incompatible Changes</a></dt>
+</dl>
+</dd>
+</dl>
+</div>
+
+<h3 id="whatsnew">
+What's new in Version 3.7</h3>
+
+<p>Here is a summary of some of the new features and feature
+improvements in version 3.7 of mental ray. Please refer to the
+<a href="../relnotes/relnotes.html">release notes</a> for more
+details and for other changes which are not mentioned here.</p>
+
+<h4>Native MetaSL Shader Support</h4>
+<p>
+mental ray now supports shaders written in MetaSL language to be used
+for software rendering. This is handled by integrated support for automatic
+compilation and/or linking on the target platform, see
+<a href="node99.html#sh:metasl">MetaSL shaders</a>.
+<p>The shader code generation is performed by so-called MetaSL back-ends.
+mental ray currently provides two back-end alternatives :</p>
+<ul>
+<li style="list-style-type:decimal">
+C++ back-end using an external compiler,</li>
+<li style="list-style-type:decimal">
+.NET back-end on Windows platforms using built-in just-in-time compilation.</li>
+</ul>
+<p>
+The <strong>C++ back-end</strong> is currently the default.
+<p>
+The <strong>.NET back-end</strong> is optional, because it has several
+<a href="limitations.html#metasl">known limitations</a> in the current
+implementation. It is using the .NET Framework from Microsoft, version
+2.0 or higher, available for all modern Windows platforms.
+<p>
+For shading trees defined in mental ray scene files, mental ray supports a first
+version of shading tree <strong>flattening</strong>. This operation allows to
+generate a single final shader from a source shading tree or phenomenon by
+resolving all parameter connections and compilation to a composite shader.
+This is possible for shading trees or phenomena which consist only of MetaSL
+shaders, i.e. not mixed with C/C++ shaders. The flattening can be enabled by
+setting the <code>{_MI_REG_METASL_FLATTEN}</code> mental ray registry variable
+to a non-empty value.</p>
+
+<h4>Progressive Rendering Mode</h4>
+<p>
+In the <a href="node6.html#fo:progressive">progressive rendering</a> mode,
+the image is not rendered in tiles each
+at full sampling quality any more. Instead, few samples are placed sparsely
+over the full image initially and more samples are taken over time until a
+desired quality is reached. During rendering the image is available for display
+at any time which allows to implement interactive rendering applications with
+mental ray. This mode even works with the regular but slower DISP stream
+protocol that is used when connecting imf_disp to a running mental ray.
+Various options allow to tune either for faster response or better quality.
+The progressive rendering can be controlled to run endlessly until explicitly
+stopped by the user, or until a certain sampling quality or error threshold is
+reached.
+<p>This version of mental ray supports traditional mental ray shaders and the
+existing rendering algorithms like finalgathering (in particular, with
+progressive finalgather precomputation) and photon mapping. Future versions
+may provide further optimized and faster converging solutions fully based on
+importance sampling and BSDFs.
+<p>Progressive mode can be controlled from the
+<a href="node245.html#cli:progressive">command line</a> and with
+<a href="node76.html#opt:progressive">scene options</a>.
+
+<h4>Progressive Final Gathering</h4>
+<p>
+The final gathering algorithm has been improved to provide much faster early
+feedback which is progressively refining during the pre-computation phase,
+to support interactive rendering applications based on mental ray. The tile
+display ordering has been adjusted to match the tile order used during regular
+rendering, giving the impression of doing a single rendering that improves
+progressively. This mode can be combined with progressive rendering mode for
+best interactive behavior. It has no effect with "exact" final gathering.
+<p>The finalgather display during pre-computation gets enabled with the
+<code>-finalgather_display on</code> command line option or with the
+<code>miRENDER_DISPLAY_FG</code> bit in the rendering mode mask.
+The pre-computation is now split into several passes, each one refining the
+previous ones. Furthermore, it also respects the order of tile computations
+specified with <code>mi_rc_set_taskorder()</code> function call.
+<p>The number of FG precomputation passes can be specified with the string
+option <code>"finalgather passes"</code>, or with the command line option
+<code>-finalgather_passes &lt;int&gt;</code>. The default value is 3.
+<p>In the current implementation, the maximal value of finalgather passes
+is 8. Only 2 most recent one apply adaptivity in the raster sampling, the
+purpose of others is to provide progressive rendering report. I.e. for the
+number of passes larger or equal to 3 the final image does not change.
+<p>For compatibility with mental ray 3.7 and prior, the single pass
+finalgather display can be enabled with the string option
+<code>"finalgather precomp legacy"</code>.</p>
+
+<h4>Finalgather Point Selection</h4>
+<p>For final gathering, implemented a way to restrict finalgather map lookup
+to a specified subset of finalgather points. In particular, this feature may
+be used for rendering of objects with multiple semi-transparent surfaces where
+explicit separating of layers is more efficient than limiting interpolation
+distance or increasing the density of the finalgather map.
+<p>The <code>miIrrad_options</code> structure passed to
+<code>mi_compute_avg_radiance()</code> function has been extended with the
+integer field <code>"id"</code>. The default value for id is zero. The id
+is stored with each finalgather point. For interpolation, the id passed to
+the interpolation call is taken into account: if zero, all finalgather points
+are potentially accepted. If non-zero, only finalgather points with the same
+id are accepted.
+<p>Backwards and forwards binary compatibility of mental ray shaders and
+finalgather map files is maintained.</p>
+
+<h4>Native Image Based Lighting (IBL) Support</h4>
+<p>
+mental ray provides a built-in solution for
+<a href="ibl.html#fo:ibl">image-based lighting</a> (<strong>IBL</strong>)
+with optimized performance and quality. It works for regular scenes which
+have a camera environment shader installed, no matter if that shader takes
+color values from a texture image or generates them procedurally. mental ray
+is pre-sampling the environment and creating lookup acceleration data
+structures to support importance-driven adaptive sampling during the lighting
+computations in shaders. The illumination from the IBL is automatically added
+to all material shaders which perform regular light sampling.
+<p>The IBL mode can be controlled with
+<a href="node76.html#opt:ibl">scene options</a>.
+<p>IBL can be used in progressive rendering mode.</p>
+
+<h4>Irradiance Particles</h4>
+<p>
+This version adds a novel and alternative global illumination technique
+called <strong>Irradiance Particles</strong> (short: <strong>IP</strong>),
+which is in many cases superior to finalgather and/or photon mapping in
+terms of image quality, usability and performance. It is based on importons
+which are shot to the scene from the camera before rendering starts. Their
+hit positions with information on the amount of direct (and possibly indirect)
+illumination coming at their position (hence the name "irradiance particles")
+are combined into a map. Optionally, one or more passes of indirect illumination
+can be computed. By the nature of the algorithm, this computation is
+importance-driven. During rendering, Irradiance Particles are used to estimate
+the irradiance for every shading point: if just direct illumination was
+collected for irradiance particles, this is equivalent to one bounce of
+indirect lighting. Irradiance can also be interpolated from precomputed
+values found at nearby particle positions.
+</p>
+
+<h4>Native BRDF/BSDF Support</h4>
+<p>
+Support for built-in illumination models represented by a
+<strong>Bidirectional Scattering Distribution Function</strong>
+(<strong>BSDF</strong>, commonly known as <strong>BRDF</strong> for
+non-transmitting materials) has been added to mental ray. In the current
+version, mental ray provides the most common <b>Lambert</b>, <b>Mirror</b>,
+<b>Phong</b> and <b>Ashikhmin</b> BSDFs, as well as an <b>Architectural</b>
+BSDF to closely simulate the behavior of the respective advanced mental ray
+shader. More BRDF/BSDF standard models will follow in future versions.
+<p>
+With BSDF shaders, it is possible to omit photon shaders. For materials with a
+BSDF shader but no photon shader specified mental ray automatically uses the
+BSDF shader and use its <code>sample</code> function to simulate photon shader
+behavior. For the future version, this fallback into BSDF will be enabled for
+other indirect illumination techniques.
+<p>
+BSDFs may be split into up to 6 components (reflection and refraction,
+with diffuse, glossy, and specular components each). The <code>eval</code>
+function evaluates all BSDF components, or a subset thereof, for a pair of
+incoming and outgoing directions. The <code>Bsdf</code> interface also
+provides a <code>sample</code> function, which allows importance sampling
+of outgoing directions for a given incoming direction. In addition, this
+function provides information about the sampled component and the sample
+weight. The latter can easily be combined with Russian roulette for
+absorption, which could be used e.g. for writing photon shaders.
+<p>A BSDF shader may be attached as material shader into
+<code>miMaterial</code>. In this case, mental ray takes care of simulating
+a material shader based on the BSDF.
+<p>
+An instance of a BSDF shader with given parameters may be specified with the
+usual shader syntax. Input parameters of a BSDF shader can be specified
+as the result of other shaders, allowing conventional shading trees and
+phenomena to be used.
+</p>
+
+<h4>Map Container</h4>
+<p>
+Initial support for generalized <strong><em>Map</em></strong> containers has
+been added. Maps are <em><strong>particle systems</strong></em> in N
+dimensional space. Each particle has a position and set data assigned.
+<p>mental ray provides functionality for creating, accessing and
+editing of Maps, as well as loading them from files and saving them to files.
+An efficient nearest neighbor lookup functionality is implemented, utilizing
+either euclidean distance or arbitrary distance functor provided by user. The
+distance functor may implement rejections by returning the
+<code>miHUGE_SCALAR</code> value.
+<p>
+Particle data may be any structure consisting of the common types including
+scalars, integers, vectors, colors and transforms. All particles in a single
+map have identical layout. The position of a particle is an N-dimensional
+float vector, where N varies in range from 1 to 6 in the current implementation.
+<p>In this version, Maps need to be created or loaded by applications or geometry
+shaders. Tutorials are added to mental ray releases.
+</p>
+
+<h4>Catmull-Clark Mesh Features</h4>
+<p>
+Implemented adaptive tessellation for Catmull-Clark meshes. Each region
+can now have a different refinement level. t-vertices with neighbor
+regions having different refinement levels are fixed with triangle fans.
+Positions are always computed on the limit surface.
+<p>For the Catmull-Clark meshes, improved texture seams quality by
+implementing spline-rule evaluation.
+</p>
+
+<h4>Hair Approximation</h4>
+<p>
+Added approximation for hair. In addition to the old approximation syntax which
+directly specifies the number of approximating segments, it is now
+possible to specify adaptive length, distance, angle approximation
+including view-dependent approximations. Parametric approximations
+depending on the degree of the hair curves are supported as well.
+<p>Especially for curved hair and hair at higher viewing distance, the
+new approximation criterion allows to have high approximation resolution
+restricted to the area where needed. The lower number of hair segments
+result in reduced memory consumption and increase rendering speed.
+<p>In order to get benefit from curvature-dependent approximations, hair
+needs to be modelled appropriately with hair degree &gt; 1.
+</p>
+
+<h4>Motion Blur Displacement</h4>
+<p>
+For moving polygonal objects with displacement, added functionality to
+<strong>automatically control</strong> the <strong>quality of displacement
+according to the amount of visual motion</strong>. For fast moving objects,
+images with comparable visual quality may be achieved with fewer displacement
+tessellation details compared to static or slow moving objects. Though it is
+also possible to tweak displacement approximation on a per-object basis, this
+would require a lot of manual efforts and is rarely done in practice. Per-object
+granularity may also be not fine enough for object having different amount of
+motion in different parts. The new approximation motion factor provides an
+automatic way for adjusting the displacement quality according to the amount
+of motion for a given object part.</p>
+<p>For view-dependent fine poly displacement the adaptive subdivision checks
+motion length in screen space. The measured motion length is used to modify
+the use of the approximation constant. Geometry is reduced only in areas of
+the object with strong motion.</p>
+<p>A new <a href="#mi:displacemotion">option</a> can be used to modify the
+amount of geometry reduction compared to static case. The feature is enabled
+by default at a rather conservative setting, which reduces displacement quality
+only for very fast moving objects.
+</p>
+
+<h4>OpenEXR Features</h4>
+<p>
+For OpenEXR textures, added ability to use display window. If the registry setting
+<code>_MI_OPENEXR_WINDOW</code> is set to "display" (in contrast to "data"), then
+the OpenEXR display window will be used. Note that display window is not compatible
+with mipmap pyramids for filtered local textures.
+<p>The OpenEXR version as been updated to 1.6.1.
+<p>OpenEXR library is linked statically. On an attempt to link
+<code>mi_openexr.dll</code>, a warning message is printed.
+
+<h4>Network Rendering</h4>
+<p>
+Added IPv6 support for mental ray multi-hosting rendering. In the
+<code>.rayhosts</code> file, as well as on the command line, IPv6
+addresses may be specified. Host names and IPv4 addresses are still
+supported. IPv6 addresses need to be put into the ]<code>[ ]</code>
+brackets following common URL convention. Note that if slave host is
+specified on the command line, the <code>[ ]</code> brackets may need
+encapsulation depending on the shell used.
+<p>mental ray master host tries to establish connections to slaves using
+either TCP or TCPv6 protocol, whatever is available and applicable to a
+slave host (if a slave host is given by name, both TCP and TCPv6
+protocols are tried out, the order depends on operating system used and
+OS configuration).
+<p>
+Added IPv6 support for the socket layer of mental ray DISP protocol
+(immediate display of tiles as they rendered). mental ray would listen
+for connections done with either TCP or TCPv6 on the same port id. The
+<code>imf_disp</code> tool would try to get the connection with any of
+TCPv6 and TCP protocols.
+
+<h3 id="mi">Scene Description Language</h3>
+<p>
+The following changes were made in the .mi scene description syntax:</p>
+<ul>
+<li>
+The .mi syntax is extended with the <code>bsdf</code> keyword, allowing to
+specify the BSDF shader in the material. An instance of a BSDF shader with
+given parameters may be specified with the usual shader syntax. Input
+parameters of a BSDF shader can be specified as the result of other shaders,
+allowing conventional shading trees and phenomena to be used.
+<li>
+The syntax is similar to user data elements. The layout of the map can be
+declared with
+<pre>
+    declare map <i>"name"</i>
+        [ dim <i>int</i> , ]
+        <i>parameter1</i>,
+        ...
+        <i>parameter</i>
+    end declare
+</pre>
+with each of parameters being one of
+<pre>
+    integer   "<i>parname</i>"
+    scalar    "<i>parname</i>"
+    vector    "<i>parname</i>"
+    color     "<i>parname</i>"
+    transform "<i>parname</i>"
+    array <i>int</i> integer "<i>parname</i>"
+    array <i>int</i> scalar  "<i>parname</i>"
+</pre>
+The allowed parameter types are 32-bit integers, single precision
+floats, float 3d vectors, 4 component float colors and 4x4 float
+matrices, as well as fixed size arrays of integers and floats.<br />
+Based on a declared layout, the actual map content may be specified in
+two variations as follows
+<pre>
+    map "<i>mapname</i>" "<i>layout</i>" (
+        ["<i>mapfile1</i>", ... "<i>mapfileN</i>"]
+    )
+    end map
+
+    map "<i>mapname</i>" "<i>layout</i>" (
+        { &lt;<i>rec1field1</i>&gt;, ... , <i>&lt;rec1fieldM&gt;</i> },
+        ....,
+        { &lt;<i>recKfield1&gt;</i>, ... , <i>&lt;recKfieldM&gt;</i> }
+    )
+    end map
+</pre>
+i.e., either a list of file names containing binary map data is
+specified, or the list of fields for each particles in the map.
+Each <i>recSfieldT</i> entry should consist of the proper number of
+space separated float or integer values. The first record in each row
+should be N floats corresponding to the position of a particle in the
+N-dimensional map.
+<li>The <code>map</code> type has been added to the list of legal shader parameter
+types, following usual conventions. However, a Map cannot be an output of a
+shader.
+<li>
+The hair approximation can be specified on a hair object with the following
+syntax:
+<pre>
+    approximate hair &lt;curve_approx&gt;
+</pre>
+with <code>&lt;curve_approx</code>&gt; being any curve approximation
+technique, for example:
+<pre>
+    approximate hair view length 3 distance 0.1 angle 5 0 7
+</pre>
+<li id="mi:displacemotion">
+Added new string option<code>"geom displace motion factor" f</code> used to
+modify the amount of geometry reduction compared to static case. A factor of
+<code>f=0</code> turns off the feature. The factor <code>f=1</code> is the
+current default to achieve a reasonable compromise between quality and speed.
+Higher values of <code>f</code> give more reduction. The current default value
+is rather conservative: the simplification of geometry will have an effect for
+motion of approximately 16 pixels. In order to get effect on slower motion,
+higher values should be used. For example, the factor value of 8 would reduce
+geometry in areas of objects moving at the speed of 2 pixels per frame.
+<li>
+Added a new string option <code>"importon emitted"</code>. If specifies
+the total number of importons to emit and overrides the <code>"importon
+density"</code> string option. The options are similar, but
+<code>"importon emitted"</code> specifies the value which is independent
+of the image resolution and thus is better for tuning.</li>
+<li>
+Added a new .mi syntax
+<pre>
+    rename "target" "source"
+</pre>
+This function may be used to rename existing scene entities.
+See the related <a href="#api:rename">API function</a> for further details.
+<li id="mi:triestimate">
+Added new object flag "<code>triangle estimate &lt;int&gt;</code>" to the .mi
+syntax. This field may be set by a translator or exporter and give approximate
+number of triangles expected for the given object. CAD application frequently
+would know the precise number, but even if it is know only up to an order of
+magnitude it is advisable to provide it. In the future versions, mental ray
+will use it as a hint for optimizing performance and memory usage.
+<li>
+Add new combined approximation style for shared displacement without
+Hermite blending. The displacement approximation styles syntax includes
+now <code>"fine shared"</code>, <code>"fine nosmoothing"</code>, and
+<code>"fine shared nosmoothing"</code>. The registry key
+<code>_MI_REG_SHARED_DISPLACEMENT</code> which could be used to enabled the
+"shared" mode globally for all objects is <strong>deprecated</strong>, but
+could be used in mental ray 3.7 for compatibility reasons.
+<li>
+Removed obsolete syntax and API interface for implicit patches.
+</ul>
+
+<h3 id="shader">Shader Writing and Integration</h3>
+<ul>
+<li>
+The <code>miMaterial</code> structure has been extended with a <code>bsdf</code>
+slot, which may specify an instance of an optional BSDF shader.
+<li>
+A material shader may access the BSDF attached to the current shading
+state by using <code>mi::shader::Access_bsdf</code> class. The API for
+interaction with BSDFs is declared in the new <code>shader_bsdf.h</code>
+header file. It is described in the doxygen documentation in the manual.
+<li>
+mental ray provides built-in <code>builtin_bsdf_architectural</code> and
+<code>builtin_bsdf_mirror</code> BSDFs.
+The <code>builtin_bsdf_architectural</code> is a simplification of the
+architectural material, containing the parameters relevant for the material
+properties. The <code>builtin_bsdf_mirror</code> is a simple specular
+reflection, which multiplies the reflected color with the
+<code>reflection</code> parameter.
+<li>
+mental ray provides a built-in compatibility version of the architectural
+bsdf. Its functionality is the same as for the
+<code>builtin_bsdf_architectural</code>, but the declaration follows those
+of the architectural material. This BSDF may be used to minimize changes to
+the existing scenes and translators using the architectural material.
+<li>API functionality for the Map container is provided with the
+<code>mi_api_map_*</code> functions family.
+<li id="api:rename">
+Added a new function
+<pre>
+    mi_api_rename(char *target, char *source)
+</pre>
+to rename existing scene entities without recreating them. In particular this
+may be used by application interface to follow user interaction. The function
+has following limitations:
+<ul>
+<li>Renaming across scopes is not supported, by design.
+<li>Compatibility with <strong>incremental</strong> echo is limited.
+mental ray kernel does not maintain list of renaming. If re-namings
+are done and scene changes are echoed, application should print a set
+of rename commands as previously echoed parts of the scene may
+contain old names.
+<li>API notify callback is not called for the function.
+<li>Renaming phenomenon/shader GUI elements is not supported.
+<li>Renaming of shader declarations is possible but discouraged as
+corresponding functions are linked using the same name as in the
+shader declaration.
+</ul>
+<li>
+Added the new member field <code>miObject::tri_est</code>, to provide an
+estimate of triangulation counts. See <a href="#mi:triestimate">scene
+syntax</a> description for more details.
+<li>mental ray code has been switched to use STLPORT compiled in the
+proprietary namespace MISTD. This resolves potential symbol conflicts for
+integrating application and 3rd party plug-ins; requirements on the
+compiler compatibility / version match are reduced.
+<li>
+The <code>miAPPROX_STYLE_FINE_NO_SMOOTHING_CONT_DISP</code> value has been
+added to the <code>miApprox_style</code> enumeration.
+<li>
+For the integrated versions of raylib, the emergency exit for
+renderings running out of memory has been modified. The function
+<code>mi_rc_run</code> now returns to the application in one second and
+does not wait until all rendering threads are blocked. The rendering
+threads are still blocked on memory or database operations, possibly
+after <code>mi_rc_run</code> returns. Previous synchronous mode where
+<code>mi_rc_run</code> returned first after all threads get blocked was
+less robust: threads blocked on internal locks were not counted, which
+resulted in a possible application freeze.
+<li>
+Added a new type for progress message in ambient occlusion computation pass.
+<li>Extended progress strings enum with Irradiance Particles entry.
+<li>Added Irradiance Particles entry to the <code>mi_query</code> mode
+<code>miQ_STAGE</code>.
+<li>
+For string options, allow shader to access boolean values as integers.
+This is handy if shaders use variables of type <code>miBoolean</code>,
+which is typedefed to int.
+<li>
+Size argument taken by memory allocation functions is now of type
+<code>unsigned</code>.
+</ul>
+
+<h3 id="incompatible">Incompatible Changes</h3>
+<ul>
+<li><code>miMaterial</code> structure has been extended with bsdf slot.
+<li>
+The layout of <code>miHair_list</code> structure has been extended with
+approximation. Unused integer approximation has been removed.
+<li>
+The content of <code>mi_shader_if.h</code> header file now include
+several partial header files according to the features if the
+<code>mi::shader::Interface</code> class. Shader writers are still
+supposed to include the <code>mi_shader_if.h</code> file into the shader
+C++ files.
+<li>
+The shader interface is now defined in the <code>mi::shader_v3</code>
+namespace. A namespace alias for <code>mi::shader</code> is added, so
+that no changes to the shader code are required. Shader writers are
+expected to continue to use the <code>mi::shader</code> namespace.
+This fixes possible crashes (mismatched symbol linkage) in debug shader
+libraries using different versions of <code>mi::shader::Access_fb</code>
+or <code>Edit_fb</code> classes from different versions in the same
+rendering.
+<li>
+The <code>mi::shader::Interface</code> version has been increased to 3.
+Shaders compiled for mental ray 3.7 alpha versions need to be recompiled.
+Shaders compiled for mental ray 3.6/3.6+ keep the limited binary
+compatibility with mental ray 3.7 over the
+<code>mi::shader::Interface</code> version 2.
+<li>Removed obsolete syntax and API interface for implicit patches.
+<li>Removed obsolete box type from the <code>miGeoBox</code> structure.
+</ul>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="upgrading.html">&laquo;&nbsp;prev</a></li>
+<li><a href="upgrading36.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+</table>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

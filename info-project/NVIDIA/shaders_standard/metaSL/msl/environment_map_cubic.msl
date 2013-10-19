@@ -1,0 +1,38 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Environment_map_cubic
+{
+  input:
+    Texture_cube env_tex = "default_reflection_cubic.dds"
+	{
+		display_name("Environment Cube Texture");
+		description("The cube texture from which the environment colors will be sampled");
+	};
+    float intensity = 1.0
+   	{		
+		display_name("Intensity");
+		soft_range(float(0),float(10));
+		description( "How brightly the environment map will be reflected in "
+					 "the scene." );
+	};
+    
+  output:
+    Color result;
+    
+    void main()
+    {
+		float3 v = transform_vector("internal", "world", direction);	
+		
+		result  = texCUBE(env_tex, v.xzy);
+		result *= intensity;
+    }
+} 
+{ 
+	shader_type( "environment" ); 
+	description( "Uses the cubic mapping to map the texture to environment "
+	             "reflection directions." );
+}
+;

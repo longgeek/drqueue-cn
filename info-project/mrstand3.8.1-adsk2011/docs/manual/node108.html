@@ -1,0 +1,148 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+<title>Textures, Motion, Derivatives</title>
+</head>
+<body>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node107.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node109.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h3 id="SECTION106">Textures, Motion, Derivatives</h3>
+<p>
+The following table is an extension to the previous. These
+variables give information about the intersection point for texture
+mapping. They are defined when the ray has hit a textured
+object:</p>
+
+<div id="INDEX408" align="center">
+<table class="table">
+<tr>
+<th><i>type</i></th>
+<th><i>name</i></th>
+<th><i>content</i></th>
+</tr>
+<tr>
+<td><tt>miVector *</tt></td>
+<td><tt>tex_list</tt></td>
+<td>list of <a href="node108.html#INDEX409">texture
+coordinate</a>s</td>
+</tr>
+<tr>
+<td><tt>miVector *</tt></td>
+<td><tt>bump_x_list</tt></td>
+<td>list of X bump basis vectors</td>
+</tr>
+<tr>
+<td><tt>miVector *</tt></td>
+<td><tt>bump_y_list</tt></td>
+<td>list of Y bump basis vectors</td>
+</tr>
+<tr>
+<td><tt>miVector</tt></td>
+<td><tt>tex</tt></td>
+<td>texture coord (tex shaders)</td>
+</tr>
+<tr>
+<td><tt>miVector</tt></td>
+<td><tt>motion</tt></td>
+<td>interpolated motion vector</td>
+</tr>
+<tr>
+<td><tt>miVector *</tt></td>
+<td><tt>derivs[5]</tt></td>
+<td>list of surface derivatives</td>
+</tr>
+</table>
+</div>
+
+<dl>
+<dt><code>tex_list</code><dd id="INDEX409">
+A pointer to an array containing the
+<a href="node108.html#INDEX409">texture coordinate</a>s of the intersection
+point in all <a href="node85.html#INDEX314">texture space</a>s. When material
+shaders that support multiple textures on a surface call a texture lookup
+function, they must specify which texture coordinate to use, usually by
+choosing one of the texture vertices in <code>tex_list</code> and copying it
+to <code>tex</code>. Texture spaces in a <i>miBox</i> may have arbitrary
+dimension. The <code>tex_list</code> entries contain only coordinates from up
+to three dimensional texture spaces. For higher dimensions, the
+<code>tex_list</code> entries are set to zero and the function
+<i><a href="node150.html#api:mi_texture_interpolate">mi_texture_interpolate</a></i>
+should be used instead.
+
+<dd class="note">For <em>hair</em>, contains texture scalars in the order
+<code>[0].x, [0].y, [0].z, [1].x,</code> and so on. In contrast to regular
+geometry hair uses scalars not vectors, and their number does not have to be
+a multiple of three. It is often useful to cast <code>tex_list</code> to a
+<code>miScalar</code> pointer for access.
+
+<dt><code>bump_x_list</code><dd>
+A pointer to an array containing the x bump basis vectors in all
+texture spaces. The scene must have been prepared to contain or compute
+these vectors. The vectors are given in
+<a href="node101.html#INDEX369">object space</a>.
+
+<dt><code>bump_y_list</code><dd>
+A pointer to an array containing the y bump basis vectors in all
+texture spaces. The vectors are in <a href="node101.html#INDEX369">object
+space</a>.
+
+<dt><code>tex</code><dd>
+The <a href="node108.html#INDEX409">texture coordinate</a>s where the texture
+should be evaluated. This variable is available only in texture shaders; it
+is set by the caller (for example, a texture lookup from a material shader).
+
+<dt><code>motion</code><dd>
+The <a href="node32.html#INDEX62">motion vector</a> of the intersection point.
+If the object has no motion vectors (<tt>m</tt> statements in the vertices in
+the scene description file) or inherited <a href="node90.html#INDEX343">motion
+transform</a>ations (including camera motion), the motion vector is a null
+vector. mental ray always interpolates motion vectors if present, regardless
+of the shutter value. However, mental ray does not interpolate
+<a href="node90.html#INDEX343">motion transform</a>ations if motion blurring
+is turned off, either with a zero shutter interval or <tt>motion off</tt> in
+the options block, because of the performance implications.
+
+<dt><code>derivs[]</code><dd>
+A pointer to an array containing the surface derivative vectors. If the object
+is a free-form surface object, the surface derivative vectors
+<code>derivs[0] &hellip; derivs[4]</code> contain
+<span class="math">&part;x&frasl;&part;u, &part;x&frasl;&part;v,
+&part;&sup2;x&frasl;&part;u&sup2;,
+&part;&sup2;x&frasl;&part;v&sup2;,
+&part;&sup2;x&frasl;&part;u&part;v</span>, respectively. Here
+<span class="math">x</span> denotes the intersection point. For polygonal
+objects the surface derivatives are taken from the .mi file. If the object
+has no first derivative vectors, the first two vectors are null vectors.
+If the object has no second derivative vectors, the last three vectors are
+null vectors. Since surface derivatives are calculated approximately, the
+vectors <span class="math">&part;x&frasl;&part;u, &part;x&frasl;&part;v</span>
+and the normal vector at the intersection point are not necessarily orthogonal
+to each other.
+
+<dd class="note">For <em>hair</em>, the <code>derivs[0]</code> contains the
+interpolated tangent at the point of intersection.
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node107.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node109.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Function Declarations</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node202.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node204.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION201"></a>
+<h3>Function Declarations</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_FUNCTION_DECL</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miFunction_decl</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>int decl_size</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls, type <tt>miFUNCTION_C</tt></td>
+</tr>
+</table>
+<pre>
+typedef enum {
+        miTYPE_BOOLEAN = 0,                     /* simple types: used for */
+        miTYPE_INTEGER,                         /* returns and parameters */
+        miTYPE_SCALAR,
+        miTYPE_STRING,
+        miTYPE_COLOR,
+        miTYPE_VECTOR,
+        miTYPE_TRANSFORM,
+        miTYPE_SHADER,                          /* complex types: used for */
+        miTYPE_SCALAR_TEX,                      /* parameters only */
+        miTYPE_COLOR_TEX,
+        miTYPE_VECTOR_TEX,
+        miTYPE_LIGHT,
+        miTYPE_STRUCT,
+        miTYPE_ARRAY,
+        miTYPE_TEX,
+        miTYPE_MATERIAL,                        /* phenomenon types */
+        miTYPE_GEOMETRY,
+        miTYPE_LIGHTPROFILE,
+        miTYPE_DATA,                            /* free-form user data */ 
+        miTYPE_SPECTRUM,                        /* light spectrum as args */
+        miNTYPES
+} miParam_type;
+</pre>
+<pre>
+typedef struct miPhen_decl {
+        int             n_subtags;              /* # of subshader/mtl tags */
+        miTag           root;                   /* root attachment point */
+        miTag           lens;                   /* optional lens shaders */
+        miTag           output;                 /* optional output shaders */
+        miTag           volume;                 /* optional volume shaders */
+        miTag           environment;            /* optional environm. shaders*/
+        miTag           geometry;               /* optional geometry shaders */
+        miTag           contour_store;          /* opt'l contour store func */
+        miTag           contour_contrast;       /* opt'l contour contrast f. */
+        int             lens_seqnr;             /* opt'l sequence number */
+        int             output_seqnr;           /* opt'l sequence number */
+        int             volume_seqnr;           /* opt'l sequence number */
+        int             environment_seqnr;      /* opt'l sequence number */
+        /* Fuzzy booleans (0=dont care, 1=false, 2=true) */
+        miCBoolean      scanline;               /* need scanline? */
+        miCBoolean      trace;                  /* need ray tracing? */
+        /* Normal Booleans (these cannot be set explicitly off): */
+        miCBoolean      deriv1;                 /* need first derivatives? */
+        miCBoolean      deriv2;                 /* need second derivatives? */
+        miUchar         mintextures;            /* not used */
+        miUchar         minbumps;               /* not used */
+        miUchar         volume_level;           /* optional volume level */
+        miUchar         parallel;               /* parallel output shader */
+        char            shadow;                 /* 0, 1, 'l' sort, 's' segm */
+        char            face;                   /* 'f'ront, 'b'ack, 'a'll */
+        char            render_space;           /* 'c'amera, 'o'bject, 0 any */
+        miCBoolean      cloned;                 /* delete decl when del. shd */
+} miPhen_decl;
+</pre>
+<pre>
+typedef struct miFunction_decl {
+        miPointer       sparep[2];
+        enum miFunction_type type;              /* C function or phenomenon */
+        miParam_type    ret_type;               /* return type of shader */
+        int             declaration_size;       /* size of declaration */
+        int             result_size;            /* size of result struct */
+        int             version;                /* shader version from .mi */
+        miUint          apply;                  /* what can it be used for? */
+        miPhen_decl     phen;                   /* if type==miFUNCTION_PHEN */
+        int             spare[2];               /* not used */
+        miTag           defaults;               /* default values or 0 */
+        char            name[miNAMESIZE];       /* ascii name */
+        char            declaration[4];         /* declaration string */
+} miFunction_decl;
+
+#define miDECL_SUBTAG(d,i) (...)
+</pre>
+<p>A translator must provide: <tt>name</tt>, <tt>result_size</tt>,
+<tt>declaration</tt>, <tt>version</tt>.<br />
+<br />
+A translator may provide: <tt>type</tt>, <tt>ret_type</tt>.<br />
+<br />
+Provided by <i>mi_scene_create</i>: <tt>parameter_size</tt>,
+<tt>declaration_size</tt>, <tt>parallel</tt>, <tt>apply</tt>.</p>
+<p><b>lock</b><sup>2.1</sup> is a lock shared by all instances of a
+shader.</p>
+<p><b>type</b> is one of <tt>miFUNCTION_C</tt> (shader),
+<tt>miFUNCTION_PHEN</tt> (Phenomenon), <tt>miFUNCTION_OUTFILE</tt>
+(output file, not a shader), or <tt>miFUNCTION_DATA</tt>
+(declaration of a <a href="node83.html#INDEX285">user data</a>
+block, not a shader).</p>
+<p><b>ret_type</b> is the return type of the function. For
+backwards compatibility, undefined return types default to
+<tt>miTYPE_COLOR</tt>. The type is important for subshaders in
+shader trees. Only "simple types" are allowed here.</p>
+<p><b>name</b> is an ASCII string identifying the shader. This name
+will be looked up in LINK's symbol table at runtime.</p>
+<p><b>parameter_size</b> helps the translator decide how many bytes
+to allocate when a new <tt>miFunction</tt> entry is allocated, see
+above. The parameter size does not include space needed for
+parameter arrays.</p>
+<p><b>declaration_size</b> is the size of the declaration array in
+bytes, including the trailing null byte.</p>
+<p><b>result_size</b> is the number of bytes in the result data
+structure. By default this is 16 (the size of <tt>miColor</tt>,
+which is the default return type). It <i>must</i> be set to match
+the <tt>result_size</tt> field of the declaration.</p>
+<p><b>version</b> is the declaration version. It can be queried by
+the shader using <i>mi_query</i> and allows the shader to ensure
+that the declaration and the shader agree. Also, if a shader
+library contains a function named <i>shadername</i>
+<tt>_version</tt>, it is scaled and its returned integer value must
+match the <i>version</i>. It is highly recommended to use this
+feature.</p>
+<p><b>apply</b> is a bitmap that specifies what the shader can be
+used for. Each bit stands for a specific type of shader:</p>
+<table class="table">
+<tr>
+<td><tt>miAPPLY_LENS</tt></td>
+<td>lens shader in a camera</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_MATERIAL</tt></td>
+<td>material shader in a material</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_LIGHT</tt></td>
+<td>light shader</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_SHADOW</tt></td>
+<td>shadow shader in a material</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_ENVIRONMENT</tt></td>
+<td>environment shader in a material or camera</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_VOLUME</tt></td>
+<td>volume shader in a material or camera</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_TEXTURE</tt></td>
+<td>texture shader</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_PHOTON</tt></td>
+<td>photon shader in a material</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_GEOMETRY</tt></td>
+<td>geometry shader</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_DISPLACE</tt></td>
+<td>displacement shader in a material</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_PHOTON_EMITTER</tt></td>
+<td>photon emitter shader in a light</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_OUTPUT</tt></td>
+<td>output shader in a camera</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_LIGHTMAP</tt></td>
+<td><a href="node25.html#INDEX49">light map</a> shader in a
+material</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_PHOTONVOL</tt></td>
+<td>photon volume shader</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_STATE</tt></td>
+<td>state shader</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_CONTOUR</tt><sup>3.4</sup></td>
+<td>contour shader</td>
+</tr>
+<tr>
+<td><tt>miAPPLY_OTHER</tt></td>
+<td>general-purpose shader, such as base shader</td>
+</tr>
+</table>
+<p>If the apply bitmap is zero (the default), it is not known what
+the shader can be used for, and all uses are legal. mental ray does
+not currently enforce non-applicability, this is only a hint.</p>
+<p><b>phen</b> is a substructure containing fields used if the
+<tt>type</tt> is <tt>miFUNCTION_PHEN</tt>. The <tt>miPhen_decl</tt>
+substructure is still under development. Note that phenomena keep a
+list of tags of shaders, materials, lights, and other sub-objects
+defined in the scope of the phenomenon in a tag list that follows
+the <i>declaration</i> string. Tags in this list can be accessed
+with the <tt>miDECL_SUBTAG</tt> macro.</p>
+<p><b>defaults</b>, if nonzero, contains the numerical
+<a href="node61.html#INDEX117">default shader parameters</a> for this
+shader. This is simply a tag of a <tt>miFunction</tt> whose
+parameters are copied to any new shader <tt>miFunction</tt> derived
+from this declaration. Only numerical values but not tags or arrays
+or array members may have defaults.</p>
+<p><b>declaration</b> describes the parameter layout required by
+the shader. It is a sequence of ascii characters, each describing a
+type or structure; the sequence is an abbreviated form of the
+declaration syntax in the .mi file. The declaration is a list of
+return and parameter declarations. Each list item begins with an
+optional <tt>'a'</tt> for array, followed by the type (one of
+<tt>biscvtSCVlS$</tt> for boolean, integer, scalar, color, vector,
+transform, scalar texture, color texture, vector texture, light,
+shader, and string) followed by a double-quoted name. Substructures
+are defined with <code>{ "<i>name</i>"</code> followed by the
+structure name followed by the structure definition followed by
+<code>}</code> . The declaration has two parts separated by an
+equals sign; the first part declares the return type and the second
+part declares the parameters. The first part may have only one
+field that may not be an array and whose double-quoted name part is
+omitted, but it may be a structure containing named fields. One
+null byte terminates the entire declaration.</p>
+<p>For example, a shader returning a color <i>r</i> and accepting
+three parameters, a scalar <i>s</i>, an array of structures
+<i>t</i> containing two integers <i>i1</i> and <i>i2</i>, followed
+by a light array <i>l</i> would lead to the following declaration
+string:</p>
+<p>
+<code>c=s"<i>s</i>"a{"<i>t</i>"i"<i>i1</i>"i"<i>i2</i>"}al"<i>l</i>"</code></p>
+<p>If the return type were a structure containing a color <i>c</i>
+and a boolean <i>b</i>, the declaration changes to:</p>
+<p>
+<code>{c"<i>c</i>"b"<i>b</i>"}=s"<i>s</i>"a{"<i>t</i>"i"<i>i1</i>"i"<i>i2</i>"}al"<i>l</i>"</code></p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node202.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node204.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

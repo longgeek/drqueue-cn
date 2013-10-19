@@ -1,0 +1,106 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Light Profiles</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node224.html">&laquo;&nbsp;prev</a></li>
+<li><a href="upgrading.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION223"></a>
+<h3>Light Profiles</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_LIGHTPROFILE</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miLight_profile[ ]</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>-</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls</td>
+</tr>
+</table>
+<pre>
+typedef enum miLight_profile_basis {
+        miLP_BASIS_NONE    = 0,
+        miLP_BASIS_HERMITE = 1
+} miLight_profile_basis;
+
+
+typedef enum miLight_profile_std {
+        miLP_STD_NONE      = 0,
+        miLP_STD_IES       = 1,
+        miLP_STD_EULUMDAT  = 2
+} miLight_profile_std;
+
+typedef struct miLight_profile {
+        miLight_profile_std   format;   /* data file standard */
+        miLight_profile_basis base;     /* basis for interpolation */
+        int             quality;        /* interpolation quality */
+        miTag           filename;       /* orig data file */
+        int             n_vert_angles;  /* there are n theta angles */
+        int             n_horz_angles;  /* there are n phi angles */
+        int             flags;          /* symmetry properties */
+} miLight_profile;
+</pre>
+A translator must provide: all fields.<br />
+A translator may provide: all fields.<br />
+Provided by <i>mi_scene_create</i>:
+<p>The intensity of light emitted by a light source may depend on
+the emission direction. Light profiles allow describing such
+dependencies. There are two data formats, IES and Eulumdat, widely
+used by manufacturers of illumination devices to describe the
+intensity distributions of their light sources. mental ray can read
+these data formats and transform them to an internal
+representation, described by a light profile.</p>
+<p><b>format</b> describes the file format of the light profile
+data. Allowed values are <i>miLP_STD_IES</i> and
+<i>miLP_STD_EULUMDAT</i></p>
+<p><b>base</b> describes the interpolation method used on the
+internal light profile repesentation. At this time the only method
+implemented is Hermite interpolation. Hence, the value of
+<i>base</i> should always be set to <i>miLP_BASIS_HERMITE</i>.</p>
+<p><b>quality</b> describes the quality of the internal
+representation of the light profile. For Hermite bases the only
+allowed values are 1 or 3, corresponding to linear of cubic Hermite
+interpolation.</p>
+<p><b>filename</b> specifies the file containing the light profile
+data.</p>
+<p><b>n_vert_angles</b> gives the number of equidistant vertical
+angle values to be used for the internal representation of the
+light profile.</p>
+<p><b>n_horz_angles</b> gives the number of equidistant horizontal
+angle values to be used for the internal representation of the
+light profile.</p>
+<p><b>flags</b> IES light profiles are often stored in a
+non-standard way with respect to the orientation of the involved
+horizontal angles. If flags is set to 1, then mental ray assumes
+that the horizontal angles are stored in non-standard clockwise
+order. If the flag value is 2, then mental ray assumes that the
+horizontal angles are stored in counter-clockwise order.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node224.html">&laquo;&nbsp;prev</a></li>
+<li><a href="upgrading.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

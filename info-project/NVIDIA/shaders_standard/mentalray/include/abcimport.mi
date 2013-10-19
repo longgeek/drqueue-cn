@@ -1,0 +1,40 @@
+#*****************************************************************************
+# Copyright 1986, 2013 NVIDIA Corporation. All rights reserved.
+#*****************************************************************************
+#
+# alembic import shader
+#
+# filename: The filename of the Alembic archive to load,
+# (the assembly search path is applied to the filename).
+#
+# time: evaluation time. if >= 0, take the time from the shader,
+# otherwise, use the current camera frame time during rendering
+# (miCamera::frame_time)
+#
+# assembly: if set, create an assembly for the Alembic archive,
+# for on-demand loading of the Alembic archive. otherwise, create
+# a direct DAG of instances and groups.
+#
+# select: if set, select a DAG path within the Alembic archive. All
+# elements on and below the path (towards the leaf) are enabled.
+# The nodes are separated by a "/" character.
+
+
+# guard against multiple inclusions
+$ifndef "abcimport_mi_included"
+set "abcimport_mi_included" "true"
+
+
+declare shader
+    geometry "abcimport" (
+	string	"filename",
+	scalar	"time"	default -1.0,
+	boolean	"assembly" default off,
+	string	"select"
+    )
+    version 1
+    apply geometry
+end declare
+
+$endif
+

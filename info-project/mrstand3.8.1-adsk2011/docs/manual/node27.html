@@ -1,0 +1,106 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>User-Defined Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node26.html">&laquo;&nbsp;prev</a></li>
+<li><a href="builtinshaders.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION25"></a>
+<h2 id="fo:shaders">User-Defined Shaders</h2>
+
+<p>mental ray comes with several of standard shader packages which
+allow to render a big variety of visual effects. In addition,
+user-defined shaders can be written and used for rendering. They are
+traditionally written in native computer languages like C or C++ and
+manually compiled and linked at runtime, or the source code can be
+passed to mental ray for automatic compilation and dynamic loading.
+Modern approaches may use the <em>meta</em> shading language
+<dfn>MetaSL</dfn> to write code in a standardized form which abstracts
+from specific renderers. <a href="#fo:metasl">MetaSL shaders</a> including
+phenomena built on top if such shaders are directly supported by mental ray.
+<p>
+User-defined shaders can be used in place of any standard shader,
+redefining materials, textures, lights, environments, volumes,
+displacements and more.
+
+<h3 id="fo:metasl">MetaSL Shaders <span class="recent">3.7</span></h3>
+<p>
+mental ray supports shaders written in <dfn>MetaSL</dfn> language to be
+used for software rendering. This is handled by integrated support for
+automatic compilation and/or linking of <a href="node99.html#sh:metasl">
+MetaSL shaders</a> on the target platform. For network rendering,
+compilation of the MetaSL shaders on slave or satellites is supported.
+</p>
+
+<h3 id="fo:native">Native Shaders</h3>
+<p>
+The mental ray native shader interface uses C language conventions.
+Shaders written in C++ should use <tt>extern "C"</tt> constructs to access
+the interface. Care should be taken to to avoid known C++ performance
+pitfalls such as <tt>new</tt> or virtual class members. Even a small
+runtime overhead becomes significant if incurred millions of times per
+frame.</p>
+<p>mental ray can link in user-defined shaders either as dynamic shared
+object (<b id="INDEX53">DSO</b> or <b id="INDEX54">DLL</b>, as plain
+object file, or in source form.</p>
+<p>Every user-defined shader must be declared before it can be
+used. A declaration is a statement that names the shader, and lists
+the name and type of all its parameters.</p>
+<p>Declarations may appear in the <tt>.mi</tt> scene description
+file, but are typically stored in an external file included at run
+time. Note that all <tt>code</tt> and <tt>link</tt> statements must
+precede the first declaration in the <tt>.mi</tt> file.</p>
+<p>Available parameter types are boolean, integer, scalar, string,
+color (RGBA), vector, transform (4&thinsp;&times;&thinsp;4 matrix),
+scalar texture, color texture, vector texture, shader, material,
+geometry, and light. In addition to these primitive types, compound
+types may be built using struct and array declarations. Structs may
+be nested but arrays may not.</p>
+<p>An instance of a shader can be created by creating a material,
+texture, light etc. that names a declared shader and associates a
+parameter list with values. Any parameter name that appeared in the
+declaration can be omitted or listed in any order, followed by a
+value that depends on the parameter type. Omitted parameters
+default to 0. Scalars accept floating point numbers, vectors accept
+one to three floating point numbers, and textures accept a texture
+name.</p>
+<p>After a material, texture, light etc has been created, it can be
+used. Materials are used by giving their names in object geometry
+statements, and textures and lights are used by naming them as
+parameter values in other shaders, typically material shaders.</p>
+<p>When the C function that implements a user-defined shader is
+called, it receives three pointers: one points to the result, one
+to global state, and one to a data structure that contains the
+parameter values. mental ray stores the parameter values in that
+data structure using a layout that corresponds exactly to the
+layout a C compiler would create, so that the C function can access
+parameters simply by dereferencing the pointer and accessing the
+data structure members by name. For this, it is necessary that a
+struct declaration is available in C syntax that corresponds
+exactly to the declaration in <tt>.mi</tt> syntax.</p>
+
+<p>For details on user-defined shaders, refer to the
+<a href="node99.html#sh:shaders">Writing Shaders</a> chapter.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node26.html">&laquo;&nbsp;prev</a></li>
+<li><a href="builtinshaders.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

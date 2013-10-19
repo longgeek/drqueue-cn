@@ -1,0 +1,221 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shader Definitions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node64.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node66.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION63"></a>
+
+<h2>Shader Definitions</h2>
+
+<p>After a shader has been declared, it can be used in a
+<a id="mi:shader"></a><dfn>shader definition</dfn>. While a shader is made
+known to mental ray using a declaration only once, it may be used any number
+of times. Each use is called a <dfn>definition</dfn>, sometimes also referred
+to as a <a id="mi:shader_instance"></a><dfn>shader "instance"</dfn>.
+A definition supplies numerical or other values for
+<a id="INDEX142"></a><dfn>shader parameters</dfn>, and is attached to some
+other scene element.</p>
+<p>In this manual, shader definitions will be used in many places,
+denoted by the <i>shader</i> meta symbol. A shader is defined as a
+shading function name followed by parameters:</p>
+<pre>
+    "<i>shader_name</i>" ( <i>parameters</i> )  
+</pre>
+<p>This sequence can be inserted for every instance of
+<i>shader</i> in the rest of this manual. (There are other forms,
+lists and named references, that can also be used in place of
+<i>shader</i>. They are described later.)</p>
+<p>The shader name must have been previously declared with a
+<tt>declare</tt> command; see above. Normally shader libraries
+containing compiled C/C++ shaders come with a <tt>$include</tt>
+file that contains all declarations for the shaders in the library.
+The library itself is typically linked into mental ray with a
+<tt>link</tt> command. There are usually many shader references for
+every declaration, each with a unique set of parameters. The syntax
+of shader calls is described in the chapter on shaders; they are
+basically a comma-separated sequence of quoted parameter names,
+each followed by a parameter value.</p>
+<p>The parenthesized <i>parameters</i> list is a comma-separated
+list of shader parameter assignments that have one of the following
+three forms:</p>
+<pre>
+    "<i>parameter_name</i>" <i>value</i>  
+    "<i>parameter_name</i>" = "<i>shader_name</i>"  
+    "<i>parameter_name</i>" = interface "<i>ifname</i>"  
+</pre>
+<p>The first form assigns a constant value to the parameter. The
+format of constant values depends on the parameter type:</p>
+<div align="center">
+<table class="table">
+<tr>
+<th>type</th>
+<th>value</th>
+</tr>
+<tr>
+<td><tt>boolean</tt></td>
+<td><tt>true</tt></td>
+</tr>
+<tr>
+<td></td>
+<td><tt>false</tt></td>
+</tr>
+<tr>
+<td><tt>integer</tt></td>
+<td><i>value</i><sub>int</sub></td>
+</tr>
+<tr>
+<td><tt>scalar</tt></td>
+<td><i>value</i></td>
+</tr>
+<tr>
+<td><tt>vector</tt></td>
+<td><i>x y z</i></td>
+</tr>
+<tr>
+<td><tt>transform</tt></td>
+<td>t<sub>00</sub> t<sub>01</sub> t<sub>02</sub> t<sub>03</sub>
+t<sub>10</sub> t<sub>11</sub> t<sub>12</sub> t<sub>13</sub>
+t<sub>20</sub> t<sub>21</sub> t<sub>22</sub> t<sub>23</sub>
+t<sub>30</sub> t<sub>31</sub> t<sub>32</sub> t<sub>33</sub></td>
+</tr>
+<tr>
+<td><tt>color</tt></td>
+<td><i>red green blue</i></td>
+</tr>
+<tr>
+<td></td>
+<td><i>red green blue alpha</i></td>
+</tr>
+<tr>
+<td></td>
+<td><tt>colorprofile</tt> <i>"profile_name" red green blue</i></td>
+</tr>
+<tr>
+<td></td>
+<td><tt>colorprofile</tt> <i>"profile_name" red green blue
+alpha</i></td>
+</tr>
+<tr>
+<td><tt>spectrum</tt></td>
+<td><i>"spectrum_name"</i></td>
+</tr>
+<tr>
+<td><tt>string</tt></td>
+<td>"<i>string</i>"</td>
+</tr>
+<tr>
+<td><tt>data</tt></td>
+<td>"<i>data_name</i>"</td>
+</tr>
+<tr>
+<td><tt>shader</tt></td>
+<td>"<i>shader_name</i>"</td>
+</tr>
+<tr>
+<td><tt>color texture</tt></td>
+<td>"<i>texture_name</i>"</td>
+</tr>
+<tr>
+<td><tt>scalar texture</tt></td>
+<td>"<i>texture_name</i>"</td>
+</tr>
+<tr>
+<td><tt>vector texture</tt></td>
+<td>"<i>texture_name</i>"</td>
+</tr>
+<tr>
+<td><tt>light</tt></td>
+<td>"<i>light_instance_name</i>"</td>
+</tr>
+<tr>
+<td><tt>material</tt></td>
+<td>"<i>material_name</i>"</td>
+</tr>
+<tr>
+<td><tt>geometry</tt></td>
+<td>"<i>object_group_or_instance_name</i>"</td>
+</tr>
+<tr>
+<td><tt>struct</tt></td>
+<td>{ <i>parameters</i> }</td>
+</tr>
+<tr>
+<td><tt>array</tt></td>
+<td>[ <i>comma-separated value list</i> ]</td>
+</tr>
+</table>
+</div>
+<p>Integer values must be signed 32-bit values. All other numerical
+values are floating-point numbers that may contain a decimal point
+and/or a decimal exponent introduced by the letter <tt>e</tt>, as
+in <tt>1.6e-27</tt>. The <i>shader_name</i> must be the name of a
+<a href="node65.html#INDEX145">named shader</a> from a preceding
+<tt>shader</tt> statement; the <i>texture_name</i> must be the name
+of a previously defined <tt>color texture</tt>, <tt>scalar
+texture</tt>, or <tt>vector texture</tt> statement, respectively. A
+<i>spectrum_name</i> referes to a previously declared spectrum
+block</p>
+<p>Colors may only be given a <tt>colorprofile</tt> parameter, if
+color profiles have been enabled in the options block. The colors
+are then presumed to be given in the color space associated with
+the color profile. The color components will be transformed to the
+render color space before they are passed to the shader.</p>
+<p>The special value keyword <tt>null</tt><a id="INDEX143"></a> can
+be used to replace any number, symbol, string,
+data, <tt>true</tt>, or <tt>false</tt>. It stores the numerical
+value <tt>0</tt> in the parameter. Its main purpose is to create
+"holes" in arrays by listing <tt>null</tt>s between the square
+brackets.</p>
+<p>The two non-constant forms of parameter assignment are explained
+later.</p>
+<p>The above shader definition form is also called an
+<b><a id="INDEX144"></a>anonymous shader</b> because the
+shader name/parameter pair is formed on the fly and used in place.
+Sometimes it is useful to give a name to a shader/parameters pair
+using a <tt>shader</tt> statement and use it more than once:</p>
+<pre>
+    shader "<i>named_shader</i>"  
+        "<i>shader_name</i>" ( <i>parameters</i> )  
+</pre>
+<p>Such pairs are called <b><a id="INDEX145"></a>named shader</b>s.
+After the pair was set up with a
+<tt>shader</tt> statement, it can be used in any place where a
+<i>shader</i> can be used, as an alternative to the anonymous
+shader statement listed above:</p>
+<pre>
+    = "<i>named_shader</i>"  
+</pre>
+<p>This is especially useful if the same shader/parameters pair is
+used in many different places in the scene, and it changes for
+every frame. Since <tt>shader</tt> statements allow
+<a href="node60.html#INDEX110">incremental change</a>s, an incremental
+change to a named shader affects all places that reference it (with
+the exception of <a href="node127.html#INDEX494">displacement
+shader</a>s - once an object is tessellated it remains unchanged
+until explicitly modified). Without named shaders it would be
+necessary to incrementally change every scene element containing
+the shader.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node64.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node66.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

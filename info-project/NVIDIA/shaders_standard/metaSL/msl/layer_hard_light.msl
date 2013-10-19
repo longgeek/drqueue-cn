@@ -1,0 +1,53 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Layer_hard_light
+{
+	input:
+		Color foreground = Color(0,0,0,0)
+		{			
+			display_name("Foreground");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The Foreground Color." );
+		};
+		Color background = Color(0,0,0,0)
+		{		
+			display_name("Background");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The Background Color." );
+		};
+
+	output:
+		Color result;
+
+	void main()
+	{
+		float one = 1.0;
+		float4 foregroundV, backgroundV, resultV;
+		
+		foregroundV = foreground;
+		backgroundV = background;
+		
+		for(int i=0;i<4;i++)
+		{
+			if( foregroundV[i] > 0.5 )
+			{
+				resultV[i] = (2*backgroundV[i])*foregroundV[i];
+			}
+			else
+			{
+				resultV[i] = one - (one - 2*(backgroundV[i] - 0.5))*
+					(one - foregroundV[i]);
+			}
+		}
+		
+		result = resultV;
+	}
+}
+{
+	description( "Uses a screen for values less than 0.5, and "
+	             "multiply for values greater than 0.5." );
+}
+;

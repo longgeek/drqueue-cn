@@ -1,0 +1,495 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// see tex_noise.cpp
+#define BLENDBAND 4.0
+
+// see tex_noise.cpp
+#define NOISE_REGULAR 0
+#define NOISE_FRACTAL 1
+#define NOISE_TURB    2
+
+// see max_texutil.cpp
+#define B 512 // 0x200
+#define RN 10000.0
+#define maxS_curve(t) ( t * t * (3.0 - 2.0 * t) )
+#define maxLerp(t, a, b) ( a + t * (b - a) )
+
+shader hlsl_Noise_EvalColor {
+ input:
+  Color Color1 = Color(0.0, 0.0, 0.0, 1.0) {
+    display_name("Color #1");
+  };
+  Color Color2 = Color(1.0, 1.0, 1.0, 1.0) {
+    display_name("Color #2");
+  };
+  Shader Map1;
+  Shader Map2;
+  const bool Map1Enabled = false {
+    display_name("Map1 Enabled");
+  };
+  const bool Map2Enabled = false {
+    display_name("Map2 Enabled");
+  };
+  float Size = 1.0 {
+    display_name("Size");
+  };
+  float Phase = 0.0 {
+    display_name("Phase");
+  };
+  const float Levels = 3.0 {
+    display_name("Levels");
+    hard_range(1.0, 4.0);
+  };
+  float ThresholdLow = 0.0 {
+    display_name("Noise Threshold Low");
+  };
+  float ThresholdHigh = 1.0 {
+    display_name("Noise Threshold High");
+  };
+  const int Type = 0 {
+    display_name("Noise Type");
+    hard_range(0, 2);
+  };
+  Shader Coords;
+  Shader Output;
+  // TODO: int GBufferID
+
+  // textures
+  Texture2d noise_tables = "noise_out.dds" {
+    disable_filtering();
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+
+ output:
+  Color result;
+
+  // additional functions for texture lookup
+  int p(in int i1) {
+    // int x_pix = i1 % 114;
+    int y_pix = i1 / 114; // 0 <= y < 9
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    // return int((511.0 * tex2d(noise_tables, float2(x, y)).r + 0.5));
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    return int((c.r + 0.5));
+  } // p
+
+  float g4(in int i1, in int i2) {
+    // int x_pix = i1 % 114;
+    int y_pix1 = 36 + i1 / 114; // 36 <= y < 45
+    int y_pix2 = 18 + i1 / 114; // 18 <= y < 27
+    // float x  = (2.0 * float(x_pix)  + 1.0) / (2.0 * 114.0);
+    float x  = (2.0 * fmod(i1,114)  + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y1 = (2.0 * float(y_pix1) + 1.0) / (2.0 * 45.0);
+    float y2 = (2.0 * float(y_pix2) + 1.0) / (2.0 * 45.0);
+    Color c1 = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y1));
+    Color c2 = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y2));
+    if (i2 == 0)
+      return c1.r;
+    else if (i2 == 1)
+      return c1.g;
+    else if (i2 == 2)
+      return c1.b;
+    else if (i2 == 3)
+      return c2.b; // use c2 and blue !!!
+    else {
+      error("g4(noise_tables, %d, %d)", i1, i2);
+      return 0.0;
+    }
+  } // g4
+
+  // see max_texutil.cpp
+  void maxSetup(in float v,
+		out int b0, out int b1,
+		out float r0, out float r1) {
+    float t = v + RN;
+    int it = (int) t;
+    b0 = it - (it / B) * B; // ((int)t) & BM;
+    // (b0+1) & BM;
+    b1 = b0 + 1;
+    if (b1 >= B) b1 = 0;
+    r0 = (float)(t - (int) t);
+    r1 = r0 - 1.0; // what if r0 < 1.0?
+  } // maxSetup
+
+  // see max_texutil.cpp
+  float maxNoise4(in float vcx,
+		  in float vcy,
+		  in float vcz,
+		  in float time) {
+    float res = 0.0;
+    // return values for maxSetup
+    int bx0 = 0;
+    int bx1 = 0;
+    int by0 = 0;
+    int by1 = 0;
+    int bz0 = 0;
+    int bz1 = 0;
+    int bw0 = 0;
+    int bw1 = 0;
+    float rx0 = 0.0;
+    float rx1 = 0.0;
+    float ry0 = 0.0;
+    float ry1 = 0.0;
+    float rz0 = 0.0;
+    float rz1 = 0.0;
+    float rw0 = 0.0;
+    float rw1 = 0.0;
+    maxSetup(vcx, bx0, bx1, rx0, rx1);
+    maxSetup(vcy, by0, by1, ry0, ry1);
+    maxSetup(vcz, bz0, bz1, rz0, rz1);
+    maxSetup(time, bw0, bw1, rw0, rw1);
+
+    int i = p(bx0);
+    int j = p(bx1);
+    int b00 = p(i + by0);
+    int b10 = p(j + by0);
+    int b01 = p(i + by1);
+    int b11 = p(j + by1);
+    float sx = maxS_curve(rx0);
+    float sy = maxS_curve(ry0);
+    float sz = maxS_curve(rz0);
+    float sw = maxS_curve(rw0);
+    float u = 0.0;
+    float v = 0.0;
+    u = (rx0 * g4(p(b00 + bz0) + bw0, 0) +
+	 ry0 * g4(p(b00 + bz0) + bw0, 1) +
+	 rz0 * g4(p(b00 + bz0) + bw0, 2) +
+	 rw0 * g4(p(b00 + bz0) + bw0, 3));
+    v = (rx1 * g4(p(b10 + bz0) + bw0, 0) +
+	 ry0 * g4(p(b10 + bz0) + bw0, 1) +
+	 rz0 * g4(p(b10 + bz0) + bw0, 2) +
+	 rw0 * g4(p(b10 + bz0) + bw0, 3));
+    float a = maxLerp(sx, u, v);
+    u = (rx0 * g4(p(b01 + bz0) + bw0, 0) +
+	 ry1 * g4(p(b01 + bz0) + bw0, 1) +
+	 rz0 * g4(p(b01 + bz0) + bw0, 2) +
+	 rw0 * g4(p(b01 + bz0) + bw0, 3));
+    v = (rx1 * g4(p(b11 + bz0) + bw0, 0) +
+	 ry1 * g4(p(b11 + bz0) + bw0, 1) +
+	 rz0 * g4(p(b11 + bz0) + bw0, 2) +
+	 rw0 * g4(p(b11 + bz0) + bw0, 3));
+    float b = maxLerp(sx, u, v);
+    float c = maxLerp(sy, a, b);
+    u = (rx0 * g4(p(b00 + bz1) + bw0, 0) +
+	 ry0 * g4(p(b00 + bz1) + bw0, 1) +
+	 rz1 * g4(p(b00 + bz1) + bw0, 2) +
+	 rw0 * g4(p(b00 + bz1) + bw0, 3));
+    v = (rx1 * g4(p(b10 + bz1) + bw0, 0) +
+	 ry0 * g4(p(b10 + bz1) + bw0, 1) +
+	 rz1 * g4(p(b10 + bz1) + bw0, 2) +
+	 rw0 * g4(p(b10 + bz1) + bw0, 3));
+    a = maxLerp(sx, u, v);
+    u = (rx0 * g4(p(b01 + bz1) + bw0, 0) +
+	 ry1 * g4(p(b01 + bz1) + bw0, 1) +
+	 rz1 * g4(p(b01 + bz1) + bw0, 2) +
+	 rw0 * g4(p(b01 + bz1) + bw0, 3));
+    v = (rx1 * g4(p(b11 + bz1) + bw0, 0) +
+	 ry1 * g4(p(b11 + bz1) + bw0, 1) +
+	 rz1 * g4(p(b11 + bz1) + bw0, 2) +
+	 rw0 * g4(p(b11 + bz1) + bw0, 3));
+    b = maxLerp(sx, u, v);
+    float d = maxLerp(sy, a, b);
+    float e = maxLerp(sz, c, d);
+	
+	
+    u = (rx0 * g4(p(b00 + bz0) + bw1, 0) +
+	 ry0 * g4(p(b00 + bz0) + bw1, 1) +
+	 rz0 * g4(p(b00 + bz0) + bw1, 2) +
+	 rw1 * g4(p(b00 + bz0) + bw1, 3));
+    v = (rx1 * g4(p(b10 + bz0) + bw1, 0) +
+	 ry0 * g4(p(b10 + bz0) + bw1, 1) +
+	 rz0 * g4(p(b10 + bz0) + bw1, 2) +
+	 rw1 * g4(p(b10 + bz0) + bw1, 3));
+    a = maxLerp(sx, u, v);
+    u = (rx0 * g4(p(b01 + bz0) + bw1, 0) +
+	 ry1 * g4(p(b01 + bz0) + bw1, 1) +
+	 rz0 * g4(p(b01 + bz0) + bw1, 2) +
+	 rw1 * g4(p(b01 + bz0) + bw1, 3));
+    v = (rx1 * g4(p(b11 + bz0) + bw1, 0) +
+	 ry1 * g4(p(b11 + bz0) + bw1, 1) +
+	 rz0 * g4(p(b11 + bz0) + bw1, 2) +
+	 rw1 * g4(p(b11 + bz0) + bw1, 3));
+    b = maxLerp(sx, u, v);
+    c = maxLerp(sy, a, b);
+    u = (rx0 * g4(p(b00 + bz1) + bw1, 0) +
+	 ry0 * g4(p(b00 + bz1) + bw1, 1) +
+	 rz1 * g4(p(b00 + bz1) + bw1, 2) +
+	 rw1 * g4(p(b00 + bz1) + bw1, 3));
+    v = (rx1 * g4(p(b10 + bz1) + bw1, 0) +
+	 ry0 * g4(p(b10 + bz1) + bw1, 1) +
+	 rz1 * g4(p(b10 + bz1) + bw1, 2) +
+	 rw1 * g4(p(b10 + bz1) + bw1, 3));
+    a = maxLerp(sx, u, v);
+    u = (rx0 * g4(p(b01 + bz1) + bw1, 0) +
+	 ry1 * g4(p(b01 + bz1) + bw1, 1) +
+	 rz1 * g4(p(b01 + bz1) + bw1, 2) +
+	 rw1 * g4(p(b01 + bz1) + bw1, 3));
+    v = (rx1 * g4(p(b11 + bz1) + bw1, 0) +
+	 ry1 * g4(p(b11 + bz1) + bw1, 1) +
+	 rz1 * g4(p(b11 + bz1) + bw1, 2) +
+	 rw1 * g4(p(b11 + bz1) + bw1, 3));
+    b = maxLerp(sx, u, v);
+    d = maxLerp(sy, a, b);
+    float f = maxLerp(sz, c, d);
+    res = maxLerp(sw, e, f);
+    return res;
+  } // maxNoise4
+
+  // see tex_noise.cpp
+  float maxTurb(// inst
+		in bool inst_filter,
+		in float inst_avgAbsNs,
+		// others
+		in float px,
+		in float py,
+		in float pz,
+		in float lev) {
+    float sum = 0.0;
+    float l = 0.0;
+    float f = 1.0;
+    float ml = Levels;
+    float rx = 0.0;
+    float ry = 0.0;
+    float rz = 0.0;
+/*    int lim_count = 0; // used to limit loops for HLSL !!!
+    for (lim_count = 0, l = lev;  l >= 1.0 && lim_count < 3;  lim_count++, l -= 1.0, ml -= 1.0) {
+      rx = px * f;
+      ry = py * f;
+      rz = pz * f;
+      sum += abs(maxNoise4(rx, ry, rz, Phase)) / f;
+      f *= 2.0;
+    } // for (l = lev; l >= 1.0; l -= 1.0, ml -= 1.0)
+    if (l > 0.0) {
+      rx = px * f;
+      ry = py * f;
+      rz = pz * f;
+      sum += l * abs(maxNoise4(rx, ry, rz, Phase)) / f;
+    } // if (l > 0.0)*/
+	//jan alternative
+	int loopcount = (int)ceil(lev);
+	float rest = lev - floor(lev);
+	float factor =1.;
+	for( int i =0 ;  i < 4;i++ )
+	if(i < loopcount)
+	{
+	  rx = px * f;
+	  ry = py * f;
+	  rz = pz * f;
+	  if( i == loopcount -1 && rest > 0.)
+		factor = rest; //make sure fractional parts are counted accordingly 
+	  sum += factor * abs(maxNoise4(rx, ry, rz, Phase))  / f;
+	  f *= 2.0f;
+	}//end jan alternative
+	
+    if (inst_filter && (ml > l)) {
+      float r = 0.0;
+      if (ml < 1.0) {
+	r += (ml-l)/f;
+      } // if (ml < 1.0)
+      else {
+	r += (1.0 - l) / f;
+	ml -= 1.0;
+	f *= 2.0;
+
+//	for (lim_count = 0, l = ml; l >= 1.0 && lim_count < 3; lim_count++, l -= 1.0) {
+	for (int i = 0; i < (int)ml; i++ ) {
+	  l -= 1.0;
+	  
+	  r += 1.0 / f;
+	  f *= 2.0;
+	} // for (l = ml; l >= 1.0; l -= 1.0)
+	if (l > 0.0) r += l / f;	
+	
+	sum += r * inst_avgAbsNs;
+      } // else [ if (ml < 1.0) ]
+    } // if (inst_filter && (ml > l))
+    return sum;
+  } // maxTurb
+
+  // see max_texutil.cpp
+  float maxThreshold(in float x, in float a, in float b) {
+    if (x < a) return 0.0;
+    if (x > b) return 1.0;
+    if (a == b) return x;
+    return (x - a) / (b - a);
+  } // maxThreshold
+
+  // see tex_noise.cpp
+  float maxSmoothThresh(in float x,
+			in float a,
+			in float b,
+			in float d) {
+    float al = a - d;
+    float ah = a + d;
+    float bl = b - d;
+    float bh = b + d;
+    if (x < al) return 0.0;
+    if (x > bh) return 1.0;
+    if (x < ah) {
+      float u = (x - al) / (2*d);
+      u = u * u * (3 - 2 * u); // smooth cubic curve
+      return u * (x - a) / (b - a);
+    } // if (x < ah)
+    if (x < bl) {
+      return (x - a) / (b - a);
+    } // if (x < bl)
+    else {
+      float u = (x - bl) / (2*d); 
+
+      u = u * u * (3 - 2 * u); // smooth cubic curve
+      return (1.0 - u) * (x - a) / (b - a) + u;
+    } // else [ if (x < bl) ]
+    return 0.0;
+  } // maxSmoothThresh
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // xyz-coords
+    float3 xyz_coords = transform_point("internal", "object", position);
+    // try to call hlsl_base_UVGenerator
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Coords.call("output", "result", shader_return)) {
+      xyz_coords.xyz = shader_return.rgb;
+    }
+    else {
+      xyz_coords *= 100.0;
+    }
+    // call other shader parameters
+    Color Map1Color = Color(0.0, 0.0, 0.0, 0.0);
+    bool useMap1 = false;
+    if (Map1Enabled &&
+	Map1.call("output", "result", Map1Color)) {
+      useMap1 = true;
+    }
+    Color Map2Color = Color(0.0, 0.0, 0.0, 0.0);
+    bool useMap2 = false;
+    if (Map2Enabled &&
+	Map2.call("output", "result", Map2Color)) {
+      useMap2 = true;
+    }
+    // use xyz-coords
+
+    // TMP
+    float inst_avgAbsNs = -1.0;
+    bool inst_filter = true; // missing maxComputeAvgValue(...)
+    float inst_avgValue = 0.501467; // is dependent on Levels !!!
+    // TMP
+    // begin of maxNoise_EvalColor
+    float px = xyz_coords.x;
+    float py = xyz_coords.y;
+    float pz = xyz_coords.z;
+    float inst_size = Size;
+    if (Size == 0.0) inst_size = 0.0001;
+    px /= inst_size;
+    py /= inst_size;
+    pz /= inst_size;
+    float smw = 0.01; // this must be !=0! should be computed
+    // TODO: limlev = maxLimitLevel(..., smw);
+    float limlev = 3.0; // WARNING: will work only for example scene !!!
+    // begin of maxNoiseFunction
+    float res = 0.0;
+    float lev = Levels;
+    if (Levels < (1.0 - BLENDBAND)) {
+      res = inst_avgValue;
+    } // if (Levels < (1.0 - BLENDBAND))
+    else {
+      if (lev < 1.0) lev = 1.0;
+      switch (Type) {
+      case NOISE_TURB:
+	res = maxTurb(inst_filter, inst_avgAbsNs, px, py, pz, lev);
+	break;
+
+      case NOISE_REGULAR:
+	res = (1.0 + maxNoise4(px, py, pz, Phase)) * 0.5;
+	break;
+
+      case NOISE_FRACTAL:
+	float sum = 0.0;
+	float l = 0.0;
+	float f = 1.0;
+	float3 r = float3(0.0, 0.0, 0.0);
+/*	int lim_count = 0; // used to limit loops for HLSL !!!
+	for (lim_count = 0, l = lev; l >= 1.0 && lim_count < 5;  lim_count++, l -= 1.0) {
+	  r.x = px * f;
+	  r.y = py * f;
+	  r.z = pz * f;
+	  sum += maxNoise4(r.x, r.y, r.z, Phase) / f;
+	  f *= 2.0f;
+	} // for (l = lev; l >= 1.0; l -= 1.0)
+	if (l > 0.0) {
+	  r.x = px * f;
+	  r.y = py * f;
+	  r.z = pz * f;
+	  sum += l * maxNoise4(r.x, r.y, r.z, Phase) / f;
+	} // if (l > 0.0)*/
+
+	//alternative jan
+	int loopcount = (int)ceil(lev);
+	float rest = lev - floor(lev);
+	float factor =1.;
+	for( int i =0 ;  i < 4;i++ )
+	if( i < loopcount)
+	{
+	  r.x = px * f;
+	  r.y = py * f;
+	  r.z = pz * f;
+	  if( i == loopcount -1 && rest > 0.)
+		factor = rest; //make sure fractional parts are counted accordingly 
+	  sum += factor * maxNoise4(r.x, r.y, r.z, Phase) / f;
+	  f *= 2.0f;
+	}//end jan alternative
+	
+	res = 0.5 * (sum + 1.0);
+	break;
+
+      default:
+	res = 0.0;
+	break;
+      } // switch (Type)
+      if (ThresholdLow < ThresholdHigh) {
+	res = (inst_filter ?
+	       maxSmoothThresh(res, ThresholdLow, ThresholdHigh, smw) :
+	       maxThreshold(res, ThresholdLow, ThresholdHigh));
+      } // if (ThresholdLow < ThresholdHigh)
+      if (res < 0.0) res = 0.0;
+      else if (res > 1.0) res = 1.0;
+      if (inst_filter) {
+	if (Levels < 1.0) {
+	  float u = (Levels + BLENDBAND - 1.0) / BLENDBAND;
+	  res = u * res + (1.0 - u) * inst_avgValue;
+	} // if (Levels < 1.0)
+      } // if (inst_filter)
+    } // else [ if (Levels < (1.0 - BLENDBAND)) ]
+    // end of maxNoiseFunction
+    float d = res;
+    Color c1 = Color1;
+    if (useMap1) {
+      c1 = Map1Color;
+    } // if (useMap1)
+    Color c2 = Color2;
+    if (useMap2) {
+      c2 = Map2Color;
+    } // if (useMap2)
+    result.r = (1.0 - d) * c1.r + d * c2.r;
+    result.g = (1.0 - d) * c1.g + d * c2.g;
+    result.b = (1.0 - d) * c1.b + d * c2.b;
+    result.a = (1.0 - d) * c1.a + d * c2.a;
+    // end of maxNoise_EvalColor
+
+    // call "output" shader, if any
+    Color output_shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Output.call("input", "inputColor", result, 
+		    "output", "result", output_shader_return)) {
+      result = output_shader_return;
+    }
+  } // main
+};

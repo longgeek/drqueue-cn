@@ -1,0 +1,92 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Lens Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node123.html">&laquo;&nbsp;prev</a></li>
+<li><a href="brdf_sh.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION122"></a>
+<h2>Lens Shaders</h2>
+<p><a id="INDEX487"></a><a id="INDEX488"></a>
+Lens shaders are called for primary rays from the
+camera. The camera is normally a simple
+<a href="node124.html#INDEX488">pinhole camera</a>. A lens shader modifies
+the origin and direction of a primary ray from the camera. More
+than one lens shader may be attached to the camera; each modifies
+the origin and direction calculated by the previous one. By
+convention, all rays up to and including the one leaving the last
+lens are called "<b><a id="INDEX489"></a>primary
+ray</b>s". The origin and direction input parameters can be found
+in the state, in the <i>origin</i> and <i>dir</i> variables. The
+outgoing ray is cast with <i><a href="node140.html#INDEX547">mi_trace_eye</a></i>,
+whose return color
+may be modified before the shader itself returns. Lens shaders are
+called recursively; a call to <i>mi_trace_eye</i> will call the
+next lens shader if there is another one.</p>
+<p>Here is a sample lens shader that implements a fish-eye
+lens:</p>
+<p><a id="INDEX490"></a></p>
+<pre>
+    miBoolean fisheye(
+        miColor         *result,
+        miState         *state,
+        void            *paras)
+                        
+    {
+        miVector        camdir, dir;
+        miScalar        x, y, r, t;
+
+        mi_vector_to_camera(state, &amp;camdir, &amp;state-&gt;dir);
+        t = state-&gt;camera-&gt;focal / -camdir.z /
+                                (state-&gt;camera-&gt;aperture/2);
+        x = t * camdir.x;
+        y = t * camdir.y * state-&gt;camera-&gt;aspect;
+        r = x * x + y * y;
+        if (r &lt; 1) {
+                dir.x = camdir.x * r;
+                dir.y = camdir.y * r;
+                dir.z = -sqrt(1 - dir.x*dir.x - dir.y*dir.y);
+                mi_vector_from_camera(state, &amp;dir, &amp;dir);
+                return(mi_trace_eye(result, state, &amp;state-&gt;org, &amp;dir));
+        } else {
+                result-&gt;r = result-&gt;g =
+                result-&gt;b = result-&gt;a = 0;
+                return(miFALSE);
+        }
+    }
+</pre>
+<p>This shader does not take the image aspect ratio into account,
+and is not physically correct. It merely bends rays away from the
+camera axis depending on their angle to the camera axis. Rays that
+fall outside the circle that touches the image edges are set to
+black (note that alpha is also set to 0). The rays are bent
+according to the square of the angle, which approaches the
+physically correct deflection for small values of <span class="math">&pi;</span>.
+This example shader has no shader parameters,
+which is why the type of the <i>paras</i> parameter is <tt>void
+*</tt>.</p>
+<p>Be sure to derive the ray origin from
+<code>state&rarr;org</code>, not <code>state&rarr;point</code>,
+which is undefined in lens shaders and can cause incorrect and
+empty or extremely noisy pictures.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node123.html">&laquo;&nbsp;prev</a></li>
+<li><a href="brdf_sh.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

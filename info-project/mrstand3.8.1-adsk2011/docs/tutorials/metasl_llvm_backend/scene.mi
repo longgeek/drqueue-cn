@@ -1,0 +1,77 @@
+### Minimalistic Cornell box clone for LLVM backend usage example
+
+### Include metasl shaders
+$include "red.msl"
+$include "blue.msl"
+$include "white.msl"
+
+
+camera "cam"
+        output "rgb" "jpg" "out.jpg"
+        focal 50.000000
+        aperture 42.0 
+        aspect 1.0 
+        resolution 400 400 
+end camera
+
+
+options "opt"
+	object space
+	shadow off
+        samples -2 2
+	jitter 1.0
+end options
+
+### Materials
+material "mat_red" 
+	"red" ()
+end material
+
+material "mat_blue" 
+	"blue" ()
+end material
+
+material "mat_white" 
+	"white" ()
+end material
+
+### Object
+object "box" visible shadow trace
+        group _mesh
+                -5.0    -5.0    -25.0
+                -5.0    5.0     -25.0
+                5.0     5.0     -25.0
+                5.0     -5.0    -25.0
+                -5.0    -5.0    -15.0
+                -5.0    5.0     -15.0
+                5.0     5.0     -15.0
+                5.0     -5.0    -15.0
+                v 0
+                v 1
+                v 2
+                v 3
+		v 4
+		v 5
+		v 6
+		v 7
+                p "mat_white"  0 1 2 3   # back wall
+                p "mat_red"    0 1 4 5   # left wall
+		p "mat_blue"   2 3 7 6   # right wall
+		p "mat_white"  0 3 7 4   # floor
+		p "mat_white"  1 2 6 5   # ceiling
+        end group
+end object
+
+
+
+### Instancing and rendering
+instance "cam-i" "cam" end instance
+instance "box-i" "box" end instance
+
+
+instgroup "all"
+	"cam-i"
+	"box-i"
+end instgroup
+
+render "all" "cam-i" "opt"

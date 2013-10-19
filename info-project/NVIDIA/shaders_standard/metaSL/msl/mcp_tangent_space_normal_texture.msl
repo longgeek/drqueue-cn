@@ -1,0 +1,154 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product shader for looking up 2d file textures
+ *****************************************************************************/
+#include <mcp_lib.msl>
+
+shader Mcp_tangent_space_normal_texture{
+    input:
+    texture2D texture
+    {
+        description("The input texture.");
+    };
+      //special bump parameters
+    float factor = 1.0f
+    {
+            description( "Determines the degree of bumpiness." );
+    };
+      //the coordinates, normaly come from Mcp_coordinate_source or Mcp_coordinate_transform 	
+    Mcp_coordinate uvw = Mcp_coordinate(
+                texture_coordinate[0].xyz,
+                ddx(texture_coordinate[0]).xyz,
+                ddy(texture_coordinate[0]).xyz,
+                float3(1.,0.,0.),
+                float3(0.,1.,0.)
+                )
+    {
+        description("Cropping range in U direction.");
+    };
+      //transformations that need affect texture filtering in special ways
+      //those should effectively be handled by the core!
+    Mcp_texture_placement texture_placement = Mcp_texture_placement(
+                 float2(0.0, 1.0),
+                 float2(0.0, 1.0),
+                 true,
+                 true,
+                 false,
+                 false)
+    {
+        description("Description of bitmap fint into coodinate space");
+    };
+    const bool flip_tangent_u = false;
+    const bool flip_tangent_v = false;
+//	bool use_ddu = true;
+//	float rot=0;
+    
+    output:
+        float3 result;
+//		float3 tv;
+//		float3 ttv;
+//		float3 tu;
+//		float3 ttu;
+        
+    void main()
+    {
+        result = normal; // get normal from state
+        bool pixel_flip_u = flip_tangent_u;
+        bool pixel_flip_v = flip_tangent_v;
+        
+        float3 texcoord = uvw.position;
+        // wrap or clamp u
+        if (!texture_placement.wrap_u)
+            texcoord.x = clamp(texcoord.x, 0.0, 1.0);
+        else if( texcoord.x > 0.){
+            if (texture_placement.mirror_u && int(texcoord.x) % 2 == 1)
+            {
+                pixel_flip_u = ! pixel_flip_u;
+                texcoord.x = 1.0 - fmod(texcoord.x, 1.0);
+            }
+            else
+                texcoord.x = fmod(texcoord.x, 1.0);		
+        }
+        else{
+            if (texture_placement.mirror_u && int(texcoord.x) % 2 == 0)
+            {
+                pixel_flip_u = ! pixel_flip_u;
+                texcoord.x = - fmod(texcoord.x, 1.0);
+            }
+            else
+                texcoord.x = 1+fmod(texcoord.x, 1.0);		
+        }
+
+        //clamp v
+        if (!texture_placement.wrap_v)
+            texcoord.y = clamp(texcoord.y, 0.0, 1.0);
+        else if( texcoord.y > 0.){
+            if (texture_placement.mirror_v && int(texcoord.y) % 2 == 1)
+            {
+                pixel_flip_v = ! pixel_flip_v;
+                texcoord.y = 1.0 - fmod(texcoord.y, 1.0);
+            }
+            else
+                texcoord.y = fmod(texcoord.y, 1.0);		
+        }
+        else{
+            if (texture_placement.mirror_v && int(texcoord.y) % 2 == 0)
+            {
+                pixel_flip_v = ! pixel_flip_v;
+                texcoord.y = - fmod(texcoord.y, 1.0);
+            }
+            else
+                texcoord.y = 1+fmod(texcoord.y, 1.0);		
+        }
+        
+        // crop
+        texcoord.x = texture_placement.crop_u.x + (texture_placement.crop_u.y - texture_placement.crop_u.x) * texcoord.x;
+        texcoord.y = texture_placement.crop_v.x + (texture_placement.crop_v.y - texture_placement.crop_v.x) * texcoord.y;
+
+        float3 mydu,mydv;
+        mydu=uvw.du;
+        mydv=uvw.dv;
+            
+//		float angle = atan2(mydu.x,mydu.y) - atan2(texture_du[0].x,texture_du[0].y);
+        float angle = atan2(mydu.x,mydu.y) - atan2(1.,0.);
+//		float angle2 = atan2(mydv.x,mydv.y) - atan2(texture_dv[0].x,texture_dv[0].y);
+//		float angle = 0;
+        //test if handedness is the same for both tangent spaces.
+        //todo
+        //rotate tangent_u/v, create new tangent space
+        float3 transformed_tangent_u = axis_rotate(angle,normal,texture_tangent_u[0]);
+        if(pixel_flip_u)
+            transformed_tangent_u=-transformed_tangent_u;
+        float3 transformed_tangent_v = axis_rotate(angle,normal,texture_tangent_v[0]);
+        if(pixel_flip_v)
+            transformed_tangent_v=-transformed_tangent_v;
+        float3x3 transformed_tangent_space = float3x3(transformed_tangent_u,transformed_tangent_v,	normal);
+                    
+            
+        float3 tangent_space_normal = (tex2d(texture,texcoord.xy).rgb -.5)*2.0;
+//		tangent_space_normal.xy *= factor;
+//		if(use_ddu)
+        {
+            result = normalize(tangent_space_normal*transformed_tangent_space);
+        }
+        result = normalize(normal* (1-factor)+ result*factor );
+/*		else
+        {
+            result = normalize(tangent_space_normal*tangent_space[0]); 
+        }*/
+/*		tu=texture_tangent_u[0];
+        tv=texture_tangent_v[0];
+        ttu=transformed_tangent_u;
+        ttv=transformed_tangent_v;*/
+        // transform the normal from tangent space
+        // into internal space and normalize
+    }
+}
+{
+        display_name( "Normal map texture (MetaSL elemental shader library)" );
+};
+

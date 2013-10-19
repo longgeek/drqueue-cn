@@ -1,0 +1,132 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Phenomenon Roots</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node69.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node71.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION68"></a>
+<h3>Phenomenon Roots</h3>
+<p>The above example also illustrates a new option allowed in
+phenomenon but not shader definitions, the <b><a name="INDEX153"
+id="INDEX153"></a>phenomenon root</b>. There are several types of
+root statements:</p>
+<pre>
+    root <i>shader</i>
+    root material "<i>material_name</i>"
+
+    geometry <i>shader</i>
+    volume <i>shader</i>
+    environment <i>shader</i>
+    lens <i>shader</i>
+    output <i>shader</i>
+    output <dfn>[</dfn>"<i>type</i>"<dfn>]</dfn> "<i>format</i>" <dfn>[</dfn><i>opt</i><dfn>]</dfn> "<i>filename</i>"
+    contour store <i>shader</i>
+    contour contrast <i>shader</i>
+
+    volume priority <i>priority</i><sub>int</sub>
+    lens priority <i>priority</i><sub>int</sub>
+    output priority <i>priority</i><sub>int</sub>
+</pre>
+<p>All of these except one of the first two are optional. The first
+<tt>root</tt> statement specifies the primary root shader of a
+phenomenon that is called when the phenomenon is called. In the
+above example, the <i>mtlsh</i> shader, when called, calls the
+phenomenon <i>phong_phen</i>, which immediately calls its subshader
+<i>sub</i> because <i>sub</i> is specified in its <tt>root</tt>
+statement.</p>
+<p>The <tt>root material</tt> variant creates a
+<b><a id="INDEX154"></a>material phenomenon</b>. This type of
+phenomenon must be declared with the return type <tt>material</tt>.
+It is instanced normally with a <tt>shader</tt> statement, which
+provides the interface parameter values. The resulting shader is
+different from regular shaders; its name can be used everywhere
+where a material name is valid. A regular phenomenon that does not
+have type <tt>material</tt> and no <tt>root material</tt>
+statement, when instanced using a <tt>shader</tt> statement,
+becomes a shader, not a material. Material phenomena should be used
+instead of regular phenomena if the phenomenon depends on not only
+assigning a single shader, such as a material shader, but other
+material components such as shadow shader, photon shader, volume
+shader etc. as well. See page <a href="node79.html#matphen">matphen</a>
+for an example of a material phenomenon.</p>
+<p>In addition to the main <tt>root</tt> statement, other roots may
+be defined that reference shaders of other types:</p>
+<p><tt>geometry</tt></p>
+<p>The <a href="node179.html#INDEX857">geometry shader</a> or
+shader list is evaluated before rendering starts. This allows the
+phenomenon to introduce procedural geometry into the scene. For
+example, a light beam phenomenon might install a transparent cone
+in the scene that bounds the volume effect.</p>
+<p><tt>volume</tt></p>
+<p>The <a href="node117.html#INDEX460">volume shader</a> or shader
+list is added to the camera before rendering starts. This allows
+the phenomenon to specify a global atmosphere that should be
+installed if the phenomenon is defined.</p>
+<p><tt>environment</tt></p>
+<p>The <a href="node119.html#INDEX468">environment shader</a> or
+shader list is added to the camera before rendering starts. This
+allows the phenomenon to specify a global environment shader that
+should be installed if the phenomenon is defined. Environment
+shaders are called when a ray does not intersect any object.</p>
+<p><tt>lens</tt></p>
+<p>This root is doing the same thing for <a href="node124.html#INDEX487">lens
+shader</a>s that should be added to
+the camera before rendering starts.</p>
+<p><tt>output</tt></p>
+<p>The list of <a href="node126.html#INDEX492">output shader</a>s
+and file <a href="node77.html#INDEX227">output statement</a> is
+added to the camera before rendering starts. This allows the
+phenomenon to specify output shaders that should be installed if
+the phenomenon is defined. For example, the phenomenon might write
+a <a href="node38.html#INDEX82">label frame buffer</a> whose values
+are picked up by the output shader after rendering completes.</p>
+<p><tt>contour&nbsp; store</tt></p>
+<p>The <a href="node131.html#INDEX498">contour store shader</a> is
+used for <a href="node92.html#INDEX0">contour</a> rendering.</p>
+<p><tt>contour&nbsp; contrast</tt></p>
+<p>The <a href="node40.html#INDEX85">contour contrast shader</a> is
+used for contour rendering.</p>
+<p>Note that during rendering, only <tt>root</tt> (or <tt>root
+material</tt> in the material phenomenon case) has any significance
+because the others have been removed and added to the camera or the
+scene before rendering started. After rendering and output shading
+completes, all these changes are undone. Note that if the
+phenomenon is defined several times (using multiple <tt>shader</tt>
+statements or anonymous shader definitions that reference it), the
+roots other than the main <tt>root</tt> are added to the scene more
+than once <a href="#FOOTNOTE9">[9]</a>interface or shader parameter
+assignments.</p>
+<p>The <b><a id="INDEX155"></a>shader priority</b>
+statements provide control over the placing of the specified
+shaders or shader lists in the corresponding shader list in the
+camera. Shaders with greater priority numbers are appended to
+shaders with smaller priority numbers, and hence execute later.
+Shaders with no priority number have priority 0, so they get
+executed before shaders with positive priority numbers. The shaders
+defined in the camera always have priority 0.</p>
+<p><a id="FOOTNOTE9">[9]</a> Shaders attached
+directly or indirectly to the <tt>output</tt>, <tt>contour
+store</tt>, and <tt>contour contrast</tt> roots may not use shader
+assignmentinterface or shader parameter assignments.<br /></p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node69.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node71.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

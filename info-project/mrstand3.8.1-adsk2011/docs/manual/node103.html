@@ -1,0 +1,108 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>State Variables</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node102.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node104.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION101"></a>
+<h2>State Variables</h2>
+
+<p id="INDEX394">
+Every shader needs to access information about the current
+state of mental ray, and information about the intersection that led to the
+shader call. This information is stored in a single structure known as the
+<dfn id="sh:shader_state">shader state</dfn>, or simply called
+<dfn id="sh:state">state</dfn>. Not all information in the state is of interest
+or defined for all shaders; for example, lens shaders are called before an
+intersection is done and hence have no information such as the intersection
+point or the normal there.
+<p>
+Before a shader is called, mental ray prepares a new state structure that
+provides global information to the shader. This state may be the same data
+structure that was used in the previous call, which s is the case for shaders
+that modify another shader's result, like lens, shadow, and volume shaders.
+Or it may be a new state structure that is a copy of the calling shader's
+state with some state variables changed. This is done if a secondary ray is
+cast with one of the tracing functions provided by mental ray. For example,
+if a material shader that is using state <var>A</var> casts a reflected ray,
+which hits another object and causes that object's material shader to be
+called with state <var>B</var>, state <var>B</var> will be a copy of state
+<var>A</var> except for the ray and intersection information, which will be
+different in states <var>A</var> and <var>B</var>. The state <var>A</var> is
+said to be the <dfn>parent</dfn> of state <var>B</var>. The state contains a
+<code>parent</code> pointer that allows sub-shader to access the state of the
+parent shader. If a volume shader is called after the material shader, the
+volume shader modifies the color calculated by the material shader, and gets
+the same state as the material shader, instead of a fresh copy.
+<p>
+The state also contains a <code>child</code> pointer that, together with the
+<code>parent</code> pointer, forms a double-linked list of states. After a
+shader casts a ray, the state copy used by that ray remains available after
+the trace call returns. This means, if a trace call returns true, the shader
+has full access to the intersection information, label value, and all other
+state variables used by the child shader. For example, the shader for a
+completely transparent object may decide to copy the <var>label</var> from
+<code>state&rarr;child&rarr;label</code> to <code>state&rarr;label</code>
+after <a href="node140.html#api:mi_trace_transparent">mi_trace_transparent</a>
+has returned. Note, that only the most recent child state is retained; thus
+<code>state&rarr;child&rarr;child</code> is undefined.
+<p id="INDEX395">
+It is possible to pass information from one shader to another in the call
+tree for a primary ray by one of two methods: either the parent (the caller)
+changes its own state that will be inherited by the child, or, the child may
+set variables in the state of the parent by following the <code>parent</code>
+pointer. Care must be taken not to destroy information in the state because
+some shaders (shadow, volume, and the first eye shader) re-use the state from
+any previous call. The state can <em>not</em> be used to pass information from
+one primary (camera) ray to the next. Static variables in the shader may be
+used for this purpose, but can pose problems on multi-processor shared-memory
+machines where the same shader may be executed simultaneously but still share
+the static variables. mental ray provides locking facilities to synchronize
+access to such variables and to protect critical sections supposed to be run
+only once at any time.
+<p>
+The state contains a <b id="INDEX396">user pointer</b> that a parent can
+store the address of a local data structure in, for passing it to sub-shaders.
+Since every sub-shader inherits this pointer, it may access information
+provided by its parent. A typical application of this are inside/outside
+calculations performed by material shaders to find out whether the ray is
+inside a closed object to base the interpretation of parameters such as
+the <a href="node76.html#INDEX201">index of refraction</a> on.
+<p>
+The next sections provide a complete list of state variables usable
+by shaders. Variables not listed here are for internal use only and
+should not be accessed or modified by shaders. Some variables are available
+only in some types of shaders; see the <a href="node111.html#statevartable">
+State Variables by Shader Type</a> page.</p>
+
+<p class="note">The <i>state</i> data structure (type <code>miState</code>),
+and everything else needed to write shaders, is defined in <tt>shader.h</tt>
+header file, which must be included by shader source files. It is recommended
+to actually use the name <code>state</code> for the state parameter that is
+passed as a formal parameter to the function because some macros provided in
+the <tt>shader.h</tt> header file rely on this name, for example the
+<code>mi_eval_*</code> family of functions.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node102.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node104.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

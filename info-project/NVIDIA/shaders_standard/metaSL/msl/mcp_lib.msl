@@ -1,0 +1,727 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ *File contents: mi cross product library functions needed by shaders
+ *****************************************************************************/
+#ifndef MCP_LIB
+#define MCP_LIB
+//#define __DEBUG
+
+enum Scattering_mode {
+    mode_reflect,
+    mode_transmit,
+    mode_reflect_transmit
+};
+
+struct Backscatter {
+    float  roughness;
+    float  anisotropy;
+    float  curve_exponent;
+    float  curve_min;
+};
+
+enum Normalization_mode {
+  normalize_weights,
+  clamp_weights
+};
+
+//bsdf related types and definitions
+enum Blend_mode {
+    weighted_blend,
+    fresnel_blend,
+    curve_blend
+};
+
+struct Blend_curve {
+    float normal_reflectivity;
+    float grazing_reflectivity;
+    float exponent;
+};
+
+struct Bsdf_layer {
+    Spectrum        weight;
+    float3          bump; //needed for fresnel blending
+    Blend_mode      blend_mode;
+    Spectrum        ior;
+
+    float           layer_thickness; // used for thin-film effects, default 0
+
+    // for curve_blend
+    Blend_curve blend_curve;
+};
+
+
+//simple linear congruence generator for random numbers
+//todo 
+
+//struct used to communicate coordinates and necessary derivatives
+struct Mcp_coordinate {
+    float3 position; //the point in space
+
+    //needed for filtering
+    float3 ddx;		//derivative with respect to screen space x
+    float3 ddy;		//derivative with respect to screen space y
+    
+    //todo: try to express the following with ddx to reduce number of communicated variables. 
+    //needed for bump
+    float3 du;		//derivative with respect to tangent_space[0]  u
+    float3 dv;		//derivative with respect to tangent_space[0]  v
+};
+
+//struct containing mirror/wrap/crop type of modifications on textures
+struct Mcp_texture_placement {
+    float2 crop_u;
+    float2 crop_v;
+    bool wrap_u;
+    bool wrap_v;
+    bool mirror_u;
+    bool mirror_v;
+};
+
+//struct used co control greyscale creation from color values
+enum Greyscale_source {
+    ALPHA     = 0,
+    AVERAGE   = 1,
+    LUMINANCE  = 2
+};
+
+//struct used for coordinate system selection
+enum Coordinate_system {
+    UVW_COORDINATES     = 0,
+    WORLD_COORDINATES   = 1,
+    OBJECT_COORDINATES  = 2
+};
+
+//struct used for projection types
+enum Projection_type {
+    PLANAR_PROJECTION     = 0,
+    CUBIC_PROJECTION   = 1,
+    SPHERICAL_PROJECTION   = 2,
+    CYLINDRICAL_PROJECTION   = 3,
+    INFINITCYLINDRICAL_PROJECTION	= 4
+};
+
+//compute arbitrary derivatives with respect to surface parameterisation based on screen space derivatives. (known as Du() Dv() ddu() or ddv())
+void dduv_from_ddxy(out float3 du_a, out float3 dv_a, float3 ddx_a, float3 ddy_a){
+    float k = ddx(texture_coordinate[0].x)*ddy(texture_coordinate[0].y) - ddx(texture_coordinate[0].y)*ddy(texture_coordinate[0].x);
+    du_a=(ddx_a*ddy(texture_coordinate[0].y)-ddy_a*ddx(texture_coordinate[0].y))/k;
+    dv_a=(ddy_a*ddx(texture_coordinate[0].x)-ddx_a*ddy(texture_coordinate[0].x))/k;
+}
+//quaternion_conjugate for unit length quaternions
+float4 quaternion_conjugate(float4 quat)
+{
+    return float4(-quat.x,-quat.y,-quat.z,quat.w);
+}
+//create a quaternion from an angle and an axis
+float4 quaternion_from_axis(float angle, float3 axis){
+    float halve_angle = angle*.5;
+    float sin_angle = sin(halve_angle);
+    return float4( axis.x *sin_angle, 
+            axis.y * sin_angle, 
+            axis.z*sin_angle,
+            cos(halve_angle));
+}
+//quaternion_multiplication
+float4 quaternion_multiply(float4 q1,float4 q2){
+    return float4(q1.w*q2.x + q1.x*q2.w + q1.y*q2.z - q1.z*q2.y,
+            q1.w*q2.y + q1.y*q2.w + q1.z*q2.x - q1.x*q2.z,
+            q1.w*q2.z + q1.z*q2.w + q1.x*q2.y - q1.y*q2.x,
+            q1.w*q2.w - q1.x*q2.x - q1.y*q2.y - q1.z*q2.y);
+}
+//rotate a vector around an other vector
+float3 axis_rotate(float angle,float3 axis,float3 source){
+    float4 q1 = quaternion_from_axis(angle,axis);
+    float4 q2 = quaternion_conjugate(q1);
+    q2 = quaternion_multiply( float4(source,0.), q2);
+    return quaternion_multiply(q1,q2).xyz;
+}
+
+//luminance fuction 
+float mcp_luminance(Color mycolor){
+    return mycolor.r * 0.212671+mycolor.g * 0.715160 + mycolor.b * 0.072169; 
+}
+
+// mcp_fade function needed for implementing noise
+float mcp_fade(float t) { 
+    return t * t * t * (t * (t * 6.0f - 15.0f) + 10.0f); 
+    }
+
+//a simulated cast to uint
+int float2uint_rd(float v)
+{
+    int v2 = floor(v);
+    if(v2 < 0)
+        v2+=16777216; //simulate cast to uint
+    return v2;
+}
+
+
+//mcp_gradient functions needed for noise implementation
+#define TABLE_HEIGHT 261.
+#define PIXEL_WIDTH 1./256.
+#define HALF_PIXEL_WIDTH 1./512.
+#define OFFSET_mcp_permute (0.+.5)/TABLE_HEIGHT
+#define OFFSET_XOR    (5.+.5)/TABLE_HEIGHT
+#define OFFSET_mcp_grad (4.+.5)/TABLE_HEIGHT
+float mcp_grad(int h, float x, float y, float z, float w,texture2D permutation_table)
+{
+    int hash = (h % 32) * 4;
+    Texture2D_sampler_float sampler = Texture2D_sampler_float(permutation_table,0.,"none"); 
+    int g1 = int(sampler.lookup(float2(hash*PIXEL_WIDTH+HALF_PIXEL_WIDTH,1.-OFFSET_mcp_grad))*2.-1.);
+    hash++;
+    int g2 = int(sampler.lookup(float2(hash*PIXEL_WIDTH+HALF_PIXEL_WIDTH,1.-OFFSET_mcp_grad))*2.-1.);
+    hash++;
+    int g3 = int(sampler.lookup(float2(hash*PIXEL_WIDTH+HALF_PIXEL_WIDTH,1.-OFFSET_mcp_grad))*2.-1.);
+    hash++;
+    int g4 = int(sampler.lookup(float2(hash*PIXEL_WIDTH+HALF_PIXEL_WIDTH,1.-OFFSET_mcp_grad))*2.-1.);
+    return x*g1 + y*g2 + z*g3 + w*g4;
+}
+
+//an 8 bit xor function 
+int mcp_xor8(int v1,int v2,texture2D permutation_table) //no bitwise operators yet in MetaSL, simple replacement for the time beeing
+{	//access baked xor table from texture
+    //this is highly vulnerable to texture filtering issues. if result is different on different platforms, check texture filtering/access
+    Texture2D_sampler_color sampler = Texture2D_sampler_color(permutation_table,0.,"none"); 
+    return int(sampler.lookup(float2(v1*PIXEL_WIDTH+HALF_PIXEL_WIDTH,1.-v2/TABLE_HEIGHT -OFFSET_XOR),float2(0),float2(0)).r*255.);
+}
+
+//permutation function
+int mcp_permute(int v,int table,texture2D permutation_table)
+{
+    if( v-(v%256) > 0)
+    {
+        v=v%256;
+        table+=1;
+    }
+    //this is highly vulnerable to texture filtering issues. if result is different on different platforms, check texture filtering/access
+    Texture2D_sampler_color sampler = Texture2D_sampler_color(permutation_table,0.,"none"); 
+    return int(sampler.lookup(float2(v*PIXEL_WIDTH+HALF_PIXEL_WIDTH,1.-table/TABLE_HEIGHT -OFFSET_mcp_permute),float2(0),float2(0)).r*256.);
+}
+
+
+//computes squared distance between 3d points
+float  mcp_sqrlength( float3 a, float3 b) { return ((b.x-a.x) * (b.x-a.x) + (b.y-a.y) * (b.y-a.y) + (b.z-a.z) * (b.z-a.z)); }
+
+//an implementation of the worley noise function
+#define STACK_MAX .9
+float2 mcp_worley_noise(float3 pos, float3 jitter,inout float3 nearest_pos[2],texture2D permutation_table)
+{
+    float3 cell = float3(floor(pos.x),floor(pos.y),floor(pos.z));
+    float2 f1f2 = float2(STACK_MAX,STACK_MAX);
+    jitter *= 1.0/255.0;
+
+    for(float i = -1.0f; i <= 1.0f; i+=1.0f) 
+    {
+        float localcellx = cell.x + i;
+        int X  = float2uint_rd(localcellx);
+        int AX = mcp_permute( X    %256,0,permutation_table);
+        int BX = mcp_permute((X+23)%256,0,permutation_table);
+        for(float j = -1.0f; j <= 1.0f; j+=1.0f) 
+        {
+            float localcelly = cell.y + j;
+            int Y  = float2uint_rd(localcelly);
+            int AY = mcp_permute(( Y    %256),1,permutation_table);
+            int BY = mcp_permute(((Y+23)%256)+256,1,permutation_table);
+            for(float k = -1.0f; k <= 1.0f; k+=1.0f) 
+            {
+                float localcellz = cell.z + k;
+                int Z  = float2uint_rd(localcellz);
+                int AZ = mcp_permute(( Z    %256),2,permutation_table);
+                int BZ = mcp_permute(((Z+23)%256),2,permutation_table);
+                float3 localpos  = float3(localcellx,localcelly,localcellz)
+                    + jitter*float3(float(mcp_xor8(mcp_xor8(AX,AY,permutation_table),BZ,permutation_table)),
+                    float(mcp_xor8(mcp_xor8(BX,AY,permutation_table),AZ,permutation_table)),
+                    float(mcp_xor8(mcp_xor8(AX,BY,permutation_table),AZ,permutation_table)));
+                float dist = mcp_sqrlength(localpos,pos); //!! could also use different metric(s)
+                if(dist < f1f2.x) 
+                {
+                    f1f2.y = f1f2.x; nearest_pos[1] = nearest_pos[0];
+                    f1f2.x = dist;   nearest_pos[0] = localpos;
+                } 
+                else 
+                if(dist < f1f2.y) 
+                {
+                    f1f2.y = dist;   nearest_pos[1] = localpos;
+                }
+            }
+        }
+    }
+
+    return float2(sqrt(f1f2.x),sqrt(f1f2.y));
+}
+
+//
+float mcp_worley_noise_simple(float3 pos, float3 turbulence_weight,texture2D permutation_table)
+{
+    float3 nearest_pos[2];
+
+    float f1 = mcp_worley_noise(pos, float3(1.0f,1.0f,1.0f), nearest_pos, permutation_table).x;
+    return ((turbulence_weight.x != 0.0f) || (turbulence_weight.y != 0.0f) || (turbulence_weight.z != 0.0f))
+         ? sin(pos.x*turbulence_weight.x + pos.y*turbulence_weight.y + pos.z*turbulence_weight.z + f1)
+         : f1;
+}
+
+float mcp_worley_noise_cell(float3 pos,float3 jitter,texture2D permutation_table)
+{
+    float3 nearest_pos[2];
+    mcp_worley_noise(pos,jitter,nearest_pos,permutation_table);    
+    return /*__uint2float_rn*/float(mcp_permute(
+        (mcp_permute(
+            (mcp_permute(
+                /*__float2int_rd*/int(floor(nearest_pos[0].x))%256,0,permutation_table
+                )+/*__float2int_rd*/int(floor(nearest_pos[0].y)))%256,0,permutation_table
+            )+/*__float2int_rd*/int(floor(nearest_pos[0].z)))%256,0,permutation_table
+        ))*(1.0/255.0);
+}
+
+    float mcp_worley_noise_step(float3 pos,  float3 jitter, float t,texture2D permutation_table)
+    {
+        float3 nearest_pos[2];
+        float2 f1f2 = mcp_worley_noise(pos,jitter,nearest_pos,permutation_table);
+        return (f1f2.y-f1f2.x < t) ? 0.0f : 1.0f;
+    }
+
+
+//a 4d perlin like noise 
+float mcp_perlin_noise(float4 pos,texture2D permutation_table)
+{
+    int X = float2uint_rd(pos.x); //uint X= __float2int_rd =  (uint)(int)floor(f)
+    int Y = float2uint_rd(pos.y);
+    int Z = float2uint_rd(pos.z);
+    int W = float2uint_rd(pos.w);
+    
+    pos.x = frac(pos.x); //pos.x -= floorf(pos.x);
+    pos.y = frac(pos.y);
+    pos.z = frac(pos.z);
+    pos.w = frac(pos.w);
+    
+    float u = mcp_fade(pos.x);
+    float v = mcp_fade(pos.y);
+    float w = mcp_fade(pos.z);
+    
+    int AX = mcp_permute(  X   %256,0,permutation_table);
+    int BX = mcp_permute( (X+1)%256,0,permutation_table);
+    int	AY = mcp_permute(( Y   %256),1,permutation_table);
+    int BY = mcp_permute(((Y+1)%256),1,permutation_table);
+    int AZ = mcp_permute(( Z   %256),2,permutation_table);
+    int BZ = mcp_permute(((Z+1)%256),2,permutation_table);
+    int AW = mcp_permute(( W   %256),3,permutation_table);
+    int BW = mcp_permute(((W+1)%256),3,permutation_table);
+    int XAA=mcp_xor8(AX,AY,permutation_table);
+    int XBA=mcp_xor8(BX,AY,permutation_table);
+    int XAB=mcp_xor8(AX,BY,permutation_table);
+    int XBB=mcp_xor8(BX,BY,permutation_table);
+    
+    int XAAA=mcp_xor8(XAA,AZ,permutation_table);
+    int XAAB=mcp_xor8(XAA,BZ,permutation_table);
+    int XBAA=mcp_xor8(XBA,AZ,permutation_table);
+    int XBAB=mcp_xor8(XBA,BZ,permutation_table);
+    int XABA=mcp_xor8(XAB,AZ,permutation_table);
+    int XABB=mcp_xor8(XAB,BZ,permutation_table);
+    int XBBA=mcp_xor8(XBB,AZ,permutation_table);
+    int XBBB=mcp_xor8(XBB,BZ,permutation_table);
+
+    return lerp(
+                 lerp( lerp( lerp( mcp_grad( mcp_xor8(XAAA,AW,permutation_table), pos.x     , pos.y     , pos.z     , pos.w,permutation_table),
+                             mcp_grad(mcp_xor8(XBAA,AW,permutation_table), pos.x-1.0f, pos.y     , pos.z     , pos.w,permutation_table),u),
+                     lerp( mcp_grad(mcp_xor8(XABA,AW,permutation_table), pos.x     , pos.y-1.0f, pos.z     , pos.w,permutation_table),
+                         mcp_grad( mcp_xor8(XBBA,AW,permutation_table), pos.x-1.0f, pos.y-1.0f, pos.z     , pos.w,permutation_table),u),v),
+                 lerp( lerp( mcp_grad(mcp_xor8(XAAB,AW,permutation_table), pos.x     , pos.y     , pos.z-1.0f, pos.w,permutation_table),
+                         mcp_grad(mcp_xor8(XBAB,AW,permutation_table), pos.x-1.0f, pos.y     , pos.z-1.0f, pos.w,permutation_table),u),
+                     lerp( mcp_grad(mcp_xor8(XABB,AW,permutation_table), pos.x     , pos.y-1.0f, pos.z-1.0f, pos.w,permutation_table),
+                         mcp_grad(mcp_xor8(XBBB,AW,permutation_table), pos.x-1.0f, pos.y-1.0f, pos.z-1.0f, pos.w,permutation_table),u),v),w),
+
+                     lerp( lerp( lerp( mcp_grad(mcp_xor8(XAAA,BW,permutation_table), pos.x     , pos.y     , pos.z     , pos.w-1.0f,permutation_table),
+                             mcp_grad(mcp_xor8(XBAA,BW,permutation_table), pos.x-1.0f, pos.y     , pos.z     , pos.w-1.0f,permutation_table),u),
+                     lerp( mcp_grad(mcp_xor8(XABA,BW,permutation_table), pos.x     , pos.y-1.0f, pos.z     , pos.w-1.0f,permutation_table),
+                         mcp_grad(mcp_xor8(XBBA,BW,permutation_table), pos.x-1.0f, pos.y-1.0f, pos.z     , pos.w-1.0f,permutation_table),u),v),
+                 lerp( lerp( mcp_grad(mcp_xor8(XAAB,BW,permutation_table), pos.x     , pos.y     , pos.z-1.0f, pos.w-1.0f,permutation_table),
+                         mcp_grad(mcp_xor8(XBAB,BW,permutation_table), pos.x-1.0f, pos.y     , pos.z-1.0f, pos.w-1.0f,permutation_table),u),
+                     lerp( mcp_grad(mcp_xor8(XABB,BW,permutation_table), pos.x     , pos.y-1.0f, pos.z-1.0f, pos.w-1.0f,permutation_table),
+                         mcp_grad(mcp_xor8(XBBB,BW,permutation_table), pos.x-1.0f, pos.y-1.0f, pos.z-1.0f, pos.w-1.0f,permutation_table),u),v),w),mcp_fade(pos.w)
+                         );
+}
+
+//multi level perlin noise	
+float mcp_summed_perlin_noise(float3 pos, float time, int terms, float4 turbulence_weight, bool abs_noise,texture2D permutation_table) 
+{
+    float sum = 0.0f;
+    float weight = 1.0f;
+    float4 p = float4(pos.x,pos.y,pos.z,time);
+    while(terms-- != 0) {
+        float n = mcp_perlin_noise(p, permutation_table);
+    sum += weight*(abs_noise ? abs(n) : n);
+    p   += p;
+    weight *= 0.5f;
+    }
+
+    return ((turbulence_weight.x != 0.0f) || (turbulence_weight.y != 0.0f) || (turbulence_weight.z != 0.0f) || (turbulence_weight.w != 0.0f))
+         ? sin(pos.x*turbulence_weight.x + pos.y*turbulence_weight.y + pos.z*turbulence_weight.z + time*turbulence_weight.w + sum)
+         : sum;
+}
+//faster perlin noise.
+float3 mi_noise_fade(
+        float3 t                        /* 0-1 interpolation parameter */
+        )
+{
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+float4 mi_noise_fade(
+        float4 t                        /* 0-1 interpolation parameter */
+        )
+{
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+float mi_perm(
+         texture1D perm,   /* The permutation table */
+        float x                         /* The texture coordinate / permutation */
+        )
+{
+    //        x = (x + 0.5/256.0)*(255.0/256.0);
+    return Texture1D_sampler_color(perm,0,"none").lookup(x).x;
+}
+
+float mi_grad(
+         texture1D grad,   /* The gradient table */
+        float x,                        /* The texture coordinate / gradient */
+        float3 p                        /* A vector to dot with the gradient */
+        )
+{
+    //        x = (x + 0.5/16.0)*(15.0/16.0);
+    float3 v = Texture1D_sampler_color(grad,0,"none").lookup(x).xyz;
+    v = v*2.0 - 1.0;
+    /* get rid of epsilon offset - values should be -1, 0, or 1 */
+    v *= floor(abs(v));
+    return dot(v, p);
+}
+
+float mi_grad(
+         texture1D grad,   /* The gradient table */
+        float x,                        /* The texture coordinate / gradient */
+        float4 p                        /* A vector to combine with the gradient */
+        )
+{
+    //        x = (x + 0.5/32.0)*(31.0/32.0);
+    float4 v = Texture1D_sampler_color(grad,0,"none").lookup(x);
+    v = v*2.0 - 1.0;
+    /* get rid of epsilon offset - values should be -1, 0, or 1 */
+    v *= floor(abs(v));
+    return dot(v, p);
+}
+
+float mi_inoise(
+        float3 p,                       /* Noise Position */
+         texture1D perm,   /* The permutation table */
+         texture1D grad    /* The gradient table */
+        )
+{
+    float3 P;
+    P = fmod(floor(p), 256.0);
+
+    p -= floor(p);
+    float3 f = mi_noise_fade(p);
+
+    P = P / 255.0;
+    float one = 1.0 / 255.0;
+
+    float A = mi_perm(perm, P.x) + P.y;
+    float4 AA;
+    AA.x = mi_perm(perm, A) + P.z;
+    AA.y = mi_perm(perm, A + one) + P.z;
+    float B = mi_perm(perm, P.x + one) + P.y;
+    AA.z = mi_perm(perm, B) + P.z;
+    AA.w = mi_perm(perm, B + one) + P.z;
+
+    return lerp(
+                lerp(
+                    lerp(
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.x),
+                                    p),
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.z),
+                                    p + float3(-1.0,0.0,0.0)),
+                            f.x),
+                    lerp(
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.y),
+                                    p + float3(0.0,-1.0,0.0)),
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.w),
+                                    p + float3(-1.0,-1.0,0.0)),
+                            f.x),
+                    f.y),
+                lerp(
+                    lerp(
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.x+one),
+                                    p + float3(0.0,0.0,-1.0)),
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.z+one),
+                                    p + float3(-1.0,0.0,-1.0)),
+                            f.x),
+                    lerp(
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.y+one),
+                                    p + float3(0.0,-1.0,-1.0)),
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.w+one),
+                                    p + float3(-1.0,-1.0,-1.0)),
+                            f.x),
+                    f.y),
+                f.z);
+
+}
+
+
+float mi_inoise(
+        float4 p,                       /* Noise Position */
+         texture1D perm,   /* The permutation table */
+         texture1D grad    /* The gradient table */
+)
+{
+    float4 P = fmod(floor(p), 256.0);
+    p -= floor(p);
+    float4 f = mi_noise_fade(p);
+
+    P = P / 255.0;
+    float one = 1.0 / 255.0;
+
+    //texture1D npt = perm;
+    //texture1D ngt = grad;
+
+    float A  = mi_perm(perm, P.x) + P.y;
+    float AA = mi_perm(perm, A) + P.z;
+    float AB = mi_perm(perm, A + one) + P.z;
+    float B  = mi_perm(perm, P.x + one) + P.y;
+    float BA = mi_perm(perm, B) + P.z;
+    float BB = mi_perm(perm, B + one) + P.z;
+
+    float AAA = mi_perm(perm, AA)+P.w;
+    float AAB = mi_perm(perm, AA+one)+P.w;
+    float ABA = mi_perm(perm, AB)+P.w;
+    float ABB = mi_perm(perm, AB+one)+P.w;
+    float BAA = mi_perm(perm, BA)+P.w;
+    float BAB = mi_perm(perm, BA+one)+P.w;
+    float BBA = mi_perm(perm, BB)+P.w;
+    float BBB = mi_perm(perm, BB+one)+P.w;
+
+    return lerp(
+                lerp(
+                    lerp(
+                            lerp(
+                                    mi_grad(grad,
+                                            mi_perm(perm,AAA),
+                                            p ),
+                                    mi_grad(grad,
+                                            mi_perm(perm,BAA),
+                                            p + float4(-1.0,0.0,0.0,0.0)),
+                                    f.x),
+                            lerp(
+                                    mi_grad(grad,
+                                            mi_perm(perm,ABA),
+                                            p + float4(0.0,-1.0,0.0,0.0)),
+                                    mi_grad(grad,
+                                            mi_perm(perm,BBA),
+                                            p + float4(-1.0,-1.0,0.0,0.0)),
+                                    f.x),
+                            f.y),
+                    lerp(
+                            lerp(
+                                    mi_grad(grad,
+                                            mi_perm(perm,AAB),
+                                            p + float4(0.0,0.0,-1.0,0.0)),
+                                    mi_grad(grad,
+                                            mi_perm(perm,BAB),
+                                            p + float4(-1.0,0.0,-1.0,0.0)),
+                                    f.x),
+                            lerp(
+                                    mi_grad(grad,
+                                            mi_perm(perm,ABB),
+                                            p + float4(0.0,-1.0,-1.0,0.0)),
+                                    mi_grad(grad,
+                                            mi_perm(perm,BBB),
+                                            p + float4(-1.0,-1.0,-1.0,0.0)),
+                                    f.x),
+                            f.y),
+                    f.z),
+                lerp(
+                        lerp(
+                                lerp(
+                                        mi_grad(grad,
+                                                mi_perm(perm,AAA+one),
+                                                p + float4(0.0,0.0,0.0,-1.0)),
+                                        mi_grad(grad,
+                                                mi_perm(perm,BAA+one),
+                                                p + float4(-1.0,0.0,0.0,-1.0)),
+                                        f.x),
+                                lerp(
+                                        mi_grad(grad,
+                                                mi_perm(perm,ABA+one),
+                                                p + float4(0.0,-1.0,0.0,-1.0)),
+                                        mi_grad(grad,
+                                                mi_perm(perm, BBA+one),
+                                                p + float4(-1.0,-1.0,0.0,-1.0)),
+                                        f.x),
+                                f.y),
+                        lerp(
+                                lerp(
+                                        mi_grad(grad,
+                                                mi_perm(perm,AAB+one),
+                                                p + float4(0.0,0.0,-1.0,-1.0)),
+                                        mi_grad(grad,
+                                                mi_perm(perm,BAB+one),
+                                                p + float4(-1.0,0.0,-1.0,-1.0)),
+                                        f.x),
+                                lerp(
+                                        mi_grad(grad,
+                                                mi_perm(perm,ABB+one),
+                                                p + float4(0.0,-1.0,-1.0,-1.0)),
+                                        mi_grad(grad,
+                                                mi_perm(perm,BBB+one),
+                                                p + float4(-1.0,-1.0,-1.0,-1.0)),
+                                        f.x),
+                                f.y),
+                        f.z),
+                f.w);
+}
+/*#define TABLE_SIZE      0x8000		///must be power of 2 
+#define TABLE_SIZE_X    0x100		// must be power of 2
+#define TABLE_SIZE_Y    0x80		//must be power of 2 
+
+float mi_inoise3(
+    Texture2d   noise_random_texture, // table of pre-computed random values 
+    int i)							// location to compute for 
+{
+    float size = TABLE_SIZE;
+
+    float index, i1, i2, i3;
+    
+    i1 = (float3(ix)/size)*float3(1341.0,719.0,2031.0);
+    index = i1.x + i1.y + i1.z;
+    
+    float t1, t2;
+    t1 = floor(index);
+    t2 = index - t1;
+    index = t2*size;
+    
+    float2 uv;
+    uv = float2( floor( fmod( index, float(TABLE_SIZE_X) ) ) / TABLE_SIZE_X,
+                  floor( index / float(TABLE_SIZE_X) ) / TABLE_SIZE_Y );
+
+    // fence post mapping 
+    uv.x = uv.x*float(TABLE_SIZE_X-1)/float(TABLE_SIZE_X) + 0.5/float(TABLE_SIZE_X);
+    uv.y = uv.y*float(TABLE_SIZE_Y-1)/float(TABLE_SIZE_Y) + 0.5/float(TABLE_SIZE_Y);
+
+    return tex2D(noise_random_texture, uv, float2(0,0), float2(0,0)).x;
+}
+
+float mi_noise_grad(
+    Texture2d   noise_random_texture,	// table of pre-computed random values 
+    float3		p,			// location to compute for 
+    out float3	g,			// returned gradient if dograd 
+    )
+{
+    float val;
+    
+    val = 0.5;
+
+    int    i, j, k, ip, loopc, loopcx, loopcy, loopcz;
+    int             d = 3;
+    int3 			ip;
+    float3          pp,fr,f;
+    float           u[9], du[9], fr[3];
+    float           dxyz[27], dyz[9], dz[3];
+    float           fxdyz[9], fxdz[3], fydz[3];
+
+
+
+    if (x < -39999) x = -39998 - x; else x += 40000;
+    if (y < -39999) y = -39998 - y; else y += 40000;
+    if (z < -39999) z = -39998 - z; else z += 40000;
+
+    ip = int(pp = x - .5);
+
+    // fractional parts of the coordinates 
+    fr = pp - ip;
+
+    // build the table of random values 
+    for (i=0; i < 3; ++i, ++iz)
+        for (iy=int(yy), j=0; j < 3; ++j, ++iy)
+            for (ix=int(xx), k=0; k < 3; ++k, ++ix)
+                dxyz[(i*3 + j)*3 + k] = mi_inoise3(noise_random_texture, ip);
+
+    
+    //  compute b-spline blending fns u[][] as functions of input point
+    // coords du[][] = d/dx (u[][]  Everything is a tensor product so we
+    //  have only one "derivative" per dimension
+    
+    for(i=0;i<9;i++)
+        u[i] = 0;
+    for(i=0;i<9;i++)
+        du[i] = 0;
+    
+    for (i=0; i < 3; ++i) {
+            xx = 1.0 - fr[i];
+             u[0 + i] = xx * xx * .5;
+            du[0 + i] = -xx; // remember: partial wrt fr[i], not xx 
+            xx = fr[i] - .5;
+             u[3 + i] = -xx * xx + .75;
+            du[3 + i] = -2 * xx;
+             u[6 + i] = fr[i] * fr[i] * .5;
+            du[6 + i] = fr[i];
+    }
+
+    
+    // compute the value of the spline function at the input point
+    // innermost loop computes the x, next outer the y, outermost the z
+    
+    for (fx=fy=fz=xx=0, i=0; i < 3; ++i) {			//z 
+        for (fxdz[i]=fydz[i]=dz[i]=0, j=0; j < 3; ++j) {	// y 
+        for (fxdyz[i*3+j]=dyz[i*3+j]=0,k=0; k < 3; ++k){	// x 
+            dyz[i*3 + j]   +=  u[k*3 + 0] * dxyz[(i*3 + j)*3 + k]; // f(x) 
+            fxdyz[i*3 +j] += du[k*3 + 0] * dxyz[(i*3 + j)*3 + k]; // x-partial 
+        }
+        
+        if (dimn >= 2) {
+            dz[i]   +=  u[j*3 + 1] *   dyz[i*3 + j];   		// f(x,y) 
+            fxdz[i] +=  u[j*3 + 1] * fxdyz[i*3 + j];		// x-partial 
+            fydz[i] += du[j*3 + 1] *   dyz[i*3 + j];		// y-partial 
+        }
+        }
+        if (dimn >= 3) {
+            xx +=  u[i*3 + 2] *   dz[i];			// f(x,y,z)  
+            fx +=  u[i*3 + 2] * fxdz[i];			// x-partial 
+            fy +=  u[i*3 + 2] * fydz[i];			// y-partial 
+            fz += du[i*3 + 2] *   dz[i];			// z-partial 
+        }
+    }
+    g = f,
+
+    return(pp.x);
+}
+*/
+//multi level perlin noise	
+float simple_summed_perlin_noise(float3 pos, float time, int terms, float4 turbulence_weight, bool abs_noise,texture1D noise_perm_texture,texture1D noise_grad_texture) 
+{
+    float sum = 0.0f;
+    float weight = 1.0f;
+    float4 p = float4(pos.x,pos.y,pos.z,time);
+    while(terms-- != 0) {
+        float n = mi_inoise(p, noise_perm_texture, noise_grad_texture);
+    sum += weight*(abs_noise ? abs(n) : n);
+    p   += p;
+    weight *= 0.5f;
+    }
+
+    return ((turbulence_weight.x != 0.0f) || (turbulence_weight.y != 0.0f) || (turbulence_weight.z != 0.0f) || (turbulence_weight.w != 0.0f))
+         ? sin(pos.x*turbulence_weight.x + pos.y*turbulence_weight.y + pos.z*turbulence_weight.z + time*turbulence_weight.w + sum)
+         : sum;
+}
+
+#endif

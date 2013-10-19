@@ -1,0 +1,959 @@
+#*****************************************************************************
+# Copyright 1986-2008 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+# Germany. All rights reserved.
+#*****************************************************************************
+# Created:	07.03.07
+# Module:	production
+# Purpose:	shaders for production
+#
+# Exports:
+#    Gui attributes
+#
+# History:
+#    07.03.07: Gui attributes for max
+#    07.05.21: Defaults fixes, removed redundant gamma/gain Phenomena
+#    07.06.07: Zap: Added mip_render_subset, fixed gui names
+#    07.10.17: Zap: Added mip_binaryproxy
+#    09.08.11: pfbreton: Initial implementation adsk_Utility_Color_Override
+#
+# Description:
+#
+#****************************************************************************/
+
+# Handle dependency on "production.mi"
+$ifndef "production_mi_included"
+$include "production.mi"
+$endif
+
+# guard against multiple inclusions
+$ifndef "production_max_mi_included"
+set "production_max_mi_included" "true"
+
+min version "3.4.00"
+max version "3.11.99"
+
+#------------------------------------------------------------------------------------------------
+# GUI attributes
+#------------------------------------------------------------------------------------------------
+  
+    gui "gui_mip_fgshooter" {
+		control "Global"  "Global" (
+			"uiName"      "mip_fgshooter",
+			"hidden"
+		)
+	}
+
+	gui "gui_mip_rayswitch_stage" {
+		control "Global"  "Global" (
+			"uiName"      "mip_rayswitch_stage",
+			"hidden"
+		)
+	}
+
+    
+    gui "gui_mip_rayswitch" {
+       control "Global"  "Global" (
+           "uiName"      "mr Raytype Switcher",
+           "hidden"
+       )
+       control "eye" "color" (
+           "uiName" "Eye Rays"
+       )
+       control "transparent" "color" (
+           "uiName" "Transparency Rays"
+       )
+        control "reflection" "color" (
+           "uiName" "Reflected Rays"
+       )
+       control "refraction" "color" (
+           "uiName" "Refracted Rays"
+       )
+       control "finalgather" "color" (
+           "uiName" "Finalgather Rays"
+       )
+       control "environment" "color" (
+           "uiName" "Environment Rays"
+       )
+       control "shadow" "color" (
+           "uiName" "Shadow Rays"
+       )
+       control "photon" "color" (
+           "uiName" "Photon Rays"
+       )
+       control "default" "color" (
+           "uiName" "Default (all other raytypes)"
+       )
+    }
+
+    gui "gui_mip_rayswitch_advanced" {
+       control "Global"  "Global" (
+           "uiName"      "mr Raytype Switcher (advanced)",
+           "hidden"
+       )
+       control "eye" "shader" (
+           "uiName" "Eye Rays"
+       )
+       control "transparent" "shader" (
+           "uiName" "Transparency Rays"
+       )
+        control "reflection" "shader" (
+           "uiName" "Reflected Rays"
+       )
+       control "refraction" "shader" (
+           "uiName" "Refracted Rays"
+       )
+       control "finalgather" "shader" (
+           "uiName" "Finalgather Rays"
+       )
+       control "environment" "shader" (
+           "uiName" "Environment Rays"
+       )
+       control "any_secondary" "shader" (
+           "uiName" "Any Secondary"
+       )
+       control "shadow" "shader" (
+           "uiName" "Shadow Rays"
+       )
+       control "photon" "shader" (
+           "uiName" "Photon Rays"
+       )
+       control "default" "shader" (
+           "uiName" "Catch-all Default"
+       )
+    }
+
+#------------------------------------------------------------------------------------------------
+# gui_mip_rayswitch_environment (mi)
+#
+# included in 3ds max 2009
+# ui name changed to something more meaninful
+# recommended to use with the mirror ball shader and with the camera map shader
+#------------------------------------------------------------------------------------------------
+
+    gui "gui_mip_rayswitch_environment" {
+       control "Global"  "Global" (
+           "uiName"      "Environment/Background Switcher"
+       )
+       control "background" "color" ("uiName" "Background","value"  0 0 0 0 )
+       control "environment" "color" ("uiName" "Environment/Reflections","value"  0 0 0 0 )
+    }
+
+    gui "gui_mip_card_opacity" {
+       control "Global"  "Global" (
+           "uiName"      "mr Card Opacity",
+           "hidden"
+       )
+       control "input" "color" ("uiName" "Input")
+       control "opacity_in_alpha" "boolean" ("uiName" "Opacity in Alpha", "nonConnectable")
+       control "opacity" "scalar" ("uiName" "Opacity", "Value" 1.0, "Range" 0 1.0)
+       control "opacity_is_premultiplied" "boolean" ("uiName" "Opacity is Premultiplied","nonConnectable")
+       control "opacity_threshold" "scalar" ("uiName" "Opacity Threshold","value"  0.1,"nonConnectable")
+    }
+#------------------------------------------------------------------------------------------------
+# gui_mip_motionblur (mi)
+#
+# included in 3ds max 2009
+# ui name changed to something more consistant with 3ds max
+#------------------------------------------------------------------------------------------------
+    gui "gui_mip_motionblur" {
+       control "Global"  "Global" (
+           "uiName"      "HDR Image Motion Blur",
+           "category"    "Output",
+           "outputTypes" "+rgba_fp,+z,+m"
+       )
+       control "shutter" "scalar" (
+            "uiName"  "Shutter Duration (frames)",
+            "value"   0.5,
+            "nonConnectable"
+       )
+       control "shutter_falloff" "scalar" (
+            "uiName"  "Shutter Falloff (Blur Softness)",
+            "value"   2.0,
+            "nonConnectable"
+       )
+       control "calculation_gamma" "scalar" (
+            "uiName"  "Calculation Color Space (Gamma)",  #consider renamming this
+            "value"   2.2,     # If max gamma is used, should be 1.0
+            "nonConnectable"
+       )
+       control "pixel_threshold" "scalar" (
+            "uiName"  "Min. Motion Threshold (pixels)",
+            "value"   1.0,
+            "nonConnectable"
+       )
+       control "background_depth" "scalar" (
+            "uiName"  "Background Distance",
+            "value"   10000.0,
+            "nonConnectable",
+            "units" "world"
+       )
+       control "depth_weighting" "boolean" (
+            "uiName"  "Blur More Objects Near Camera",
+            "value"   off,
+            "nonConnectable"
+       )
+       control "blur_environment" "bool" (
+            "uiName"  "Blur Environment/Background",
+            "value"   1,
+            "nonConnectable"
+       )
+       control "blur_fb" "string" (
+            "uiName"  "Blurred Framebuffer (empty = rgb)",
+            "value"   "",
+            "nonConnectable",
+            "hidden"
+       )
+       control "depth_fb" "string" (
+            "uiName"  "Depth Framebuffer (empty = z)",
+            "value"   "",
+            "nonConnectable",
+            "hidden"
+       )
+       control "motion_fb" "string" (
+            "uiName"  "Motion Framebuffer (empty = m)",
+            "value"    "",
+            "hidden"
+       )              
+       control "use_coverage" "boolean" (
+            "uiName"  "Use Coverage Buffer",
+            "default" off,
+            "nonConnectable",
+            "hidden"
+       )
+    }
+
+#------------------------------------------------------------------------------------------------
+# gui_mip_motion_vector (mi)
+#
+# included in 3ds max 2009
+#------------------------------------------------------------------------------------------------
+    gui "gui_mip_motion_vector" {
+       control "Global"  "Global" (
+           "uiName"      "Motion Vector Export",
+           "category"    "Output",
+           "outputTypes" "+rgba_fp,+z,+m"
+       )
+       control "max_displace" "scalar" (
+            "uiName"  "Max Displace (pixels)",
+            "value"   50.0,
+            "nonConnectable"
+       )
+       control "pixel_threshold" "scalar" (
+            "uiName"  "Min. Motion Threshold (pixels)",
+            "value"   0.0,
+            "nonConnectable",
+            "hidden"
+       )
+       control "blur_environment" "bool" (
+            "uiName"  "Blur Environment/Background",
+            "value"   1,
+            "nonConnectable"
+       )
+       control "floating_point_format" "integer" (
+            "uiName"  "Floating Point Format",
+            "enum",
+            "value"   "0 Off,1 Raw ,2 Autodesk Toxik",
+            "range" 0 2,
+            "nonConnectable"
+       )
+       control "blue_is_magnitude" "bool" (
+            "uiName"  "Blue Channel is Magnitude",
+            "value"   off,
+            "nonConnectable"
+       )
+       control "result_fb" "string" (
+            "uiName"  "Result Framebuffer (empty = rgb)",
+            "value"   "",
+            "nonConnectable",
+            "hidden"
+       )
+       control "depth_fb" "string" (
+            "uiName"  "Depth Framebuffer (empty = z)",
+            "value"   "",
+            "nonConnectable",
+            "hidden"
+       )
+       control "motion_fb" "integer" (
+            "uiName"  "Motion Framebuffer (empty = m)",
+            "value"    "",
+            "nonConnectable",
+            "hidden"
+       )              
+       control "use_coverage" "boolean" (
+            "uiName"  "Use Coverage Buffer",
+            "default" off,
+            "nonConnectable",
+            "hidden"
+       )
+    }
+    
+#------------------------------------------------------------------------------------------------
+# gui_mip_matteshadow (mi)
+# matte shadow mtl is included in 3ds max via a home brewed phenomenon, this one is hidden by design
+#------------------------------------------------------------------------------------------------   
+   
+
+    gui "gui_mip_matteshadow" {
+        control "Global"  "Global" (
+            "uiName"      "mr Matte/Shadow/Reflection",
+            "hidden"
+        )
+        control "background" "color" (
+            "uiName" "Background",
+            "value"   0 0 0 0
+        )
+
+        control "catch_shadows" "boolean" (
+            "uiName" "Catch Shadows",
+            "value"   1
+        )
+
+        control "colored_shadows" "scalar" (
+            "uiName" "Colored Shadows",
+            "value"  1,
+            "range"   0 1
+        )
+
+        control "shadows" "color" (
+            "uiName" "  Shadows",
+            "value"   0 0 0 1
+        )
+        control "ambient" "color" (
+            "uiName" "  Ambient",
+            "value"   0.2 0.2 0.2
+        )
+        control "no_self_shadow" "boolean" (
+            "uiName" "  Do Not Self-shadow",
+            "value"   1
+        )
+        control "use_dot_nl" "boolean" (
+            "uiName" "  Attenuate by Light Angle (dot_nl)",
+            "value"   1
+        )
+
+        control "ao_on" "boolean" (
+            "uiName" "  Use Ambient Occlusion (AO)",
+            "value"   1
+        )
+
+        control "ao_samples" "integer" (
+            "uiName" "    AO: Samples",
+            "value"   16
+        )
+        control "ao_dark" "integer" (
+            "uiName" "    AO: Shadow Strength",
+            "value"   0.0 0.0 0.0
+        )
+        control "ao_distance" "integer" (
+            "uiName" "    AO: Max Distance",
+            "value"   0.0
+        )
+
+        control "catch_reflections" "boolean" (
+            "uiName" "Catch Reflections",
+            "value"   off
+        )
+        control "refl_color" "color" (
+            "uiName" "  Reflection Color",
+            "value"   1 1 1 1
+        )
+        control "refl_subtractive" "color" (
+            "uiName" "  Reflections - Subtractive",
+            "value"   0 0 0 0
+        )
+        control "refl_samples" "integer" (
+            "uiName" "  Samples (0 = mirror)",
+            "value"   0
+        )
+        control "refl_glossiness" "scalar" (
+            "uiName" "  Glossiness",
+            "range"  0.0 1.0,
+            "value"   0
+        )
+        control "refl_max_dist" "scalar" (
+            "uiName" "  Max Distance (0 = infinite)",
+            "value"   0
+        )
+        control "refl_falloff" "scalar" (
+            "uiName" "  Max Distance Falloff",
+            "value"   2.0
+        )
+
+        control "catch_indirect" "boolean" (
+            "uiName" "Catch Indirect Light",
+            "value"   off
+        )
+        control "indirect" "color" (
+            "uiName" "  Indirect Light Multiplier",
+            "value"   1 1 1 1
+        )
+        control "multiple_outputs" "boolean" (
+            "uiName" "Enable Multiple Outputs",
+            "value"   off
+        )
+        control "additional_color" "color" (
+            "uiName" "Additional Color",
+            "value"   0 0 0
+        )
+        control "catch_illuminators" "boolean" (
+            "uiName" "Catch Illuminating Lights",
+            "value"   off
+        )
+        control "illuminators" "array lights" (
+            "uiName" "Illuminating Lights",
+        )
+        control "mode" "integer" (
+            "uiName" "Lights Mode",
+        )
+        control "lights" "array lights" (
+            "uiName" "Lights"
+        )
+    }
+#------------------------------------------------------------------------------------------------
+# gui_mip_cameramap (mi)
+#
+# included in 3ds max 2009
+# ui name changed to 3ds max standards
+# recommended to use with the environment/background switcher
+#------------------------------------------------------------------------------------------------
+    gui "gui_mip_cameramap" {
+        control "Global"  "Global" (
+            "uiName"      "Environment/Background Camera Map"
+        )
+        control "map" "color texture" 									("uiName" "Map")
+        control "per_pixel_match" "boolean" 						("uiName" "Per-pixel Matching","nonConnectable")
+        control "transparent_alpha" "boolean" 					("uiName" "Force Transparent Alpha ", "value" 1,"nonConnectable")
+        control "multiplier" "scalar" 									("uiName" "Multiplier","value" 1.0,"nonConnectable")
+        control "degamma" "scalar" 											("uiName" "Reverse Gamma Correction","value" 1.0,"range" 1.0 5.0,"nonConnectable")
+        control "offscreen_is_environment" "boolean" 		("uiName" "Off-screen Rays return Environment","value" 1,"nonConnectable")
+        control "offscreen_color" "color" 							("uiName" "Off-screen Color (When Above Off)","nonConnectable")
+    }
+
+#------------------------------------------------------------------------------------------------
+# gui_mip_mirrorball (mi)
+#
+# included in 3ds max 2009
+# ui name changed to 3ds max standards
+# recommended to use with the environment/background switcher
+#------------------------------------------------------------------------------------------------
+    gui "gui_mip_mirrorball" {
+        control "Global"  "Global" (
+            "uiName"      "Environment Probe/Chrome Ball"
+        )
+        control "texture" "color texture" ("uiName" "Chrome/Mirror Ball Image")
+        control "multiplier" "scalar" ("uiName" "Multiplier","value" 1.0,"nonConnectable")
+        control "degamma" "scalar" ("uiName" "Reverse Gamma Correction","value" 1.0,"range" 1.0 5.0,"nonConnectable")
+        control "blur" "scalar" ("uiName" "Blur (literal mental ray image files only)","value" 0.0,"nonConnectable")
+    }
+
+#------------------------------------------------------------------------------------------------
+# gui_mip_grayball (mi)
+#
+# included in 3ds max 2009
+# ui name changed to 3ds max standards
+#------------------------------------------------------------------------------------------------
+    gui "gui_mip_grayball" {
+        control "Global"  "Global" (
+            "uiName"      "Environment Probe/Gray Ball"
+        )
+        control "texture" "color texture" ("uiName" "Grey Ball Image")
+        control "multiplier" "scalar" ("uiName" "Multiplier","value" 1.0,"nonConnectable")
+        control "degamma" "scalar" ("uiName" "Reverse Gamma Correction","value" 1.0,"range" 1.0 5.0,"nonConnectable")
+        control "blur" "scalar" ("uiName" "Blur (literal mental ray image files only)","value" 0.0,"nonConnectable")
+    }
+
+#------------------------------------------------------------------------------------------------
+# gui_mip_gamma_gain (mi)
+#
+# included in 3ds max 2009
+# ui name changed to 3ds max standards
+#------------------------------------------------------------------------------------------------
+    gui "gui_mip_gamma_gain" {
+    	control "Global"  "Global" ("uiName" "Gamma & Gain")
+        control "input" "color" ("uiName" "Input")
+        control "gamma" "scalar" ("uiName" "Gamma","value" 2.2, "range" 1.0 5.0,"nonConnectable")
+        control "gain" "scalar" ("uiName" "Gain (multiplier)","value" 1.0,"nonConnectable")
+        control "reverse" "boolean" ("uiName" "Reverse Gamma Correction (De-Gamma)","value" 1,"nonConnectable")
+    }
+
+#------------------------------------------------------------------------------------------------
+# gui_mip_render_subset (mi)
+#
+# included in 3ds max 2009
+# ui name changed to 3ds max standards
+#------------------------------------------------------------------------------------------------
+    gui "gui_mip_render_subset" 
+    {
+        control "Global"  "Global" 								("uiName""Render Subset of Scene/Masking")
+        control "enabled" "boolean" 							("uiName" "Enabled","value"  1,"nonConnectable")
+        control "objects" "array geometry" 				("uiName" "Object List")
+        control "instance_label" "array integer"	("uiName" "GBuffer Object IDs", "hidden")
+        control "material" "material" 						("uiName" "Material",)
+        control "mask_only" "boolean" 						("uiName" "Mask Only","nonConnectable")
+        control "mask_color" "color" 							("uiName" "   Mask Color","value"  1 1 1 1)
+        control "background" "color" 							("uiName" "Color of Background","value"  0 0 0 0)
+        control "other_objects" "color" 					("uiName" "Color of Other Objects","value"  0 0 0 0)
+        control "full_screen_fg" "boolean" 				("uiName" "Calculate FG On All Objects (Entire Image)","value"  1,"nonConnectable")
+    }
+    
+#------------------------------------------------------------------------------------------------
+# gui_mip_matteshadow_mtl (mi)
+# matte shadow mtl is included in 3ds max via a home brewed phenomenon, this one is hidden by design
+#------------------------------------------------------------------------------------------------   
+   
+     gui "gui_mip_matteshadow_mtl" {
+        control "Global"  "Global" (
+            "uiName"      "mr Matte/Shadow/Reflection Mtl",
+            "hidden"
+        )
+        control "background" "color" (
+            "uiName" "Background",
+            "value"   0 0 0 0
+        )
+
+        control "catch_shadows" "boolean" (
+            "uiName" "Catch shadows",
+            "value"   1
+        )
+        control "colored_shadows" "scalar" (
+            "uiName" "  Colored Shadows (0 = grayscale)",
+            "value"   1,
+            "range"   0 1
+        )
+        control "shadows" "color" (
+            "uiName" "  Shadows",
+            "value"   0 0 0 1
+        )
+        control "ambient" "color" (
+            "uiName" "  Ambient",
+            "value"   0.2 0.2 0.2
+        )
+        control "no_self_shadow" "boolean" (
+            "uiName" "  Do Not Self-shadow",
+            "value"   1
+        )
+        control "use_dot_nl" "boolean" (
+            "uiName" "  Attenuate by Light Angle (dot_nl)",
+            "value"   1
+        )
+
+        control "ao_on" "boolean" (
+            "uiName" "  Use Ambient Occlusion (AO)",
+            "value"   1
+        )
+
+        control "ao_samples" "integer" (
+            "uiName" "    AO: Samples",
+            "value"   16
+        )
+        control "ao_dark" "integer" (
+            "uiName" "    AO: Shadow Strength",
+            "value"   0.0 0.0 0.0
+        )
+        control "ao_distance" "integer" (
+            "uiName" "    AO: Max Distance",
+            "value"   0.0
+        )
+
+        control "catch_reflections" "boolean" (
+            "uiName" "Catch Reflections",
+            "value"   off
+        )
+        control "refl_color" "color" (
+            "uiName" "  Reflection Color",
+            "value"   1 1 1 1
+        )
+        control "refl_subtractive" "color" (
+            "uiName" "  Reflections - Subtractive",
+            "value"   0 0 0 0
+        )
+        control "refl_samples" "integer" (
+            "uiName" "  Samples (0 = mirror)",
+            "value"   0
+        )
+        control "refl_glossiness" "scalar" (
+            "uiName" "  Glossiness",
+            "range"  0.0 1.0,
+            "value"   0
+        )
+        control "refl_max_dist" "scalar" (
+            "uiName" "  Max Distance (0 = infinite)",
+            "value"   0
+        )
+        control "refl_falloff" "scalar" (
+            "uiName" "  Max Distance Falloff",
+            "value"   2.0
+        )
+
+        control "catch_indirect" "boolean" (
+            "uiName" "Catch Indirect Light",
+            "value"   off
+        )
+        control "indirect" "color" (
+            "uiName" "  Indirect Light Multiplier",
+            "value"   1 1 1 1
+        )
+        control "multiple_outputs" "boolean" (
+            "uiName" "Enable Multiple Outputs",
+            "value"   off
+        )
+        control "additional_color" "color" (
+            "uiName" "Additional Color",
+            "value"   0 0 0
+        )
+        control "opacity" "scalar" (
+            "uiName" "Opacity",
+            "value"   1,
+            "range" 0 1
+        )
+        control "catch_illuminators" "boolean" (
+            "uiName" "Catch Illuminating Lights",
+            "value"   off
+        )
+        control "illuminators" "array lights" (
+            "uiName" "Illuminating Lights"
+        )
+        control "mode" "integer" (
+            "uiName" "Lights Mode",
+        )
+        control "lights" "array lights" (
+            "uiName" "Shadow Casting Lights"
+        )
+        
+    }
+    
+    # Hidden, used by "mrProxy" objects
+    gui "gui_mip_binaryproxy" {
+        control "Global"  "Global" (
+            "uiName"      "mr Binary Proxy",
+            "hidden"
+        )
+    }
+ 
+    
+#------------------------------------------------------------------------------------------------
+# 3ds Max specific phenomena
+#------------------------------------------------------------------------------------------------
+   
+#------------------------------------------------------------------------------------------------
+# Matte/Shadow/Reflection (adsk)
+#
+# Altered matte/shadow/reflections material phenomenon 
+# With UI matching 3ds max standards and terminology easier to understand
+# This phenomenon provides similar features than the one provided by mental images (mip_matteshadow_mtl)
+# Although it combines the features into logical groups and hide a certain level of complexity
+# Since we could not alter the orininal shader declaration, we made our own phenomenon
+# Written by pfbreton, october 2007
+#------------------------------------------------------------------------------------------------
+declare phenomenon material "adsk_Mtl_MatteShadowReflections" (
+			  #--------------------------------------
+			  # background color handling
+			  #--------------------------------------
+			  struct "struct_surface"
+        {
+        	color   "background"     default 0 0 0 0,
+            scalar   "opacity"       default 1.0, #: min 0 max 1
+            color texture "bump",
+            scalar   "bump_amount"
+        },
+
+			  #--------------------------------------
+        # Shadows
+        #--------------------------------------
+        struct "struct_shadows"
+        {
+        	#------- shadow casting lights
+        	boolean "catch_shadows"   default on,
+        	color   "shadows"         default 0 0 0 1,
+            scalar  "ambient_intensity" default 0.2,
+            color   "ambient"           default 1 1 1,
+        	boolean "no_self_shadow"  default on,
+        	boolean "use_dot_nl"      default on,
+        	scalar  "colored_shadows" default 1.0,    #: min 0 max 1
+            array light "lights"
+        },
+        
+			  #--------------------------------------
+        # Ambient Occlusion
+        #--------------------------------------
+        struct "struct_ao"
+        {
+        	# AO
+        	boolean "ao_on"           default on,
+        	integer "ao_samples"      default 16,     #: min 0 
+        	scalar  "ao_distance"     default 0.0,    #: min 0 
+        	color   "ao_dark"         default 0.0 0.0 0.0
+        },
+        
+        #------------------------------------------------	
+        # Reflections
+        #------------------------------------------------	
+        struct "struct_reflections"
+        {
+        	boolean "catch_reflections" default off,
+        	color   "refl_color"        default 0.2 0.2 0.2 0.2,
+        	color   "refl_subtractive"  default 0 0 0 0,
+        	
+        	scalar  "refl_glossiness"   default 0.5,  #: min 0.01 softmax 1.0
+        	integer "refl_samples"      default 0,    #: min 0
+        	
+        	scalar  "refl_max_dist"     default 0.0,  #: min 0 
+	        scalar  "refl_falloff"      default 2.0  #: min 0.01 softmax 5.0
+				},
+				
+        #--------------------------------------
+        # Indirect Illumination
+        #--------------------------------------
+        struct "struct_indirect_lighting"
+        {
+            boolean "catch_indirect"    default off,
+            scalar   "indirect"				default 1.0,
+            color   "additional_color" default 0 0 0
+        },
+
+        #--------------------------------------
+        # Direct Illumination
+        #--------------------------------------
+        struct "struct_lighting"
+        {
+            #------ illuminating lights
+            boolean "catch_illuminators" default off,
+            array light "illuminators"
+        },
+
+        	integer     "mode"
+    )
+        	
+    shader "intensityshader" "mib_color_mix" (
+        "num"  1,
+        "color_0"  = interface "struct_surface.background",
+        "weight_0" = interface "struct_indirect_lighting.indirect"
+    )
+    
+    shader "ambient_intensity" "mib_color_mix" (
+        "num" 1,
+        "color_0"  = interface "struct_shadows.ambient",
+        "weight_0" = interface "struct_shadows.ambient_intensity"
+		)
+    
+    shader "matteshadow" "mip_matteshadow" (
+        "background"        = interface "struct_surface.background",
+        
+        "catch_shadows"     = interface "struct_shadows.catch_shadows",
+        "shadows"           = interface "struct_shadows.shadows",
+        "colored_shadows"   = interface "struct_shadows.colored_shadows",
+        "ambient"           = "ambient_intensity",
+        "no_self_shadow"    = interface "struct_shadows.no_self_shadow",
+        "use_dot_nl"        = interface "struct_shadows.use_dot_nl",
+        
+        "ao_on"             = interface "struct_ao.ao_on",
+        "ao_dark"           = interface "struct_ao.ao_dark",
+        "ao_samples"        = interface "struct_ao.ao_samples",
+        "ao_distance"       = interface "struct_ao.ao_distance",
+        
+        "catch_reflections" = interface "struct_reflections.catch_reflections",
+        "refl_color"        = interface "struct_reflections.refl_color",
+        "refl_subtractive"  = interface "struct_reflections.refl_subtractive",
+        "refl_samples"      = interface "struct_reflections.refl_samples",
+        "refl_glossiness"   = interface "struct_reflections.refl_glossiness",
+        "refl_max_dist"     = interface "struct_reflections.refl_max_dist",
+        "refl_falloff"      = interface "struct_reflections.refl_falloff",
+        
+        "catch_indirect"    = interface "struct_indirect_lighting.catch_indirect",
+        "indirect"          = "intensityshader",
+        
+        "multiple_outputs"  off,
+
+        "catch_illuminators" = interface "struct_lighting.catch_illuminators",
+        "illuminators"       = interface "struct_lighting.illuminators",
+        "additional_color"   = interface "struct_indirect.additional_color",
+
+        "mode"              = interface "mode",
+        "lights"             = interface "struct_shadows.lights"
+    )
+    
+    shader "bumpshader" "max_Bump" (
+        "Multiplier" = interface "struct_surface.bump_amount",
+        "Map"        = interface "struct_surface.bump"
+    )
+    
+    shader "cardshader" "mip_card_opacity" (
+        "input" = "matteshadow.result",
+        "opacity_in_alpha" false,
+        "opacity" = interface "struct_surface.opacity",
+        "opacity_is_premultiplied" false,
+        "opacity_threshold" 0.1
+    )
+    
+
+    
+    material "material" 
+        = "bumpshader" = "cardshader"
+        shadow = "matteshadow"
+        photon = "matteshadow"
+    end material
+
+    root material "material"   
+
+    gui "gui_adsk_Mtl_MatteShadowReflections" {
+        control "Global"  "Global" (
+            "uiName"      "Matte/Shadow/Reflection"
+        )
+        
+       	control "struct_surface" "struct" ("uiName" "Matte/Shadow/Reflection Parameters")
+    		{ 
+            control "background" "color" ("uiName" "Camera Mapped Background","value"   0 0 0 0)
+        		control "opacity" "scalar" 						("uiName" "Mask/Opacity","range" 0 1, "value"   1)
+            control "bump_amount" "scalar" 						("uiName" "Bump Amount","range" -10 11, "value"   0.3)
+            control "bump" "vector texture" ("uiName" "Bump", "textureInfo" "max_texmap")
+        }
+        control "struct_shadows" "struct" ("uiName" "Shadows")
+    		{ 
+		        control "catch_shadows" "boolean" 		("uiName" "Receive Shadows","value"  1,"nonConnectable","enables" "lights,colored_shadows,ambient,ambient_intensity")
+		        control "lights" "array light" 				("uiName" "  Shadow Casting Lights List","nonConnectable")
+		        control "colored_shadows" "scalar" 		("uiName" "  Colored Shadows (0 = grayscale)","value" 1,"range" 0 1,"hidden" )
+            control "shadows" "color" 						("uiName" "  Shadow Color","value"  0 0 0 1, "hidden")
+            control "ambient" "color" 						("uiName" "  Ambient / Shadow Color","value"  1 1 1 )
+            control "ambient_intensity" "scalar" 						("uiName" "  Ambient / Shadow Intensity (affected by AO)","value"  0.2 )
+		        control "no_self_shadow" "boolean" 		("uiName" "  Do Not Self-shadow","value"  1,"nonConnectable","hidden")
+		        control "use_dot_nl" "boolean" 				("uiName" "  Attenuate by Light Angle (dot_nl)", "value" 1,"nonConnectable","hidden")
+        }
+        control "struct_lighting" "struct" ("uiName" "Direct Illumination")
+        { 
+		        control "catch_illuminators" "boolean"("uiName" "Receive Direct Illumination","value" 0,"nonConnectable")
+		        control "illuminators" "array lights" ("uiName" " Illuminating Lights List")
+				}
+	
+				control "struct_ao" "struct" ("uiName" "Ambient Occlusion")
+    		{ 	
+            control "ao_on" "boolean" 						("uiName" "  Use Ambient Occlusion (AO)","value"  1 ,"nonConnectable", "enables" "ao_samples,ao_distance,ao_dark")
+		        control "ao_samples" "integer" 				("uiName" "    AO Samples", "value" 8, "range" 1 1024 ,"nonConnectable")
+		    
+            control "ao_distance" "integer" 			("uiName" "    AO Max Distance (0 = infinite)","value"   "0.5m" ,"range"  0.0 1000000000000000,"nonConnectable","units" "world")
+		        control "ao_dark" "integer" 					("uiName" "    AO Shadow Strength","value"   0.0 0.0 0.0 )
+		     }   
+				
+				control "struct_indirect_lighting" "struct" ("uiName" "Indirect Illumination")
+    		{ 	
+
+		        control "catch_indirect" "boolean" 		("uiName" "Receive Indirect Illumination","value"   1,"nonConnectable", "enables" "indirect" )
+		        control "indirect" "scalar" 					("uiName" "  Indirect Illumination Multiplier", "value"   1.0,"range" 0.0 1000000000000000 )
+		        control "additional_color" "color" 		("uiName" "Additional Color","value"   0 0 0,"hidden")
+		     }
+	
+
+		      
+		    control "struct_reflections" "struct" ("uiName" "Reflections")
+    		{ 
+		        control "catch_reflections" "boolean" ("uiName" "Receive Reflections", "value"  off,"nonConnectable","enables" "refl_color,refl_subtractive,refl_glossiness,refl_samples,refl_max_dist,refl_falloff" )
+		        control "refl_color" "color" 					("uiName" "  Reflection Color","value"   .5 .5 .5 1 )
+		        control "refl_subtractive" "color" 		("uiName" "  Reflections (Subtractive Color)","value" 1 1 1 1 )
+		        control "refl_glossiness" "scalar" 		("uiName" "  Glossiness", "range"  0.0 1.0, "value"  1.0 )
+		        control "refl_samples" "integer" 			("uiName" "    Glossy Samples (0 = mirror)", "range" 0 1024, "value"   8,"nonConnectable" )
+		        control "refl_max_dist" "scalar" 			("uiName" "  Max Distance (0 = infinite)", "range"  0 1000000000000000, "value"   0,"units" "world","nonConnectable")
+            control "refl_falloff" "scalar" 			("uiName" "    Max Distance Falloff", "range"  0 1000000000000000, "value"   2.0,"nonConnectable")
+				}
+				
+		    #control "multiple_outputs" "boolean" 	("hidden", "uiName" "Enable Multiple Outputs","value"   off )
+        control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+    }
+ end declare
+ 
+#------------------------------------------------------------------------
+# Utility Color Override on mip_rayswitch shader. Useful to override colors of ray taypes such as reducing color bleeding from FG or Photons.
+# More information here: http://www.mentalimages.com/fileadmin/user_upload/PDF/production.pdf
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Utility_Color_Override" 
+  (
+	#-------------------------------------
+	# Main parameters
+	#-------------------------------------
+      struct "m" 
+      {
+				shader "default",
+				shader "eye",
+				shader "transparent",
+				shader "reflection",
+				shader "refraction",
+				shader "shadow"
+      },
+      struct "n" 
+      {
+				shader "finalgather",
+				shader "photon",
+				shader "environment"
+      },
+      integer "mode",
+      array light "lights"
+      	
+   )#end phenomenon
+
+
+#------------------------------------------------------------------------
+# mip_rayswitch
+#------------------------------------------------------------------------
+
+shader "Map_mip_rayswitch_advanced|Texmap|Shader" "mip_rayswitch_advanced" 
+	(
+        "eye"  = interface "m.eye",
+        "transparent"  = interface "m.transparent",
+        "reflection"  =  interface "m.reflection",
+        "refraction"   = interface "m.refraction",
+        "finalgather"  =  interface "n.finalgather",
+        "environment"  =  interface "n.environment",
+        "shadow"  =  interface "m.shadow",
+        "photon"   = interface "n.photon",
+        "default"   = interface "m.default"
+	)#end shader
+
+#------------------------------------------------------------------------
+#  Connections
+#------------------------------------------------------------------------
+root = "Map_mip_rayswitch_advanced|Texmap|Shader"
+apply texture
+
+#------------------------------------------------------------------------
+# UI
+#------------------------------------------------------------------------
+ gui "gui_adsk_Utility_Color_Override" {
+       #-------------------------------------
+       # Main Parameters
+       #-------------------------------------
+       control "Global"  "Global" ("uiName" "Color Override/Ray Type Switcher", "category" "Texture")
+     
+     	
+       control "m" "struct" ("uiName" "Color Override/Ray Type Switcher Parameters")
+		{
+	       control "default" "shader" ("uiName" "Default", "helpText" "Specify Default Ouput. Leave all others empty if you do not wish to override their colors.")
+	       	
+	       control "eye" "shader" ("uiName" "Eye Rays","helpText" "Overrides Views Rays with a specific shader (Primary rays). Leave empty to return the result of the Default shader.")
+	       control "transparent" "shader" ("uiName" "Transparency","helpText" "Overrides Transparency Rays with a specific shader. Note that Transparency Rays are not the same as Refraction rays.Leave empty to return the result of the Default shader.")
+	       control "reflection" "shader" ("uiName" "Reflections","helpText" "Overrides Reflection Rays with a specific shader.Leave empty to return the result of the Default shader.")
+	       control "refraction" "shader" ("uiName" "Refraction","helpText" "Overrides Refraction Rays with a specific shader. Note that Refraction is not the same as Transparency.Leave empty to return the result of the Default shader.")
+	       control "shadow" "shader" ("uiName" "Shadows","helpText" "Overrides Shadow Rays with a specific shader.Leave empty to return the result of the Default shader.")       
+       } #end control
+       
+       #-------------------------------------
+       # Environment and Indirect Illumination
+       #-------------------------------------
+       control "n" "struct" ("uiName" "Environment & Indirect Illumination Override")
+			 {
+	       control "finalgather" "shader" ("uiName" "Final Gather","helpText" "Overrides Final Gather Rays as well as child rays to Final Gather rays. Useful to limit color bleeding from light bounces.Leave empty to return the result of the Default shader.")
+	       control "photon" "shader" ("uiName" "Photons","helpText" "Overrides Photon Rays as well as child rays to Photon Rays. Useful to limit color bleeding from light bounces.Leave empty to return the result of the Default shader.")
+	       control "environment" "shader" ("uiName" "Environment","helpText" "Overrides Environment Rays with a specific shader.Leave empty to return the result of the Default shader.")
+	       
+	       	
+       }#end control
+       	
+       #----------------------------------
+       control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+       control "lights" "array light" ("hidden","nonConnectable")
+       control "mode" "integer" ("hidden","nonConnectable")
+       	
+}#end gui
+
+
+end declare #end declare phenomenon
+
+
+$endif #if not "production_max_mi_included"

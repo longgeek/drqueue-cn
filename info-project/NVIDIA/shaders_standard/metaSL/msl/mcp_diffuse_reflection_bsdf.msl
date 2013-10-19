@@ -1,0 +1,214 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product BSDF for a diffuse reflection
+ *****************************************************************************/
+//for some reason the bsdf works faster in view if i do not implement get_attributes and get_components
+#define IMPLEMENT_PDF_SAMPLE
+#define IMPLEMENT_GET_ATTRIBUTES_COMPONENTS
+
+// Map a uniform [0, 1]^2 sample (u1,u2) to a cosine-weighted hemisphere sample.
+float3 cosine_hemisphere_sample( float u1, float u2) {
+    if((u1 == 0.0) && (u2 == 0.0))
+        return float3(0.0);
+
+    // Map (u1, u2) to [-1, 1]^2 (while remapping (0,0)).
+    u1 += u1;
+    u2 += u2;
+    if (u1 >= 1.0)
+        u1 -= 2.0;
+    if (u2 >= 1.0)
+        u2 -= 2.0;
+
+    // Map [-1, 1]^2 to hemisphere.
+    bool flip = ((u1 > -u2) != (u1 < u2));
+    float r = flip ?  u1 : u2;
+
+    float y = 1.0 - r*r;
+    if( y <= 0.0)
+        return float3(0.0, 1.0, 0.0); // prevent vectors on plane
+
+    float s = flip ? -u2 : u1;
+
+    float phi = PI/4.0 * s/r + (flip ? PI*1.5 : PI);
+
+    // Compute the y component by "lifting" the point onto the unit hemisphere.
+    float3 dir( r * sin(phi), sqrt(y), r * cos(phi));
+    return dir;
+}
+
+//Oren Nayar diffuse reflection bsdf
+bsdf Mcp_diffuse_reflection_bsdf {
+input:
+    float    roughness = 0.f; // shininess as aux shader with conversion to roughness
+    float3   bump = normal;
+
+member:
+    varying Mcp_diffuse_reflection_bsdf()
+    {
+        void(roughness);
+        normal = bump;
+    }
+
+    //the worst case of active attributes for this bsdf, independent of what actual input parameters are.
+    Bsdf_attributes get_attributes()
+    {
+        return Bsdf_attributes{geometry_dependent};
+    }
+    //the list of all possible bsdf components computed by this bsdf
+    Bsdf_components get_components()
+    {
+        return Bsdf_components{reflect_diffuse};
+    }
+    //the list of active attributes, given the actual input parameters. 
+    //For this bsdf it equals the worst case described by get_attributes(), so we do not need to implement this
+    Bsdf_attributes get_active_attributes() 
+    {
+        return get_attributes();
+    }
+    Bsdf_components get_active_components() 
+    {
+        return get_components();
+    }
+
+    //the concrete set of components computed based on the current inputs.
+    //no need to implement since in this case it equals get_components()
+    //Bsdf_components get_active_components(){
+
+    //evaluate the bsdf for given directions.
+    Spectrum eval(
+            float3              fixed_direction,
+            float3              sampled_direction,
+            Bsdf_components     allowed_components,
+            bool                transport_source)
+    {
+        // Check if fixed_direction and sampled_direction cross the geometric plane
+        // to avoid light leaks.
+        allowed_components = bsdf_check_type(
+                geometry_normal,fixed_direction,sampled_direction,allowed_components);
+
+        if (Bsdf_components{reflect_diffuse} in allowed_components) {
+            // When tracing from light, apply adjoint correction
+            // term which compensates for the fact that particle
+            // density is proportional to projected area with
+            // respect to the non-interpolated normal.
+            if (transport_source == light) {
+                return Spectrum(abs(dot(fixed_direction,bump)
+                                 / (dot(fixed_direction,geometry_normal) * PI)));
+            }
+            else {
+                return Spectrum(1. / PI);
+            }
+            //    const float fnk2 = fmaxf(sample_dir.dot(ShadingNormal),0.0f);
+            //  ref *= eval_oren_nayar(data.m_fnk1, fnk2, dir, sample_dir, ShadingNormal, data.m_on);
+
+        }
+        else
+            return Spectrum(0.);
+    }
+
+#ifdef IMPLEMENT_PDF_SAMPLE
+    float pdf(
+            in float3           fixed_direction,
+            in float3           sampled_direction,
+            in Bsdf_components  allowed_components,
+            in bool             transport_source)
+    {
+        void(transport_source);
+        allowed_components = bsdf_check_type(
+                geometry_normal, fixed_direction, sampled_direction, allowed_components);
+        return (Bsdf_components{reflect_diffuse} in allowed_components) ? 1.0 / PI : 0.0;
+    }
+
+    Bsdf_components sample(
+            in float3           fixed_direction,
+            out float3          sampled_direction,
+            inout Bsdf_sample   primary_sample,
+            out Spectrum        sample_weight,
+            inout float         sample_probability,
+            in Bsdf_components  allowed_components,
+            in bool             transport_source)
+    {
+        if (Bsdf_components{reflect_diffuse} in allowed_components)
+        {
+
+            // sample direction
+            sampled_direction = cosine_hemisphere_sample( float(primary_sample.polar),
+                    float(primary_sample.azimuthal));
+            float d_Ng = dot(fixed_direction,geometry_normal);
+
+            // transform to internal space
+            if (transport_source == eye) {
+                sampled_direction = transform_from_local(
+                        sampled_direction,
+                        bump,
+                        texture_tangent_u[0],
+                        texture_tangent_v[0]);
+                // Check if direction is on the correct side of the surface.
+                if (dot(sampled_direction,geometry_normal) * d_Ng < 0.0)
+                    sampled_direction = -sampled_direction;
+
+                // sample_weight is f/p, i.e., the BSDF's value
+                // for (fixed_direction,sampled_direction) divided by the
+                // probability of sampling the direction
+                sample_weight = Spectrum(1.);
+            }
+            else {
+                sampled_direction = transform_from_local(
+                        sampled_direction,
+                        geometry_normal,
+                        geometry_tangent_u[0],
+                        geometry_tangent_v[0]);
+                // Transformed direction cannot
+                // be below geometry plane, no need
+                // to check.
+                sample_weight = Spectrum(abs(dot(fixed_direction,bump)
+                                           / d_Ng));
+                if (d_Ng < 0.0)  // reverse?
+                    sampled_direction = -sampled_direction;
+            }
+            if (sample_probability != 0.0)
+                sample_probability = 1.0 / PI;
+
+            return Bsdf_components{reflect_diffuse};
+        }
+        else
+            return bsdf_invalid_sample(sampled_direction, sample_weight);
+
+    }
+#endif
+
+    float eval_oren_nayar(
+            in float            nk1,            // dot normal to eye
+            in float            nk2,            // dot normal to light
+            in float3           k1,             // to eye
+            in float3           k2,             // to light
+            in float3           normal,
+            in float2           AB)
+    {
+        /*
+        // project vectors down to plane
+        const vec_t kp1 = (k1 - normal * nk1).normalize();
+        const vec_t kp2 = (k2 - normal * nk2).normalize();
+
+        // compute cosine of angle between them on plane
+        const float max_cos = fmaxf(0.0f, kp1.dot(kp2));
+
+        // compute sin(alpha) * tan(beta), alpha = max(theta1, theta2), beta = min(theta1, theta2), optimized version for theta in [0,pi/2]
+        const float sin_theta1_sin_theta2 = sqrtf((1.0f - nk1 * nk1) * (1.0f - nk1 * nk2));
+        const float sin_alpha_tan_beta = sin_theta1_sin_theta2 / fmaxf(nk1, nk2);
+        return AB.x + AB.y * max_cos * sin_alpha_tan_beta;
+         */
+        // opt:
+        float3 kp1 = k1 - normal * nk1;
+        float3 kp2 = k2 - normal * nk2;
+        return AB.x + AB.y * max(0.0f,
+                dot(kp1,kp2) * sqrt((1.0f - nk1 * nk1)*(1.0f - nk1 * nk2) / ((kp1.x*kp1.x + kp1.y*kp1.y + kp1.z*kp1.z)*(kp2.x*kp2.x + kp2.y*kp2.y + kp2.z*kp2.z))) / max(nk1, nk2)
+        );
+    }
+
+
+};

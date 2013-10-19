@@ -1,0 +1,116 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// declaration for shader mia_roundcorners, created Tue Feb 10 14:02:10 2009
+
+shader hlsl_mia_roundcorners {
+    // Version 3
+
+output:
+    float3 result;
+    float3 normal_result;
+
+input:
+    float       radius;    
+    // TODO: Material comparision not supported yet
+    bool        allow_different_materials;
+    Shader      bump;
+    int         bump_mode;
+    float3      bump_vector;
+
+    void main() 
+    {
+        float3 basevector[3] = {
+            float3( 0, 1, 0 ),
+            float3( 0, 0, 1 ),
+            float3( 1, 0, 0 )
+        }; 
+        // Remember original normal
+        float3 org_n   = normal;
+        float3 org_pnt = position;
+
+        // We work with this one
+        float3 worknormal = normal;
+
+        if (bump_mode == 0) // Mode 0 perturbs the normal 
+        {
+            bump.call("output", "normal_result", worknormal);
+            result        = float3(0,0,0);
+            normal_result = worknormal;
+            return;
+        }
+
+        // Okay, now it's time to calculate what we should return!        
+        result = worknormal;
+
+        // If we get here, bump_mode > 0, and we need to care about any bump vector
+        // given to us from the outside world...
+        apply_bumpvector(bump_mode, result, bump_vector);
+
+        if (bump_mode <= 4) // "Add" mode; construct the difference vector 
+        {
+            result -= org_n;
+        }
+
+        switch (bump_mode)
+        {
+            case 1: // Add vector, internal space 
+            case 5: // Set vector, internal space 
+                break;
+            case 2: // Add vector, world space 
+            case 6: // Set vector, world space 
+                result = transform_vector("internal", "world", result);
+                break;
+            case 3: // Add vector, object space 
+            case 7: // Set vector, object space 
+                result = transform_vector("internal", "object", result);
+                break;
+            case 4: // Add vector, camera space 
+            case 8: // Set vector, camera space 
+                result = transform_vector("internal", "camera", result);
+                break;
+        } // switch (bump_mode)
+    } // main
+    
+    void apply_bumpvector(in int mode, inout float3 norm, in float3 perturb)
+    {
+        bool add = false;
+
+        if (perturb.x == 0.0f &&
+            perturb.y == 0.0f &&
+            perturb.z == 0.0f)
+                return;
+        switch (mode)
+        {
+            case 1: // Add vector, internal space 
+            case 5: // Set vector, internal space 
+                break;
+            case 2: // Add vector, world space 
+            case 6: // Set vector, world space 
+                perturb = transform_vector("world", "internal", perturb);
+                break;
+            case 3: // Add vector, object space 
+            case 7: // Set vector, object space 
+                perturb = transform_vector("object", "internal", perturb);
+                break;
+            case 4: // Add vector, camera space 
+            case 8: // Set vector, camera space 
+                perturb = transform_vector("camera", "internal", perturb);
+                break;
+        }
+        // Mode less than 4 is "add", others are "set" 
+        if (mode <= 4)
+        {
+            norm += perturb;
+        }
+        else // Set 
+        {
+            norm = perturb;
+        }
+
+        // renormalize the normal 
+        norm = normalize(norm);
+    } // apply_bumpvector
+}; // end shader mia_roundcorners

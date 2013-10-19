@@ -1,0 +1,112 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Surfaces: Curve Segment List</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node212.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node214.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION211"></a>
+<h3>Surfaces: Curve Segment List</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_CURVE</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miCurve</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>int no_curves</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>as described below</td>
+</tr>
+</table>
+<pre>
+enum miCurve_type {
+        miCURVE_TRIM,
+        miCURVE_HOLE,
+        miCURVE_SPECIAL,
+        miCURVE_SPACE
+};
+
+typedef struct miCurve {
+        miApprox          approx;       /* approx techn. for surface */
+        miBoolean         new_loop;     /* F=concat to prev, T=begin new */
+        miUshort          ctl_dim;      /* control point dimension 2 or 3 */
+        miUshort          degree;       /* from basis, for ease in GAP */
+        miGeoRange        range;        /* min/max for curve params. */
+        miGeoIndex        no_parms;     /* number of curve parameters */
+        miGeoIndex        no_ctls;      /* number of control points */
+        miGeoIndex        no_specpnts;  /* number of special points */
+        miGeoIndex        scalar_idx;   /* index into curve_scalar list */
+        miGeoIndex        specpnt_idx;  /* index into special points list */
+        miGeoIndex        basis_idx;    /* index into basis list */
+        enum miCurve_type type;
+        int               pad;          /* not used */
+} miCurve;
+</pre>
+<p>A translator must provide: <tt>type</tt>, <tt>approx</tt>,
+<tt>new_loop</tt>, <tt>ctl_dim</tt>, <tt>degree</tt>,
+<tt>range</tt>, <tt>no_parms</tt>, <tt>no_ctls</tt>,
+<tt>scalar_idx</tt>, <tt>basis_idx</tt>.<br />
+<br />
+A translator may provide: <tt>no_specpnts</tt>,
+<tt>specpnt_idx</tt>.<br />
+<br /></p>
+<p><b>type</b> specifies what the curve is used for. It must be one
+of <tt>miCURVE_TRIM</tt>, <tt>miCURVE_HOLE</tt>,
+<tt>miCURVE_SPECIAL</tt> or <tt>miCURVE_SPACE</tt>. The default is
+<tt>miCURVE_TRIM</tt>.</p>
+<p><b>approx</b> is the approximation technique as described above,
+in the <tt>miFace</tt> description.</p>
+<p><b>new_loop</b> is <tt>miTRUE</tt> for every new loop. Loops can
+be pieced together from multiple consecutive curves. The default is
+<tt>miTRUE</tt>.</p>
+<p><b>ctl_dim</b> is the control point dimension; 2 for UV curves
+or 3 for space curves. The default is 2.</p>
+<p><b>degree</b> is the degree of the curve. The default is 3.</p>
+<p><b>range</b> is the range over which the curve is evaluated. The
+value depends on the parameter list. The defaults are 0.0 and
+1.0.</p>
+<p><b>no_parms</b> is the length of the parameter vectors.</p>
+<p><b>no_ctls</b> is the number of control points for this curve.
+The number of scalars required in the curve scalar list is
+<var>no_ctls &middot; ctl_dim</var>.</p>
+<p><b>no_specpoints</b> is the number of special points to be
+included in the approximation.</p>
+<p><b>scalar_idx</b> is the index of the first scalar in the curve
+scalar list (also anchored in the object, see above). The scalar
+list for one curve consists of the parameter vector, followed by
+the control points (all X first, then all Y, then all Z, if
+present).</p>
+<p><b>specpnt_idx</b> is the index of the first special point in
+the special points list (anchored in the object) to use.</p>
+<p><b>basis_idx</b> is the index of the basis in the basis list
+(anchored in the object) to use.</p>
+<p><b>type</b> describes what the curve is used for: trimming,
+hole, special, or space curve.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node212.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node214.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

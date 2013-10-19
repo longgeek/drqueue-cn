@@ -1,0 +1,347 @@
+#*****************************************************************************
+# Copyright 1986, 2013 NVIDIA Corporation. All rights reserved.
+#*****************************************************************************
+# Created:	15.09.2010
+# Module:	userdata
+# Purpose:	.mi declarations for userdata shaders
+#
+# Exports:
+#            user data declarations:
+#
+# mib_data_bool
+# mib_data_int
+# mib_data_scalar
+# mib_data_vector
+# mib_data_color
+# mib_data_string
+# mib_data_texture
+# mib_data_shader
+# mib_data_bool_array
+# mib_data_int_array
+# mib_data_scalar_array
+# mib_data_vector_array
+# mib_data_color_array
+# mib_data_string_array
+# mib_data_texture_array
+# mib_data_shader_array
+#
+#            user data access shaders:
+#
+# mib_data_get_bool
+# mib_data_get_int
+# mib_data_get_scalar
+# mib_data_get_vector
+# mib_data_get_color
+# mib_data_get_string
+# mib_data_get_texture
+# mib_data_get_shader
+# mib_data_get_shader_bool
+# mib_data_get_shader_int
+# mib_data_get_shader_scalar
+# mib_data_get_shader_vector
+# mib_data_get_shader_color
+#
+# Declare user data and shaders for storing and accessing per-object values.
+#****************************************************************************/
+
+# guard against multiple inclusions
+$ifndef "userdata_mi_included"
+set "userdata_mi_included" "true"
+
+min version "3.7.53"
+max version "3.11.99"
+
+
+#-------------------------------------------- user data blocks
+
+
+declare data
+    "mib_data_bool"
+    (
+	string  "name",		#: shortname "nam"
+        boolean "value"		#: shortname "val"
+    )
+end declare
+
+declare data
+    "mib_data_int"
+    (
+	string  "name",		#: shortname "nam"
+        integer "value"		#: shortname "val"
+    )
+end declare
+
+declare data
+    "mib_data_scalar"
+    (
+	string  "name",		#: shortname "nam"
+        scalar  "value"		#: shortname "val"
+    )
+end declare
+
+declare data
+    "mib_data_vector"
+    (
+	string  "name",		#: shortname "nam"
+        vector  "value"		#: shortname "val"
+    )
+end declare
+
+declare data
+    "mib_data_color"
+    (
+	string  "name",		#: shortname "nam"
+        color   "value"		#: shortname "val"
+    )
+end declare
+
+declare data
+    "mib_data_string"
+    (
+	string  "name",		#: shortname "nam"
+        string  "value"		#: shortname "val"
+    )
+end declare
+
+declare data
+    "mib_data_texture"
+    (
+	string  "name",		#: shortname "nam"
+        color texture  "value"	#: shortname "val"
+    )
+end declare
+
+declare data
+    "mib_data_shader"
+    (
+	string  "name",		#: shortname "nam"
+        shader  "value"		#: shortname "val"
+    )
+end declare
+
+
+#-------------------------------------------- array user data blocks
+
+
+# These data blocks should have arrays of name/value pairs
+# but that confuses Maya's 'Add New Item' functionality
+
+declare data
+    "mib_data_bool_array"
+    (
+	array string  "names",  #: shortname "nams"
+        array boolean "values"	#: shortname "vals"
+    )
+end declare
+
+declare data
+    "mib_data_int_array"
+    (
+	array string  "names",	#: shortname "nams"
+        array integer "values"	#: shortname "vals"
+    )
+end declare
+
+declare data
+    "mib_data_scalar_array"
+    (
+	array string  "names",	#: shortname "nams"
+        array scalar  "values"	#: shortname "vals"
+    )
+end declare
+
+declare data
+    "mib_data_vector_array"
+    (
+	array string  "names",		#: shortname "nams"
+        array vector  "values"		#: shortname "vals"
+    )
+end declare
+
+declare data
+    "mib_data_color_array"
+    (
+	array string  "names",		#: shortname "nams"
+        array color   "values"		#: shortname "vals"
+    )
+end declare
+
+declare data
+    "mib_data_string_array"
+    (
+	array string  "names",		#: shortname "nams"
+        array string  "values"		#: shortname "vals"
+    )
+end declare
+
+declare data
+    "mib_data_texture_array"
+    (
+	array string  "names",		#: shortname "nams"
+        array color texture  "values" #: shortname "vals"
+    )
+end declare
+
+declare data
+    "mib_data_shader_array"
+    (
+	array string  "names",		#: shortname "nams"
+        array shader  "values"		#: shortname "vals"
+    )
+end declare
+
+
+#-------------------------------------------- user data shaders
+
+
+# Search state->instance for a user data block of a matching 
+# type.  If it exists and is of the appropriate type, search the
+# data block for the label that matches the <"name" parameter>.
+# If it exists, return the data block's corresponding "value"
+# element. Otherwise, return the "default" parameter.
+
+declare shader
+	boolean     #: shortname "result"
+    "mib_data_get_bool"
+    (
+        string  "name",			#: shortname "nam"
+        boolean "default" default false	#: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+declare shader
+    integer     #: shortname "result"
+    "mib_data_get_int"
+    (
+        string  "name",                 #: shortname "nam"
+        integer "default" default 0     #: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+declare shader
+    scalar      #: shortname "result"
+    "mib_data_get_scalar"
+    (
+        string  "name",                 #: shortname "nam"
+        scalar  "default" default 0.0   #: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+declare shader
+    vector      #: shortname "result"
+    "mib_data_get_vector"
+    (
+        string  "name",				#: shortname "nam"
+        vector  "default" default 0.0 0.0 0.0	#: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+declare shader
+    color       #: shortname "result"
+    "mib_data_get_color"
+    (
+        string  "name",					#: shortname "nam"
+        color   "default" default 0.0 0.0 0.0 0.0	#: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+declare shader
+    string      #: shortname "result"
+    "mib_data_get_string"
+    (
+        string  "name",			#: shortname "nam"
+        string  "default"		#: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+declare shader
+    color texture      #: shortname "result"
+    "mib_data_get_texture"
+    (
+        string  "name",			#: shortname "nam"
+        color texture  "default"	#: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+declare shader
+    shader      #: shortname "result"
+    "mib_data_get_shader"
+    (
+        string  "name",			#: shortname "nam"
+        shader  "default"		#: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+declare shader
+    boolean      #: shortname "result"
+    "mib_data_get_shader_bool"
+    (
+        string  "name",			#: shortname "nam"
+        shader  "default"		#: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+declare shader
+    integer      #: shortname "result"
+    "mib_data_get_shader_int"
+    (
+        string  "name",			#: shortname "nam"
+        shader  "default"		#: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+declare shader
+    scalar      #: shortname "result"
+    "mib_data_get_shader_scalar"
+    (
+        string  "name",			#: shortname "nam"
+        shader  "default"		#: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+declare shader
+    vector      #: shortname "result"
+    "mib_data_get_shader_vector"
+    (
+        string  "name",			#: shortname "nam"
+        shader  "default" 		#: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+declare shader
+    color      #: shortname "result"
+    "mib_data_get_shader_color"
+    (
+        string  "name",			#: shortname "nam"
+        shader  "default"		#: shortname "def"
+    )
+    version 1
+    apply texture
+end declare
+
+$endif  # "userdata_mi_included"
+

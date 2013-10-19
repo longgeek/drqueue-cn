@@ -1,0 +1,130 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+shader mip_cameramap {
+ input:
+    Texture2d map = "default.dds"{
+    };
+    float multiplier = 1.0{
+    };
+    float degamma = 1.0{
+    };
+    bool per_pixel_match = false{
+    };
+    bool transparent_alpha = false{
+    };
+    bool offscreen_is_environment = true{
+    };
+    Color offscreen_color = Color(0, 0, 0, 0){
+    };
+    
+ output:
+  Color result;
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+
+    float2 local_raster = float2(0.0, 0.0);
+    float3 temp_raster = float3(0.0, 0.0, 0.0);
+
+    bool is_primary = false;
+
+    // TODO: "true" statement here is in workaround to the raster coordinate space bug
+    //       this should obviously be removed later!!!
+    if(true || ray_type == "eye")
+    {
+        local_raster = raster;
+        is_primary = true;
+    }
+    else
+    {
+        if(ray_shader == "environment")
+        {
+            /* If this is an environment call, then project
+               state->dir to 'infinity' and see what pixel 
+               coord this gives us */
+            temp_raster = position + direction*1e+5;
+            temp_raster = transform_point("internal", "raster", temp_raster);
+            
+        }
+        else /* Back-convert the shade point */
+        {
+            temp_raster = transform_point("internal", "raster", position);
+        }
+        
+        local_raster = temp_raster.xy;
+    }
+
+    if(local_raster.x >= 0.0 && local_raster.y >= 0 &&
+       local_raster.x < image_x_resolution && 
+       local_raster.y < image_y_resolution)
+    {
+        float local_gamma = degamma;
+        float local_mult = multiplier;
+        float2 tex = float2(0.0, 0.0);
+        /* Do pixel-level lookup for primary ray */
+        if(is_primary && per_pixel_match)
+        {
+            float x = floor(local_raster.x);
+            float y = -floor(local_raster.y + 0.5);
+            
+            //convert to texture coordinates
+            tex = float2(x/image_x_resolution, y/image_y_resolution);
+        }
+        else
+        {
+            /* Plain old texture lookup */
+            tex = float2(local_raster.x/image_x_resolution, 
+                         - local_raster.y/image_y_resolution);
+        }
+
+        /*
+            TODO
+            Set state->raster to the "right" ones so even if 'map' points
+           to a shader, and that shader looks up by pixel, it'll do the
+           right thing. */
+	tex.y = 1 - tex.y;   
+        result = tex2D(map, tex);
+
+
+        if (local_gamma == 1.0f || local_gamma <= 0.0f)
+        {
+            result.rgb *= local_mult;
+        }
+        else
+        {
+            result.rgb = pow(result.rgb, local_gamma)*local_mult;
+        }
+
+        if(transparent_alpha)
+            result.a = 0.0f;
+        return;
+    }
+
+    /* We missed - use environment */
+
+    if(offscreen_is_environment)
+    {
+        Ray ray = Ray(position, direction);
+        Ray ray_dx, ray_dy;
+        Trace_options trace_options;
+        trace_options.set_ray_type("environment");
+        trace(ray, ray_dx, ray_dy, trace_options, "result", result);
+        return;
+    }
+
+    result = offscreen_color;
+    
+
+  } // main
+}
+{ 
+	// shader_type( "environment", "texture" ); 
+	description( "Projects an image as if it was projected "
+                 "from the current rendering camera." );
+}
+;

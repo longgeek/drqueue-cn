@@ -1,0 +1,834 @@
+# ==========================================================================
+# Copyright 2008 Autodesk, Inc. All rights reserved.
+#
+# Use of this software is subject to the terms of the Autodesk
+# license agreement provided at the time of installation or download,
+# or which otherwise accompanies this software in either electronic
+# or hard copy form.
+# ==========================================================================
+
+# guard against multiple inclusion
+$ifndef "autodesk_adskshadersdkwrappers_included"
+set "autodesk_adskshadersdkwrappers_included" "true"
+
+min version "3.7.0"
+max version "3.8.99"
+
+$include "mayabase.mi"
+$include "AdskShaderSDK.mi"
+$include "MayaShaders.mi"
+# depends on these libraries
+link "architectural.so"
+link "paint.so"
+link "subsurface.so"
+$include "architectural.mi"
+$include "paint.mi"
+$include "subsurface.mi"
+
+#
+# The "Architectural" monolithic material, extended version (with
+# structure output and new/updated parameters). This is the double
+# extended phenomenon version with render pass support.
+#
+declare phenomenon
+    struct {
+        color  "result",
+        color  "outGlowColor",
+        color  "outMatteOpacity",
+        color  "outTransparency",
+
+        color  "diffuse_result",
+        color  "diffuse_raw",
+        color  "diffuse_level",
+        
+        color  "spec_result",
+        color  "spec_raw",
+        color  "spec_level",
+
+        color  "refl_result",
+        color  "refl_raw",
+        color  "refl_level",
+        
+        color  "refr_result",
+        color  "refr_raw",
+        color  "refr_level",
+        
+        color  "tran_result",
+        color  "tran_raw",
+        color  "tran_level",
+        
+        color  "indirect_result",
+        color  "indirect_raw",
+        color  "indirect_post_ao",
+        color  "ao_raw",
+        
+        color  "add_result",
+        
+        color  "opacity_result",
+        color  "opacity_raw",
+        scalar "opacity"
+    }
+    "mia_material_x_passes" (
+        # Maya render pass flags
+
+        integer "miFrameBufferWriteOperation" default 1, # add
+        integer "miFrameBufferWriteFlags" default 0, # no flags
+        scalar  "miFrameBufferWriteFactor" default 1.0,
+
+        # Primary flags
+
+        scalar  "diffuse_weight"      default 1.0, #: min 0.0 max 1.0
+        color   "diffuse"             default 0.5 0.5 0.5,
+        scalar  "diffuse_roughness"   default 0.0, #: min 0.0 max 1.0
+
+        scalar  "reflectivity"        default 0.6, #: min 0.0 max 1.0
+        color   "refl_color"          default 1.0 1.0 1.0,
+        scalar  "refl_gloss"          default 1.0, #: min 0.0 max 1.0 softmin 0.15
+        integer "refl_gloss_samples"  default 8,   #: min 0 softmax 128
+        boolean "refl_interpolate"    default off,
+        boolean "refl_hl_only"        default off,
+        boolean "refl_is_metal"       default off,
+
+        scalar  "transparency"        default 0.0, #: min 0.0 max 1.0
+        color   "refr_color"          default 1.0 1.0 1.0,
+        scalar  "refr_gloss"          default 1.0, #: min 0.0 max 1.0
+        scalar  "refr_ior"            default 1.4, #: min 0.1 softmax 2.0
+        integer "refr_gloss_samples"  default 8,   #: min 0 softmax 128
+        boolean "refr_interpolate"    default off,
+        boolean "refr_translucency"   default off,
+        color   "refr_trans_color"    default 0.7 0.6 0.5,
+        scalar  "refr_trans_weight"   default 0.5, #: min 0.0 max 1.0
+
+        scalar  "anisotropy"          default 1.0, #: min 0.1 softmax 10
+        scalar  "anisotropy_rotation" default 0.0, #: softmin 0 softmax 1
+        integer "anisotropy_channel"  default -1,  #: min -4  softmax 64
+
+        boolean "brdf_fresnel"         default off,
+        scalar  "brdf_0_degree_refl"   default 0.2, #: min 0.0 max 1.0
+        scalar  "brdf_90_degree_refl"  default 1.0, #: min 0.0 max 1.0
+        scalar  "brdf_curve"           default 5.0, #: min 0.1 softmax 20
+        boolean "brdf_conserve_energy" default on,
+
+        # Interpolation settings
+        
+        integer "intr_grid_density"   default 2,    #: min 0 max 5 enum "2 (double):1 (same as rendering):1/2 (half resolution):1/3 (third resolution):1/4 (quarter resolution):1/5 (fifth resolution)"
+        integer "intr_refl_samples"   default 2,    #: min 0 softmax 5
+        boolean "intr_refl_ddist_on"  default off,
+        scalar  "intr_refl_ddist"     default 0.0,
+        integer "intr_refr_samples"   default 2,    #: min 0 softmax 5
+        boolean "single_env_sample"   default off,
+
+        # Reflection/Refraction optimizations & falloffs
+
+        boolean  "refl_falloff_on"       default off,
+        scalar   "refl_falloff_dist"     default 0.0,
+        boolean  "refl_falloff_color_on" default off,
+        color    "refl_falloff_color"    default 0 0 0,
+        integer  "refl_depth"            default 5,    #: min 0 softmax 10
+        scalar   "refl_cutoff"           default 0.01, #: min 0.0 max 1.0
+
+        boolean  "refr_falloff_on"       default off,
+        scalar   "refr_falloff_dist"     default 0.0,
+        boolean  "refr_falloff_color_on" default off,
+        color    "refr_falloff_color"    default 0 0 0,
+        integer  "refr_depth"            default 5,    #: min 0 softmax 10
+        scalar   "refr_cutoff"           default 0.01, #: min 0.0 max 1.0
+
+        # Factors
+
+        scalar   "indirect_multiplier"   default 1.0,  #: min 0 softmax 1.0
+        scalar   "fg_quality"            default 1.0,  #: min 0 softmax 10.0
+        scalar   "fg_quality_w"          default 1.0,  #: min 0 softmax 1.0
+
+        # Built in AO
+        
+        boolean  "ao_on"          default off,
+        integer  "ao_samples"     default 16,          #: min 0 softmax 128
+        scalar   "ao_distance"    default 10.0,
+        color    "ao_dark"        default 0.2 0.2 0.2,
+        color    "ao_ambient"     default 0.0 0.0 0.0,
+        integer  "ao_do_details"  default 1,           #: min 0 max 2 enum "Off:On:With color bleed"
+
+        # Options
+
+        boolean  "thin_walled"            default off,
+        boolean  "no_visible_area_hl"     default on,
+        boolean  "skip_inside_refl"       default on,
+        boolean  "do_refractive_caustics" default off,
+        boolean  "backface_cull"          default off,
+        boolean  "propagate_alpha"        default off,    
+
+        # Other effects
+        
+        scalar   "hl_vs_refl_balance"     default 1.0,   #: min 0.0 softmax 1.0
+        scalar   "cutout_opacity"         default 1.0,   #: min 0.0 max 1.0
+        color    "additional_color"       default 0 0 0 0,
+        shader   "bump",
+        boolean  "no_diffuse_bump"        default off,
+
+        integer     "mode"                default 4,    #: property "lightmode"
+        array light "lights",                #: property "lightlink"
+ 
+        # Additional bump handling
+        integer     "bump_mode"              default 5, 
+        vector      "overall_bump",
+        vector      "standard_bump",
+
+        # Input/output flags
+        boolean     "multiple_outputs"      default on,
+        boolean     "output_2009_passes"    default off
+    )
+
+    shader "mia" "mia_material_x" (
+        "diffuse_weight" = interface "diffuse_weight",
+        "diffuse" = interface "diffuse",
+        "diffuse_roughness" = interface "diffuse_roughness",
+
+        "reflectivity" = interface "reflectivity",
+        "refl_color" = interface "refl_color",
+        "refl_gloss" = interface "refl_gloss",
+        "refl_gloss_samples" = interface "refl_gloss_samples",
+        "refl_interpolate" = interface "refl_interpolate",
+        "refl_hl_only" = interface "refl_hl_only",
+        "refl_is_metal" = interface "refl_is_metal",
+
+        "transparency" = interface "transparency",
+        "refr_color" = interface "refr_color",
+        "refr_gloss" = interface "refr_gloss",
+        "refr_ior" = interface "refr_ior",
+        "refr_gloss_samples" = interface "refr_gloss_samples",
+        "refr_interpolate" = interface "refr_interpolate",
+        "refr_translucency" = interface "refr_translucency",
+        "refr_trans_color" = interface "refr_trans_color",
+        "refr_trans_weight" = interface "refr_trans_weight",
+
+        "anisotropy" = interface "anisotropy",
+        "anisotropy_rotation" = interface "anisotropy_rotation",
+        "anisotropy_channel" = interface "anisotropy_channel",
+
+        "brdf_fresnel" = interface "brdf_fresnel",
+        "brdf_0_degree_refl" = interface "brdf_0_degree_refl",
+        "brdf_90_degree_refl" = interface "brdf_90_degree_refl",
+        "brdf_curve" = interface "brdf_curve",
+        "brdf_conserve_energy" = interface "brdf_conserve_energy",
+
+        # Interpolation settings
+        
+        "intr_grid_density" = interface "intr_grid_density",
+        "intr_refl_samples" = interface "intr_refl_samples",
+        "intr_refl_ddist_on" = interface "intr_refl_ddist_on",
+        "intr_refl_ddist" = interface "intr_refl_ddist",
+        "intr_refr_samples" = interface "intr_refr_samples",
+        "single_env_sample" = interface "single_env_sample",
+
+        # Reflection/Refraction optimizations & falloffs
+
+        "refl_falloff_on" = interface "refl_falloff_on",
+        "refl_falloff_dist" = interface "refl_falloff_dist",
+        "refl_falloff_color_on" = interface "refl_falloff_color_on",
+        "refl_falloff_color" = interface "refl_falloff_color",
+        "refl_depth" = interface "refl_depth",
+        "refl_cutoff" = interface "refl_cutoff",
+
+        "refr_falloff_on" = interface "refr_falloff_on",
+        "refr_falloff_dist" = interface "refr_falloff_dist",
+        "refr_falloff_color_on" = interface "refr_falloff_color_on",
+        "refr_falloff_color" = interface "refr_falloff_color",
+        "refr_depth" = interface "refr_depth",
+        "refr_cutoff" = interface "refr_cutoff",
+
+        # Factors
+
+        "indirect_multiplier" = interface "indirect_multiplier",
+        "fg_quality" = interface "fg_quality",
+        "fg_quality_w" = interface "fg_quality_w",
+
+        # Built in AO
+        
+        "ao_on" = interface "ao_on",
+        "ao_samples" = interface "ao_samples",
+        "ao_distance" = interface "ao_distance",
+        "ao_dark" = interface "ao_dark",
+        "ao_ambient" = interface "ao_ambient",
+        "ao_do_details" = interface "ao_do_details",
+
+        # Options
+
+        "thin_walled" = interface "thin_walled",
+        "no_visible_area_hl" = interface "no_visible_area_hl",
+        "skip_inside_refl" = interface "skip_inside_refl",
+        "do_refractive_caustics" = interface "do_refractive_caustics",
+        "backface_cull" = interface "backface_cull",
+        "propagate_alpha" = interface "propagate_alpha",
+
+        # Other effects
+        
+        "hl_vs_refl_balance" = interface "hl_vs_refl_balance",
+        "cutout_opacity" = interface "cutout_opacity",
+        "additional_color" = interface "additional_color",
+        "bump" = interface "bump",
+        "no_diffuse_bump" = interface "no_diffuse_bump",
+
+        "mode" = interface "mode",
+        "lights" = interface "lights",
+ 
+        # Additional bump handling
+        "bump_mode" = interface "bump_mode",
+        "overall_bump" = interface "overall_bump",
+        "standard_bump" = interface "standard_bump",
+
+        # Input/output flags
+        "multiple_outputs" = interface "multiple_outputs"
+    )
+    
+    shader "adapter" "adskMayaMiaMaterialXAdapter" (
+        "FrameBufferWriteOperation" = interface "miFrameBufferWriteOperation",
+        "FrameBufferWriteFlags" = interface "miFrameBufferWriteFlags",
+        "FrameBufferWriteFactor" = interface "miFrameBufferWriteFactor",
+
+        "mia_material_x_shader" "mia",
+        
+        "Output2009Passes" = interface "output_2009_passes"
+    )
+    
+    root = "adapter"
+    apply material, photon, shadow    
+    version 2
+    #: nodeid 1091695
+end declare
+
+
+#
+# car paint shader (no reflections/clearcoat layer!)
+# "extended" version w. multiple outputs. Extended again
+# to support Maya render passes
+#
+declare phenomenon
+    struct {
+        color  "result",
+        color  "outGlowColor",
+        color  "outMatteOpacity",
+        color  "outTransparency",
+
+        color  "ambient_result",
+        color  "ambient_raw",
+        color  "ambient_level",
+        
+        color  "diffuse_result",
+        color  "diffuse_raw",
+        color  "diffuse_level",
+
+        color  "indirect_result",
+        color  "indirect_raw",
+        color  "indirect_level",
+
+        color  "spec1_result",
+        color  "spec1_raw",
+        color  "spec1_level",
+
+        color  "spec2_result",
+        color  "spec2_raw",
+        color  "spec2_level",
+
+        color  "flake_result",
+        color  "flake_raw",
+        color  "flake_level",
+
+        color  "flake_refl_result",
+        color  "flake_refl_raw",
+        color  "flake_refl_level",
+        
+        vector "flake_normal"
+    }
+    "mi_metallic_paint_x_passes" (
+        # Maya render pass flags
+
+        integer "miFrameBufferWriteOperation" default 1, # add
+        integer "miFrameBufferWriteFlags" default 0, # no flags
+        scalar  "miFrameBufferWriteFactor" default 1.0,
+
+        # Paint parameters
+
+        color       "ambient"           default 0 0 0 1,
+        color       "base_color"        default 0.8 0.1 0.0 1,
+        color       "edge_color"        default 0.0 0.0 0.0,
+        scalar      "edge_color_bias"   default 1.0,
+        color       "lit_color"         default 0.6 0.0 0.2,
+        scalar      "lit_color_bias"    default 8.0,
+
+        scalar      "diffuse_weight"    default 1.0,
+        scalar      "diffuse_bias"      default 1.5,
+        scalar      "irradiance_weight" default 1.0,
+
+        color       "spec"              default 1 1 1 1,
+        scalar      "spec_weight"       default 0.2,
+        scalar      "spec_exp"          default 60.0,
+        color       "spec_sec"          default 1 1 1 1,
+        scalar      "spec_sec_weight"   default 0.3,
+        scalar      "spec_sec_exp"      default 25.0,
+        boolean     "spec_glazing"      default on,
+
+        color       "flake_color"       default 1.0 1.0 1.0 1,
+        scalar      "flake_weight"      default 1.0,
+        scalar      "flake_reflect"     default 0.0,
+        scalar      "flake_exp"         default 45.0,
+        scalar      "flake_decay"       default 0.0,
+        shader      "flake_bump",
+
+        scalar      "global_weight"     default 1.0,
+
+        integer     "mode"              default 4,
+        array light "lights"
+    )
+
+    shader "metalPaint" "mi_metallic_paint_x" (
+        "ambient" = interface "ambient",
+        "base_color" = interface "base_color",
+        "edge_color" = interface "edge_color",
+        "edge_color_bias" = interface "edge_color_bias",
+        "lit_color" = interface "lit_color",
+        "lit_color_bias" = interface "lit_color_bias",
+
+        "diffuse_weight" = interface "diffuse_weight",
+        "diffuse_bias" = interface "diffuse_bias",
+        "irradiance_weight" = interface "irradiance_weight",
+
+        "spec" = interface "spec",
+        "spec_weight" = interface "spec_weight",
+        "spec_exp" = interface "spec_exp",
+        "spec_sec" = interface "spec_sec",
+        "spec_sec_weight" = interface "spec_sec_weight",
+        "spec_sec_exp" = interface "spec_sec_exp",
+        "spec_glazing" = interface "spec_glazing",
+
+        "flake_color" = interface "flake_color",
+        "flake_weight" = interface "flake_weight",
+        "flake_reflect" = interface "flake_reflect",
+        "flake_exp" = interface "flake_exp",
+        "flake_decay" = interface "flake_decay",
+        "flake_bump" = interface "flake_bump",
+
+        "global_weight" = interface "global_weight",
+
+        "mode" = interface "mode",
+        "lights" = interface "lights"
+    )
+
+    # Sum specular outputs to create one single specular
+    # This is how it's done internally in the actual shader
+    shader "colToVec1" "maya_color_to_vector" (
+        "color" = "metalPaint.spec1_result"
+    )
+
+    shader "colToVec2" "maya_color_to_vector" (
+        "color" = "metalPaint.spec2_result"
+    )
+
+    shader "colToVec3" "maya_color_to_vector" (
+        "color" = "metalPaint.flake_result"
+    )
+
+    shader "sumSpecular" "maya_plusminusavg" (
+        "operation" 1,
+        "input1D" [
+            = "colToVec1.a",
+            = "colToVec2.a",
+            = "colToVec3.a"
+            ],
+        "input3D" [
+            = "colToVec1.vector",
+            = "colToVec2.vector",
+            = "colToVec3.vector"
+            ]
+    )
+
+    shader "vecToCol" "maya_vector_to_color" (
+        "vector" = "sumSpecular.output3D",
+        "a" = "sumSpecular.output1D"
+    )
+
+    shader "adapter" "adskMayaMiMetallicPaintXAdapter" (
+        "FrameBufferWriteOperation" = interface "miFrameBufferWriteOperation",
+        "FrameBufferWriteFlags" = interface "miFrameBufferWriteFlags",
+        "FrameBufferWriteFactor" = interface "miFrameBufferWriteFactor",
+
+        "beauty" = "metalPaint.result",
+        "ambientMaterialColor" = "metalPaint.ambient_raw",
+        "diffuse" = "metalPaint.diffuse_result",
+        "directIrradiance" = "metalPaint.diffuse_raw",
+        "indirect" = "metalPaint.indirect_result",
+        "specular" = "vecToCol",
+        "reflection" = "metalPaint.flake_refl_result",
+
+        "ambient_result" = "metalPaint.ambient_result",
+        "ambient_raw" = "metalPaint.ambient_raw",
+        "ambient_level" = "metalPaint.ambient_level",
+        "diffuse_result" = "metalPaint.diffuse_result",
+        "diffuse_raw" = "metalPaint.diffuse_raw",
+        "diffuse_level" = "metalPaint.diffuse_level",
+        "indirect_result" = "metalPaint.indirect_result",
+        "indirect_raw" = "metalPaint.indirect_raw",
+        "indirect_level" = "metalPaint.indirect_level",
+        "spec1_result" = "metalPaint.spec1_result",
+        "spec1_raw" = "metalPaint.spec1_raw",
+        "spec1_level" = "metalPaint.spec1_level",
+        "spec2_result" = "metalPaint.spec2_result",
+        "spec2_raw" = "metalPaint.spec2_raw",
+        "spec2_level" = "metalPaint.spec2_level",
+        "flake_result" = "metalPaint.flake_result",
+        "flake_raw" = "metalPaint.flake_raw",
+        "flake_level" = "metalPaint.flake_level",
+        "flake_refl_result" = "metalPaint.flake_refl_result",
+        "flake_refl_raw" = "metalPaint.flake_refl_raw",
+        "flake_refl_level" = "metalPaint.flake_refl_level",
+        "flake_normal" = "metalPaint.flake_normal"
+    )
+
+    root = "adapter"
+    version 1
+    apply material
+    #: nodeid 1091696
+end declare 
+
+
+#
+# car paint phenomenon "extended" version w. multiple outputs.
+# Extended again to support Maya render passes
+#
+declare phenomenon
+    struct {
+        color  "result",
+        color  "outGlowColor",
+        color  "outMatteOpacity",
+        color  "outTransparency",
+
+        color  "ambient_result",
+        color  "ambient_raw",
+        color  "ambient_level",
+        
+        color  "diffuse_result",
+        color  "diffuse_raw",
+        color  "diffuse_level",
+
+        color  "indirect_result",
+        color  "indirect_raw",
+        color  "indirect_level",
+
+        color  "spec1_result",
+        color  "spec1_raw",
+        color  "spec1_level",
+
+        color  "spec2_result",
+        color  "spec2_raw",
+        color  "spec2_level",
+
+        color  "flake_result",
+        color  "flake_raw",
+        color  "flake_level",
+
+        color  "flake_refl_result",
+        color  "flake_refl_raw",
+        color  "flake_refl_level",
+        
+        vector "flake_normal",
+
+        color  "reflection_result",
+        color  "reflection_raw",
+        color  "reflection_level",
+
+        color  "dirt_result",
+        color  "dirt_raw",
+        color  "dirt_level"
+    }
+    "mi_car_paint_phen_x_passes" (
+        # Maya render pass flags
+
+        integer "miFrameBufferWriteOperation" default 1, # add
+        integer "miFrameBufferWriteFlags" default 0, # no flags
+        scalar  "miFrameBufferWriteFactor" default 1.0,
+
+        # Car paint parameters
+
+        color       "ambient"           default 0 0 0 1,
+        color       "base_color"        default 0.8 0.1 0.0 1,
+        color       "edge_color"        default 0.0 0.0 0.0,
+        scalar      "edge_color_bias"   default 1.0,
+        color       "lit_color"         default 0.6 0.0 0.2,
+        scalar      "lit_color_bias"    default 8.0,
+        scalar      "diffuse_weight"    default 1.0,
+        scalar      "diffuse_bias"      default 1.5,
+
+        color       "spec"              default 1 1 1 1,
+        scalar      "spec_weight"       default 0.2,
+        scalar      "spec_exp"          default 60.0,
+        color       "spec_sec"          default 1 1 1 1,
+        scalar      "spec_sec_weight"   default 0.3,
+        scalar      "spec_sec_exp"      default 25.0,
+        boolean     "spec_glazing"      default on,
+
+        color       "flake_color"       default 1.0 1.0 1.0 1,
+        scalar      "flake_weight"      default 1.0,
+        scalar      "flake_reflect"     default 0.0,
+        scalar      "flake_exp"         default 45.0,
+        scalar      "flake_density"     default 0.5,
+        scalar      "flake_decay"       default 0.0,
+        scalar      "flake_strength"    default 0.8,
+        scalar      "flake_scale"       default 0.12,
+
+        color       "reflection_color"       default 1 1 1,
+        scalar      "edge_factor"            default 7.0,    
+        scalar      "reflection_edge_weight" default 1.0,
+        scalar      "reflection_base_weight" default 0.2,
+        integer     "samples"                default 0,
+        scalar      "glossy_spread"          default 0.0,
+        scalar      "max_distance"           default 0.0,
+        boolean     "single_env_sample"      default off,
+
+        color       "dirt_color"        default .3 .3 .3,
+        scalar      "dirt_weight"       default 0.0,
+
+        scalar      "irradiance_weight" default 1.0,
+        scalar      "global_weight"     default 1.0,
+
+        integer     "mode"              default 4,
+        array light "lights"
+    )
+
+    shader "carPaint" "mi_car_paint_phen_x" (
+        "ambient" = interface "ambient",
+        "base_color" = interface "base_color",
+        "edge_color" = interface "edge_color",
+        "edge_color_bias" = interface "edge_color_bias",
+        "lit_color" = interface "lit_color",
+        "lit_color_bias" = interface "lit_color_bias",
+        "diffuse_weight" = interface "diffuse_weight",
+        "diffuse_bias" = interface "diffuse_bias",
+
+        "flake_color" = interface "flake_color",
+        "flake_weight" = interface "flake_weight",
+        "flake_reflect" = interface "flake_reflect",
+        "flake_exp" = interface "flake_exp",
+        "flake_density" = interface "flake_density",
+        "flake_decay" = interface "flake_decay",
+        "flake_strength" = interface "flake_strength",
+        "flake_scale" = interface "flake_scale",
+
+        "spec" = interface "spec",
+        "spec_weight" = interface "spec_weight",
+        "spec_exp" = interface "spec_exp",
+        "spec_sec" = interface "spec_sec",
+        "spec_sec_weight" = interface "spec_sec_weight",
+        "spec_sec_exp" = interface "spec_sec_exp",
+        "spec_glazing" = interface "spec_glazing",
+
+        "reflection_color" = interface "reflection_color",
+        "edge_factor" = interface "edge_factor",
+        "reflection_edge_weight" = interface "reflection_edge_weight",
+        "reflection_base_weight" = interface "reflection_base_weight",
+        "samples" = interface "samples",
+        "glossy_spread" = interface "glossy_spread",
+        "max_distance" = interface "max_distance",
+        "single_env_sample" = interface "single_env_sample",
+
+        "dirt_color" = interface "dirt_color",
+        "dirt_weight" = interface "dirt_weight",
+
+        "irradiance_weight" = interface "irradiance_weight",
+        "global_weight" = interface "global_weight",
+
+        "mode" = interface "mode",
+        "lights" = interface "lights"
+    )
+
+    # Sum specular outputs to create one single specular
+    # This is how it's done internally in the actual shader
+    shader "colToVec1" "maya_color_to_vector" (
+        "color" = "carPaint.spec1_result"
+    )
+
+    shader "colToVec2" "maya_color_to_vector" (
+        "color" = "carPaint.spec2_result"
+    )
+
+    shader "colToVec3" "maya_color_to_vector" (
+        "color" = "carPaint.flake_result"
+    )
+
+    shader "sumSpecular" "maya_plusminusavg" (
+        "operation" 1,
+        "input1D" [
+            = "colToVec1.a",
+            = "colToVec2.a",
+            = "colToVec3.a"
+            ],
+        "input3D" [
+            = "colToVec1.vector",
+            = "colToVec2.vector",
+            = "colToVec3.vector"
+            ]
+    )
+
+    shader "vecToCol" "maya_vector_to_color" (
+        "vector" = "sumSpecular.output3D",
+        "a" = "sumSpecular.output1D"
+    )
+
+    shader "adapter" "adskMayaMiCarPaintPhenXAdapter" (
+        "FrameBufferWriteOperation" = interface "miFrameBufferWriteOperation",
+        "FrameBufferWriteFlags" = interface "miFrameBufferWriteFlags",
+        "FrameBufferWriteFactor" = interface "miFrameBufferWriteFactor",
+
+        "beauty" = "carPaint.result",
+        "ambientMaterialColor" = "carPaint.ambient_raw",
+        "diffuse" = "carPaint.diffuse_result",
+        "directIrradiance" = "carPaint.diffuse_raw",
+        "indirect" = "carPaint.indirect_result",
+        "specular" = "vecToCol",
+        "reflection" = "carPaint.reflection_result",
+
+        "ambient_result" = "carPaint.ambient_result",
+        "ambient_raw" = "carPaint.ambient_raw",
+        "ambient_level" = "carPaint.ambient_level",
+        "diffuse_result" = "carPaint.diffuse_result",
+        "diffuse_raw" = "carPaint.diffuse_raw",
+        "diffuse_level" = "carPaint.diffuse_level",
+        "indirect_result" = "carPaint.indirect_result",
+        "indirect_raw" = "carPaint.indirect_raw",
+        "indirect_level" = "carPaint.indirect_level",
+        "spec1_result" = "carPaint.spec1_result",
+        "spec1_raw" = "carPaint.spec1_raw",
+        "spec1_level" = "carPaint.spec1_level",
+        "spec2_result" = "carPaint.spec2_result",
+        "spec2_raw" = "carPaint.spec2_raw",
+        "spec2_level" = "carPaint.spec2_level",
+        "flake_result" = "carPaint.flake_result",
+        "flake_raw" = "carPaint.flake_raw",
+        "flake_level" = "carPaint.flake_level",
+        "flake_refl_result" = "carPaint.flake_refl_result",
+        "flake_refl_raw" = "carPaint.flake_refl_raw",
+        "flake_refl_level" = "carPaint.flake_refl_level",
+        "flake_normal" = "carPaint.flake_normal",
+        "reflection_result" = "carPaint.reflection_result",
+        "reflection_raw" = "carPaint.reflection_raw",
+        "reflection_level" = "carPaint.reflection_level",
+        "dirt_result" = "carPaint.dirt_result",
+        "dirt_raw" = "carPaint.dirt_raw",
+        "dirt_level" = "carPaint.dirt_level"
+    )
+
+    root = "adapter"
+    version 1
+    apply material
+    #: nodeid 1091700
+end declare 
+
+
+#
+# Fast sss shader "extended" version w. multiple outputs.
+# Extended again to support Maya render passes
+#
+declare phenomenon
+    struct {
+        color  "result",
+        color  "outGlowColor",
+        color  "outMatteOpacity",
+        color  "outTransparency",
+
+        color  "diffuse_result",
+        color  "diffuse_raw",
+        color  "diffuse_level",
+        
+        color  "specular_result",
+
+        color  "front_result",
+        color  "front_raw",
+        color  "front_level",
+
+        color  "back_result",
+        color  "back_raw",
+        color  "back_level"
+    }
+    "misss_fast_shader_x_passes" (
+        # Maya render pass flags
+
+        integer "miFrameBufferWriteOperation" default 1, # add
+        integer "miFrameBufferWriteFlags" default 0, # no flags
+        scalar  "miFrameBufferWriteFactor" default 1.0,
+
+        # misss_fast_shader_x parameters
+
+        color texture "lightmap",
+        color texture "depthmap",
+        shader        "bump",
+        shader        "diffuse_illum",
+        color         "diffuse_color"    default 1 1 1,
+        shader        "specular_illum",
+
+        scalar        "diffuse_weight"   default 0.5,
+        color         "front_sss_color"  default 0.8 0.4 0.1,
+        scalar        "front_sss_weight" default 0.5,
+        scalar        "front_sss_radius" default 10,
+        color         "back_sss_color"   default 0.8 0.4 0.1,
+        scalar        "back_sss_weight"  default 0.5,
+        scalar        "back_sss_radius"  default 10,
+        scalar        "back_sss_depth",  # unassigned (zero) means "same as radius"
+        scalar        "scale_conversion" default 1.0,
+        boolean       "screen_composit"  default on,
+        boolean       "output_sss_only",
+        scalar        "falloff"          default 2.0,
+        integer       "samples"          default 64,
+    )
+
+    shader "fastSSS" "misss_fast_shader_x" (
+        "lightmap" = interface "lightmap",
+        "depthmap" = interface "depthmap",
+        "bump" = interface "bump",
+        "diffuse_illum" = interface "diffuse_illum",
+        "diffuse_color" = interface "diffuse_color",
+        "specular_illum" = interface "specular_illum",
+
+        "diffuse_weight" = interface "diffuse_weight",
+        "front_sss_color" = interface "front_sss_color",
+        "front_sss_weight" = interface "front_sss_weight",
+        "front_sss_radius" = interface "front_sss_radius",
+        "back_sss_color" = interface "back_sss_color",
+        "back_sss_weight" = interface "back_sss_weight",
+        "back_sss_radius" = interface "back_sss_radius",
+        "back_sss_depth" = interface "back_sss_depth",
+        "scale_conversion" = interface "scale_conversion",
+        "screen_composit" = interface "screen_composit",
+        "output_sss_only" = interface "output_sss_only",
+        "falloff" = interface "falloff",
+        "samples" = interface "samples"
+    )
+
+    shader "adapter" "adskMayaMisssFastShaderXAdapter" (
+        "FrameBufferWriteOperation" = interface "miFrameBufferWriteOperation",
+        "FrameBufferWriteFlags" = interface "miFrameBufferWriteFlags",
+        "FrameBufferWriteFactor" = interface "miFrameBufferWriteFactor",
+
+        "beauty" = "fastSSS.result",
+        "diffuse" = "fastSSS.diffuse_result",
+        "directIrradiance" = "fastSSS.diffuse_raw",
+        "specular" = "fastSSS.specular_result",
+
+        "diffuse_result" = "fastSSS.diffuse_result",
+        "diffuse_raw" = "fastSSS.diffuse_raw",
+        "diffuse_level" = "fastSSS.diffuse_level",
+        "specular_result" = "fastSSS.specular_result",
+        "front_result" = "fastSSS.front_result",
+        "front_raw" = "fastSSS.front_raw",
+        "front_level" = "fastSSS.front_level",
+        "back_result" = "fastSSS.back_result",
+        "back_raw" = "fastSSS.back_raw",
+        "back_level" = "fastSSS.back_level"
+    )
+
+    root = "adapter"
+    version 1
+    apply material
+    #: nodeid 1091697
+end declare 
+
+$endif  # if not "autodesk_adskshadersdkwrappers_included"
+

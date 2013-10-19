@@ -1,0 +1,183 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Textures</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node77.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node79.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION76"></a>
+<h3 id="mi:textures">Textures</h3>
+
+<a id="texture"></a>
+<pre>
+    <dfn>[</dfn>local<dfn>] [</dfn>filter <dfn>[</dfn><i>scale_const</i><dfn>]]</dfn> scalar texture "<i>texture_name</i>" "<i>filename</i>"
+    scalar texture "<i>texture_name</i>" [ <i>width</i><sub>int</sub> <i>height</i><sub>int</sub> <dfn>[</dfn><i>depth</i><sub>int</sub><dfn>]</dfn> ] <i>bytes</i> ...
+    writable scalar texture "<i>texture_name</i>" [ <i>width</i><sub>int</sub> <i>height</i><sub>int</sub> <dfn>[</dfn><i>depth</i><sub>int</sub><dfn>]</dfn> ]
+    writable scalar texture "<i>texture_name</i>" "<i>filename</i>" "<i>filetype</i>" <dfn>[</dfn>"<i>fileformat</i>"<dfn>]</dfn> [ <i>width</i><sub>int</sub> <i>height</i><sub>int</sub> ]
+    scalar texture "<i>texture_name</i>"<i>shader_list</i>
+</pre>
+<pre>
+    <dfn>[</dfn>local<dfn>] [</dfn>filter <dfn>[</dfn><i>scale_const</i><dfn>]]</dfn> scalar texture "<i>texture_name</i>" <dfn>[</dfn>colorprofile "<i>profile_name</i>"<dfn>]</dfn> "<i>filename</i>"
+    color texture "<i>texture_name</i>" <dfn>[</dfn>colorprofile "<i>profile_name</i>"<dfn>]</dfn> [ <i>width</i><sub>int</sub> <i>height</i><sub>int</sub> <dfn>[</dfn><i>depth</i><sub>int</sub><dfn>]</dfn> ] <i>bytes</i> ...
+    writable color texture "<i>texture_name</i>" <dfn>[</dfn>colorprofile "<i>profile_name</i>"<dfn>]</dfn> [ <i>width</i><sub>int</sub> <i>height</i><sub>int</sub> <dfn>[</dfn><i>depth</i><sub>int</sub><dfn>]</dfn> ]
+    writable color texture "<i>texture_name</i>" <dfn>[</dfn>colorprofile "<i>profile_name</i>"<dfn>]</dfn> "<i>filename</i>" "<i>filetype</i>" <dfn>[</dfn>"<i>fileformat</i>"<dfn>]</dfn> [ <i>width</i><sub>int</sub> <i>height</i><sub>int</sub> ]
+    color texture "<i>texture_name</i>"<i>shader_list</i>
+</pre>
+<pre>
+    <dfn>[</dfn>local<dfn>]</dfn> vector texture "<i>texture_name</i>" "<i>filename</i>"
+    vector texture "<i>texture_name</i>" [ <i>width</i><sub>int</sub> <i>height</i><sub>int</sub> ] <i>bytes</i> ...
+    writable vector texture "<i>texture_name</i>" [ <i>width</i><sub>int</sub> <i>height</i><sub>int</sub> ]
+    writable vector texture "<i>texture_name</i>" "<i>filename</i>" "<i>filetype</i>" <dfn>[</dfn>"<i>fileformat</i>"<dfn>]</dfn> [ <i>width</i><sub>int</sub> <i>height</i><sub>int</sub> ]
+    vector texture "<i>texture_name</i>"<i>shader_list</i>
+</pre>
+<a id="INDEX236"></a>
+<a id="INDEX237"></a>
+<a id="INDEX238"></a>
+<a id="INDEX239"></a>
+<p>Textures are lookup functions. They
+come in two flavors: lookups of two-dimensional texture or picture
+files or literal bytes, and procedural lookups. File textures
+require a file name parameter or a byte list; procedural textures
+require a shading function parameter. There are three types of
+texture functions: textures computing scalars, colors, and vectors.
+Which one is chosen depends on what the texture is used for.
+Textures are used as parameters to other shaders, typically
+material shaders. A material shader could, for example, use a
+color texture to wrap a picture around an object, or a scalar
+texture as a transparency or displacement map, or a vector texture
+as a bump map. The actual use of the texture result is entirely up
+to the shader that uses the texture.</p>
+<p>All of the above syntax variations define a texture
+<i>texture_name</i>. The <i>texture_name</i> should be quoted to
+avoid reserved words and to allow non-alphabetic characters. This
+is the name that the texture will later be referenced as.</p>
+<p>Verbatim or writable non-procedural textures can be defined by
+specifying the <i>width</i> and <i>height</i> of the texture and an
+optional <i>depth</i> (bytes per component, 1, 2, or 4, default is 1).
+For verbatim textures, a list of <span style="white-space:nowrap">
+<var>width &times; height &times; depth</var></span>
+hexadecimal two-digit bytes follows, most significant digit first
+if <i>depth</i> is 2 or 4, in RGBA order for colors and UV order
+for vectors. Note, that the brackets around the sizes are literally
+part of the <tt>.mi</tt> file, while the skinny brackets around
+<i>depth</i> denote that the depth is optional and not part of the
+<tt>.mi</tt> file. These textures are called <b><a name="INDEX240"
+id="INDEX240"></a>verbatim textures</b>, and should be used with
+care because they can increase the scene file size enormously.
+Writable textures are primarily useful as the output of light
+mapping.</p>
+<a id="mmap"></a>
+<p>Non-procedural textures can also
+be defined by naming a texture or picture file. For a list of supported
+file formats, see page <a href="node19.html#picformats">file formats</a>.
+In this case, the sizes (width, height, and depth) are read from the file.
+If the <tt>local</tt> keyword is not present, the file is read once on the
+master host and then transmitted over the network to all slave
+hosts that participate in the rendering. With the <tt>local</tt>
+keyword, only the file name is transmitted to the slave hosts; the file
+is expected to exists locally on slave hosts. This allows to distribute
+the texture files to all the remote machines once by manual copying, thus
+reducing network transfer times during mental ray rendering drastically.
+Filename rewriting is available for interpreting the remote filename locally,
+for example to translate between Unix and Windows file paths. Maximum speed
+improvements are achieved if local files are memory-mapped pyramids (see the
+<tt>-p</tt> option of the <a href="node249.html#INDEX1088">imf_copy</a>
+tool), and reside on local disks and not on network-mounted file systems.
+Most efficient memory usage together with reasonable performance, on the
+other hand, is achieved by using tiled <a href="node19.html#picformats">
+texture formats</a> which benefit from
+<a href="texcache.html#fo:texture_caching">texture caching</a>.
+</p>
+
+<a id="INDEX241"></a>
+<p>If the <tt>writable</tt>
+keyword is present, the texture is written to a file after it was
+written by a shader. This kind of texture is used by
+<a href="node135.html#INDEX501">lightmap shader</a>s to write back the
+<a href="node25.html#INDEX49">light map</a>ping result. Light
+mapping involves scanning the surface of an object, and collecting
+data for each point. This data is later written to a texture file.
+A typical example is "baking" <a href="node80.html#INDEX259">indirect
+illumination</a> into a texture
+that can then be simply texture-mapped at a later render pass,
+instead of computing the information at rendering time. If
+<tt>writable</tt> is specified, <tt>local</tt> should be specified
+as well because the file should be written to disk on the master
+host only. Writable textures always have to give the texture height
+and width in pixels. The depth may be given explicitely or be
+inferred from the <a href="node38.html#INDEX78">file type</a>. The
+file format of the file is usually derived from the file extension,
+but it is possible to provide an explicit
+<a href="node38.html#fo:outformat">file format</a>.</p>
+
+<p id="mi:filter_texture">
+The <tt>filter</tt> keyword, if present, enables texture filtering based
+on <a href="node19.html#INDEX36">texture pyramid</a>s, a technique comparable
+to <a href="node22.html#INDEX46">mip-map texture</a>s. Filtered textures are
+preprocessed before rendering begins and use approximately 30% more memory.
+Filtering should be used when the texture is large and seen at a distance,
+such that every sample covers many texture pixels. Without filtering, widely
+spaced samples "overlook" the areas between the samples; filtered textures
+perform a filter operation to take the skipped areas into account.
+The compression of the texture on the viewing plane can be scaled
+by the optional <i>scale</i> value if necessary.</p>
+
+<p>Color textures may be flagged with an optional <code>colorprofile</code>.
+The texture is then assumed to be given in the color space
+described by this profile. The color values of the texture will be
+transformed to render color space before they are used.</p>
+
+<p>When loading a texture image from a file, mental ray checks whether the
+texture is memory-mappable. This is the case if the texture file is stored
+in the special uncompressed <tt>.map</tt> format. In this case, the
+texture is not loaded into memory but mapped into virtual memory.
+Memory-mapped textures use far less physical memory and no swap space,
+they use virtual memory only (practically reducing available memory on
+computers with limited address range, like 32bit machines). Memory mapping
+might especially be useful for large textures that are not used often (i.e.,
+many or most of its pixels are not sampled or the textured object is small
+or far away from the camera). Memory-mapped textures are implicitly also local
+textures. In addition, they always need to fit the byte order of the CPU on
+the local machine, otherwise they are read as regular files because they can
+not be memory mapped. Memory-map textures should be created with the
+<a href="node249.html#INDEX1088">imf_copy</a> utility, with the <tt>-p</tt>
+option to create pyramids. Note, that the filter scale value is stored
+in the texture file as well, any other <var>scale</var> constant specified
+in the scene texture definition referencing such files is ignored. Note also,
+that color profiles should not be applied to memory mapped textures, since
+the resulting color space transformations would attempt to overwrite the
+original texture files with the color transformed textures.</p>
+
+<p>Procedural textures are defined by naming a shading function
+with parameters; the shading function can either be one of the
+built-in functions or an external function from a <tt>code</tt> or
+<tt>link</tt> command.</p>
+<p>When a shader evaluates a texture by calling a texture
+evaluation function, the program either looks up non-procedural
+shaders by looking up the texture in the range <i>[0, 1)</i> in
+each dimension, or it calls the named shader in the procedural
+case. The shader is free to interpret the point for which it
+evaluates the texture in any way it wants, two-dimensional or
+three-dimensional.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node77.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node79.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,167 @@
+#*****************************************************************************
+# Copyright 2007 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	Pierre-Felix Breton
+# Purpose:	Simplified Wave map based on the 3ds max Wave (Water) map
+#
+# History:
+#
+# 2007 feb 15th - pfbreton, initial implementation
+#
+# 
+#****************************************************************************/
+
+min version "3.4"
+
+#------------------------------------------------------------------------
+# Phenomenon
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Map_Simple_Wave_V2" 
+  (
+      #-------------------------------------
+			# Main parameters
+			#-------------------------------------
+      struct "m" 
+      {
+				color "Color1", 
+				color "Color2",
+				integer "Distribution", #2D or 3D type
+				integer "NumWaveSets",  #Number of Waves
+				scalar "WaveRadius", 
+				scalar "WaveLenMin", 
+				scalar "WaveLenMax", 
+				scalar "Amplitude", 
+				scalar "Phase" , 
+				integer "RandomSeed" 	
+      },
+      
+			#-------------------------------------
+			# XYZ Generator Parameters
+			# 		This is a temporary solution
+			#			minimal set of parameters exposed
+			#			more design work needs to be done
+			#-------------------------------------
+      struct "u" 
+      {
+      	vector "Offset",
+      	vector "Tiling",
+      	vector "Angle"
+
+      },
+      integer "mode",
+      array light "lights"
+      	
+   )#end phenomenon
+
+
+#-------------------------------------
+# XYZ Generator
+#-------------------------------------
+shader "XYZGen|Shader" "adsk_Utility_XYZGenerator" 
+(
+	"CoordinateSystem" 0, 				#ObjectXYZ | WorldXYZ | ExplicitMapChannel | VertexColorChannel
+	"MapChannel" 1,  							#Unused in this case, since we are using the ObjectXYZ coordinatesystem
+	#--------------			
+	"Offset" = interface "u.Offset", 
+	"Tiling" = interface "u.Tiling", 
+	"Angle" = interface "u.Angle", 
+	#-------------------
+	"Blur" 1, 
+	"BlurOffset" 0
+)#end shader
+
+#------------------------------------------------------------------------
+# Wave Map Shader
+#------------------------------------------------------------------------
+shader "Map_Wave|Texmap|Shader" "adsk_Tex_Water" 
+	(
+		"Parameters" 
+		{
+			"Color1" = interface "m.Color1", 
+			"Color2" = interface "m.Color2", 
+			"Map1On" off, 
+			"Map2On" off, 
+			#--------------------------
+		  "Distribution" = interface "m.Distribution", #2D | 3D
+			"NumWaveSets" = interface "m.NumWaveSets", 
+			"WaveRadius" = interface "m.WaveRadius", 
+			"WaveLenMin" = interface "m.WaveLenMin", 
+			"WaveLenMax" = interface "m.WaveLenMax", 
+			"Amplitude" = interface "m.Amplitude", 
+			"Distribution" = interface "m.Distribution", 
+			"RandomSeed" = interface "m.RandomSeed", 
+			"Phase" = interface "m.Phase", 
+			#--------------------------
+			"Coords" "XYZGen|Shader"
+		}, 
+		"ExtraParameters" 
+		{
+			"GBufferID" 0	
+		}
+
+	)#end shader
+
+
+root = "Map_Wave|Texmap|Shader"
+apply texture
+
+#------------------------------------------------------------------------
+# UI
+#------------------------------------------------------------------------
+
+	gui "gui_adsk_Map_Simple_Wave_V2"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "Simple Wave Map (adsk)", "category" "Texture", "hidden" )
+	
+		#-------------------------------------
+		#  Map Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Simple Wave Map Parameters")
+		{
+			#----------------------------------
+			control "Color1" "color" ("uiName" "Color 1","value" 0 0 0 1.0)
+			control "Color2" "color" ("uiName" "Color 2","value" 1 1 1 1.0)
+			
+			#----------------------------------
+			control "Distribution" "integer" ("nonConnectable", "uiName" "Distribution (3D, 2D)", "value" 1, "range" 0 1) #2D or 3D type
+			control "NumWaveSets" "integer" ("nonConnectable", "uiName" "Number of Waves", "value" 3, "range" 1 50)
+			
+			#----------------------------------
+			control "WaveRadius" "float" ("nonConnectable", "uiName" "Radius", "value" 1000, "range" 0 1000000000)
+			control "WaveLenMin" "float" ("nonConnectable", "uiName" "Len Min", "value" 50, "range" 0 1000000000)
+			control "WaveLenMax" "float" ("nonConnectable", "uiName" "Len Max", "value" 50, "range" 0 1000000000)
+			
+			#-----------------------------------
+			control "Amplitude" "float" ("nonConnectable", "uiName" "Amplitude", "value" 1, "range" 0 10000)
+			control "Phase" "float" ("nonConnectable", "uiName" "Phase", "value" 0, "range" 0 10000)
+			
+			#-----------------------------------
+			control "RandomSeed" "integer" ("nonConnectable", "uiName" "Random Seed", "value" 30159, "range" 0 65535)
+     	
+		}#end control
+		
+		
+	#-------------------------------------
+	# XYZ Generator Parameters
+	# 		This is a temporary solution
+	#			minimal set of parameters exposed
+	#			more design work needs to be done
+	#-------------------------------------
+		control "u" "struct" ("uiName" "Texture Coordinates Parameters")
+    {  
+         control "Offset" "vector" ("nonConnectable", "value" 0 0 0)
+         control "Tiling" "vector" ("nonConnectable", "value" 1 1 1)
+         control "Angle" "vector" ("nonConnectable", "value" 0 0 0)     
+   }#end struct
+		
+		
+	  #----------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+
+	}#end gui
+
+end declare #end declare phenomenon

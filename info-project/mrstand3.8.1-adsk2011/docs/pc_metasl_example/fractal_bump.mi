@@ -1,0 +1,269 @@
+link "mr_prebuilt.dll"
+link "architectural.dll"
+
+$include "light_point.msl"
+$include "conversion_scalar_color.msl"
+$include "fractal_bump.xmsl" 
+
+
+
+declare shader
+	struct {
+		color "result",
+		color "diffuse_result",
+		color "diffuse_raw",
+		color "diffuse_level",
+		color "spec_result",
+		color "spec_raw",
+		color "spec_level",
+		color "refl_result",
+		color "refl_raw",
+		color "refl_level",
+		color "refr_result",
+		color "refr_raw",
+		color "refr_level",
+		color "tran_result",
+		color "tran_raw",
+		color "tran_level",
+		color "indirect_result",
+		color "indirect_raw",
+		color "indirect_level",
+		color "add_result",
+		color "opacity_result",
+		color "opacity_raw",
+		color "opacity_level",
+		scalar "opacity"	} "mia_material_x" (
+		scalar "diffuse_weight",
+		color "diffuse",
+		scalar "diffuse_roughness",
+		scalar "reflectivity",
+		color "refl_color",
+		scalar "refl_gloss",
+		integer "refl_gloss_samples",
+		boolean "refl_interpolate",
+		boolean "refl_hl_only",
+		boolean "refl_is_metal",
+		scalar "transparency",
+		color "refr_color",
+		scalar "refr_gloss",
+		scalar "refr_ior",
+		integer "refr_gloss_samples",
+		boolean "refr_interpolate",
+		boolean "refr_translucency",
+		color "refr_trans_color",
+		scalar "refr_trans_weight",
+		scalar "anisotropy",
+		scalar "anisotropy_rotation",
+		integer "anisotropy_channel",
+		boolean "brdf_fresnel",
+		scalar "brdf_0_degree_refl",
+		scalar "brdf_90_degree_refl",
+		scalar "brdf_curve",
+		boolean "brdf_conserve_energy",
+		integer "intr_grid_density",
+		integer "intr_refl_samples",
+		boolean "intr_refl_ddist_on",
+		scalar "intr_refl_ddist",
+		integer "intr_refr_samples",
+		boolean "single_env_sample",
+		boolean "refl_falloff_on",
+		scalar "refl_falloff_dist",
+		boolean "refl_falloff_color_on",
+		color "refl_falloff_color",
+		integer "refl_depth",
+		scalar "refl_cutoff",
+		boolean "refr_falloff_on",
+		scalar "refr_falloff_dist",
+		boolean "refr_falloff_color_on",
+		color "refr_falloff_color",
+		integer "refr_depth",
+		scalar "refr_cutoff",
+		scalar "indirect_multiplier",
+		scalar "fg_quality",
+		scalar "fg_quality_w",
+		boolean "ao_on",
+		integer "ao_samples",
+		scalar "ao_distance",
+		color "ao_dark",
+		color "ao_ambient",
+		boolean "ao_do_details",
+		boolean "thin_walled",
+		boolean "no_visible_area_hl",
+		boolean "skip_inside_refl",
+		boolean "do_refractive_caustics",
+		boolean "backface_cull",
+		boolean "propagate_alpha",
+		scalar "hl_vs_refl_balance",
+		scalar "cutout_opacity",
+		color "additional_color",
+		shader "bump",
+		boolean "no_diffuse_bump",
+		integer "mode",
+		array light "lights",
+		integer "bump_mode",
+		vector "overall_bump",
+		vector "standard_bump",
+		boolean "multiple_outputs"
+	)
+	version 16
+end declare
+
+color texture "noise_perm" "noise_perm.dds"
+color texture "noise_grad" "noise_grad.dds"
+
+
+shader "fractal_bump_1" "fractal_bump" (
+	"noise_perm_texture" "noise_perm",
+	"noise_grad_texture" "noise_grad",
+	"noise_gain" 1
+)
+	
+shader "vector_fractal" "Conversion_color_to_vector3"(
+	"color" = "fractal_bump_1")
+
+
+light "light0" "Light_point" ( 
+	"color" 	1.000000 1.000000 1.000000 1.000000,
+	"intensity" 	2.141590,
+	"distance_falloff_exponent" 	0.000000,
+	"distance_scale" 	1.000000,
+	 ) 
+	 origin		0 0 0 
+end light 
+
+instance "iLight0" "light0" 
+	 hide		off 
+	 transform
+		 0.707107 -0.500000 0.500000 0.000000
+		 0.707107 0.500000 -0.500000 0.000000
+		 0.000000 0.707107 0.707107 0.000000
+		 0.000000 0.000000 -2.000000 1.000000
+end instance 
+
+material  "mtl" opaque
+	"mia_material_x" (
+	"diffuse_weight" 0.8, 
+	"diffuse" 0.5 0.5 0.5, 
+	"diffuse_roughness" 0, 
+	"reflectivity" 0.25, 
+	"refl_color" 0.81 1 1 0, 
+	"refl_gloss" 0.39, 
+	"refl_gloss_samples" 8, 
+	"refl_interpolate" off, 
+	"refl_hl_only" off, 
+	"refl_is_metal" off, 
+	"transparency" 0, 
+	"refr_color" 1 1 1 0, 
+	"refr_gloss" 1, 
+	"refr_ior" 1.4, 
+	"refr_gloss_samples" 8, 
+	"refr_interpolate" off, 
+	"refr_translucency" off, 
+	"refr_trans_color" 0.7 0.6 0.5 0, 
+	"refr_trans_weight" 0.5, 
+	"anisotropy" 1, 
+	"anisotropy_rotation" 0, 
+	"anisotropy_channel" -1, 
+	"brdf_fresnel" off, 
+	"brdf_0_degree_refl" 0.2, 
+	"brdf_90_degree_refl" 1, 
+	"brdf_curve" 5, 
+	"brdf_conserve_energy" on, 
+	"intr_grid_density" 2, 
+	"intr_refl_samples" 2, 
+	"intr_refl_ddist_on" off, 
+	"intr_refl_ddist" 0, 
+	"intr_refr_samples" 2, 
+	"single_env_sample" off, 
+	"refl_falloff_on" off, 
+	"refl_falloff_dist" 0, 
+	"refl_falloff_color_on" off, 
+	"refl_falloff_color" 0 0 0 0, 
+	"refl_depth" 5, 
+	"refl_cutoff" 0.01, 
+	"refr_falloff_on" off, 
+	"refr_falloff_dist" 0, 
+	"refr_falloff_color_on" off, 
+	"refr_falloff_color" 0 0 0 0, 
+	"refr_depth" 5, 
+	"refr_cutoff" 0.01, 
+	"indirect_multiplier" 1, 
+	"fg_quality" 1, 
+	"fg_quality_w" 1, 
+	"ao_on" on, 
+	"ao_samples" 16, 
+	"ao_distance" 10, 
+	"ao_dark" 0.2 0.2 0.2 0, 
+	"ao_ambient" 0 0 0 0, 
+	"ao_do_details" on, 
+	"thin_walled" off, 
+	"no_visible_area_hl" on, 
+	"skip_inside_refl" on, 
+	"do_refractive_caustics" off, 
+	"backface_cull" off, 
+	"propagate_alpha" off, 
+	"hl_vs_refl_balance" 1, 
+	"cutout_opacity" 1, 
+	"additional_color" 0 0 0 0, 
+	"no_diffuse_bump" off, 
+	"standard_bump"="vector_fractal",
+	"bump_mode" 2,
+	"mode" 1, 
+	"lights" [
+		 "iLight0"	])
+	shadow 
+end material
+		 
+
+options "opt" 
+	 samples 0 1 
+	 contrast 0.1  0.1  0.1 
+	 object space 
+	 face both 
+end options 
+
+
+camera "cam" 
+	 frame	1 
+	 output	"pic" "msl_image.pic" 
+	 focal	50 
+	 aperture	44 
+	 resolution	500 424 
+end camera  
+
+instance "cam_inst" "cam" 
+	 hide		off 
+	 transform	
+		 0.707107 -0.500000 0.500000 0.000000
+		 0.707107 0.500000 -0.500000 0.000000
+		 0.000000 0.707107 0.707107 0.000000
+		 0.000000 0.000000 -2.000000 1.000000
+end instance 
+
+
+object "msl_obj" 
+	 group 
+$include "msl_custom_obj.mi"
+	 end group 
+end object 
+
+instance "msl_obj_inst" "msl_obj" 
+	 visible		on 
+	 shadow		on 
+	 trace		on 
+	 transform	
+		 1.000000 0.000000 0.000000 0.000000
+		 0.000000 1.000000 0.000000 0.000000
+		 0.000000 0.000000 1.000000 0.000000
+		 0.000000 0.000000 0.000000 1.000000
+end instance 
+
+
+instgroup "rootgrp" 
+	 "cam_inst" "msl_obj_inst"   
+	"iLight0" 
+end instgroup 
+
+render "rootgrp" "cam_inst" "opt" 
+
+

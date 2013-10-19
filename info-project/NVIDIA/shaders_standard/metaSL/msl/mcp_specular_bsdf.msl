@@ -1,0 +1,262 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product BSDF for specular model
+ *****************************************************************************/
+#include <mcp_lib.msl>
+
+/*
+int bsdf_choose_component(
+        float                   pmf[],
+        Bsdf_components         types[],
+        inout double            select,
+        Bsdf_components         allowed,
+        out float               norm)
+{
+    // build CDF and index table
+    // (since array sizes are known at compile time, these should
+    // end up on the stack)
+    double myselect=select;
+    int count = 0;
+    {
+        float cdf_sum = 0.0f;
+        for (int i = 0; i < pmf.count; ++i) {
+            if (Bsdf_components{} != (allowed & types[i])) {
+                cdf_sum += pmf[i];
+                if(cdf_sum == 0)
+                count ++;
+            }
+        }
+        norm = cdf_sum;
+    }
+    if (0 == norm)      //no non-zero component or suppressed by /allowed/
+    {
+        return -1;
+    }
+    // select component
+    myselect *= norm;
+    float prev_cdf = 0.0f, curr_cdf;
+    int curr_ind;
+    int num = 1;
+
+    for (int i = 0; i < pmf.count; ++i) {
+        if (Bsdf_components{} != (allowed & types[i])) {
+            curr_cdf = prev_cdf + pmf[i];
+
+            if (myselect < curr_cdf) {
+                myselect = (myselect - prev_cdf) / pmf[i];
+                return i;
+            }
+            prev_cdf = curr_cdf;
+        }
+
+    }
+    return -2;
+}
+*/
+bsdf Mcp_specular_bsdf {
+    
+  input:	
+    Scattering_mode  scattering_mode = mode_reflect;
+    float3   bump = normal;
+
+
+  member:
+    Bsdf_attributes get_attributes()
+    {
+        return Bsdf_attributes{geometry_dependent};
+    }
+    
+    Bsdf_components get_components()
+    {
+        return Bsdf_components{reflect_specular,transmit_specular};
+    }
+    //the list of active attributes, given the actual input parameters. 
+    //For this bsdf it equals the worst case described by get_attributes(), so we do not need to implement this
+    Bsdf_attributes get_active_attributes() 
+    {
+        return get_attributes();
+    }
+    Bsdf_components get_active_components() 
+    {
+        switch(scattering_mode)
+        {
+            case mode_reflect:
+            return Bsdf_components{reflect_specular};
+            case mode_transmit:
+            return Bsdf_components{transmit_specular};
+            case mode_reflect_transmit:
+            default:
+            return Bsdf_components{reflect_specular,transmit_specular};
+        }
+    }
+
+
+  Spectrum eval(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        void(fixed_direction);
+        void(sampled_direction);
+        void(allowed_components);
+        void(transport_source);
+        return Spectrum(0);
+    }
+
+    float pdf(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        void(fixed_direction);
+        void(sampled_direction);
+        void(allowed_components);
+        void(transport_source);
+        return 0.f;
+    }
+    Bsdf_components sample(
+        in float3           fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+        {
+        Scattering_mode  choosen_scattering_mode;
+        float d_Ng = dot(fixed_direction,geometry_normal);
+        int wavelength_idx;
+        float w;
+        if( !(Bsdf_components{reflect_specular} in allowed_components) && !(Bsdf_components{transmit_specular} in allowed_components)  )
+            return bsdf_invalid_sample(sampled_direction,sample_weight);
+/*		if(primary_sample.component_select == 0.)
+*/			
+        spectrum_choose_index(primary_sample.component_select,wavelength_idx,w);
+
+        float eta_i = eval_at_index(inside_ior,wavelength_idx);
+        float eta_t = eval_at_index(outside_ior,wavelength_idx);
+        if(inside)
+        {
+            eta_t = eval_at_index(inside_ior,wavelength_idx);
+            eta_i = eval_at_index(outside_ior,wavelength_idx);
+        }
+        float eta = eta_t / eta_i;
+            
+        
+        float d_Ns = dot(fixed_direction,bump);
+        float s_Ns = cos_refraction_angle(d_Ns,eta*eta);
+
+
+
+        float color_factor=1;// /w;
+        float inv_psel=1;
+        sample_probability = DIRAC_DELTA ;
+        if(scattering_mode==mode_reflect_transmit) {
+            // compute Fresnel term
+            float fresnel = s_Ns > 0.f ?
+                        fresnel_diel(eta_i,eta_t,abs(d_Ns),s_Ns) :
+                        1.f;
+            // choose reflection or refraction according to Fresnel term
+            float pmf[2] = { fresnel, 1.f - fresnel };
+/*			Bsdf_components types[] = {
+                    Bsdf_components{reflect_specular},
+                    Bsdf_components{transmit_specular}
+            };*/
+            float norm;
+            
+            int c = 1;//bsdf_choose_component(pmf,types,
+                    //primary_sample.component_select,allowed_components,norm);
+//			if(c <0)
+            if(c==0){
+                choosen_scattering_mode=mode_reflect;
+                inv_psel=norm/pmf[0];
+                color_factor *= (fresnel * inv_psel);
+            }
+            else if(c==1){
+                choosen_scattering_mode=mode_transmit;
+                inv_psel=norm/pmf[1];
+                color_factor *= ((1.f - fresnel) * inv_psel);
+            }
+            else
+                return bsdf_invalid_sample(sampled_direction,sample_weight);
+            sample_probability/=inv_psel;
+        }
+        else
+            choosen_scattering_mode=scattering_mode;
+        
+        switch( choosen_scattering_mode){
+            case mode_reflect:
+                // compute reflection direction
+                sampled_direction = -fixed_direction + (2 * d_Ns) * bump;
+
+                Bsdf_components allowed_components_reflect = bsdf_check_type(
+                        geometry_normal,fixed_direction,sampled_direction,allowed_components);
+                        
+                if (Bsdf_components{reflect_specular} in allowed_components_reflect) 
+                {
+                    float s_Ng = dot(sampled_direction,geometry_normal);
+
+                    sample_weight = 
+                        (transport_source == light) ? Spectrum(1.) *color_factor * abs(s_Ng/d_Ng) : Spectrum(1) * color_factor;
+//						sample_spectrum(wavelength_idx,
+//                    (transport_source == light) ? Spectrum(1.) * (s_Ng/d_Ng) : Spectrum(1.));
+                    return Bsdf_components{reflect_specular};
+                }
+                else
+                    return bsdf_invalid_sample(sampled_direction,sample_weight);
+                break;
+            case mode_transmit:
+                // compute reflection direction
+                sampled_direction = -fixed_direction;
+                sampled_direction = fixed_direction * -eta
+                     + bump * (eta * d_Ns - s_Ns);
+                Bsdf_components allowed_components_transmit = bsdf_check_type(
+                        geometry_normal,fixed_direction,sampled_direction,allowed_components);
+                        
+                if (Bsdf_components{transmit_specular} in allowed_components_transmit) 
+                {
+                    float s_Ng = dot(sampled_direction,geometry_normal);
+                    float d_Ng = dot(fixed_direction,geometry_normal);
+
+                    sample_weight = (transport_source == light) ?
+                        Spectrum(1) * abs((d_Ns * s_Ng) / (d_Ng * s_Ns)) * color_factor:
+                        Spectrum(1.) / (eta * eta) * color_factor;
+                        
+                    return Bsdf_components{transmit_specular};
+                }
+                else
+                    return bsdf_invalid_sample(sampled_direction,sample_weight);
+                break;
+            case mode_reflect_transmit:
+            default:
+            
+        }
+        return bsdf_invalid_sample(sampled_direction,sample_weight);
+    }
+    float fresnel_diel(
+        float        eta_i,        // incoming IOR
+        float        eta_t,        // transmitted IOR
+        float        cos_i,        // incoming cosine
+        float        cos_t)        // transmitted cosine
+    {
+        float eici = eta_i * cos_i;
+        float etci = eta_t * cos_i;
+        float eict = eta_i * cos_t;
+        float etct = eta_t * cos_t;
+        float perp = (eici - etct) / (eici + etct);
+        float para = (etci - eict) / (etci + eict);
+        return .5f * (perp * perp + para * para);
+    }
+    float cos_refraction_angle(float d_Ns, float eta2)
+    {
+        return sqrt(1.0f - (eta2 - d_Ns * d_Ns * eta2));
+
+    }
+    
+};

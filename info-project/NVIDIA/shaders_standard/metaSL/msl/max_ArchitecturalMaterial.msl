@@ -1,0 +1,1127 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#include <max_common.msl>
+
+#define VERBOSE
+
+#define kShaderPhong 0
+#define kShaderMetal 1
+#define kExtinctionCoef 0.5
+#define kDiffuseIOR 0.99
+#define kTransmittanceCutoff 1.0e-5f
+#define kDiffuseDistAtten 1.0
+#define miHUGE_SCALAR 1e36
+
+#define CalculateReflectance(color, totalTrans, local_result) { \
+    float temp = 1.0 - (totalTrans);			  \
+    (local_result).r = (color).r * (temp);			  \
+    (local_result).g = (color).g * (temp);			  \
+    (local_result).b = (color).b * (temp);			  \
+  }
+
+#define CalculateDiffTransparency(transparency, translucency, local_result) {	\
+    float op = 1.0 - (transparency);					\
+    (local_result) = (op > 0.0) ? (op * (translucency)) : 0.0;		\
+  }
+
+#define CalculateSpecTransmittance(color, specTrans, local_result) { \
+    (local_result).r = (color).r * (specTrans);		       \
+    (local_result).g = (color).g * (specTrans);		       \
+    (local_result).b = (color).b * (specTrans);		       \
+  }
+
+#define CalculateDiffTransmittance(color, diffTrans, local_result) { \
+    (local_result).r = (color).r * (diffTrans);		       \
+    (local_result).g = (color).g * (diffTrans);		       \
+    (local_result).b = (color).b * (diffTrans);		       \
+  }
+
+#define CalculateGlow(color, luminance, local_result) { \
+    (local_result).r = (color).r * (luminance);	  \
+    (local_result).g = (color).g * (luminance);	  \
+    (local_result).b = (color).b * (luminance);	  \
+  }
+
+#define clipRange(v, min, max) { \
+    if((v) > (max))		 \
+      (v) = (max);		 \
+    else if((v) < (min))	 \
+      (v) = (min);		 \
+  }
+
+#define clipMin(v, min) { \
+    if((v) < (min))	  \
+      (v) = (min);	  \
+  }
+
+#define isDiffuse(ior) (((ior) > kDiffuseIOR) && ((ior) < (1.0 / kDiffuseIOR)))
+
+#define isTransparent(color) ((abs((color).r) +				\
+			       abs((color).g) +				\
+			       abs((color).b)) > kTransmittanceCutoff)
+
+// see max_support.h
+#define INPLACE_MULT(res, op) {					\
+    (res).r *= (op).r; (res).g *= (op).g; (res).b *= (op).b;	\
+  }
+#define INPLACE_MULT_SCALAR(res, scalar) {				\
+    (res).r *= (scalar); (res).g *= (scalar); (res).b *= (scalar);	\
+  }
+#define INPLACE_DIV_SCALAR(res, scalar) {				\
+    (res).r /= (scalar); (res).g /= (scalar); (res).b /= (scalar);	\
+  }
+#define INPLACE_ADD(res, op) {					\
+    (res).r += (op).r; (res).g += (op).g; (res).b += (op).b;	\
+  }
+#define INPLACE_SUB(res, op) {					\
+    (res).r -= (op).r; (res).g -= (op).g; (res).b -= (op).b;	\
+  }
+
+shader max_ArchitecturalMaterial {
+ input:
+  // see mrMaterialArchitectural in max_arch.h
+#ifdef HLSL_OPTIMIZE
+  const bool twoSided = false {
+  };
+  const bool emitLuminance = false {
+  };
+  const bool rawDiffuseTexture = false {
+  };
+  Color diffuse = Color(0.588235, 0.588235, 0.588235, 1.0);
+  float diffuseMapAmount = 1.0 {
+    hard_range(0.0, 1.0);
+  };
+  const bool diffuseMapEnable = true {
+  };
+  Shader diffuseMap;
+  float shininess = 0.0 {
+    hard_range(0.0, 1.0);
+  };
+  const bool shininessMapEnable = true {
+  };
+  Shader shininessMap;
+  float transparency = 0.0 {
+    hard_range(0.0, 1.0);
+  };
+  const bool transparencyMapEnable = true {
+  };
+  Shader filterMap;
+  float translucency = 0.0 {
+    hard_range(0.0, 1.0);
+  };
+  const bool translucencyEnable = true {
+  };
+  Shader translucencyMap;
+  float ior = 1.5 {
+  };
+  float luminance = 0.0 {
+  };
+  const bool luminanceMapEnable = true {
+  };
+  Shader luminanceMap;
+  float bumpMapAmount = 1.0 {
+    hard_range(-10.0, 10.0);
+  };
+  const bool bumpMapEnable = true {
+  };
+  Shader bumpMap;
+  float intensityMapAmount = 1.0 {
+    hard_range(0.0, 1.0);
+  };
+  const bool intensityMapEnable = true {
+  };
+  Shader intensityMap;
+  float cutoutMapAmount = 1.0 {
+    hard_range(0.0, 1.0);
+  };
+  const bool cutoutMapEnable = true {
+  };
+  Shader cutoutMap;
+  float colorBleed = 1.0 {
+    hard_range(0.0, 1.0);
+  };
+  float indirectBumpAmount = 1.0 {
+    hard_range(0.0, 1.0);
+  };
+  float reflectanceScale = 1.0 {
+    hard_range(0.0, 1.0);
+  };
+  float transmittanceScale = 1.0 {
+    hard_range(0.0, 1.0);
+  };
+  const bool useTextureSize = false {
+  };
+  float textureWidth = 40.0 {
+  };
+  float textureHeight = 40.0 {
+  };
+  float textureUOffset = 0.0 {
+  };
+  float textureVOffset = 0.0 {
+  };
+#else
+  struct ArchitecturalMaterialParams_struct {
+    bool twoSided;              // twoSided
+    bool emitLuminance;         // emitEnergy
+    bool rawDiffuseTexture;     // emitEnergy
+    Color diffuse;              // diffuseColor
+    float diffuseMapAmount;     // diffuseMapAmount
+    bool diffuseMapEnable;      // diffuseMapOn
+    Shader diffuseMap;
+    float shininess;            // shininess
+    bool shininessMapEnable;    // shininessMapOn
+    Shader shininessMap;
+    float transparency;         // transparency
+    bool transparencyMapEnable; // transparencyMapOn
+    Shader filterMap;
+    float translucency;         // translucency
+    bool translucencyEnable;    // translucencyMapOn
+    Shader translucencyMap;
+    float ior;                  // ior
+    float luminance;            // luminance
+    bool luminanceMapEnable;    // luminanceMapOn
+    Shader luminanceMap;
+    float bumpMapAmount;        // bumpMapAmount
+    bool bumpMapEnable;         // bumpMapOn
+    Shader bumpMap;
+    float intensityMapAmount;   // intensityMapAmount
+    bool intensityMapEnable;    // intensityMapOn
+    Shader intensityMap;
+    float cutoutMapAmount;      // cutoutMapAmount
+    bool cutoutMapEnable;       // cutoutMapOn
+    Shader cutoutMap;
+    float colorBleed;           // colorBleedScale
+    float indirectBumpAmount;   // indirectBumpScale
+    float reflectanceScale;     // reflectanceScale
+    float transmittanceScale;   // transmittanceScale
+    bool useTextureSize;        // useTextureSize
+    float textureWidth;         // textureWidth
+    float textureHeight;        // textureHeight
+    float textureUOffset;       // textureUOffset
+    float textureVOffset;       // textureVOffset
+  }; // ArchitecturalMaterialParams_struct
+  ArchitecturalMaterialParams_struct ArchitecturalMaterialParams =
+    ArchitecturalMaterialParams_struct(false,
+				       false,
+				       false,
+				       // diffuse
+				       Color(0.588235, 0.588235, 0.588235, 1.0),
+				       1.0,
+				       true,
+				       Shader(),
+				       // shininess
+				       0.0,
+				       true,
+				       Shader(),
+				       // transparency
+				       0.0,
+				       true,
+				       Shader(),
+				       // translucency
+				       0.0,
+				       true,
+				       Shader(),
+				       // ior
+				       1.5,
+				       // luminance
+				       0.0,
+				       true,
+				       Shader(),
+				       // bump
+				       1.0,
+				       true,
+				       Shader(),
+				       // intensity
+				       1.0,
+				       true,
+				       Shader(),
+				       // cutout
+				       1.0,
+				       true,
+				       Shader(),
+				       // colorBleedScale etc.
+				       1.0,
+				       1.0,
+				       1.0,
+				       1.0,
+				       // useTextureSize
+				       false,
+				       // textureWidth etc.
+				       40.0,
+				       40.0,
+				       0.0,
+				       0.0);
+  struct ExtraParameters_struct {
+    int GBufferId;
+    int shaderType;
+    float physicalScale;
+  }; // ExtraParameters_struct
+  ExtraParameters_struct ExtraParameters;
+#endif
+
+ output:
+  Color result;
+
+  // see max_raytrace.cpp
+  bool RefractVector(inout float3 dir,
+		     //state
+		     in float state_dot_nd,
+		     in bool state_inv_normal,
+		     in float state_ior_in,
+		     in float state_ior,
+		     in float3 state_normal,
+		     in float3 state_dir
+		     ) {
+    dir = float3(0.0, 0.0, 0.0);
+    float VN = -state_dot_nd;
+    float ior = 0.0;
+    float k1 = 0.0;
+    bool refract_bool = false;
+
+    if (state_inv_normal) {
+      ior = state_ior_in;
+    } // if (state_inv_normal)
+    else {
+      ior = ((state_ior != 0.0) ? (1.0 / state_ior) : 1.0);
+    } // else [ if (state_inv_normal) ]
+    k1 = 1.0 - ior * ior * (1.0 - VN * VN);
+    if (k1 < 0.0001) {
+      dir.x = -2.0 * state_normal.x * state_dot_nd + state_dir.x;
+      dir.y = -2.0 * state_normal.y * state_dot_nd + state_dir.y;
+      dir.z = -2.0 * state_normal.z * state_dot_nd + state_dir.z;
+      refract_bool = false;
+    } // if (k1 < 0.0001)
+    else {
+      dir.x = (((ior * VN) - sqrt(k1)) * state_normal.x) + (ior * state_dir.x);
+      dir.y = (((ior * VN) - sqrt(k1)) * state_normal.y) + (ior * state_dir.y);
+      dir.z = (((ior * VN) - sqrt(k1)) * state_normal.z) + (ior * state_dir.z);
+      refract_bool = true;
+    } // else [ if (k1 < 0.0001) ]
+    dir = normalize(dir);
+    return refract_bool;
+  } // RefractVector
+
+  // see max_arch.cpp
+  float calcSigma(in float shininess) {
+    float local_shininess = shininess;
+    if (local_shininess <= 0.0) local_shininess = 0.0001;
+    else if (local_shininess >= 1.0) local_shininess = 0.9999;
+    return 0.1 * log(local_shininess) / log(0.5);
+  } // calcSigma
+
+  // see max_arch.cpp
+  void CalculateShininess(in float shininess,
+			  inout float sigma, inout float slope,
+			  inout float gc, inout float m2) {
+    sigma = calcSigma(shininess);
+    slope = 0.2 * (1.0 - shininess);
+    gc = (1.0 - shininess) * (1.0 - shininess) / 4.0 + 0.01;
+    m2 = 2.0 * slope * slope;
+  } // CalculateShininess
+
+  // see max_arch.cpp
+  // very close to Siegel and Howel pg 95
+  float fresnel(in float ior, in float Ci) {
+    float local_ior = ior;
+    float local_Ci = Ci;
+    float r0 = 0.0;
+    float r1 = 0.0;
+    float ret = 0.0;
+    float Ct = 0.0;
+
+    if (local_Ci < 0.0f) {
+      local_ior = 1.0f / local_ior;
+      local_Ci = - local_Ci;
+    } // if (local_Ci < 0.0f)
+    Ct = 1.0 - (1.0 / (local_ior * local_ior)) * (1.0 - local_Ci * local_Ci);
+    if (Ct < 0.0001) return 1.0; // total internal reflection
+    Ct = sqrt(Ct);
+    // perpendicular polarization
+    r0 = (local_Ci - local_ior * Ct) / (local_Ci + local_ior * Ct);
+    // parallel polarization
+    r1 = (local_ior * local_Ci - Ct) / (local_ior * local_Ci + Ct);
+    // we don't know the polarization, so use average
+    ret = (r0 * r0 + r1 * r1) / 2.0;
+#ifdef VERBOSE
+    // miASSERT(ret < 1.00001);
+    if (ret >= 1.00001) {
+      error("miASSERT(ret < 1.00001)");
+    } // if (ret >= 1.00001)
+#endif
+    return ret;
+  } // fresnel
+
+  // Hall pg 195 eqn 18
+  void computeIOR(in Color p, inout Color ior) {
+    float rho = 0.0;
+    float a = 0.0;
+    float b = 0.0;
+    float c = 0.0;
+    float desc = 0.0;
+
+    // red
+    rho = p.r;
+    if (rho > .99) rho = .99;
+    else if (rho < 0.01) rho = 0.01;
+    a = 1.0 - rho;
+    b = - 2.0 * (1.0 + rho);
+    c = a * (1.0 + kExtinctionCoef * kExtinctionCoef);
+    desc = b * b - 4.0 * a * c;
+    if (desc > 0.0)
+      ior.r = (-b + sqrt(desc)) / (2.0 * a);
+    else
+      ior.r = -b / (2.0 * a);
+    // green
+    rho = p.g;
+    if (rho > .99) rho = .99;
+    else if (rho < 0.01) rho = 0.01;
+    a = 1.0 - rho;
+    b = - 2.0 * (1.0 + rho);
+    c = a * (1.0 + kExtinctionCoef * kExtinctionCoef);
+    desc = b * b - 4.0 * a * c;
+    if (desc > 0.0)
+      ior.g = (-b + sqrt(desc)) / (2.0 * a);
+    else
+      ior.g = -b / (2.0 * a);
+    // blue
+    rho = p.b;
+    if (rho > .99) rho = .99;
+    else if (rho < 0.01) rho = 0.01;
+    a = 1.0 - rho;
+    b = - 2.0 * (1.0 + rho);
+    c = a * (1.0 + kExtinctionCoef * kExtinctionCoef);
+    desc = b * b - 4.0 * a * c;
+    if (desc > 0.0)
+      ior.b = (-b + sqrt(desc)) / (2.0 * a);
+    else
+      ior.b = -b / (2.0 * a);
+  } // computeIOR
+
+  // very close to Hall pg 22
+  void fresnelMetal(in Color ior, in float Ci, inout Color f) {
+    float local_Ci = Ci;
+    float rp2 = 0.0;
+    float rs2 = 0.0;
+    float Ci2n = 0.0;
+    float n2k2 = 0.0;
+    float Ci2 = local_Ci * local_Ci;
+
+    if (local_Ci < 0.0) {
+      local_Ci = -local_Ci;
+    } // if (local_Ci < 0.0)
+    // red
+    // ---
+    n2k2 = ior.r * ior.r + kExtinctionCoef * kExtinctionCoef;
+    Ci2n = local_Ci * ior.r * 2.0;
+    // perpendicular polarization
+    rp2 = (n2k2 * Ci2 - Ci2n + 1.0) / (n2k2 * Ci2 + Ci2n + 1.0);
+    // parallel polarization
+    rs2 = (n2k2 - Ci2n + Ci2) / (n2k2 + Ci2n + Ci2);
+    // we don't know the polarization, so use average
+    f.r = (rp2 + rs2) / 2.0;
+#ifdef VERBOSE
+    // miASSERT(f.r >= 0.0);
+    if (f.r < 0.0) error("miASSERT(f.r >= 0.0);");
+    // miASSERT(f.r <= 1.0);
+    if (f.r > 1.0) error("miASSERT(f.r <= 1.0);");
+#endif
+    // green
+    // -----
+    n2k2 = ior.g * ior.g + kExtinctionCoef * kExtinctionCoef;
+    Ci2n = local_Ci * ior.g * 2.0;
+    // perpendicular polarization
+    rp2 = (n2k2 * Ci2 - Ci2n + 1.0) / (n2k2 * Ci2 + Ci2n + 1.0);
+    // parallel polarization
+    rs2 = (n2k2 - Ci2n + Ci2) / (n2k2 + Ci2n + Ci2);
+    // we don't know the polarization, so use average
+    f.g = (rp2 + rs2) / 2.0;
+#ifdef VERBOSE
+    // miASSERT(f.g >= 0.0);
+    if (f.g < 0.0) error("miASSERT(f.g >= 0.0);");
+    // miASSERT(f.g <= 1.0);
+    if (f.g > 1.0) error("miASSERT(f.g <= 1.0);");
+#endif
+    // blue
+    // ----
+    n2k2 = ior.b * ior.b + kExtinctionCoef * kExtinctionCoef;
+    Ci2n = local_Ci * ior.b * 2.0;
+    // perpendicular polarization
+    rp2 = (n2k2 * Ci2 - Ci2n + 1.0) / (n2k2 * Ci2 + Ci2n + 1.0);
+    // parallel polarization
+    rs2 = (n2k2 - Ci2n + Ci2) / (n2k2 + Ci2n + Ci2);
+    // we don't know the polarization, so use average
+    f.b = (rp2 + rs2) / 2.0;
+#ifdef VERBOSE
+    // miASSERT(f.b >= 0.0);
+    if (f.b < 0.0) error("miASSERT(f.b >= 0.0);");
+    // miASSERT(f.b <= 1.0);
+    if (f.b > 1.0) error("miASSERT(f.b <= 1.0);");
+#endif
+  } // fresnelMetal
+
+  float specularG(in float sigma, in float Ci) {
+    float gL2 = 4.0 * PI * sigma * Ci;
+    gL2 *= gL2;
+    return exp(-gL2 / (0.54 * 0.54));
+  } // specularG
+
+  float specularS(in float sigma_over_tau, inout float Ci) {
+    float A = 0.0;
+    float a = 0.0;
+    float b = 0.0;
+    float ret = 0.0;
+
+    if (Ci < 0.0) {
+      Ci = - Ci;
+    } // if (Ci < 0.0)
+    A = (Ci / sqrt(1.0001 - Ci * Ci)) / sigma_over_tau;
+    a = 1.0 - 0.5 * exp(-A);
+    if (A == 0) {
+      // b is infinite => ret = 0;
+      return 0.0;
+    } // if (A == 0)
+    b = 1.0 / (2.0 * sqrt(PI) * A);
+    ret = a / (a + b);
+    return ret;
+  } // specularS
+
+  // see max_texeval.cpp
+  bool TexEvalNormal(inout float3 local_result, in Color paras_bumpMap) {
+    // TODO: mi_call_shader_x(...)
+    // right now we just return the input parameter
+    local_result.x = paras_bumpMap.r;
+    local_result.y = paras_bumpMap.g;
+    local_result.z = paras_bumpMap.b;
+    return true;
+  } // TexEvalNormal
+
+  // see max_arch.cpp
+  bool EvalNormalPerturb(inout float3 res,
+			 // paras
+			 in Color paras_bumpMap,
+			 in float paras_bumpMapAmount) {
+    if (TexEvalNormal(res, paras_bumpMap)) {
+      res.x *= paras_bumpMapAmount;
+      res.y *= paras_bumpMapAmount;
+      res.z *= paras_bumpMapAmount;
+      return true;
+    } // if (TexEvalNormal(res, paras_bumpMap))
+    else {
+      return false;
+    } // else [ if (TexEvalNormal(res, paras_bumpMap)) ]
+  } // EvalNormalPerturb
+
+  // see max_arch.cpp
+  void AlphaCompCol(inout Color c, in Color c_over) {
+    float ia = 1.0 - c_over.a;
+    if (ia < 0.0) ia = 0.0;
+    c.r = c.r * ia + c_over.r;
+    c.g = c.g * ia + c_over.g;
+    c.b = c.b * ia + c_over.b;
+  } // AlphaCompCol
+
+  // see max_arch.cpp
+  void LerpEvalMix(inout Color c, in float mapSlot_mapAmount,
+		   in Color init_mapColor) {
+    Color mapColor = init_mapColor; // instead of Eval(...) call !!!
+    mapColor.a *= mapSlot_mapAmount;
+    AlphaCompCol(c, mapColor);
+  } // LerpEvalMix
+
+  // prefixes used:
+  // - "inst_": ArchMtl_INST         (max_arch.h)
+  // - "ip_":   maxIllumParams       (max_illumprm.h)
+  // - "sp_":   ArchMtl_ShaderParams (max_arch.h)
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    Color illum = Color(0.0, 0.0, 0.0, 0.0);
+    Color refractivity  = Color(0.0, 0.0, 0.0, 1.0); // black
+    // struct maxIllumParams
+    float ip_finalOpac  = 0.0;
+    float ip_reflectAmt = 0.0;
+    float ip_refractAmt = 0.0;
+    Color ip_ambIllumOut   = Color(0.0, 0.0, 0.0, 1.0);
+    Color ip_diffIllumOut  = Color(0.0, 0.0, 0.0, 1.0);
+    Color ip_transIllumOut = Color(0.0, 0.0, 0.0, 1.0);
+    Color ip_selfIllumOut  = Color(0.0, 0.0, 0.0, 1.0);
+    Color ip_specIllumOut  = Color(0.0, 0.0, 0.0, 1.0);
+    Color ip_reflIllumOut  = Color(0.0, 0.0, 0.0, 1.0);
+    float ip_diffIllumIntens  = 0.0;
+    float ip_finalAttenuation = 0.0;
+    Color ip_finalC = Color(0.0, 0.0, 0.0, 1.0);
+    Color ip_finalT = Color(0.0, 0.0, 0.0, 1.0);
+    Color ip_localT = Color(0.0, 0.0, 0.0, 1.0);
+    // init function
+    int inst_mShaderType = kShaderPhong;
+    // TODO: implement switch again !!!
+    //     int inst_mShaderType = -1;
+    //     switch (extraParams.shaderType) {
+    //     case kShaderMetal:
+    //       inst_mShaderType = kShaderMetal;
+    //       break;
+    //     default:
+    //     case kShaderPhong:
+    //       inst_mShaderType = kShaderPhong;
+    //       break;
+    //     }
+    bool inst_mRawDiffuseTexture = ARCH_PARAS(rawDiffuseTexture);
+    bool inst_mUseTextureScale = ARCH_PARAS(useTextureSize);
+    float inst_mUScale = 1.0;
+    float inst_mVScale = 1.0;
+    float inst_mUOffset = 1.0;
+    float inst_mVOffset = 1.0;
+    if (inst_mUseTextureScale) {
+      float width  = ARCH_PARAS(textureWidth);
+      float height = ARCH_PARAS(textureHeight);
+      float uoff   = ARCH_PARAS(textureUOffset);
+      float voff   = ARCH_PARAS(textureVOffset);
+      if (width > 0.0) {
+	inst_mUScale /= width;
+	inst_mUOffset = 0.5 * (width - 1.0) + uoff;
+      } // if (width > 0.0)
+      if (height > 0.0) {
+	inst_mVScale /= height;
+	inst_mVOffset = 0.5 * (height - 1.0) + voff;
+      } // if (height > 0.0)
+    } // if (inst_mUseTextureScale)
+    Color inst_mDiffuseColor = ARCH_PARAS(diffuse);
+    float inst_mIOR = ARCH_PARAS(ior);
+    clipMin(inst_mIOR, 1.0);
+    float inst_mTransparency = ARCH_PARAS(transparency);
+    clipRange(inst_mTransparency, 0.0, 1.0);
+    float inst_mShininess = ARCH_PARAS(shininess);
+    clipRange(inst_mShininess, 0.0, 1.0);
+    float inst_mLuminance = ARCH_PARAS(luminance);
+    clipMin(inst_mLuminance, 0.0);
+    float inst_mTranslucency = ARCH_PARAS(translucency);
+    clipRange(inst_mTranslucency, 0.0, 1.0);
+    float inst_mColorBleed = ARCH_PARAS(colorBleed);
+    clipRange(inst_mColorBleed, 0.0, 1.0);
+    float inst_mReflectanceScale = 
+      ARCH_PARAS(reflectanceScale);
+    clipRange(inst_mReflectanceScale, 0.0, 1.0);
+    float inst_mTransmittanceScale = 
+      ARCH_PARAS(transmittanceScale);
+    clipRange(inst_mTransmittanceScale, 0.0, 1.0);
+    float inst_mIndirectBumpAmount = 
+      ARCH_PARAS(indirectBumpAmount);
+    float inst_mCutoutAmount = 
+      ARCH_PARAS(cutoutMapAmount);
+    clipRange(inst_mCutoutAmount, 0.0, 1.0);
+    bool inst_mTwoSided = ARCH_PARAS(twoSided);
+    bool inst_mEmitLuminance = ARCH_PARAS(emitLuminance);
+    // Calculate... in init function
+    float inst_mDiffTrans = 0.0;
+    float inst_mSigma = 0.0;
+    float inst_mSlope = 0.0;
+    float inst_mGc = 0.0;
+    float inst_mM2 = 0.0;
+    Color inst_mReflectance = Color(0.0, 0.0, 0.0, 0.0);
+    Color inst_mSpecTransmittance = Color(0.0, 0.0, 0.0, 0.0);
+    Color inst_mDiffTransmittance = Color(0.0, 0.0, 0.0, 0.0);
+    Color inst_mGlow = Color(0.0, 0.0, 0.0, 0.0);
+    CalculateShininess(//input
+		       inst_mShininess,
+		       // output
+		       inst_mSigma, inst_mSlope, inst_mGc, inst_mM2);
+    if (inst_mShaderType == kShaderMetal) {
+      inst_mDiffTrans = 0.0;
+    } // if (inst_mShaderType == kShaderMetal)
+    else {
+      CalculateDiffTransparency(inst_mTransparency, inst_mTranslucency,
+				inst_mDiffTrans);
+    } // else [if (inst_mShaderType == kShaderMetal) ]
+    float totalTrans = inst_mTransparency + inst_mDiffTrans;
+    CalculateReflectance(inst_mDiffuseColor,
+			 totalTrans,
+			 inst_mReflectance);
+    CalculateSpecTransmittance(inst_mDiffuseColor, inst_mTransparency,
+			       inst_mSpecTransmittance);
+    CalculateDiffTransmittance(inst_mDiffuseColor, inst_mDiffTrans,
+			       inst_mDiffTransmittance);
+    bool inst_mIsTranslucent = ((inst_mShaderType != kShaderMetal) &&
+				(abs(inst_mDiffTransmittance.r) >= 1.0e-4 ||
+				 abs(inst_mDiffTransmittance.g) >= 1.0e-4 ||
+				 abs(inst_mDiffTransmittance.b) >= 1.0e-4));
+    CalculateGlow(inst_mDiffuseColor, inst_mLuminance, inst_mGlow);
+    // ...
+    // these are calculated from cached parameters during Update
+    float inst_mPhysicalScale = 1.0;
+    // InitializeShadeParams (TODO: diffuse & cutout TexmapSlots)
+    Color sp_mDiffuseColor = inst_mDiffuseColor;
+    if (ARCH_PARAS(diffuseMapEnable)) {
+      Color diffuseMapColor = Color(0.0, 0.0, 0.0, 0.0);
+      ARCH_PARAS(diffuseMap).call("output", "result", diffuseMapColor);
+      LerpEvalMix(sp_mDiffuseColor, 
+		  ARCH_PARAS(diffuseMapAmount), 
+		  diffuseMapColor);
+    } // if (ARCH_PARAS(diffuseMapEnable))
+    Color sp_mReflectColor = Color(0.0, 0.0, 0.0, 1.0);;
+    Color sp_mRefractColor = Color(0.0, 0.0, 0.0, 1.0);;
+    Color sp_mSpecTransmittance = Color(0.0, 0.0, 0.0, 0.0);
+    float sp_mShininess = inst_mShininess;
+    float sp_mLuminance = inst_mLuminance;
+    bool sp_mRawDiffuseTexture = inst_mRawDiffuseTexture;
+    bool sp_mMetal = false;
+    bool sp_mDiffuse = false;
+    bool sp_mIsTranslucent = false;
+    bool sp_mBumped = false;
+    bool sp_mSecondary = true; // TODO: we can't check trace depth in MetaSL
+    bool sp_mReflected = false;
+    bool sp_mTransmitted = false;
+    float sp_mIOR = 0.0;
+    float sp_translucencyAmount = 0.0;
+    float sp_mIndBump = 0.0;
+    float sp_mCosTheta = 0.0;
+    float sp_mSlope = 0.0;
+    float sp_mSi = 0.0; // TODO: where initialized?
+    float sp_mGc = 0.0; // TODO: where initialized?
+    float sp_mFi = 0.0; // TODO: where initialized?
+    float sp_mSigma = 0.0; // TODO: where initialized?
+    float sp_mM2 = 0.0; // TODO: where initialized?
+    float sp_mCutout = 1.0; // TODO: this should come from TexmapSlots
+    Color sp_mReflectance = Color(0.0, 0.0, 0.0, 0.0);
+    Color sp_mDiffTransmittance = Color(0.0, 0.0, 0.0, 0.0);
+    Color sp_mP_dir = Color(0.0, 0.0, 0.0, 0.0);
+    Color sp_mP_iud = Color(0.0, 0.0, 0.0, 0.0); // TODO: where initialized?
+    Color sp_mP_sr = Color(0.0, 0.0, 0.0, 0.0); // TODO: where initialized?
+    Color sp_mP_ind = Color(0.0, 0.0, 0.0, 0.0); // TODO: where initialized?
+    Color sp_mP_st = Color(0.0, 0.0, 0.0, 0.0); // TODO: where initialized?
+    Color sp_mFiM = Color(0.0, 0.0, 0.0, 0.0); // TODO: where initialized?
+    float3 sp_mNormal = float3(0.0, 0.0, 0.0);
+    float3 sp_mViewDir = float3(0.0, 0.0, 0.0);
+    if (!sp_mRawDiffuseTexture) {
+      // sp_mTextured = inst_mTexmaps[kMapDiffuse].mapOn;
+      sp_mMetal = (inst_mShaderType == kShaderMetal);
+      sp_mIOR = inst_mIOR;
+      sp_mDiffuse = isDiffuse(sp_mIOR);
+      CalculateShininess(// input
+			 sp_mShininess,
+			 // output
+			 sp_mSigma, sp_mSlope, sp_mGc, sp_mM2);
+      float xp = 0.0;
+      float xl = 0.0;
+      xp = inst_mTransparency;
+      if (sp_mMetal) {
+	xl = 0.0;
+      } // if (sp_mMetal)
+      else {
+	sp_translucencyAmount = inst_mTranslucency;
+	CalculateDiffTransparency(xp, sp_translucencyAmount, xl);
+      } // else [ if (sp_mMetal) ]
+      float totalTrans = xp + xl;
+      CalculateReflectance(sp_mDiffuseColor, totalTrans, sp_mReflectance);
+      CalculateSpecTransmittance(sp_mDiffuseColor, xp, sp_mSpecTransmittance);
+      CalculateDiffTransmittance(sp_mDiffuseColor, xl, sp_mDiffTransmittance);
+      sp_mIsTranslucent = (!sp_mMetal && (sp_mDiffTransmittance.r >= 1.0e-4 ||
+					  sp_mDiffTransmittance.g >= 1.0e-4 ||
+					  sp_mDiffTransmittance.b >= 1.0e-4));
+      // ...
+      sp_mSigma = inst_mSigma;
+      sp_mSlope = inst_mSlope;
+      sp_mGc = inst_mGc;
+      sp_mM2 = inst_mM2;
+      // ...
+      // sp_mReflectance = inst_mReflectance;
+      // sp_mDiffTransmittance = inst_mDiffTransmittance;
+      // sp_mSpecTransmittance = inst_mSpecTransmittance;
+      // sp_mIsTranslucent = inst_mIsTranslucent;
+      // sp_translucencyAmount = inst_mTranslucency;
+      // apply physical scale
+      ip_selfIllumOut.r /= inst_mPhysicalScale;
+      ip_selfIllumOut.g /= inst_mPhysicalScale;
+      ip_selfIllumOut.b /= inst_mPhysicalScale;
+      sp_mNormal = normal;
+      sp_mBumped = false;
+      sp_mIndBump = 1.0;
+      // if(bump->mapOn) {...}
+      if (ARCH_PARAS(bumpMapEnable)) {
+	float3 dn = float3(0.0, 0.0, 0.0);
+	// TODO: EvalNormalPerturb
+	Color bumpMapColor = Color(0.0, 0.0, 0.0, 0.0);
+	bool evalNormal = true;
+	ARCH_PARAS(bumpMap).call("input", "evalNormal", 
+			    evalNormal,
+			    "output", "result", 
+			    bumpMapColor);
+	if (EvalNormalPerturb(dn, 
+			      bumpMapColor, 
+			      ARCH_PARAS(bumpMapAmount))) {
+	  // sp->mOldNormal = sp->mNormal;
+	  // if(state->inv_normal) {
+	  //   dn.x = -dn.x;
+	  //   dn.y = -dn.y;
+	  //   dn.z = -dn.z;
+	  // }
+	  // mi_vector_add(&sp->mNormal, &state->normal, &dn);
+	  sp_mNormal = normal + dn;
+	  // mi_vector_normalize(&sp->mNormal);
+	  sp_mNormal = normalize(sp_mNormal);
+	  // state->normal = sp->mNormal;
+	  normal = sp_mNormal;
+	  // sp->mBumped = miTRUE;
+	  sp_mBumped = true;
+	  // sp->dn = dn;
+	  // re-calcualte dot_nd
+	  // sp->mOldDotND = state->dot_nd;
+	  // state->dot_nd = mi_vector_dot(&state->normal, &state->dir);
+	} // if (EvalNormalPerturb(...))
+      } // if (ARCH_PARAS(bumpMapEnable))
+      sp_mViewDir = direction;
+      sp_mCosTheta = -dot(sp_mViewDir, sp_mNormal);
+      sp_mReflected = (sp_mMetal || !sp_mDiffuse);
+      sp_mTransmitted = (!sp_mMetal && isTransparent(sp_mSpecTransmittance));
+      // ...
+      if (sp_mMetal) {
+	// getShadeDataMetal(sp);
+	float S = specularS(sp_mSlope, sp_mCosTheta);
+	float eG = 0.0;
+	Color nonSpec = Color(0.0, 0.0, 0.0, 0.0);
+	Color F = Color(0.0, 0.0, 0.0, 0.0);
+	Color ior = Color(0.0, 0.0, 0.0, 0.0);
+	float temp = 0.0;
+
+	computeIOR(sp_mDiffuseColor, ior);
+	fresnelMetal(ior, sp_mCosTheta, F);
+	sp_mSi = S;
+	sp_mFiM = ior;
+	S *= S;
+	eG = specularG(sp_mSigma, sp_mCosTheta);
+	if (!sp_mSecondary) S = 0.0;
+	temp = eG * S;
+	sp_mP_sr.r = F.r * temp;
+	sp_mP_sr.g = F.g * temp;
+	sp_mP_sr.b = F.b * temp;
+	sp_mP_st.r = sp_mP_st.g = sp_mP_st.b = 0.0;
+	fresnelMetal(ior, sqrt(0.5 * (1.0 + sp_mCosTheta)), F);
+	nonSpec.r = nonSpec.g = nonSpec.b = (1.0 - eG * S) * kDiffuseDistAtten;
+	sp_mP_ind = nonSpec * F;
+	sp_mP_iud = Color(0.0, 0.0, 0.0, 1.0); // black
+	sp_mIsTranslucent = false;
+      } // if (sp_mMetal)
+      else if (sp_mDiffuse) {
+	// TODO: getShadeDataDiffuse(sp);
+	if (!sp_mTransmitted) {
+	  sp_mP_iud.r = sp_mDiffuseColor.r * kDiffuseDistAtten;
+	  sp_mP_iud.g = sp_mDiffuseColor.g * kDiffuseDistAtten;
+	  sp_mP_iud.b = sp_mDiffuseColor.b * kDiffuseDistAtten;
+	} // if (!sp_mTransmitted)
+	else {
+	  sp_mP_iud = sp_mReflectance;
+	  sp_mP_iud += sp_mDiffTransmittance;
+	  sp_mP_iud *= kDiffuseDistAtten;
+	  sp_mP_st = sp_mSpecTransmittance;
+	} // else [ if (!sp_mTransmitted) ]
+	sp_mP_ind = sp_mP_iud;
+      } // else if (sp_mDiffuse)
+      else {
+	// getShadeData(sp);
+	float S = specularS(sp_mSlope, sp_mCosTheta);
+	float eG = 0.0;
+	Color nonSpec = Color(0.0, 0.0, 0.0, 0.0);
+	float F = 0.0;
+	float dF = 0.0;
+	float temp = 0.0;
+
+	S = specularS(sp_mSlope, sp_mCosTheta);
+	F = fresnel(sp_mIOR, sp_mCosTheta);
+	sp_mSi = S;
+	sp_mFi = F;
+	if (!sp_mSecondary) {
+	  S = 0.0;
+	  eG = 0.0;
+	} // if (!sp_mSecondary)
+	else {
+	  S *= S;
+	  eG = specularG(sp_mSigma, sp_mCosTheta);
+	  sp_mP_sr.r = sp_mP_sr.g = sp_mP_sr.b = eG * F * S;
+	} // else [ if (!sp_mSecondary) ]
+	nonSpec.r = nonSpec.g = nonSpec.b = 1.0 - eG * S;
+	dF = fresnel(sp_mIOR, sqrt(0.5 * (1.0 + sp_mCosTheta)));
+	temp = dF * kDiffuseDistAtten;
+	sp_mP_ind.r = nonSpec.r * temp;
+	sp_mP_ind.g = nonSpec.g * temp;
+	sp_mP_ind.b = nonSpec.b * temp;
+	if (sp_mTransmitted) {
+	  sp_mP_st.r = sp_mP_st.g = sp_mP_st.b = eG * (1.0 - F) * S;
+	  temp = (1.0 - dF);
+	  nonSpec.r = sp_mP_st.r + nonSpec.r * temp;
+	  nonSpec.g = sp_mP_st.g + nonSpec.g * temp;
+	  nonSpec.b = sp_mP_st.b + nonSpec.b * temp;
+	  sp_mP_iud = nonSpec * sp_mReflectance;
+	  sp_mP_iud += sp_mDiffTransmittance;
+	  sp_mP_iud *= kDiffuseDistAtten;
+	  sp_mP_ind += sp_mP_iud;
+	  sp_mP_st *= sp_mSpecTransmittance;
+	} // if (sp_mTransmitted)
+	else {
+	  temp = ((1.0 - dF) * kDiffuseDistAtten);
+	  sp_mP_iud.r = sp_mDiffuseColor.r * temp;
+	  sp_mP_iud.g = sp_mDiffuseColor.g * temp;
+	  sp_mP_iud.b = sp_mDiffuseColor.b * temp;
+	  sp_mP_ind += sp_mP_iud;
+	} // else [ if (sp_mTransmitted) ]
+      } // else
+    } // if (!sp_mRawDiffuseTexture)
+    // shade the surface (back in max_ArchitecturalMaterial_Shade)
+    if (sp_mCutout > 0.0) {
+      if (sp_mRawDiffuseTexture) {
+	ip_diffIllumOut = sp_mDiffuseColor;
+	ip_diffIllumIntens = Intens(ip_diffIllumOut);
+	ip_finalAttenuation = 1.0;
+	ip_finalOpac = 1.0 - sp_mCutout;
+	ip_finalC = ip_diffIllumOut;
+      } // if (sp_mRawDiffuseTexture)
+      else {
+	Color cb_transAmbIllumOut  = Color(0.0, 0.0, 0.0, 1.0); // black
+	Color cb_transDiffIllumOut = Color(0.0, 0.0, 0.0, 1.0); // black
+	bool cb_transAmbIllum = false;
+	// cb_sp = sp;
+	// --------------------------
+	// Begin IllumAccumulate(...)
+	// --------------------------
+	// light loop
+	Light_iterator light;
+	foreach (light) {
+	  float cosR = light.dot_nl;
+	  // diffuse
+	  illum = light.contribution/PI;
+	  INPLACE_MULT_SCALAR(illum, cosR);
+	  // specular
+	  if (sp_mMetal || !sp_mDiffuse) {
+	    float cosH;
+	    float3 H;
+	    if (cosR < 0.0001) {
+	      cosR = 0.0001;
+	    } // if (cosR < 0.0001)
+	    H = light.direction - sp_mViewDir;
+	    cosH = dot(H, sp_mNormal);
+	    cosH /= length(H);
+	    if (cosH < 0.0001) {
+	      cosH = 0.0001;
+	    } // if (cosH < 0.0001)
+	    if (sp_mMetal) {
+	      // getDirectMetal(cosR, cosH, sp);
+	      float SI;
+	      float SR = specularS(sp_mSlope, cosR) / cosR;
+	      float slope2 = sp_mSlope * sp_mSlope + 0.000001;
+	      float cosH2 = cosH * cosH;
+	      float tanH2 = (1.0001 - cosH2) / cosH2;
+	      float D = exp(-tanH2 / slope2) / (slope2 * cosH2 * cosH2);
+	      float temp;
+	      float dd;
+	      Color F;
+
+	      if (sp_mSi == 0.0) {
+		SI = 0.0;
+	      } // if (sp_mSi == 0.0)
+	      else if (sp_mCosTheta == 0.0) {
+		SI = miHUGE_SCALAR;
+	      } // else if (sp_mCosTheta == 0.0)
+	      else {
+		SI = sp_mSi / sp_mCosTheta;
+	      } // else
+	      dd = SI * SR * D;
+	      fresnelMetal(sp_mFiM, cosH, F);
+	      temp = dd / PI;
+	      sp_mP_dir.r = F.r * temp;
+	      sp_mP_dir.g = F.g * temp;
+	      sp_mP_dir.b = F.b * temp;
+	      temp = sp_mGc / PI;
+	      sp_mP_dir.r += sp_mDiffuseColor.r * temp;
+	      sp_mP_dir.g += sp_mDiffuseColor.g * temp;
+	      sp_mP_dir.b += sp_mDiffuseColor.b * temp;
+	    } // if (sp_mMetal)
+	    else {
+	      // getDirect(cosR, cosH, sp);
+	      float F = fresnel(sp_mIOR, cosH);
+	      float SI;
+	      float SR = specularS(sp_mSlope, cosR) / cosR;
+	      float slope2 = sp_mSlope * sp_mSlope + 0.000001;
+	      float cosH2 = cosH * cosH;
+	      float tanH2 = (1.0001 - cosH2) / cosH2;
+	      float D = exp(-tanH2 / slope2) / (slope2 * cosH2 * cosH2);
+	      float dd = 0.0;
+
+	      if (sp_mSi == 0.0) {
+		SI = 0.0;
+	      } // if (sp_mSi == 0.0)
+	      else if (sp_mCosTheta == 0.0) {
+		SI = miHUGE_SCALAR;
+	      } // else if (sp_mCosTheta == 0.0)
+	      else {
+		SI = sp_mSi / sp_mCosTheta;
+	      } // else
+	      dd = F * SI * SR * D;
+	      dd /= PI;
+	      sp_mP_dir.r = sp_mP_dir.g = sp_mP_dir.b = dd;
+	    } // else [ if (sp_mMetal) ]
+	    ip_specIllumOut.r += illum.r * sp_mP_dir.r;
+	    ip_specIllumOut.g += illum.g * sp_mP_dir.g;
+	    ip_specIllumOut.b += illum.b * sp_mP_dir.b;
+	  } // if (sp_mMetal || !sp_mDiffuse)
+	  // do some more stuff on illum ...
+	  INPLACE_MULT(illum, sp_mP_iud);
+	  INPLACE_ADD(ip_diffIllumOut, illum);
+	} // foreach (light)
+	// sample illumination on the backface if the material is translucent
+	if (!cb_transAmbIllum && sp_mIsTranslucent) {
+	  Color transDiffIllumOut = Color(0.0, 0.0, 0.0, 1.0); // black
+	  // flip normal
+	  normal = -normal;
+	  // second light loop
+	  Light_iterator light2;
+	  foreach (light2) {
+	    float cosR = light2.dot_nl;
+	    illum = light2.contribution/PI;
+	    // TODO: self shadowing, dim lightcol by distance,opacity&filter...
+	    INPLACE_MULT_SCALAR(illum, cosR);
+	    INPLACE_ADD(transDiffIllumOut, illum);
+	  } // foreach (light2)
+	  // flip normal back
+	  normal = -normal;
+	  // add the light samples to the result
+	  INPLACE_ADD(cb_transDiffIllumOut, transDiffIllumOut);
+	} // if (!cb_transAmbIllum && sp_mIsTranslucent)
+	// ------------------------
+	// End IllumAccumulate(...)
+	// ------------------------
+	if (sp_mIsTranslucent) {
+	  if (cb_transAmbIllum)
+	    ip_transIllumOut = cb_transAmbIllumOut;
+	  else
+	    ip_transIllumOut = cb_transDiffIllumOut;
+	  INPLACE_MULT(ip_transIllumOut, sp_mDiffTransmittance);
+	} // if (sp_mIsTranslucent)
+#if 1
+	// reflections
+	if (sp_mReflected) {
+	  float3 dir = float3(0.0, 0.0, 0.0);
+	  dir = reflect(direction, normal);
+	  Ray ray;
+	  Ray ray_dx; // ignore for the moment
+	  Ray ray_dy; // ignore for the moment
+	  ray = Ray(position, dir);
+	  Trace_options trace_options;
+	  trace_options.set_ray_type("reflect");
+	  trace_options.set_ray_dispersal_group("specular");
+	  if (trace(ray, ray_dx, ray_dy, trace_options, "result", 
+		    sp_mReflectColor)) {
+	    INPLACE_MULT(sp_mReflectColor, sp_mP_sr);
+	    INPLACE_ADD(ip_reflIllumOut, sp_mReflectColor);
+	  } // if (trace(...))
+	} // if (sp_mReflected)
+	// refractions
+	if (sp_mTransmitted && !sp_mDiffuse) {
+	  float3 dir = float3(0.0, 0.0, 0.0);
+	  bool refract_bool = false;
+
+	  float my_incident_ior  = sp_mIOR;
+	  float my_refracted_ior = sp_mIOR;
+	  if (ray_type == "eye") {
+	    my_incident_ior  = 1.0;
+	  }
+	  refract_bool = RefractVector(dir,
+				       // state
+				       dot_nd, backside,
+				       my_incident_ior, my_refracted_ior,
+				       normal, direction);
+	  if (refract_bool) {
+	    // refraction ray
+	    Ray ray;
+	    Ray ray_dx; // ignore for the moment
+	    Ray ray_dy; // ignore for the moment
+	    ray = Ray(position, dir);
+	    Trace_options trace_options;
+	    trace_options.set_ray_type("refract");
+	    if (trace(ray, ray_dx, ray_dy, trace_options, "result", 
+		      sp_mRefractColor)) {
+	      INPLACE_MULT(sp_mRefractColor, sp_mP_st);
+	      INPLACE_ADD(ip_transIllumOut, sp_mRefractColor);
+	      float temp = (1.0 - sp_mRefractColor.a);
+	      refractivity.r = sp_mP_st.r * temp;
+	      refractivity.g = sp_mP_st.g * temp;
+	      refractivity.b = sp_mP_st.b * temp;
+	    } // if (trace(...))
+	  } // if (refract_bool)
+	  else {
+	    // reflection ray
+	    Ray ray;
+	    Ray ray_dx; // ignore for the moment
+	    Ray ray_dy; // ignore for the moment
+	    ray = Ray(position, dir);
+	    Trace_options trace_options;
+	    trace_options.set_ray_type("reflect");
+	    if (trace(ray, ray_dx, ray_dy, trace_options, "result", 
+		      sp_mRefractColor)) {
+	      INPLACE_MULT(sp_mRefractColor, sp_mP_st);
+	      INPLACE_ADD(ip_transIllumOut, sp_mRefractColor);
+	    } // if (trace(...))
+	  } // else [ if (refract_bool) ]
+	} // if (sp_mTransmitted && !sp_mDiffuse)
+#endif
+	ip_diffIllumIntens = Intens(ip_diffIllumOut);
+	// TODO: ip_ambIllumOut += sceneData_ambientLight;
+	INPLACE_MULT(ip_ambIllumOut, sp_mP_ind);
+	ip_finalAttenuation = sp_mCutout;
+	ip_finalOpac = 1.0 - (1.0-Intens(sp_mSpecTransmittance)) * sp_mCutout;
+	ip_finalC = ip_ambIllumOut;
+	INPLACE_ADD(ip_finalC, ip_diffIllumOut);
+	INPLACE_ADD(ip_finalC, ip_transIllumOut);
+	// TODO: INPLACE_ADD(ip_finalC, ip_selfIllumOut);
+	INPLACE_ADD(ip_finalC, ip_specIllumOut);
+	INPLACE_ADD(ip_finalC, ip_reflIllumOut);
+      } // else [ if (sp_mRawDiffuseTexture) ]
+      ip_finalC.r *= sp_mCutout;
+      ip_finalC.g *= sp_mCutout;
+      ip_finalC.b *= sp_mCutout;
+    } // if (sp_mCutout > 0.0)
+    bool mtlTransmitted = true; // state_options_trace || isMtlEdit;
+    if (!sp_mRawDiffuseTexture && sp_mTransmitted &&
+	(!mtlTransmitted || sp_mDiffuse)) {
+      Color t = Color(1.0, 1.0, 1.0, 1.0);
+      ip_finalT = t;
+      INPLACE_SUB(t, sp_mP_st);
+      t.r *= sp_mCutout;
+      t.g *= sp_mCutout;
+      t.b *= sp_mCutout;
+      INPLACE_SUB(ip_finalT, t);
+    } // if (!sp_mRawDiffuseTexture && sp_mTransmitted &&  ...)
+    else {
+      ip_finalT.r = ip_finalT.g = ip_finalT.b = (1.0f - sp_mCutout);
+    } // else [ if (!sp_mRawDiffuseTexture && sp_mTransmitted &&  ...) ]
+    ip_localT = ip_finalT;
+#if 0
+    // composite transparency
+    if ((ip_finalT.r > 0) || (ip_finalT.g > 0) || (ip_finalT.b > 0)) {
+      Color transpColor = Color(0.0, 0.0, 0.0, 0.0);
+      Ray ray;
+      Ray ray_dx; // ignore for the moment
+      Ray ray_dy; // ignore for the moment
+      ray = Ray(position, direction);
+      Trace_options trace_options;
+      trace_options.set_ray_type("transparent");
+      if (trace(ray, ray_dx, ray_dy, trace_options, "result", transpColor)) {
+	float temp = 0.0;
+	ip_finalC.r += (transpColor.r * ip_finalT.r);
+	ip_finalC.g += (transpColor.g * ip_finalT.g);
+	ip_finalC.b += (transpColor.b * ip_finalT.b);
+	temp = (1.0 - transpColor.a);
+	ip_finalT.r *= temp;
+	ip_finalT.g *= temp;
+	ip_finalT.b *= temp;
+      } // if (trace(...))
+    } // if ((ip_finalT.r > 0) || (ip_finalT.g > 0) || (ip_finalT.b > 0))
+#endif
+    result = ip_finalC;
+    // alpha channel
+    Color totalTransmissivity = Color(0.0, 0.0, 0.0, 0.0);
+    totalTransmissivity.r = ip_finalT.r + refractivity.r;
+    totalTransmissivity.g = ip_finalT.g + refractivity.g;
+    totalTransmissivity.b = ip_finalT.b + refractivity.b;
+    result.a = 1.0 - Intens(totalTransmissivity);
+  } // main
+};

@@ -1,0 +1,257 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Approximations</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node205.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node207.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION204"></a>
+<h3>Approximations</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>-</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miApprox</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>-</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>as set by miAPPROX_DEFAULT()</td>
+</tr>
+</table>
+<pre>
+enum miApprox_method {
+        miAPPROX_PARAMETRIC,
+        miAPPROX_REGULAR,
+        miAPPROX_SPATIAL,
+        miAPPROX_CURVATURE,
+        miAPPROX_LDA,
+        miAPPROX_ADJACENCY,             /* only for curves */
+        miAPPROX_ALGEBRAIC,             /* only for surfaces */
+        miAPPROX_DEFTRIM,               /* only for miFace def_trim_approx */
+        miAPPROX_REGULAR_PERCENT,       /* new in 3.2, regular param n% m% */
+        miAPPROX_INDIRECT,
+        miAPPROX_NMETHODS
+};
+
+enum miApprox_style {
+        miAPPROX_STYLE_NONE,
+        miAPPROX_STYLE_GRID,
+        miAPPROX_STYLE_TREE,
+        miAPPROX_STYLE_DELAUNAY,
+        miAPPROX_STYLE_FINE,            /* sub-object/subpixel tessellation */
+        miAPPROX_STYLE_FINE_NO_SMOOTHING,/* fine poly displacement without
+                                            Hermite interpolation */
+        miAPPROX_NSTYLES
+};
+
+#define miCNST_UPARAM   0               /* regular/parametric only */
+#define miCNST_VPARAM   1
+#define miCNST_LENGTH   0               /* curvature/spatial only */
+#define miCNST_DISTANCE 1
+#define miCNST_ANGLE    2
+
+enum miCnst_type {
+        miCNST_VISIBLE  = 0,            /* for accessing (int)cnst[0] */
+        miCNST_TRACE,
+        miCNST_SHADOW,
+        miCNST_CAUSTIC,
+        miCNST_GLOBILLUM,
+        miCNST_NTYPES                   /* must not be &gt; 7 ! */
+};
+
+typedef struct miApprox {
+        miScalar             cnst[6];   /* indexed with miUPARAM...miANGLE */
+        miUint1              sharp;     /* 0=smooth normals, 255=faceted */
+        miCBoolean           spare;     /* not used */
+        miCBoolean           any;       /* stop if any criterion is met */
+        miCBoolean           view_dep;  /* view dependent? */
+        enum miApprox_method method;
+        enum miApprox_style  style;
+        miUshort             subdiv[2]; /* recursive subdivision depth */
+        miGeoIndex           max;       /* maximum number of triangles */
+        miScalar             grading;   /* min angle bound for graded meshing*/
+} miApprox;
+
+#define miAPPROX_MAX_SUBDIV     7
+#define miAPPROX_DEFAULT(A) do {                 \
+        (A).style         = miAPPROX_STYLE_TREE; \
+        (A).method        = miAPPROX_PARAMETRIC; \
+        (A).sharp         = 0;                   \
+        (A).flag          = miAPPROX_FLAG_ANY;   \
+        (A).any           = miFALSE;             \
+        (A).view_dep      = miFALSE;             \
+        (A).cnst[0]       = 0.0;                 \
+        (A).cnst[1]       = 0.0;                 \
+        (A).cnst[2]       = 0.0;                 \
+        (A).cnst[3]       = 0.0;                 \
+        (A).cnst[4]       = 0.0;                 \
+        (A).cnst[5]       = 0.0;                 \
+        (A).subdiv[miMIN] = 0;                   \
+        (A).subdiv[miMAX] = 5;                   \
+        (A).max           = miHUGE_INT;          \
+        (A).grading       = 0.0; } while (0)
+#define miAPPROX_FINE_DEFAULT(A) do {            \
+        (A).style         = miAPPROX_STYLE_FINE; \
+        (A).method        = miAPPROX_LDA;        \
+        (A).sharp         = 0;                   \
+        (A).flag          = (1&lt;&lt;miCNST_NTYPES)-1;\
+        (A).any           = miFALSE;             \
+        (A).view_dep      = miTRUE;              \
+        (A).cnst[0]       = 0.25;                \
+        (A).cnst[1]       = 0.0;                 \
+        (A).cnst[2]       = 0.0;                 \
+        (A).cnst[3]       = 0.0;                 \
+        (A).cnst[4]       = 0.0;                 \
+        (A).cnst[5]       = 0.0;                 \
+        (A).subdiv[miMIN] = 0;                   \
+        (A).subdiv[miMAX] = miAPPROX_MAX_SUBDIV; \
+        (A).max           = miHUGE_INT;          \
+        (A).grading       = 0.0; } while (0)
+</pre>
+<p>A translator may provide: all fields.</p>
+<p>The approximation structure is a substructure of
+<b>miPolygon_list</b>, <b>miCurve</b>, and <b>miSurface</b>. It
+does not have its own database entry and no associated SCENE
+functions of its own.</p>
+<p><b>method</b> is the approximation method, and must be one of
+<tt>miAPPROX_PARAMETRIC</tt>, <tt>miAPPROX_REGULAR</tt>,
+<tt>miAPPROX_SPATIAL</tt>, <tt>miAPPROX_CURVATURE</tt>,
+<tt>miAPPROX_LDA</tt>, <tt>miAPPROX_ADJACENCY</tt> (available for
+curves only), and <tt>miAPPROX_REGULAR_PERCENT</tt>. The default is
+<tt>miAPPROX_PARAMETRIC</tt>. "LDA" stands for Length, Distance,
+Angle; this mode combines the spatial and curvature-dependent modes
+which are now considered obsolete. As a special case, the value of
+<tt>miAPPROX_INDIRECT</tt> switches the meaning of the cnst array
+to an array of six integer offsets into the inherited approximation
+list, which contains up to ten approximations separately for
+visible, trace, shadow, and other flagged approximations.</p>
+<p><b>tyle</b> is the approximation style, and must be one of
+<tt>miAPPROX_NONE</tt>, <tt>miAPPROX_GRID</tt>,
+<tt>miAPPROX_TREE</tt>, <tt>miAPPROX_STYLE_FINE</tt><sup>3.1</sup>,
+and <tt>miAPPROX_STYLE_FINE_NO_SMOOTHING</tt><sup>3.4</sup>\. Tree
+mode is the default. The API and GAP module will automatically
+change the style field to grid mode if the method is parametric or
+regular. The <a href="node89.html#INDEX337">fine approximation</a>
+style<sup>3.1</sup> only works with parametric and edge length
+criteria; the recommended mode is view-dependent edge length with a
+subpixel diagonal constant. If any approximation in an object uses
+<a href="node89.html#INDEX337">fine approximation</a>, the miObject
+should have the <tt>fine</tt> flag set. fine approximation, no
+smoothing can be used for polygon displacement for turning off a
+smoothing procedure which is used by default during fine polygon
+displacement. (See page <a href="node89.html#fineapprox">fineapprox</a>
+for more details about fine
+approximation.)</p>
+<p><b>sharp</b><sup>3.1</sup> controls the normal vector
+interpolation. If set to 0, mental ray uses the interpolated normal
+as specified by the base surface, modified by displacement if
+available. If set to 255 (which corresponds to 1.0 in the .mi scene
+file), mental ray will use the geometric normal for a faceted look.
+This is primarily useful in
+<tt>miAPPROX_STYLE_FINE</tt><sup>3.1</sup> mode. mental ray 3.2
+also accepts values in the range 1..254 to blend smoothly between
+interpolated and faceted tessellations.</p>
+<p><b>any</b>, if <tt>miTRUE</tt>, makes the tessellation stop if
+<i>any</i> criterion is met, instead of when <i>all</i> criteria
+are met. Close faces are tessellated more finely than distant
+faces. This mode is not available for the parametric and regular
+method.</p>
+<p><b>view_dep</b>, if <tt>miTRUE</tt>, turns on view-dependent
+tessellation. Close faces are tessellated more finely than distant
+faces. This mode is not available for the parametric and regular
+method.</p>
+<p><b>cnst[0]</b>, <b>cnst[1]</b>, and <b>cnst[2]</b> specify the
+approximation precision. They depend on the approximation method.
+The defaults are 1.0 (which is not ideal for curvature-dependent
+tessellation). The <b>cnst</b> array should be indexed using the
+<tt>miCNST_</tt>* constants. The cnst array was a
+<tt>miGeoScalar</tt> array up to mental ray 3.1, and switch to
+<tt>miScalar</tt> in mental ray 3.2. If the method field is
+<tt>miAPPROX_INDIRECT</tt>, these six cnst fields are interpreted
+as integer offsets into the inherited approximation list, which
+contains the actual approximations to use. Indirection cannot be
+nested. For example, if the method is indirect, the approximation
+to use for shadow rays is <tt>inheritedlist [ (int)approx.cnst [
+miCNST_SHADOW ]]</tt>.</p>
+<p><b>subdiv</b> specifies the minimum and maximum number of
+subdivision recursion levels.</p>
+<p><b>grading</b> is used for Delaunay tessellation only, and
+specifies how gradually the triangle mesh should become finer.</p>
+<div align="center">
+<table class="table">
+<tr>
+<th>technique</th>
+<th><tt>cnst[0]</tt></th>
+<th><tt>cnst[1]</tt></th>
+<th><tt>cnst[2]</tt></th>
+</tr>
+<tr>
+<td>parametric</td>
+<td>(number of U subdivs) &frasl; degree</td>
+<td>(number of V subdivs) &frasl; degree</td>
+<td>-</td>
+</tr>
+<tr>
+<td>regular</td>
+<td>number of U subdivs</td>
+<td>number of V subdivs</td>
+<td>-</td>
+</tr>
+<tr>
+<td>spatial</td>
+<td>edge length limit</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>curvature</td>
+<td>-</td>
+<td>distance tolerance</td>
+<td>angle tolerance</td>
+</tr>
+<tr>
+<td>lda</td>
+<td>edge length limit</td>
+<td>distance tolerance</td>
+<td>angle tolerance</td>
+</tr>
+</table>
+</div>
+<p><b>subdiv[0]</b> and <b>subdiv[1]</b> specify the recursion
+limits. The defaults are 0 and 5, respectively. The maximum value
+is 7. A subdivision level <i>n</i> means that the curve, triangle,
+or surface is halved in each parameter direction <i>n</i> times,
+yielding on the order of <i>2^n</i> segments. The limits have no
+effect on Delaunay triangulation.</p>
+<p><b>max</b> is used only for Delaunay triangulation. It specifies
+the maximum number of triangles to create. The number may be
+exceeded if the trimming and hole curves have too many
+vertices.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node205.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node207.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

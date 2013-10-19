@@ -1,0 +1,470 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Material Contour Shaders</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node26.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node28.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION25"></a>
+
+  <h2>Material Contour Shaders</h2>
+
+  <p>After the contour contrast shaders have decided where contours
+  should be drawn, contour shaders decide on the contour color and
+  width (and optionally motion, normal, material tag, and label).</p>
+
+  <h3>Simple</h3>
+
+  <p>A material gets a simple contour of constant color and width
+  if it references the
+  <i><a href="node27.html#INDEX79">contour_shader_simple</a></i> contour
+  shader.</p>
+
+  <a id="INDEX79"></a>
+<h5 class="anchor" id="mi_shader__contour_shader_simple">contour_shader_simple</h5>
+  <pre>
+    "contour_shader_simple" (
+        color           "color",
+        scalar          "width")
+</pre>
+
+<dl>
+  <dt>color<dd> is the color of the contour.
+  <dt>width<dd> is the width of the contour, in percent of the
+  image width. Percentages allow scaling of the image without
+  changing the relative contour width.
+</dl>
+
+  <h3>Silhouette</h3>
+
+  <p>This shader only puts contours at the silhouette of objects -
+  even if the contour contrast function has decided that there
+  might also be contours internally on objects.</p>
+
+  <a id="INDEX89"></a>
+<h5 class="anchor" id="mi_shader__contour_shader_silhouette">contour_shader_silhouette</h5>
+  <pre>
+    "contour_shader_silhouette" (
+        color           "color",
+        scalar          "width")
+</pre>
+
+<dl>
+  <dt>color<dd> is the color of the contour lines.
+  <dt>width<dd> is the width of the contour.
+</dl>
+
+  <h3>Maximum Material Color</h3>
+
+  <p>This shader takes the maximum (in each color band) of the two
+  material colors on each side of the contour.</p>
+
+  <a id="INDEX90"></a>
+<h5 class="anchor" id="mi_shader__contour_shader_maxcolor">contour_shader_maxcolor</h5>
+  <pre>
+    "contour_shader_maxcolor" (
+        scalar          "width")
+</pre>
+
+<dl>
+  <dt>width<dd> is the width of the contour lines.
+</dl>
+
+  <h3>Curvature-dependent Width</h3>
+
+  <p>This shader draws contours whose width depends on the
+  curvature (the difference in surface orientation). If <i>&phi;</i>
+  is the angle between two surface normals, the width is computed by the
+  formula <span class="math">&frac12;(W&minus;w)(1&minus;cos&phi;)+w</span>,
+  where <i>w</i> is the parameter min_width and <i>W</i> is the
+  parameter max_width. So if two normals are in nearly opposite
+  directions, there is a contour of width close to max_width
+  between them. When the angle between them decreases, the width of
+  the contour decreases down to nearly min_width. (The width will
+  never reach min_width completely, since the contour contrast
+  function will not create any contours where the surface curvature
+  is less than ndelta degrees, and ndelta can not be set to zero
+  without getting contours in the interior of all objects.</p>
+
+  <p>At the edge of an object, where the depth difference is large,
+  the maximum contour width is used. The minimum width would
+  theoretically occur at 0 degrees and the maximum width at 180
+  degrees.</p>
+
+<a id="INDEX80"></a>
+<h5 class="anchor" id="mi_shader__contour_shader_curvature">contour_shader_curvature</h5>
+<pre>
+    "contour_shader_curvature" (
+        color           "color",
+        scalar          "min_width",
+        scalar          "max_width")
+</pre>
+
+<dl>
+  <dt>color<dd> is the color of the contour.
+  <dt>min_width<dd> is the minimum contour width, in percent of
+  the image size.
+  <dt>max_width<dd> is the maximum contour width, in percent of
+  the image size.
+</dl>
+
+  <h3>Color-dependent Width</h3>
+
+  <p>With the <tt>contour_shader_widthfromcolor</tt> contour
+  shader, a material gets contours whose thickness depends on
+  material color. The thickness depends on the maximum <i>m</i> of
+  the red, green, and blue color bands. (<i>m</i> is clamped to 1
+  if it is larger than 1.) The width is computed as <span class="math">
+  (W&minus;w)(1&minus;m)+w</span>, where <i>w</i> is the parameter min_width
+  and <i>W</i> is the parameter max_width. When the color is bright no
+  contour is visible, and when the color gets darker the contour
+  gets wide. The minimum width is used at bright colors and the
+  maximum width is used at black.</p>
+
+  <a id="INDEX81"></a>
+<h5 class="anchor" id="mi_shader__contour_shader_widthfromcolor">contour_shader_widthfromcolor</h5>
+  <pre>
+    "contour_shader_widthfromcolor" (
+        color           "color",
+        scalar          "min_width",
+        scalar          "max_width")
+</pre>
+
+<dl>
+  <dt>color<dd> is the color of the contour.
+  <dt>min_width<dd> is the minimum contour width, in percent of the image size.
+  <dt>max_width<dd> is the maximum contour width, in percent of the image size.
+</dl>
+
+  <p>For example, to get black contours that are thick where the
+  material is in shadow and thin where the material is brightly
+  illuminated, specify</p>
+  <pre>
+    contour "contour_shader_widthfromcolor" (
+        "color"         0 0 0 1,  # solid black
+        "min_width"     0.5,      # min width
+        "max_width"     1.5       # max width
+    )
+</pre>
+
+  <p>Note that for semitransparent materials, the material color is
+  not just the color of the object material under the given
+  illumination; the color of the objects behind the material is
+  also taken into account.</p>
+
+  <h3>Color from Material Color</h3>
+
+  <p>This shader draws a contour whose color matches the color of
+  the object being contoured, only with a different brightness
+  (usually much darker).</p>
+
+  <a id="INDEX82"></a>
+<h5 class="anchor" id="mi_shader__contour_shader_factorcolor">contour_shader_factorcolor</h5>
+  <pre>
+    "contour_shader_factorcolor" (
+        scalar          "factor",
+        scalar          "width")
+</pre>
+
+<dl>
+  <dt>factor<dd> is the multiplier for the material color. If the
+  factor is 0, a black contour results. If the factor is between 0
+  and 1, a dark contour (of the same hue as the material) results.
+  If the factor is 1, the contour gets the same color as the
+  material at that point. If the factor is larger than 1, bright
+  contours of the same hue as the material result.
+
+  <dt>width<dd> is the contour width, in percent of the image size.
+</dl>
+
+  <p>For example, to get contours that are half the material color
+  and two percent wide, specify:</p>
+  <pre>
+    contour "contour_shader_factorcolor" (
+        "factor"        0.5,      # factor of material color
+        "width"         2.0       # contour width (in %)
+    )
+</pre>
+
+  <p>Like the previous shader, this shader takes the color of
+  objects behind semitransparent materials into account.</p>
+
+  <h3>Depth-fading Contours</h3>
+
+  <p>Contours are drawn whose color and width are linearly
+  interpolated between two values as specified with the near and
+  far parameter sets. If a contour point is more distant than
+  far_z, the contour gets color far_color and width far_width. If a
+  point is nearer than near_z, the contour gets color near_color
+  and width near_width. If the depth is in between, the color and
+  width are linearly interpolated.</p>
+
+  <a id="INDEX83"></a>
+<h5 class="anchor" id="mi_shader__contour_shader_depthfade">contour_shader_depthfade</h5>
+  <pre>
+    "contour_shader_depthfade" (
+        scalar          "near_z",
+        color           "near_color",
+        scalar          "near_width",
+        scalar          "far_z",
+        color           "far_color",
+        scalar          "far_width")
+</pre>
+
+<dl>
+  <dt>near_z<dd> is the minimum distance.
+  <dt>near_color<dd> is the color at and below the minimum distance.
+  <dt>near_width<dd> is the width at and below the minimum distance.
+  <dt>far_z<dd> is the maximum distance.
+  <dt>far_color<dd> is the color at and below the maximum distance.
+  <dt>far_width<dd> is the width at and below the maximum distance.
+</dl>
+
+  <p>For example, to get contours that are interpolated between two
+  percent wide red at depth <i>-10</i> and half a percent wide blue
+  at depth <i>-25</i>, specify</p>
+  <pre>
+    contour "contour_shader_depthfade" (
+        "near_z"        -10,
+        "near_color"    1 0 0 1,
+        "near_width"    2,
+        "far_z"         -25,
+        "far_color"     0 0 1 1,
+        "far_width"     0.5
+    )
+</pre>
+
+  <h3>Animated Contours</h3>
+
+  <p>This shader draws contours with a color and width that depends
+  linearly on the frame number. Two frame numbers, colors, and
+  widths are specified. If the frame number is less than the first
+  frame number, the first color and width is used. If the frame
+  number is higher than the last frame number, the last color and
+  width are used. If the frame number is in between, a linear
+  interpolation of the two colors and widths are used.</p>
+
+  <a id="INDEX84"></a>
+<h5 class="anchor" id="mi_shader__contour_shader_framefade">contour_shader_framefade</h5>
+  <pre>
+    "contour_shader_framefade" (
+        integer         "frame1",
+        color           "color1",
+        scalar          "width1",
+        integer         "frame2",
+        color           "color2",
+        scalar          "width2")
+</pre>
+
+<dl>
+  <dt>frame1<dd> is the minimum frame number.
+  <dt>color1<dd> is the color at and below the minimum frame number.
+  <dt>width1<dd> is the width at and below the minimum frame number.
+  <dt>frame2<dd> is the maximum frame number.
+  <dt>color2<dd> is the color at and below the maximum frame number.
+  <dt>width2<dd> is the width at and below the maximum frame number.
+</dl>
+
+  <p>In the following example, the contour will be fully opaque
+  white before frame 3, and then disappear gradually until frame
+  10. After frame 10 the contour is completely transparent.</p>
+  <pre>
+    contour "contour_shader_framefade" (
+        "frame1"        3,
+        "color1"        1 1 1 1,
+        "width1"        1,
+        "frame2"        10,
+        "color2"        0 0 0 0,
+        "width2"        0.2
+    )
+</pre>
+
+  <h3>Width from Light Direction</h3>
+
+  <p>Contours are drawn whose width depends on the angle <span class="math">
+  &phi;</span> between the surface normal and the direction
+  to a light source. The width is computed by the formula
+  <span class="math">&frac12;(W&minus;w)(1&minus;cos&phi;)+w</span>,
+  where <i>w</i> is a parameter min_width and <i>W</i> is a parameter max_width.
+  Therefore the thickness increases gradually from min_width when the surface
+  is directly facing the light direction to max_width when the surface is
+  facing exactly opposite the light direction.</p>
+
+  <a id="INDEX85"></a>
+<h5 class="anchor" id="mi_shader__contour_shader_widthfromlight">contour_shader_widthfromlight</h5>
+  <pre>
+    "contour_shader_widthfromlight" (
+        color           "color",
+        scalar          "min_width",
+        scalar          "max_width",
+        light           "light")
+</pre>
+
+<dl>
+  <dt>color<dd> is the color of the contour lines.
+  <dt>min_width<dd> is the minimum width of the contour.
+  <dt>max_width<dd> is the maximum width of the contour.
+  <dt>light<dd> is the light.
+</dl>
+
+  <p>For example, consider the case where the name of the light
+  source is light_0. To get black contours that are two percent
+  wide where the surface is facing away from the light source,
+  decreasing down to zero width where the surface is facing the
+  light source directly, specify:</p>
+  <pre>
+    contour "contour_shader_widthfromlight" (
+        "color"         0 0 0 1,       # contour color
+        "min_width"     0.0,           # min width (%)
+        "max_width"     2.0,           # max width (%)
+        "light"         "light_0"      # light name
+    )
+</pre>
+
+  <h3>Width from Light Direction</h3>
+
+  <p>This shader is a variation of the previous one. It accepts a
+  direction directly, instead of a light that implicitly provides
+  the direction.</p>
+
+  <a id="INDEX86"></a>
+<h5 class="anchor" id="mi_shader__contour_shader_widthfromlightdir">contour_shader_widthfromlightdir</h5>
+  <pre>
+    "contour_shader_widthfromlightdir" (
+        color           "color",
+        scalar          "min_width",
+        scalar          "max_width",
+        vector          "light_dir")
+</pre>
+
+<dl>
+  <dt>color<dd> is the color of the contour lines.
+  <dt>min_width<dd> is the minimum width of the contour.
+  <dt>max_width<dd> is the maximum width of the contour.
+  <dt>light_dir<dd> is the direction to the main light source.
+</dl>
+
+  <h3>Width from Layer</h3>
+
+  <p>With this contour shader, the width of a contour will change
+  depending on how many levels of materials are on top of it. If
+  the material is on top, its contour will be of a width specified
+  by a parameter. For each material on top of it, its width will
+  decrease by a factor that is also controllable with a
+  parameter.</p>
+
+  <a id="INDEX87"></a>
+<h5 class="anchor" id="mi_shader__contour_shader_layerthinner">contour_shader_layerthinner</h5>
+  <pre>
+    "contour_shader_layerthinner" (
+        color           "color",
+        scalar          "width",
+        scalar          "factor")
+</pre>
+
+<dl>
+  <dt>color<dd> is the color of the contour lines.
+  <dt>width<dd> is the width of the contour at the top layer.
+  <dt>factor<dd> is the factor to make the contour thinner for each layer.
+</dl>
+
+  <p>For example, to get red contours that are 2 percent wide when
+  the material is on top, 1 percent wide when the material is
+  behind one other (semitransparent) material, 0.5 percent wide
+  when the material is behind two materials, and so on, use the
+  following:</p>
+  <pre>
+     contour "contour_shader_layerthinner" (
+        "color"         1 0 0 1,       # contour color
+        "width"         2.0,           # width at top layer (%)
+        "factor"        0.5            # factor pr. layer
+     )
+</pre>
+
+  <h3>Combination</h3>
+
+  <p>This is a combination of the <i>depthfade</i>,
+  <i>layerthinner</i>, and <i>widthfromlight</i> contour shaders.
+  The width of the contour fades into the background (from
+  near_width to far_width), and the color fades from near_color to
+  far_color. The contour width and color changes with a ramp
+  function between distances near_z and far_z. For each layer the
+  ray has passed through, a factor is multiplied on to the width.
+  If no factor is specified, the width will not depend on the
+  layer. If a light source is specified, the width also depends on
+  the surface normal relative to the light source direction.</p>
+
+  <a id="INDEX88"></a>
+<h5 class="anchor" id="mi_shader__contour_shader_combi">contour_shader_combi</h5>
+  <pre>
+    "contour_shader_combi" (
+        scalar          "near_z",
+        color           "near_color",
+        scalar          "near_width",
+        scalar          "far_z",
+        color           "far_color",
+        scalar          "far_width",
+        scalar          "factor",
+        light           "light",
+        scalar          "light_min_factor")
+</pre>
+
+<dl>
+  <dt>near_z<dd> is the minimum distance.
+  <dt>near_color<dd> is the color at and below the minimum distance.
+  <dt>near_width<dd> is the width at and below the minimum distance.
+  <dt>far_z<dd> is the maximum distance.
+  <dt>far_color<dd> is the color at and below the maximum distance.
+  <dt>far_width<dd> is the width at and below the maximum distance.
+  <dt>factor<dd> is the factor to make the contour thinner for
+  each layer. Leave this undefined to disable layer dependency.
+  <dt>light<dd> is the light source; leave undefined for no light dependency.
+  <dt>light_min_factor<dd> specifies the minimum factor that the
+  light-dependency decreases the contour width.
+</dl>
+
+  <p>For example, for contours that are interpolated between two
+  percent wide red at depth <i>-12</i> and one percent wide blue at
+  depth <i>-18</i>, and get half as wide for each layer of material
+  above this material, and where the width also depends on the
+  direction to the light source named <i>mylight</i>, specify</p>
+  <pre>
+     contour "contour_shader_combi" (
+                                       # interpolate from
+        "near_z"        -12,           # this depth,
+        "near_color"    1 0 0 1,       # color (red),
+        "near_width"    2,             # and width (in %)
+                                       # to
+        "far_z"         -18,           # this depth
+        "far_color"     0 0 1 1,       # color (blue)
+        "far_width"     1,             # and width (in %).
+                                       # optional:
+        "factor"        0.5,           # factor pr. layer
+        "light"         "mylight",     # light name
+        "light_min_factor" 0.5
+     )
+</pre>
+
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node26.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node28.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

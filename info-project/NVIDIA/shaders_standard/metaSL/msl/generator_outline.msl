@@ -1,0 +1,35 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Generator_outline
+{
+  input:
+    float threshold = 1.0
+	{
+		display_name("Threshold");
+	};
+    Color line_color = Color(0,0,0,1)
+	{
+		display_name("Line Color");
+	};
+    Color fill_color = Color(1,1,1,1)
+	{
+		display_name("Fill Color");
+	};		
+    
+  output:
+    Color result;
+    
+    void main()
+    {
+		float z = transform_normal("internal", "camera", normal).z;
+		float dndx_z = transform_normal("internal", "camera", ddx(normal)).z;
+		float dndy_z = transform_normal("internal", "camera", ddy(normal)).z;
+		float dnds = abs(dndx_z) + abs(dndy_z);
+		dnds = saturate(10 * dnds);
+		float t = threshold * dnds * dnds;
+		result = z < t ? line_color : fill_color;
+    }
+};

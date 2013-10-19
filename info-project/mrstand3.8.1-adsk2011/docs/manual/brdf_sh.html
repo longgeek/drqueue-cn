@@ -1,0 +1,207 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>BRDF Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node124.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node125.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h2 id="sh:bsdf">BRDF Shaders <span class="recent">3.7</span></h2>
+
+<p>BRDF shaders are a new type of material property to support common shading
+and texturing tasks with a single shading function which is designed to work
+with both direct and indirect illumination. A BRDF can be computed either
+procedurally for algorithmic models, or retrieved from measured BRDF data of
+real-world materials.</p>
+
+<h3 id="sh:bsdf_builtin">Built-in BRDFs <span class="recent">3.7</span></h3>
+
+<ul class="nav tag">
+<li><a href="#sh:builtin_bsdf_lambert">builtin_bsdf_lambert</a>
+<li><a href="#sh:builtin_bsdf_phong">builtin_bsdf_phong</a>
+<li><a href="#sh:builtin_bsdf_ashikhmin">builtin_bsdf_ashikhmin</a>
+<li><a href="#sh:builtin_bsdf_mirror">builtin_bsdf_mirror</a>
+<li><a href="#sh:builtin_bsdf_architectural">builtin_bsdf_architectural</a>
+<li><a href="#sh:builtin_bsdf_architectural_comp">builtin_bsdf_architectural_comp</a>
+</ul>
+
+<p>
+mental ray supports built-in BRDFs for common illumination models, like
+Lambert, Phong, Ashikhmin, and Mirror, and BRDFs for widely used mental ray
+shaders like architectural material and car paint. They are pre-registered
+as BSDF with the following declaration:</p>
+
+<h5 class="anchor" id="sh:builtin_bsdf_lambert">builtin_bsdf_lambert</h5>
+<pre>
+    declare shader color "builtin_bsdf_lambert" (
+        color       "diffuse",
+        array light "lights",
+        integer     "mode" )
+        version     1
+    end declare
+</pre>
+<h5 class="anchor" id="sh:builtin_bsdf_phong">builtin_bsdf_phong</h5>
+<pre>
+    declare shader color "builtin_bsdf_phong" (
+        color       "diffuse",
+        color       "glossy",
+        scalar      "exponent",
+        array light "lights",
+        integer     "mode" )
+        version     1
+    end declare
+</pre>
+<h5 class="anchor" id="sh:builtin_bsdf_ashikhmin">builtin_bsdf_ashikhmin</h5>
+<pre>
+    declare shader color "builtin_bsdf_ashikhmin" (
+        color        "diffuse",
+        color        "glossy",
+        scalar       "exp_u",
+        scalar       "exp_v",
+        array light  "lights",
+        integer      "mode" )
+        version      1
+    end declare
+</pre>
+
+<h5 class="anchor" id="sh:builtin_bsdf_mirror">builtin_bsdf_mirror</h5>
+<pre>
+    declare shader color "builtin_bsdf_mirror" (
+        color       "reflection"             default 0 0 0 1)
+    end declare
+    </pre>
+<p>
+This is a simple specular reflection, which multiplies the reflected color
+with the reflection parameter.
+
+<h5 class="anchor" id="sh:builtin_bsdf_architectural">builtin_bsdf_architectural</h5>
+<pre>
+    declare shader color "builtin_bsdf_architectural" (
+        color       "diffuse_refl"           default 0 0 0 1,
+        scalar      "diffuse_refl_scalar"    default 1,
+        scalar      "diffuse_dev",
+        color       "specular_refl"          default 0 0 0 1,
+        scalar      "specular_refl_scalar"   default 1,
+        scalar      "refl_gloss"             default 1,
+        boolean     "metal_material"         default on,
+        color       "specular_trans"         default 0 0 0 1,
+        scalar      "specular_trans_scalar"  default 1,
+        scalar      "trans_gloss"            default 1,
+        color       "diffuse_trans"          default 0 0 0 1,
+        scalar      "diffuse_trans_scalar"   default 1,
+        scalar      "anisotropy",
+        scalar      "anisotropy_rotation",
+        integer     "mode",
+        array light "lights")
+    end declare
+    </pre>
+<p>
+This is a simplification of the architectural material, containing only those
+parameters which are relevant for the material properties.
+<h5 class="anchor" id="sh:builtin_bsdf_architectural_comp">builtin_bsdf_architectural_comp</h5>
+<pre>
+    declare shader color "builtin_bsdf_architectural_comp" (
+        color       "diffuse"                 default 0.5 0.5 0.5 1,
+        scalar      "diffuse_weight"          default 1,
+        scalar      "diffuse_roughness",
+        color       "refl_color"              default 1 1 1 1,
+        scalar      "reflectivity"            default 0.6,
+        scalar      "refl_gloss"              default 1,
+        boolean     "refl_is_metal"           default on,
+        color       "refr_color"              default 1 1 1 1,
+        scalar      "transparency",
+        scalar      "refr_gloss"              default 1,
+        color       "refr_trans_color"        default 0.7 0.6 0.5 1,
+        scalar      "refr_trans_weight"       default 0.5,
+        scalar      "anisotropy"              default 1,
+        scalar      "anisotropy_rotation",
+        integer     "mode",
+        array light "lights",
+        scalar      "refr_ior",
+        boolean     "brdf_fresnel",
+        scalar      "brdf_0_degree_refl",
+        boolean     "refr_translucency",
+        integer     "anisotropy_channel",
+        integer     "refl_gloss_samples",
+        boolean     "refl_interpolate",
+        boolean     "refl_hl_only",
+        integer     "refr_gloss_samples",
+        boolean     "refr_interpolate",
+        scalar      "brdf_90_degree_refl",
+        scalar      "brdf_curve",
+        boolean     "brdf_conserve_energy",
+        integer     "intr_grid_density",
+        integer     "intr_refl_samples",
+        boolean     "intr_refl_ddist_on",
+        scalar      "intr_refl_ddist",
+        integer     "intr_refr_samples",
+        boolean     "single_env_sample",
+        boolean     "refl_falloff_on",
+        scalar      "refl_falloff_dist",
+        boolean     "refl_falloff_color_on",
+        color       "refl_falloff_color",
+        integer     "refl_depth",
+        scalar      "refl_cutoff",
+        boolean     "refr_falloff_on",
+        scalar      "refr_falloff_dist",
+        boolean     "refr_falloff_color_on",
+        color       "refr_falloff_color",
+        integer     "refr_depth",
+        scalar      "refr_cutoff",
+        scalar      "indirect_multiplier",
+        scalar      "fg_quality",
+        scalar      "fg_quality_w",
+        boolean     "ao_on",
+        integer     "ao_samples",
+        scalar      "ao_distance",
+        color       "ao_dark",
+        color       "ao_ambient",
+        boolean     "ao_do_details",
+        boolean     "thin_walled",
+        boolean     "no_visible_area_hl",
+        boolean     "skip_inside_refl",
+        boolean     "do_refractive_caustics",
+        boolean     "backface_cull",
+        boolean     "propagate_alpha",
+        scalar      "hl_vs_refl_balance",
+        scalar      "cutout_opacity",
+        color       "additional_color",
+        shader      "bump",
+        boolean     "no_diffuse_bump")
+    end declare
+</pre>
+<p>
+This is a compatibility version of the architectural BSDF. It provides
+identical functionality to the
+<a href="#sh:builtin_bsdf_architectural">builtin_bsdf_architectural</a>,
+but its declaration exactly matches that of the traditional architectural
+material shader. It can be used to minimize changes to the existing scenes
+and translators using the architectural material.
+<p>
+The current feature set for BRDF/BSDF has some
+<a href="limitations.html#bsdf">known limitations</a>.
+</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node124.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node125.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

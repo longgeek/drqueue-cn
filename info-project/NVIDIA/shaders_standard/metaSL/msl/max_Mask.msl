@@ -1,0 +1,97 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+
+// max_proto.h
+#define mi_MAX_EVAL_COLOR 0
+#define mi_MAX_EVAL_MONO 1
+#define mi_MAX_EVAL_NORMAL 2
+
+shader max_Mask {
+ input:
+  bool evalNormal = false {
+  };
+  // parameters for max_Mask:
+  // ------------------------
+  // see mrMask in max_texmaps.h
+  struct Parameters_struct {
+    Shader Map;        // tex1
+    Shader Mask;       // tex2
+    bool MapEnabled;   // tex1Enabled
+    bool MaskEnabled;  // tex2Enabled
+    bool MaskInverted; // invertMask
+  }; // Parameters
+  Parameters_struct Parameters = 
+    Parameters_struct(Shader(),
+		      Shader(),
+		      true,
+		      true,
+		      false);
+  struct ExtraParameters_struct {
+    int GBufferID;
+  }; // ExtraParameters
+  ExtraParameters_struct ExtraParameters;
+  // shader type parameters
+
+ output:
+  Color result;
+
+  // see max_support.cpp
+  float maxIntensity(in Color c) {
+    float f = (c.r + c.g + c.b) * 0.333333333;
+    return f;
+  } // maxIntensity
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    int info_texture_eval_type = 0; // mi_MAX_EVAL_COLOR
+    if (evalNormal) {
+      info_texture_eval_type = 2; // mi_MAX_EVAL_NORMAL
+    } // if (evalNormal)
+    float m = 0.0;
+    switch (info_texture_eval_type) {
+    case mi_MAX_EVAL_COLOR:
+    case mi_MAX_EVAL_MONO:
+      // maxMask_EvalColor(...);
+      Color mask_shader_return = Color(0.0, 0.0, 0.0, 0.0);
+      if (Parameters.MaskEnabled &&
+	  Parameters.Mask.call("output", "result", mask_shader_return)) {
+	// int origEvaltype = info_texture_eval_type;
+	// info_texture_eval_type = mi_MAX_EVAL_MONO;
+	// mi_call_shader_x_BlackIfFails (&result, miSHADER_TEXTURE,
+	// 			       state, paras_tex2,
+	// 			       add_info);
+	// info_texture_eval_type = origEvaltype;
+	m = maxIntensity(mask_shader_return);
+      } // if (Parameters.MaskEnabled)
+      else {
+	m = 1.0;
+      } // else [ if (Parameters.MaskEnabled) ]
+      if (Parameters.MaskInverted) m = 1.0 - m;
+      Color map_shader_return = Color(0.0, 0.0, 0.0, 0.0);
+      if (Parameters.MapEnabled &&
+	  Parameters.Map.call("output", "result", map_shader_return)) {
+	// mi_call_shader_x_BlackIfFails (&result, miSHADER_TEXTURE, state,
+	// 			       paras_tex1, add_info);
+	result = map_shader_return;
+      } // if (Parameters.MapEnabled)
+      else {
+	result.r = result.g = result.b = result.a = 1.0;
+      } // else [ if (Parameters.MapEnabled) ]
+      if (m != 1.0) {
+	result.r *= m;
+	result.g *= m;
+	result.b *= m;
+	result.a *= m;
+      }
+      break;
+
+    case mi_MAX_EVAL_NORMAL:
+      // maxMask_EvalNormalPerturb(...);
+      break;
+    } // switch (info_texture_eval_type)
+  } // main
+};

@@ -1,0 +1,276 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#import  <mi_msl_shared.msl>
+#import  <generator_noise.msl>
+
+shader Illumination_carpaint
+{
+  input:
+    Color  base_color = Color(1,0,0,1)
+        {
+            display_name("Base Color");
+            soft_range(Color(0,0,0,0),Color(1,1,1,1));
+            hard_range(Color(0,0,0,0),Color(1,1,1,1));
+            description( "The basic paint color." );
+        };
+    Color  reflectivity0 = Color(0.1,0.1,0.1,1)
+        {
+            display_name("Reflectivity 0");
+            soft_range(Color(0,0,0,0),Color(1,1,1,1));
+            hard_range(Color(0,0,0,0),Color(1,1,1,1));
+            description( "The specular reflectivity at 0 degree incidence." );
+        };
+    Color  reflectivity90 = Color(0.3,0.3,0.3,1)
+        {
+            display_name("Reflectivity 90");
+            soft_range(Color(0,0,0,0),Color(1,1,1,1));
+            hard_range(Color(0,0,0,0),Color(1,1,1,1));
+            description( "The specular reflectivity at 90 degree incidence." );
+        };
+    float fresnel_falloff = 5.0
+        {
+            display_name("Fresnel Falloff");
+            soft_range(float(0.1),float(10));
+            hard_range(float(0.1),float(10));
+            description( "Exponent of the fresnel falloff function." );
+        };
+    float metallic = 0.3
+        {
+            display_name("Metallic");
+            soft_range(float(0),float(1));
+            hard_range(float(0),float(1));
+            description( "The weight of the metallic effect." );
+        };
+    Color  metallic_color = Color(1,1,1,1)
+        {
+            display_name("Metallic Color");
+            soft_range(Color(0,0,0,0),Color(1,1,1,1));
+            hard_range(Color(0,0,0,0),Color(1,1,1,1));
+            description( "The color of the metallic effect." );
+        };
+    float metallic_falloff = 8
+        {
+            display_name("Metallic Falloff");
+            soft_range(float(0.1),float(16));
+            hard_range(float(0.1),float(16));
+            description( "Falloff exponent for the metallic effect." );
+        };
+    Color  edge_color = Color(1,0,0,1)
+        {
+            display_name("Edge Color");
+            soft_range(Color(0,0,0,0),Color(1,1,1,1));
+            hard_range(Color(0,0,0,0),Color(1,1,1,1));
+            description( "The edge color of the base paint." );
+        };
+    float edge_falloff = 2
+        {
+            display_name("Edge Falloff");
+            soft_range(float(0.1),float(10));
+            hard_range(float(0.1),float(10));
+            description( "Falloff exponent for the edge color." );
+        };
+    float unit_scale = 1
+        {
+            display_name("Unit Scale");
+            soft_range(float(0),float(100));
+            description( "Scale factor of the scene." );
+        };
+    float sparkle_weight = 0.05
+        {
+            display_name("Sparkle Weight");
+            soft_range(float(0),float(1));
+            hard_range(float(0),float(1));
+            description( "The weight of the sparkle effect." );
+        };
+    float sparkle_falloff = 1
+        {
+            display_name("Sparkle Falloff");
+            soft_range(float(0),float(100));
+            description( "The distance falloff factor for the sparkle effect." );
+        };
+    Texture1d noise_perm_texture = "noise_perm.dds"
+        {
+            display_name("Noise Permutation Texture");
+            description( "Texture containing the permutation table used to "
+                         "generate the noise for the sparkle effect." );
+            disable_filtering();
+            texture_coord_u("wrap");
+        };
+    Texture1d noise_grad_texture = "noise_grad.dds"
+        {
+            display_name("Noise Gradient Texture");
+            description( "Texture containing the gradient table used to "
+                         "generate the noise for the sparkle effect." );
+            disable_filtering();
+            texture_coord_u("wrap");
+        };
+
+  output:
+    Color result;
+    Color sum;
+    Color diffuse;
+    Color glossy;
+    Color specular;
+
+    // Schlick's fresnel approximation, with variable falloff exponent.
+    Color schlick_fresnel_falloff(
+        Color       col_nrm,
+        Color       col_grz,
+        float      cos_half_dir,
+        float      exponent )
+    {
+        float g = clamp( 1.0-cos_half_dir, 0.0, 1.0 );
+        g = pow( g, exponent );
+        return col_nrm + (col_grz-col_nrm) * g;
+    }
+
+    // Return the normalization factor needed for colors so that their
+    // sum does not exceed 1.
+    float normfact(
+        Color c0,
+        Color c1 )
+    {
+        Color  colsum = c0 + c1;
+        float colmax = max(colsum.r,max(colsum.g,colsum.b));
+        return colmax > 1.0 ? 1.0/colmax : 1.0;
+    }
+
+    // Return the color with the largest component.
+    Color maxcompcolor(
+        Color c0,
+        Color c1 )
+    {
+        float c0max = max(c0.r,max(c0.g,c0.b));
+        float c1max = max(c1.r,max(c1.g,c1.b));
+        return c0max > c1max ? c0 : c1;
+    }
+
+    // Mix the diffuse colors.
+    Color mix_colors(
+        Color   c0,
+        Color   c1,
+        float  falloff,
+        float3 dir0,
+        float3 n )
+    {
+        float t = pow( 1.0-max(0.0,dot(dir0,n)), falloff );
+        return (1.0-t)*c0 + t*c1;
+    }
+
+    void main()
+    {
+        // Compute direction pointing away from shading point.
+        float3 d = -direction;
+
+        // Compute sparkle contribution.
+        float3 p = transform_point( "internal", "object", position );
+        float  sweight = sparkle_weight * min( 1.0,
+                            1.0 / (sparkle_falloff * ray_length / unit_scale ) );
+        Color   sparkle = Color(sweight * mi_inoise( p * 1000.0/unit_scale,
+                            noise_perm_texture,
+							noise_grad_texture));
+
+        // Compute diffuse and glossy color. Normalize if they sum to >1.
+        Color   diffuse_color0 = clamp( sparkle + base_color, 0.0, 1.0 );
+        Color   diffuse_color1 = clamp( sparkle + edge_color, 0.0, 1.0 );
+        Color   glossy_color   = clamp( sparkle + (metallic * 0.7) * metallic_color, 0.0, 1.0 );
+        Color   maxdiffcol     = maxcompcolor( diffuse_color0, diffuse_color1 );
+        float  norm           = normfact( maxdiffcol, glossy_color );
+        diffuse_color0        *= norm;
+        diffuse_color1        *= norm;
+        glossy_color          *= norm;
+        Color diffuse_color    = mix_colors(
+            diffuse_color0,
+            diffuse_color1,
+            edge_falloff,
+            d,
+            normal );
+
+        //
+        // Light loop. Only diffuse and glossy components contribute here,
+        // since specular effects would need sampling of the BRDF (not the lights).
+        //
+
+        diffuse  = Color(0,0,0,0);
+        glossy   = Color(0,0,0,0);
+        Light_iterator light;
+        foreach (light)
+        {
+            float cos = saturate(light.dot_nl);
+            if (cos > 0.0)
+            {
+                // Compute halfvector.
+                float3 halfvec = normalize( d + light.direction );
+
+                // Compute the weight of the diffuse+glossy contribution.
+                Color weight = 1.0 - schlick_fresnel_falloff(
+                    reflectivity0,
+                    reflectivity90,
+                    dot(halfvec,d),
+                    fresnel_falloff );
+
+                // Add diffuse and glossy contributions.
+                diffuse += weight * diffuse_color * 0.3183098 * cos * light.contribution;
+                glossy  += weight * glossy_color * cos
+                    * mi_phong_specular( light.direction, direction, normal, metallic_falloff )
+                    * light.contribution;
+            }
+        }
+
+        //
+        // Add (approximate) contributions of IBL/FG/AO.
+        //
+
+        Irradiance_options irr_options;
+        Color irr_color = irradiance( irr_options );
+        diffuse += diffuse_color*irr_color * 0.3183098;
+        glossy  += glossy_color *irr_color * 0.3183098;
+        Occlusion_options options;
+        Color occ = Color( 1.0-occlusion(options) );
+        diffuse *= occ;
+        glossy  *= occ;
+
+        //
+        // Specular reflection contribution.
+        //
+
+        // Compute the halfvector of the mirror direction.
+        float3 refldir = reflect(direction,normal);
+        float3 halfvec = normalize( d + refldir );
+
+        // Compute the color of the specular reflection.
+        Color specular_color = schlick_fresnel_falloff(
+            reflectivity0,
+            reflectivity90,
+            dot(halfvec,d),
+            fresnel_falloff );
+
+        // Compute the specular reflection.
+        Ray ray( position, refldir );
+        Trace_options trace_opt;
+        Color trace_result = Color(0, 0, 0, 0);
+        Ray ray_dx(float3(0), float3(0));
+        Ray ray_dy(float3(0), float3(0));
+        trace(ray, ray_dx, ray_dy, trace_opt, "result", trace_result);
+        specular = specular_color * trace_result;
+
+        //
+        // Construct the final output.
+        //
+
+        diffuse.a  = 1.0;
+        glossy.a   = 1.0;
+        specular.a = 1.0;
+        sum = diffuse + glossy + specular;
+        sum.a = 1.0;
+        result = sum;
+    }
+}
+{
+        description( "Simple illumination model for metallic paints, including "
+                     "a sparkle effect to simulate flakes." );
+}
+;

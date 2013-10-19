@@ -1,0 +1,75 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Constant Data</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node160.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node162.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION159"></a>
+<h3>Constant Data</h3>
+<p>If the data is constant, such as a <a href="node146.html#INDEX689">random
+number</a> lattice for <a href="node146.html#INDEX695">Perlin noise</a> functions,
+it can be
+stored in a static array that is built in the init shader and
+deleted, if necessary, in the <a href="node159.html#INDEX836">exit
+shader</a>.</p>
+<pre>
+     static struct mystruct *mydata;
+
+     DLLEXPORT void myshader_init(      /* init shader */
+         miState         *state,
+         struct myshader *paras,
+         miBoolean       *inst_req)
+     {
+         mydata = mi_mem_allocate(...)
+         ...initialize *mydata...
+         return(miTRUE);
+     }
+
+     DLLEXPORT void myshader_exit(      /* exit shader */
+         miState         *state,
+         struct myshader *paras)
+     {
+         mi_mem_release(mydata);
+         return(miTRUE);
+     }
+
+     DLLEXPORT void myshader(           /* main shader */
+         miState         *state,
+         struct myshader *paras)
+     {
+         ...read-only access to *mydata...
+         return(miTRUE);
+     }
+</pre>
+<p>This form of data storage is very simple, but can be used only
+if the data is constant for the current frame, and does not in any
+way depend on shader parameters or the shader instance. This means
+that the shader body may not modify the data because it is
+unpredictable in which order shaders are called. Worse, the shader
+may be called in multiple threads simultaneously, so writing to the
+data could become interleaved in ways that are very hard to
+reproduce and debug. Locking is not a solution because that would
+mean that shaders would have to "wait in line" to gain access to
+the data, which seriously degrades parallel performance.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node160.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node162.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

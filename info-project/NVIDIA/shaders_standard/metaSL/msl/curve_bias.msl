@@ -1,0 +1,34 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+ 
+ #include <mi_msl_shared.msl>
+
+shader Curve_bias {
+  input:
+	float t = texture_coordinate[0].x {
+		display_name("Input");
+	};
+	float a = 0.1 {
+		display_name("Transition Shape");
+		hard_range(0.0, 1.0);
+		description("Adjusts the shape of the curve");
+	};
+		
+  output:
+	float result; 
+	Color graph_out;
+		 
+	void main()
+	{
+		result = t/((1/a -2)*(1-t)+1);
+		graph_out = texture_coordinate[0].y < result ? MI_LOWER_COL : MI_UPPER_COL;
+	}
+}
+{
+	description("Applies a bias to the incoming values");
+};
+
+// declaration for curve shader pack backwards compatibility
+shader curve_bias : Curve_bias { };

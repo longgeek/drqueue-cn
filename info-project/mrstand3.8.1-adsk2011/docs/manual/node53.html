@@ -1,0 +1,80 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Volume Caustics</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node47.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node48.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION51"></a>
+
+<h3>Volume Caustics</h3>
+<p>
+Volume caustics are caused by light that has been specularly
+reflected or refracted by one or more surfaces and is then
+scattered by a participating medium in a volume. Examples are:</p>
+<ul>
+<li>Sunlight refracted by a wavy water surface and then scattered
+by little silt particles in the water.</li>
+<li>Car fog lamps: light emitted by a bulb filament, reflected by a
+parabolic reflector, and scattered by fog.</li>
+</ul>
+<p>In order to create volume caustics, the same light sources,
+material shaders, photon shaders, and caustic tags as for caustics
+are needed. But in addition, volume shaders and volume photon
+shaders are needed. For example:</p>
+<pre>
+     material "volsurf"  opaque    # material for surfaces of volume
+        "transmat" ()
+        shadow "transmat" ()
+        photon "transmat_photon" ()
+        volume "parti_volume" (
+           "scatter" 0.05 0.05 0.05,
+           "extinction" 0.05,
+           "lights" ["arealight-i"]
+        )
+        photonvol "parti_volume_photon" (
+           "scatter" 0.05 0.05 0.05,
+           "extinction" 0.05
+        )
+     end material
+</pre>
+<p>mental ray 3.3 and later do not require the
+<b><a id="INDEX99"></a>transmat</b> and
+<b><a id="INDEX100"></a>transmat_photon</b> shaders; they allow leaving
+the material shaders to remain undefined to stop the object from
+interacting with visible rays. Such an object is called a
+<b><a id="INDEX101"></a>hull object</b> because it
+acts as a hull for a volume, but is not visible itself.</p>
+<p>Photons that get scattered multiple times in the volume are
+stored in a volume <a href="node48.html#INDEX96">photon map</a>.
+During rendering, volume shaders can call the function
+<i>mi_compute_volume_irradiance</i> to get
+<a href="node48.html#INDEX97">irradiance</a> from the photons stored
+in the volume <a href="node48.html#INDEX96">photon map</a>.</p>
+<p>In order to fine-tune the volume caustic, it is possible to
+change the number of photons that is used to compute the indirect
+light in the volume caustic. This is done with a <tt>photonvol
+accuracy</tt> statement in the options. The default is 30 photons
+and a radius that depends on the scene extent.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node47.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node48.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a><br /></p>
+</body>
+</html>

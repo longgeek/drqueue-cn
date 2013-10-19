@@ -1,0 +1,93 @@
+/*****************************************************************************
+* Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Light_spot
+{
+  input:
+    Color   color = Color(1,1,1,1)
+	{		
+		display_name("Color");
+		soft_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color that the light will shine on the scene." );
+	};
+    float  intensity = PI
+	{	
+		display_name("Intensity");
+		soft_range(0,10);
+		description( "How bright the light will shine on the scene." );
+	};
+    float  distance_falloff_exponent = 0.0
+	{	
+		display_name("Distance Falloff Exponent");
+		soft_range(0,4);
+		hard_range(0,4);
+		description( "Determines how quickly light intensity falls "
+		             "off as a function of distance." );
+	};
+    float  distance_scale = 1.0
+   	{	
+		display_name("Distance Scale");
+		soft_range(0.001,2);
+		description( "Factor to apply in all distance calculations." );
+	};
+    float  light_spread_inner = 30.0
+   	{	
+		display_name("Light Spread Inner");
+		soft_range(0,90);
+		description( "Width of the inner cone angle across which "
+					 "intensity is constant." );
+	};
+    float  light_spread_falloff = 1.0
+   	{	
+		display_name("Light Spread Falloff");
+		soft_range(0,10);
+		description( "Rate at which light intensity decays to zero "
+					 "between inner and outer angles." );
+	};	
+    
+  output:
+    Color result;
+	Color light_shadow;
+    
+    void main()
+    {
+	float attenuation = 1.0;
+	if (distance_falloff_exponent > 0)
+	    attenuation = pow(light_distance * distance_scale, -distance_falloff_exponent);
+
+	// Note: the dot product here might be slightly larger than 1.0 due to
+        // numerical imprecisions, so clamp it to prevent NaNs from acos.
+	float locationSpread = min(1.0,dot(light_to_surface, light_direction));
+
+	if( locationSpread < light_spread_cos )
+		result = 0.0;
+	else
+	{
+		float sf;
+		float locationSpreadRadians = acos(locationSpread);
+		float light_spread_innerRadians = radians(light_spread_inner);
+		if( locationSpreadRadians < light_spread_innerRadians )
+			sf = 1.0;
+		else
+			sf = pow(max(1.0 - 
+				saturate(locationSpreadRadians - light_spread_innerRadians)/
+				(light_spread - light_spread_innerRadians), 0),
+				light_spread_falloff);
+					
+		result = color * intensity * attenuation * sf;
+	}
+
+        result.a = 1.0;
+		
+	light_shadow = shadowing();
+    }
+}
+{ 
+	shader_type( "light" );
+	light_type( "spot" );
+	description( "Creates an directional light source centered at "
+				 "a point in the world." );
+}
+;

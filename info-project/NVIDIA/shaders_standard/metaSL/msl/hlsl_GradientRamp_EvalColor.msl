@@ -1,0 +1,536 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#define NUM_FLAGS 5          // TODO: this should not be hardcoded
+#define NUM_FLAGS_PLUS_ONE 6 // TODO: this should not be hardcoded
+
+// see tex_gradramp.cpp
+#define GRAD_4CORNER 0
+#define GRAD_BOX     1
+#define GRAD_DIAG    2
+#define GRAD_LIGHT   3
+#define GRAD_LINEAR  4
+#define GRAD_MAPPED  5
+#define GRAD_VECTOR  6
+#define GRAD_PONG    7
+#define GRAD_RADIAL  8
+#define GRAD_SWEEP   9
+#define GRAD_SPIRAL  10
+#define GRAD_TARTAN  11
+
+// see tex_gradramp.cpp
+#define  CUSTOM_INTERP   0
+#define  BIAS_IN_INTERP  1
+#define  INOUT_INTERP    2
+#define  BIAS_OUT_INTERP 3
+#define  LINEAR_INTERP   4
+#define  SOLID_INTERP    5
+
+// see tex_gradramp.cpp
+#define JGC_FLAG_MODE  	1
+#define JGC_UV_MAP_MODE	2
+#define JGC_BITMAP_MODE	3
+#define JGC_LAST_MODE	4
+
+// see tex_gradramp.cpp
+#define BIASIN(X)         maxBias(0.35f, X)
+#define BIASOUT(X)	  maxBias(0.65f, X)
+#define NKNOTS            6
+#define BIASINOUT(X)	  (maxSpline(X, NKNOTS, knots))
+
+// see max_texutil.cpp
+#define CR00     -0.5
+#define CR01      1.5
+#define CR02     -1.5
+#define CR03      0.5
+#define CR10      1.0
+#define CR11     -2.5
+#define CR12      2.0
+#define CR13     -0.5
+#define CR20     -0.5
+#define CR21      0.0
+#define CR22      0.5
+#define CR23      0.0
+#define CR30      0.0
+#define CR31      1.0
+#define CR32      0.0
+#define CR33      0.0
+
+// see tex_gradramp.cpp
+#define RadToDeg(x)   ( 180.0 * ( x ) / PI )
+
+shader hlsl_GradientRamp_EvalColor {
+ input:
+  struct Flags_struct {
+    float Position;
+    int Number;
+    int Interp;
+    float3 Color;
+    // TODO: struct shader "Shader"
+  };
+  const int Type = 11 {
+    display_name("Type");
+    hard_range(0, 11);
+  };
+  // TODO: float Amount
+  // TODO: float Size
+  // TODO: float Phase
+  // TODO: int NoiseType
+  // TODO: float NoiseLevels
+  // TODO: float NoiseThresholdLow
+  // TODO: float NoiseThresholdHigh
+  // TODO: float NoiseThresholdSmooth
+  // TODO: int dummy
+  const bool MapOn = false {
+    display_name("Map Enabled");
+  };
+  Shader Coords;
+  Shader Output;
+  Shader SourceMap;
+  // TODO: int InterpType
+  int Mode = 1 {
+    display_name("Mode");
+  };
+  // TODO: Texture2d Bitmap
+  // TODO: int GBufferID
+
+  // IMPORTANT: Flags[] are ALREADY SORTED !!!
+  Flags_struct Flags[] = {
+    Flags_struct(0.0, 0, 4, float3(0.0, 0.0666667, 0.968628)),
+    Flags_struct(0.245791, 3, 4, float3(0.988235, 0.0588235, 0.0588235)),
+    Flags_struct(0.5, 2, 4, float3(0.937255, 0.827451, 0.0784314)),
+    Flags_struct(1.0, 1, 4, float3(1.0, 1.0, 1.0))
+  };
+
+ output:
+  Color result;
+
+  // see max_texutil.cpp
+  float maxClamp(in float x, in float a, in float b) {
+    return (x < a ? a : (x > b ? b : x));
+  } // maxClamp
+
+  // see max_texutil.cpp
+  float maxSpline(in float x, in int nknots, inout float knot[]) {
+    int span = 0;
+    int nspans = nknots - 3;
+    // coefficients of the cubic.
+    float c0 = 0.0;
+    float c1 = 0.0;
+    float c2 = 0.0;
+    float c3 = 0.0;
+    // find the appropriate 4-point span of the spline.
+    x = maxClamp(x, 0.0, 1.0) * nspans;
+    span = (int) x;
+    if (span >= nknots - 3) span = nknots - 3;
+    x -= span;
+    // WARNING: can't do this: knot += span;
+    // evaluate the span cubic at x using Horner's rule.
+    c3 = (CR00 * knot[span+0] + CR01 * knot[span+1] +
+	  CR02 * knot[span+2] + CR03 * knot[span+3]);
+    c2 = (CR10 * knot[span+0] + CR11 * knot[span+1] +
+	  CR12 * knot[span+2] + CR13 * knot[span+3]);
+    c1 = (CR20 * knot[span+0] + CR21 * knot[span+1] +
+	  CR22 * knot[span+2] + CR23 * knot[span+3]);
+    c0 = (CR30 * knot[span+0] + CR31 * knot[span+1] +
+	  CR32 * knot[span+2] + CR33 * knot[span+3]);
+    return ((c3 * x + c2) * x + c1) * x + c0;
+  } // maxSpline
+
+  // see max_texutil.cpp
+  float maxBias(in float a, in float b) {
+    return pow(a, log(b) / log(0.5));
+  } // maxBias
+
+  // see tex_gradramp.cpp
+  float maxGetInterpolationParams(// state
+				  // paras
+				  in int paras_n_flags,
+				  // inst
+				  inout float inst_pFlags_pos[NUM_FLAGS_PLUS_ONE],
+				  inout float inst_pFlags_fPositionNormalizer[NUM_FLAGS_PLUS_ONE],
+				  // others
+				  in float pos, inout int nLeftFlag) {
+    int i = 0;
+    i = paras_n_flags / 2;
+    if (pos < inst_pFlags_pos[i]) {
+      do i--;
+      while (pos < inst_pFlags_pos[i]);
+    }
+    else {
+      while(pos >= inst_pFlags_pos[i+1])
+	i++;
+    }
+    nLeftFlag = i;
+    return (pos - inst_pFlags_pos[i]) * inst_pFlags_fPositionNormalizer[i];
+  } // maxGetInterpolationParams
+
+  // see tex_gradramp.cpp
+  Color maxGetBitmapColor(// state
+			  // paras
+			  // add_info
+			  // others
+			  in float cpos) {
+    error("TODO: maxGetBitmapColor");
+    return Color(0.0, 0.0, 0.0, 0.0);
+  } // maxGetBitmapColor
+
+  // see tex_gradramp.cpp
+  Color maxGetFlagColor(// state
+			// paras
+			in int paras_n_flags,
+			// inst
+			inout float inst_pFlags_pos[NUM_FLAGS_PLUS_ONE],
+			inout float inst_pFlags_fPositionNormalizer[NUM_FLAGS_PLUS_ONE],
+			inout float3 inst_pFlags_col[NUM_FLAGS_PLUS_ONE],
+			inout int inst_pFlags_nInterpType[NUM_FLAGS_PLUS_ONE],
+			// others
+			in float cpos,
+			in float dpos) {
+    float knots[NKNOTS] = { 0.0, 0.0, 0.4, 0.6, 1.0, 1.0 };
+    Color col = Color(0.0, 0.0, 0.0, 0.0);
+    int nLeftFlag = 0; // return value for maxGetInterpolationParams(...)
+    float pos = maxGetInterpolationParams(// state
+					  // paras
+					  paras_n_flags,
+					  // inst
+					  inst_pFlags_pos,
+					  inst_pFlags_fPositionNormalizer,
+					  // others
+					  cpos, nLeftFlag);
+    col.a = 1.0;
+    // if (inst_pFlags[nLeftFlag].map != miNULLTAG) {
+    // // we're evaluating the color of the map, so must override the
+    // // mode to make sure we're not evaluating a normal perturb
+    // if(add_info) {
+    // int evalTypeSave = add_info->texture_eval_type;
+    // add_info->texture_eval_type = mi_MAX_EVAL_COLOR;
+    // mi_call_shader_x_BlackIfFails(...);
+    // add_info->texture_eval_type = evalTypeSave;
+    // }
+    // else
+    // mi_call_shader (...);
+    // }
+    // else {
+    col.r = inst_pFlags_col[nLeftFlag].x;
+    col.g = inst_pFlags_col[nLeftFlag].y;
+    col.b = inst_pFlags_col[nLeftFlag].z;
+    // }
+    switch (inst_pFlags_nInterpType[nLeftFlag]) {
+    case BIAS_IN_INTERP:
+      pos = BIASIN(pos);
+      break;
+    case BIAS_OUT_INTERP:
+      pos = BIASOUT(pos);
+      break;
+    case INOUT_INTERP:
+      pos = BIASINOUT(pos);
+      break;
+    case SOLID_INTERP:
+      return col;
+    case LINEAR_INTERP:
+    default:
+      break;
+    } // switch (inst_pFlags_nInterpType[nLeftFlag])
+    if (pos != 0.0) {
+      Color colr = Color(0.0, 0.0, 0.0, 0.0);
+      // if (inst_pFlags[nLeftFlag + 1].map != miNULLTAG) {
+      // // we're evaluating the color of the map, so must override the
+      // // mode to make sure we're not evaluating a normal perturb
+      // if(add_info) {
+      // int evalTypeSave = add_info->texture_eval_type;
+      // add_info->texture_eval_type = mi_MAX_EVAL_COLOR;
+      // mi_call_shader_x_BlackIfFails(...);
+      // add_info->texture_eval_type = evalTypeSave;
+      // }
+      // else
+      // mi_call_shader(...);
+      // }
+      // else {
+      colr.r = inst_pFlags_col[nLeftFlag + 1].x;
+      colr.g = inst_pFlags_col[nLeftFlag + 1].y;
+      colr.b = inst_pFlags_col[nLeftFlag + 1].z;
+      // }
+      col.r += (colr.r - col.r) * pos;
+      col.g += (colr.g - col.g) * pos;
+      col.b += (colr.b - col.b) * pos;
+    } // if (pos != 0.0)
+    return col;
+  } // maxGetFlagColor
+
+  // see tex_gradramp.cpp
+  Color maxGetColor(// state
+		    // paras
+		    in int paras_mode,
+		    in int paras_n_flags,
+		    // inst
+		    inout float inst_pFlags_pos[NUM_FLAGS_PLUS_ONE],
+		    inout float inst_pFlags_fPositionNormalizer[NUM_FLAGS_PLUS_ONE],
+		    inout float3 inst_pFlags_col[NUM_FLAGS_PLUS_ONE],
+		    inout int inst_pFlags_nInterpType[NUM_FLAGS_PLUS_ONE],
+		    // add_info
+		    // others
+		    in float fx, in float dpos) {
+    switch (paras_mode) {
+    case JGC_FLAG_MODE:
+      return maxGetFlagColor(// state
+			     // paras
+			     paras_n_flags,
+			     // inst
+			     inst_pFlags_pos,
+			     inst_pFlags_fPositionNormalizer,
+			     inst_pFlags_col,
+			     inst_pFlags_nInterpType,
+			     // others
+			     fx, dpos);
+    case JGC_UV_MAP_MODE:
+    case JGC_BITMAP_MODE:
+      return maxGetBitmapColor(// state
+			       // paras
+			       // add_info
+			       // others
+			       fx);
+    } // switch (paras_mode)
+    return Color(0.0, 0.0, 0.0, 1.0); // black
+  } // maxGetColor
+
+  // see tex_gradramp.cpp
+  float maxGradFunc(// paras
+		    in int paras_gradType,
+		    // others
+		    in float v, in float u, in float du, in float dv) {
+    // I have no idea why u and v are in a different order (I would
+    // expect u to be specified first)
+    float a = v;
+    float local_u = u;
+    float local_v = v;
+    float3 v1 = float3(0.0, 0.0, 0.0);
+    float3 v2 = float3(0.0, 0.0, 0.0);
+    float x = 0.0;
+    switch (paras_gradType) {
+    case GRAD_4CORNER:
+      // find point closest to u,v on line from p1 to p2,
+      // find length, devide by length of (p2-1p)
+      if (local_u > 0.0) {
+	a = (local_v * local_v / local_u * local_u);
+      } // if (local_u > 0.0)
+      else {
+	a = local_v;
+      } // else [ if (local_u > 0.0) ]
+      break;
+    case GRAD_DIAG:
+      v1 = float3(0.0, 0.0, 0.0);
+      v1.x = local_v - local_u;
+      v1.y = local_u - local_v;
+      v1.z = 0.0;
+      a = length(v1);
+      break;
+    case GRAD_TARTAN:
+      // translate center of box to 0,0
+      // take abs value, so all u,v are mapped into upper left quadrant
+      // return largest of u and v.
+      local_u -= 0.5;
+      local_u = abs(local_u) * 2.0;
+      local_v -= 0.5;
+      local_v = abs(local_v) * 2.0;
+      if (local_v > local_u) a = local_u;
+      else a = local_v;
+      if (a > 1.0) a = 1.0;
+      a = (1.0 - a);
+      break;
+    case GRAD_BOX:
+      // translate center of box to 0,0
+      // take abs value, so all u,v are mamped into upper left quadrant
+      // return largest of u and v.
+      local_u -= 0.5;
+      local_u = abs(local_u) * 2.0;
+      local_v -= 0.5;
+      local_v = abs(local_v) * 2.0;
+      if (local_v < local_u) {
+        a = local_u;
+      } // if (local_v < local_u)
+      else {
+        a = local_v;
+      } // else [ if (local_v < local_u) ]
+      if (a > 1.0) a = 1.0;
+      break;
+    case GRAD_RADIAL:
+      // translate to center
+      // calc distance from center,
+      // mult by two since this is the radius of the circle
+      local_u -= 0.5;
+      local_v -= 0.5;
+      // distance from center of map
+      a = sqrt(local_u * local_u + local_v * local_v) * 2.0;
+      if (a > 1.0) a = 1.0;
+      break;
+    case GRAD_SWEEP:
+      local_u -= 0.5;
+      local_v -= 0.5;
+      v1 = float3(0.0, 0.5, 0.0);
+      v2 = float3(local_v, local_u, 0.0);
+      v1 = normalize(v1);
+      v2 = normalize(v2);
+      x = acos(dot(v1, v2)); 
+      x = RadToDeg(x);
+      if (local_v > 0.0) x = 360.0 - x;
+      a = x / 360.0;
+      if (a > 1.0) a = 1.0;
+      break;
+    case GRAD_SPIRAL:
+      v1 = float3(0.0, 1.0, 0.0);
+      v2 = float3(local_v, local_u, 0.0);
+      v1 = normalize(v1);
+      v2 = normalize(v2);
+      x = acos(dot(v1, v2)); 
+      x = RadToDeg(x);
+      a = x / 90.0;
+      if (a > 1.0) a = 1.0;
+      break;
+    case GRAD_PONG:
+      // divide u by v unless result is greater than 1 then v by u,
+      // unless divisor is zero then a is zero
+      if (local_v > 0.0) {
+	a = local_u / local_v;
+	if (a > 1.0) {
+	  if (local_u > 0.0) a =  local_v / local_u;
+	  else a = 0.0;
+	} // if (a > 1.0)
+      } // if (local_v > 0.0)
+      if (a > 1.0) a =  1.0;
+      break;
+    case GRAD_MAPPED:
+    case GRAD_VECTOR:
+    case GRAD_LIGHT:
+    case GRAD_LINEAR:
+    default:
+      a = local_v;
+    } // switch(gradType)
+    return a;
+  } // maxGradFunc
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // uv-coords
+    float u = texture_coordinate[0].x;
+    float v = texture_coordinate[0].y;
+    // try to call hlsl_base_UVGenerator
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Coords.call("output", "result", shader_return)) {
+      u = shader_return.r;
+      v = shader_return.g;
+    }
+    // call other shader parameters
+    Color SourceMapColor = Color(0.0, 0.0, 0.0, 0.0);
+    bool useSourceMap = false;
+    if (MapOn && SourceMap.call("output", "result", SourceMapColor)) {
+      useSourceMap = true;
+    }
+    // use uv-coords
+
+    // create arrays
+    int paras_n_flags = Flags.count;
+    float inst_pFlags_pos[NUM_FLAGS_PLUS_ONE] = 
+      {0.0,0.0,0.0,0.0,0.0,0.0};
+    int inst_pFlags_nNumber[NUM_FLAGS_PLUS_ONE] = {0,0,0,0,0,0};
+    float3 inst_pFlags_col[NUM_FLAGS_PLUS_ONE] = {
+      float3(0.0,0.0,0.0), 
+      float3(0.0,0.0,0.0), 
+      float3(0.0,0.0,0.0), 
+      float3(0.0,0.0,0.0), 
+      float3(0.0,0.0,0.0), 
+      float3(0.0,0.0,0.0)
+    };
+    int inst_pFlags_nInterpType[NUM_FLAGS_PLUS_ONE] = {0,0,0,0,0,0};
+    float inst_pFlags_fPositionNormalizer[NUM_FLAGS_PLUS_ONE] = 
+      {0.0,0.0,0.0,0.0,0.0,0.0};
+    float3 inst_pFlags_dcol[NUM_FLAGS_PLUS_ONE] = {
+      float3(0.0,0.0,0.0), 
+      float3(0.0,0.0,0.0), 
+      float3(0.0,0.0,0.0), 
+      float3(0.0,0.0,0.0), 
+      float3(0.0,0.0,0.0), 
+      float3(0.0,0.0,0.0)
+    };
+    // begin max_GradientRamp_init(...)
+
+    // TODO: we simply assume that the Flags entries are already
+    // sorted before the shader gets called !!!
+
+    int i = 0;
+    for (i = 0; i < paras_n_flags; i++) {
+      inst_pFlags_pos[i] = Flags[i].Position;
+      inst_pFlags_nNumber[i] = Flags[i].Number;
+      inst_pFlags_nInterpType[i] = Flags[i].Interp;
+      inst_pFlags_col[i] = Flags[i].Color;
+    } // for (i = 0; i < paras_n_flags; i++)
+    inst_pFlags_pos[paras_n_flags] = inst_pFlags_pos[paras_n_flags-1];
+    inst_pFlags_nNumber[paras_n_flags] = inst_pFlags_nNumber[paras_n_flags-1];
+    inst_pFlags_nInterpType[paras_n_flags] =
+      inst_pFlags_nInterpType[paras_n_flags-1];
+    inst_pFlags_col[paras_n_flags] = inst_pFlags_col[paras_n_flags-1];
+    float tmp1 = 0.0;
+    float tmp2 = 0.0;
+    for (i = 0; i < paras_n_flags; i++) {
+      tmp1 = inst_pFlags_pos[i+1];
+      tmp2 = inst_pFlags_pos[i];
+      inst_pFlags_fPositionNormalizer[i] = ((tmp1 == tmp2) ? 0.0 : 
+					    1.0 / (tmp1 - tmp2));
+      inst_pFlags_dcol[i] = inst_pFlags_col[i+1] - inst_pFlags_col[i];
+    } // for (i = 0; i < paras_n_flags; i++)
+    inst_pFlags_pos[paras_n_flags] = 17.0;
+    // end max_GradientRamp_init(...)
+    // begin of maxGradientRamp_evalFunction
+    float du = 0.02; // TODO: calculate those values
+    float dv = 0.02; // TODO: calculate those values
+    float a = 0.0;
+    switch (Type) {
+    case GRAD_VECTOR:
+      error("TODO: GRAD_VECTOR");
+      break;
+
+    case GRAD_LIGHT:
+      error("TODO: GRAD_LIGHT");
+      break;
+
+    case GRAD_MAPPED:
+      if (useSourceMap) {
+	a = (SourceMapColor.r + SourceMapColor.g + SourceMapColor.b) / 3.0;
+      } // if (useSourceMap)
+      else {
+	a = 0.0;
+      } // else [ if (useSourceMap) ]
+      break;
+      
+    default:
+      a = maxGradFunc(// paras
+		      Type,
+		      // others
+		      u, v, du, dv);
+    } // switch (Type)
+    if (a < 0.0) a = 0.0;
+    if (a > 1.0) a = 1.0;
+    result = maxGetColor(// state
+			 // paras
+			 Mode,
+			 paras_n_flags,
+			 // inst
+			 inst_pFlags_pos,
+			 inst_pFlags_fPositionNormalizer,
+			 inst_pFlags_col,
+			 inst_pFlags_nInterpType,
+			 // add_info
+			 // others
+			 a, du+dv);
+    // end of maxGradientRamp_evalFunction
+
+    // call "output" shader, if any
+    Color output_shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Output.call("input", "inputColor", result, 
+		    "output", "result", output_shader_return)) {
+      result = output_shader_return;
+    }
+  } // main
+};

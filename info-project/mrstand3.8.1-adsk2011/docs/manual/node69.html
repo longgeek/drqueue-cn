@@ -1,0 +1,116 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Phenomenon Interface Parameters</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node68.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node70.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION67"></a>
+<h3>Phenomenon Interface Parameters</h3>
+<p><a id="INDEX151"></a><a id="INDEX152"></a>
+Phenomena, like shaders, have parameters. In the
+phenomenon case they are called "<a href="node138.html#INDEX530">interface
+parameter</a>s" because they form
+the gateway between the rest of the scene and the internal
+implementation of the phenomenon. Interface parameters are what
+makes the phenomenon look like a simple shader to the named and
+anonymous shader definitions. Phenomena are implemented in terms of
+subshader nodes, each with their own parameters. Subshader
+parameters can be assigned from the interface using an assignment
+of the following form:</p>
+<pre>
+    "<i>parameter_name</i>" = interface "<i>ifname</i>"  
+</pre>
+<p>This looks similar to the shader assignments described above,
+but when the shader calls <i><a href="node138.html#INDEX522">mi_eval</a></i>
+on a parameter assigned to
+the interface of the phenomenon it is defined in, no shader is
+called but the value is obtained from the phenomenon interface. For
+example:</p>
+<pre>
+     declare shader 
+        color "phong" (color "ambient",
+                       color "diffuse",
+                       color "specular")
+        version 1
+     end declare
+
+     declare phenomenon
+        color "phong_phen" (color "col")
+        version 1
+
+        shader "sub" "phong" (
+            "ambient"   0.3 0.3 0.3,
+            "diffuse"   = interface "col",
+            "specular"  1.0 1.0 1.0)
+
+        root = "sub"
+     end declare
+
+     shader "mtlsh" "phong_phen" (
+        "col"   1.0 0.5 0.0)
+</pre>
+<p>For the shader definition, the phenomenon <i>phong_phen</i>
+looks like a shader with a single color parameter <i>col</i>.
+Internally, it contains the definition of a simple shader
+<i>sub</i> with three parameters, two of which have constant values
+and one which takes its value from the interface. When the shader
+definition <i>mtlsh</i> is called from a material or elsewhere in
+the scene, it calls the phenomenon <i>phong_phen</i> with the value
+1.0 0.5 0.0 for the interface parameter <i>col</i>. This value is
+propagated to the <i>diffuse</i> parameter of the shader <i>sub</i>
+during evaluation of the phenomenon.</p>
+<p>It is important to distinguish parameter <i>values</i>, such as
+1.0 1.0 1.0 for <tt>specular</tt>, from shader <i>assignments</i>,
+which begin with an "=" sign. In particular, consider the shader
+parameter type <tt>shader</tt>: if a shader name is given as the
+value without "=" sign, the named shader will be returned but not
+called by <i><a href="node138.html#INDEX522">mi_eval</a></i>. With
+an "=" sign, <i><a href="node138.html#INDEX522">mi_eval</a></i>
+will call the shader and expect it to return another shader (so its
+return value must have type <tt>shader</tt>) which is then returned
+by <i><a href="node138.html#INDEX522">mi_eval</a></i>. The latter
+involves an indirection, and is not often used for parameters of
+type <tt>shader</tt>. This is a common mistake, and return type
+mismatches will result in mental ray warning messages.</p>
+<p>When calling a phenomenon, all its parameters must pass through
+the interface. The shader <i>sub</i> and everything else defined
+inside the phenomenon block is visible only inside the phenomenon,
+and no names defined outside the phenomenon are visible to
+definitions inside the phenomenon. The interface is the only
+connection point between the inner and outer world. This
+encapsulation ensures the integrity and completeness of phenomena
+independently of the scene they are used in.</p>
+<p>Phenomena may also contain material, light, and instance
+definitions in addition to shader definitions.</p>
+<p>By convention, anonymous shader definitions should not be used
+in phenomenon declarations. There is no functional disadvantage in
+using anonymous shader definitions but it makes life difficult for
+graphical phenomenon editing tools like mental ray' Phenomenon
+Creator<sup>&trade;</sup>, which uses shader names to label the
+icons and boxes that represent subshaders in its graph and browser
+views.</p>
+<p>The return type of a phenomenon may be any type that is a valid
+return type for a shader.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node68.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node70.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

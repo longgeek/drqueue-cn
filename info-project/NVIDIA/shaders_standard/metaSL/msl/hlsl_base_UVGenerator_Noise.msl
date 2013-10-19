@@ -1,0 +1,196 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// see max_texutil.cpp
+#define B 512 // 0x200
+#define RN 10000.0
+#define maxS_curve(t) ( t * t * (3.0 - 2.0 * t) )
+#define maxLerp(t, a, b) ( a + t * (b - a) )
+
+shader hlsl_base_UVGenerator_Noise {
+ input:
+  float u = 0.0 {
+    hidden();
+    display_name("u-coord");
+  };
+  float v = 0.0 {
+    hidden();
+    display_name("v-coord");
+  };
+  const bool Animate = false {
+    display_name("Animate");
+  };
+  float Amount = 10.0 {
+    display_name("Amount");
+  };
+  float Size = 0.5 {
+    display_name("Size");
+  };
+  const int Level = 3 {
+    display_name("Level");
+    hard_range(0, 5);
+  };
+  float Phase = 0.0 {
+    display_name("Phase");
+    hard_range(0.0, 100.0);
+  };
+  Texture2d noise_tables = "noise_out.dds" {
+    display_name("Noise Texture");
+    disable_filtering();
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+
+ output:
+  Color result;
+
+  // see max_texutil.cpp
+  void maxSetup(in float v,
+		inout int b0, inout int b1,
+		inout float r0, inout float r1) {
+    float t = v + RN;
+    int it = (int) t;
+    b0 = it - (it / B) * B; // ((int)t) & BM;
+    // (b0+1) & BM;
+    b1 = b0 + 1;
+    if (b1 >= B) b1 = 0;
+    r0 = (float)(t - (int) t);
+    r1 = r0 - 1.0; // what if r0 < 1.0?
+  } // maxSetup
+
+  // additional functions for texture lookup
+  int p(in int i1) {
+    // int x_pix = i1 % 114;
+    int y_pix = i1 / 114; // 0 <= y < 9
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    // return int((511.0 * tex2d(noise_tables, float2(x, y)).r + 0.5));
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    return int((c.r + 0.5));
+  } // p
+
+  float g1(in int i1) {
+    // int x_pix = i1 % 114;
+    int y_pix = 9 + i1 / 114; // 9 <= y < 18
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    // return 2.0 * tex2d(noise_tables, float2(x, y)).r - 1.0;
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    return c.r;
+  } // g1
+
+  float g2(in int i1, in int i2) {
+    // int x_pix = i1 % 114;
+    int y_pix = 18 + i1 / 114; // 18 <= y < 27
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    if (i2 == 0)
+      return c.r;
+    else if (i2 == 1)
+      return c.g;
+    else {
+      error("g2(noise_tables, %d, %d)", i1, i2);
+      return 0.0;
+    }
+  } // g2
+
+  // see max_texutil.cpp
+  float maxNoise1(in float arg) {
+    int bx0 = 0;
+    int bx1 = 0;
+    float rx0 = 0.0;
+    float rx1 = 0.0;
+    maxSetup(arg, bx0, bx1, rx0, rx1);
+    float sx = maxS_curve(rx0);
+    float u = rx0 * g1(p(bx0));
+    float v = rx1 * g1(p(bx1));
+    return maxLerp(sx, u, v);
+  } // maxNoise1
+
+  // max_texutil.cpp
+  float maxNoise2(in float x, in float y) {
+    int bx0 = 0;
+    int bx1 = 0;
+    int by0 = 0;
+    int by1 = 0;
+    float rx0 = 0.0;
+    float rx1 = 0.0;
+    float ry0 = 0.0;
+    float ry1 = 0.0;
+    float q = 0.0;
+    maxSetup(x, bx0, bx1, rx0, rx1);
+    maxSetup(y, by0, by1, ry0, ry1);
+    int i = p(bx0);
+    int j = p(bx1);
+    int b00 = p(i + by0);
+    int b10 = p(j + by0);
+    int b01 = p(i + by1);
+    int b11 = p(j + by1);
+    float sx = maxS_curve(rx0);
+    float sy = maxS_curve(ry0);
+    float u = rx0 * g2(b00, 0) + ry0 * g2(b00, 1);
+    float v = rx1 * g2(b10, 0) + ry0 * g2(b10, 1);
+    float a = maxLerp(sx, u, v);
+    u = rx0 * g2(b01, 0) + ry1 * g2(b01, 1);
+    v = rx1 * g2(b11, 0) + ry1 * g2(b11, 1);
+    float b = maxLerp(sx, u, v);
+    return maxLerp(sy, a, b);
+  } // maxNoise2
+
+  // see max_stduv.cpp
+  float maxTurb(in float x) {
+    float m = 0.0;
+    float s = 1.0;
+    float local_x = x;
+    int	i = 0;
+    for (i = 0; i < Level; i++) {
+      m += abs(maxNoise1(local_x) / s);
+      s *= 2.0;
+      local_x *= 2.0;
+    } // for (i = 0; i < nlev; i++)
+    return m;
+  } // maxTurb
+
+  // see max_stduv.cpp
+  float maxTurb2(in float x) {
+    float m = 0.0;
+    float s = 1.0;
+    float local_x = x;
+    float local_y = Phase;
+    int	i = 0;
+    for (i = 0; i < Level; i++) {
+      m += abs(maxNoise2(local_x, local_y) / s);
+      s *= 2.0;
+      local_x *= 2.0;
+      local_y *= 2.0;
+    } // for (i = 0; i < Level; i++)
+    return m;
+  } // maxTurb2
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    float2 t = float2(u, v);
+    float x = t.x / Size;
+    float y = t.y / Size;
+    float f = 0.1 * Amount;
+    if (Animate) {
+      t.x += f * maxTurb2(y);
+      t.y += f * maxTurb2(x);
+    } // if (Animate)
+    else {
+      t.x += f * maxTurb(y);
+      t.y += f * maxTurb(x);
+    } // else [ if (Animate) [
+    result.r = t.x;
+    result.g = t.y;
+  } // main
+};

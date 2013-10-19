@@ -1,0 +1,243 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#include <max_common.msl>
+
+shader max_Mix {
+ input:
+  // parameters for max_Mix:
+  // -----------------------
+  // see mrMix in max_texmaps.h
+#ifdef HLSL_OPTIMIZE
+  float MixAmount = 0;                      // mix
+  float Lower = 0.3;                        // crvA
+  float Upper = 0.7;                        // crvB
+  const bool UseCurve = false;              // useCurve
+  Color Color1 = Color(0.0, 0.0, 0.0, 1.0); // col1
+  Color Color2 = Color(1.0, 1.0, 1.0, 1.0); // col2
+  Shader Map1;                              // tex1
+  Shader Map2;                              // tex2
+  Shader Mask;                              // mask
+  const bool Map1Enabled = true;           // tex1Enabled
+  const bool Map2Enabled = true;           // tex2Enabled
+  const bool MaskEnabled = true;           // maskEnabled
+  Shader Output;                            // output
+  // TODO: GBufferID
+#else
+  struct Parameters_struct { // see mrMix in max_texmaps.h
+    float MixAmount;         // mix
+    float Lower;             // crvA
+    float Upper;             // crvB
+    bool UseCurve;           // useCurve
+    Color Color1;            // col1
+    Color Color2;            // col2
+    Shader Map1;             // tex1
+    Shader Map2;             // tex2
+    Shader Mask;             // mask
+    bool Map1Enabled;        // tex1Enabled
+    bool Map2Enabled;        // tex2Enabled
+    bool MaskEnabled;        // maskEnabled
+    Shader Output;           // output
+  }; // Parameters_struct
+  Parameters_struct Parameters =
+    Parameters_struct(0.0, 0.3, 0.7,
+		      false,
+		      Color(0.0, 0.0, 0.0, 1.0),Color(1.0, 1.0, 1.0, 1.0),
+		      Shader(), Shader(), Shader(),
+		      false, false, false,
+		      Shader());
+  struct ExtraParameters_struct {
+    int GBufferID;     //
+  }; // ExtraParameters_struct
+  ExtraParameters_struct ExtraParameters;
+#endif
+  bool evalNormal = false {
+  };
+
+ output:
+  Color result;
+
+  // see max_support.cpp
+  float maxIntensity(in Color c) {
+    float f = (c.r + c.g + c.b) * 0.333333333;
+    return f;
+  } // maxIntensity
+
+  // see tex_mix.cpp
+  float maxMixCurve(// paras
+		    in float paras_crvA,
+		    in float paras_crvB,
+		    // others
+		    in float x) 
+  {
+    if (x < paras_crvA)  return 0.0;
+    if (x >= paras_crvB) return 1.0;
+    float local_x = x;
+    local_x = (local_x - paras_crvA) / (paras_crvB - paras_crvA);
+    return (local_x * local_x * (3.0 - 2.0 * local_x));
+  } // maxMixCurve
+
+  // see tex_mix.cpp
+  Color maxMix_EvalColor(// paras
+			 in float paras_mix,
+			 in Color paras_col1,
+			 in Color paras_col2) 
+  {
+    Color res = Color(0.0, 0.0, 0.0, 0.0);
+    // TODO: if (sub[2] != miNULLTAG) {...}
+    float m = paras_mix;
+    if (m < 0.0001) {
+      // TODO: if (sub[0] != miNULLTAG) {...}
+      res = paras_col1;
+    } // if (m < 0.0001)
+    else {
+      if (m > 0.9999) {
+	// TODO: if (sub[1] != miNULLTAG) {...}
+	res = paras_col2;
+      } // if (m > 0.9999)
+      else  {
+	// TODO: if (sub[0] != miNULLTAG) {...}
+	Color c0 = paras_col1;
+	// TODO: if (sub[1] != miNULLTAG) {...}
+	Color c1 = paras_col2;
+	res.r = (1.0 - m) * c0.r + m * c1.r;
+	res.g = (1.0 - m) * c0.g + m * c1.g;
+	res.b = (1.0 - m) * c0.b + m * c1.b;
+	res.a = (1.0 - m) * c0.a + m * c1.a;
+      } // else [ if (m > 0.9999) ]
+      // TODO: if (paras_output != miNULLTAG) {...}
+    } // else [ if (m < 0.0001) ]
+    return res;
+  } // maxMix_EvalColor
+
+  // see tex_mix.cpp
+  float3 maxMix_EvalNormalPerturb(
+				  in float paras_mix,
+				  in bool  paras_tex1Enabled,
+				  in Color paras_tex1,
+				  in bool  paras_tex2Enabled,
+				  in Color paras_tex2) 
+  {
+    float3 v = float3(0.0, 0.0, 0.0);
+    Color res = Color(0.0, 0.0, 0.0, 0.0);
+    Color c0  = Color(0.0, 0.0, 0.0, 0.0);
+    Color c1  = Color(0.0, 0.0, 0.0, 0.0);
+    float m = paras_mix;
+
+    if (m == 0.0) {
+      if (paras_tex1Enabled) {
+	res = paras_tex1;
+	v.x = res.r;
+	v.y = res.g;
+	v.z = res.b;
+      } // if (paras_tex1Enabled)
+      else {
+	v = float3(0.0, 0.0, 0.0);
+      } // else [ if (paras_tex1Enabled) ]
+    }
+    else if (m == 1.0) {
+      if (paras_tex2Enabled) {
+	res = paras_tex2;
+	v.x = res.r;
+	v.y = res.g;
+	v.z = res.b;
+      } // if (paras_tex2Enabled)
+      else {
+	v = float3(0.0, 0.0, 0.0);
+      } // else [ if (paras_tex2Enabled) ]
+    } // else if (m == 1.0)
+    else { // m != 0.0 && m != 1.0
+      if (paras_tex1Enabled) {
+	// mi_call_shader_x_BlackIfFails(&c0, ...)
+	c0 = paras_tex1;
+      } // if (paras_tex1Enabled)
+      else {
+	c0.r = 0.0;
+	c0.g = 0.0;
+	c0.b = 0.0;
+      } // else [ if (paras_tex1Enabled) ]
+      if (paras_tex2Enabled) {
+	// mi_call_shader_x_BlackIfFails(&c1, ...)
+	c1 = paras_tex2;
+      } // if (paras_tex2Enabled)
+      else {
+	c1.r = 0.0;
+	c1.g = 0.0;
+	c1.b = 0.0;
+      } // else [ if (paras_tex2Enabled) ]
+      v.x = (1.0 - m) * c0.r + m * c1.r;
+      v.y = (1.0 - m) * c0.g + m * c1.g;
+      v.z = (1.0 - m) * c0.b + m * c1.b;
+    } // m != 0.0 && m != 1.0
+      // TODO: if (paras->Parameters.output != miNULLTAG)
+    return v;
+  } // maxMix_EvalNormalPerturb
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+
+    float mixamount = PARAS(MixAmount);
+
+    Color col1 = Color(0.0, 0.0, 0.0, 1.0);
+    Color col2 = Color(0.0, 0.0, 0.0, 1.0);
+    if (!evalNormal) {
+      col1 = PARAS(Color1);
+      col2 = PARAS(Color2);
+    }
+
+    if (PARAS(Map1Enabled)) {
+      PARAS(Map1).call("input", "evalNormal", evalNormal,
+		       "output", "result", col1);
+    }
+
+    if (PARAS(Map2Enabled)) {
+      PARAS(Map2).call("input", "evalNormal", evalNormal,
+		       "output", "result", col2);
+    }
+
+    if (PARAS(MaskEnabled)) {
+      Color mono = Color(mixamount, mixamount, mixamount, mixamount);
+      PARAS(Mask).call("output", "result", mono);
+      mixamount = maxIntensity(mono);
+    }
+
+    if (PARAS(UseCurve)) {
+      mixamount = maxMixCurve(// paras
+			      PARAS(Lower),
+			      PARAS(Upper),
+			      // others
+			      mixamount);
+    } // if (paras_useCurve)
+
+    // pattern
+    if (evalNormal) {
+      // TODO: deal with the bump mapping later (just make mslc happy)
+      float3 v = maxMix_EvalNormalPerturb(
+					  // Mask, 
+					  mixamount,
+					  PARAS(Map1Enabled),
+					  col1,  
+					  PARAS(Map2Enabled),
+					  col2); 
+      result.r = v.x;
+      result.g = v.y;
+      result.b = v.z;
+      result.a = 1.0;
+    } // if (evalNormal)
+    else {
+      Color col = maxMix_EvalColor(mixamount,
+				   col1,
+				   col2);
+
+      // call the output shader, if any
+      Color output_shader_return = Color(0.0, 0.0, 0.0, 0.0);
+      if (PARAS(Output).call("input",  "inputColor", col,
+			     "output", "result", output_shader_return)) {
+	col = output_shader_return;
+      }
+      result = col;
+    } // else [ if (evalNormal) ]
+  } // main
+};

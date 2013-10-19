@@ -1,0 +1,117 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Assemblies</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node189.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node190.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="api:assemblies"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_api_assembly_begin">mi_api_assembly_begin</a></li>
+<li><a href="#api:mi_api_assembly_end">mi_api_assembly_end</a></li>
+<li><a href="#api:mi_api_assembly_filename">mi_api_assembly_filename</a></li>
+<li><a href="#api:mi_api_assembly_callback">mi_api_assembly_callback</a></li>
+<li><a href="#api:mi_api_get_assembly_root">mi_api_get_assembly_root</a></li>
+</ul>
+
+<h3>Assemblies</h3>
+
+<p>Assemblies can be created either by referencing an assembly
+file, or procedurally by an assembly callback.</p>
+<h5 class="anchor" id="api:mi_api_assembly_begin">mi_api_assembly_begin</h5>
+<pre>
+    miAssembly *mi_api_assembly_begin(
+        char            *name)     /* assembly name */
+</pre>
+<p>Begins the definition of an assembly with the given <i>name</i>.
+If the <i>name</i> parameter is zero, the assembly is not
+registered in the symbol tables, so it cannot be referenced by
+name. In this case the tag returned by <i>mi_api_assembly_end</i>
+must be used for referencing the assembly. The returned
+<span style="font-style: italic;">miAssembly</span> pointer should
+be used to initialize the bounding box and motion bounding box of
+the assembly.</p>
+<h5 class="anchor" id="api:mi_api_assembly_end">mi_api_assembly_end</h5>
+<pre>
+    miTag mi_api_assembly_end()
+</pre>
+<p>Completes the definition of the assembly, a database tag is
+returned, type is <tt>miSCENE_ASSEMBLY</tt>.</p>
+<h4>File Assemblies</h4>
+<h5 class="anchor" id="api:mi_api_assembly_filename">mi_api_assembly_filename</h5>
+<pre>
+    miBoolean mi_api_assembly_filename(
+        char            *filename)     /* filename of assembly */
+</pre>
+<p>Defines a file assembly. The given file contains the subscene
+and is loaded on demand.</p>
+<h4>Procedural Assembly</h4>
+<h5 class="anchor" id="api:mi_api_assembly_callback">mi_api_assembly_callback</h5>
+<pre>
+    typedef miTag (*miApi_assembly_callback)(const miState * state, void * args);
+    typedef miBoolean (*miApi_assembly_exit_callback(const miState * state, void * args);
+
+    miBoolean mi_api_assembly_callback(
+        miApi_assembly_callback      cb,    /* assembly creation callback */
+        miApi_assembly_exit_callback ecb,   /* optional exit callback */
+        void                         *args) /* arguments for both callbacks */
+</pre>
+<p>Defines a procedural assembly. The given creation callback is
+executed on demand. The <i>args</i> parameter is passed to the
+callbacks when executed.</p>
+<p>The exit callback argument is optional, null pointer can be
+passed. It is called when the assembly is deleted from the database
+and could be used for cleanup of the arguments passed with
+<i>args</i>.</p>
+<p>The state passed has to the callbacks has the following fields
+initialized:</p>
+<ul>
+<li><tt>camera</tt>,</li>
+<li><tt>camera_inst</tt>,</li>
+<li><tt>options</tt>,</li>
+<li><tt>instance</tt>,</li>
+<li><tt>version</tt>.</li>
+</ul>
+<p>Both and exit callbacks are executed on the master host.</p>
+<h4>Parser functions</h4>
+<h5 class="anchor" id="api:mi_api_assembly_root">mi_api_assembly_root</h5>
+<pre>
+    miBoolean mi_api_assembly_root(
+        char            *root_name)     /* root group name */
+</pre>
+<p>Defines the root group name of a file assembly. This function
+must be called when the file assembly is being loaded, usually
+inside a parser. The name must refer to an existing instgroup in
+the assembly file.</p>
+<h5 class="anchor" id="api:mi_api_get_assembly_root">mi_api_get_assembly_root</h5>
+<pre>
+    miTag mi_api_get_assembly_root()
+</pre>
+<p>Returns root group of the last defined file assembly. The tag is
+of type <tt>miSCENE_GROUP</tt>.</p>
+<p>The Examples sections contains source code for a <a href="node180.html#api:assembly_callback_example">geometry shader creating
+assemblies.</a></p>
+<br />
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node189.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node190.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a href="file:copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a><br />
+</body>
+</html>

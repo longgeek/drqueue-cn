@@ -1,0 +1,59 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Illumination_lambert
+{
+  input:    
+  Color  diffuse_color = Color(1,1,1,1)
+  {	
+      display_name("Diffuse Color");
+      hard_range(Color(0,0,0,0),Color(1,1,1,1));
+      description( "The color used to tint the Diffuse Reflectance Color." );
+  };
+  float diffuse_scalar = 0.7
+  {		
+      display_name("Diffuse Float");
+      hard_range(float(0),float(1));
+      description( "The intensity of the light diffusely reflected from "
+      "this surface." );
+  };
+
+  output:
+    Color result;
+
+  void main() 
+  {
+      result = Color(0.0,0.0,0.0,0.0);
+  
+      Color Rd = diffuse_color * diffuse_scalar / PI;
+      // TODO: normalize inputs?
+      //float max_c = max(max(Rd.r, Rd.g), Rd.b);
+      //if (max_c > 1.0)
+      //    Rd /= max_c;
+
+      float3 vdir = direction;
+      
+      // enumerate lights
+      Light_iterator light;
+      foreach (light)
+      {
+          float cos = saturate(light.dot_nl);
+          if (cos > 0.0) {
+              result += cos * Rd * light.contribution;
+          }
+      }
+      
+      // irradiance term
+      Irradiance_options irradiance_options;
+      irradiance_options.set_importance(diffuse_scalar);
+      result += Rd * irradiance(irradiance_options);
+      
+      result.a = 1.0;
+  }
+}
+{
+    description( "An illumination model for diffuse surfaces." );
+}
+;

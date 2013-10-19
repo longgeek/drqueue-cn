@@ -1,0 +1,252 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Upgrading from mental ray 3.4 to 3.5</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="upgrading36.html">&laquo;&nbsp;prev</a></li>
+<li><a href="appendix.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<div class="toc">
+<dl>
+<dt>Upgrading from mental ray 3.4 to 3.5</dt>
+<dd>
+<dl>
+<dt><a href="#whatsnew">What's new in Version 3.5</a></dt>
+<dt><a href="#mi">Scene Description Language</a></dt>
+<dt><a href="#shader">Shader Writing and Integration</a></dt>
+<dt><a href="#incompatible">Incompatible Changes</a></dt>
+</dl>
+</dd>
+</dl>
+</div>
+<a id="SECTION233"></a>
+<h3 id="whatsnew">What's new in Version 3.5</h3>
+<p>Here is a summary of some of the new features and feature
+improvements in version 3.5 of mental ray:</p>
+<h4>New final gathering modes</h4>
+<p>mental ray now has four <a href="node52.html#modes">final
+gathering modes</a>: "automatic", "multiframe", "3.4", and "strict
+3.4". The automatic and multiframe modes have been greatly
+simplified and do not require control by radii, while usually
+giving superious image quality. The multiframe mode is specifically
+designed to avoid flickering artifacts in camera animations. The
+3.4 and strict 3.4 modes are provided for backwards
+compatibility.</p>
+<h4>Light lists in instances</h4>
+<p><a href="node90.html#light_lists">Light lists</a> have been
+added to geometric instances to offer a general, more flexible ways
+to specify lights for illumination, and for finer control over
+shadow casting. The same material may now use different lights on
+different geometries. Light lists provide a new, standard method to
+pass lights to shaders for illumination; they require, however,
+support in the shaders by using the new
+<a href="classmi_1_1shader_1_1LightIterator.html">light iterators</a>.</p>
+<h4>Catmull-Clark meshes</h4>
+<p><a href="catmullclark.html">Catmull-Clark polygon meshes</a>
+("ccmeshes") have been introduced. This subdivision surface type
+uses Catmull-Clark rules for smoothening and supports polygons with
+arbitrary numbers of vertices.</p>
+<h4>Reloading of .mi files for reduced memory consumption</h4>
+<p>A command line option <a href="node245.html#reload"><tt>-reload</tt></a>
+has been introduced. If
+this is specified then mental ray attempts to avoid keeping
+geometric objects read from the mi file in memory permanently, but
+re-read them from disk as needed. This optimization is not
+applicable to all scenes and workflows but may save large amounts
+of memory on certain complex scenes.</p>
+<h4>Per-face data</h4>
+<p>Per-face data have been introduced for polygonal geometric
+objects. Per-face data make it possible to attach arbitrary
+floating point data to the primitives. An object may also contain
+per-primitive data information to identify the data attached to the
+primitives.</p>
+<h4>String options</h4>
+<p>Up to version 3.4, options are hardcoded in the .mi syntax and
+options data structures. It is now also possible to add new
+<a href="node76.html#string_options">string options</a> in a more
+extensible way as arbitrary name - value pairs, where the name of
+the option is an arbitrary string, and the value can be of any of a
+few basic types.</p>
+<h4>Photon merging</h4>
+<p>A new, optional optimization of global illumination using photon
+mapping called photon merging has been implemented. This feature
+reduces memory consumption in scenes with complex indirect
+illumination where were many photons must be shot but only few of
+them contribute to the rendered image, by merging photons in memory
+which are closer to each other than a user specified distance
+threshold. Some scenes which previously could not be rendered in
+sufficient quality due to memory size of the shot photons may be
+rendered now using this option.</p>
+<h4>Built-in shaders</h4>
+<p>As of version 3.5, mental ray has a small set of simple
+<a href="builtinshaders.html">built-in shaders</a>. These are intended for
+simple visualizations, where speed and simplicity of scene setup
+are more important than customization of shading elements. The
+shaders are designed to be flexible, but to offer only little
+control over shading details.</p>
+<h4>Paint shader library</h4>
+<p>A <a href="../shaders/paint/paint.html">paint shader library</a>
+has been added with shaders for metallic paint.</p>
+<h4>Other improvements</h4>
+<ul>
+<li>Support for spectral rendering has been improved.</li>
+<li>Support for color spaces and color profiles has been
+extended.</li>
+<li>The splitting of large objects with boundaries has been
+improved.</li>
+<li>The handling of out-of-memory errors has been improved.</li>
+<li>The rasterizer rendering method has been optimized for better
+performance.</li>
+<li>In the hardware rendering mode, larger images and higher
+supersampling for antialiasing can now be rendered by automatic
+tiling of the image into smaller regions.</li>
+</ul>
+<h3 id="mi">Scene Description Language</h3>
+<p>The following changes were made in the .mi scene description
+syntax:</p>
+<ul>
+<li>String options have been introduced in the options syntax.</li>
+<li>Instances may contain light lists for illumination and shadow
+casting.</li>
+<li>An option <tt>finalgather secondary scale</tt>
+(<tt>-finalgather_secondary_scale</tt>) has been added to specify a
+scaling color for secondary bounces.</li>
+<li>An option <tt>photonvol scale</tt> (<tt>-photonvol_scale</tt>)
+has been added to scale volume global illumination by a color.</li>
+<li>A string option <tt>"finalgather contrast"</tt> has been
+added.</li>
+<li>A photon map may be specified in an object: <tt>photonmap file
+"<i>filename</i>"</tt>.</li>
+<li>Shader parameters can now be prefixed with <tt>colorprofile
+<i>name</i></tt> to specify the colorspace of the parameter.</li>
+<li>String options <tt>"globillum merge"</tt>, <tt>"caustics
+merge"</tt>, and <tt>"photonvol merge"</tt> have been added for
+photon merging.</li>
+<li>For lightmapping ("baking"), the file type of writable textures
+can now be set explicitly in the syntax of writable textures.</li>
+<li>Light energies may now contain a color profile or a spectrum:
+<tt>energy colorprofile <i>name color</i></tt> or <tt>energy
+spectrum <i>name</i></tt>.</li>
+<li>Lights may now contain a light profile (<tt>lightprofile
+<i>name</i>)</tt>.</li>
+<li>The scalar values in color spectra are no longer separated by
+commas: <tt>spectrum <i>symbol scalar...</i> end
+spectrum</tt>.</li>
+<li>Per face data have been added to primitive lists.</li>
+<li>A registry variable <tt>_MI_REG_MEMORY_LIMIT</tt> may now be
+set to specify the memory limit for mental ray which is otherwise
+specified with the <tt>-memory</tt> command line option.</li>
+</ul>
+<h3 id="shader">Shader Writing and Integration</h3>
+<p>The following changes were made in the shader and integration
+interfaces.</p>
+<p><b>Note:</b> All shaders and integrations should be recompiled
+for mental ray version 3.5. Many data structures in the shader
+interface and integration API have been changed. Shaders compiled
+for an earlier version of mental ray may crash without error
+indication if they access changed data structures in the shader
+interface.</p>
+<ul>
+<li>The C-style shader and integration interface has been extended
+with a new <a href="shader_if_cpp.html">C++ interface</a> for
+shaders and integrations. This interface introduces more modern
+software interface approaches, simplifies linking and access to
+functions in mental ray, and supports versioning for future
+interface changes while maintaining backwards compatibility.
+<p>It uses styles and methodologies slightly different from the
+ones used in the interfaces so far, and requires compilation of the
+shader or integration as C++. The C interfaces will be continued to
+be supported but some new features may only be available in the C++
+interface. The C++ interface currently provides
+<a href="classmi_1_1shader_1_1LightIterator.html">light iterators</a> for
+access to <a href="node90.html#light_lists">light lists in
+instances</a>, and <a href="structmi_1_1shader_1_1Options.html">access to string
+options</a>.</p>
+</li>
+<li>The <tt>camera</tt> and <tt>options</tt> entries in the
+<tt>state</tt> structure are now marked as <tt>const</tt>, meaning
+that <tt>state-&gt;camera</tt> and <tt>state-&gt;options</tt> can
+not be modified in shaders. This enforces a restriction which is
+very important for the correctness of shaders, since the camera and
+options are shared among multiple threads executing in parallel and
+can therefore not be modified without undesired and dangerous side
+effects. A recommended and safer way is to make a copy of the
+camera or options, modify the copy, and install it in the state;
+please see the release notes for details.</li>
+<li>Two new functions <tt>int mi_img_get_width(const miImg_image
+*)</tt> and <tt>int mi_img_get_height(const miImg_image *)</tt>
+have been added which return the true, full width of tiled images
+and textures.</li>
+<li>Two new query modes <tt>miQ_LIGHT_NORMAL</tt> and
+<tt>miQ_LIGHT_TANGENT_SPACE</tt> were introduced. They return for
+area light sources the tangent space of the current sample on the
+light surface.</li>
+</ul>
+<h3 id="incompatible">Incompatible Changes</h3>
+<p>The following changes were made in mental ray 3.5 which are not
+backwards compatible or which may cause different results than
+previous versions of mental ray:</p>
+<ul>
+<li>The default final gathering mode is automatic; use the 3.4 or
+strict 3.4 mode to get the same behaviour as in version 3.4.</li>
+<li>Color clipping is now performed <em>after</em> the accumulation
+of image samples for motion blur, while it used to be performed
+before the accumulation. This has the effect of rendering
+super-white motion blurred objects brighter than white motion
+blurred objects, and may cause motion blurred objects to be
+rendered significantly brighter.</li>
+<li>Extra samples in the generation of shadow maps have been
+eliminated. This may result in different images of some scenes
+using shadow maps, in particular in combination with motion blur,
+since shadows previously may have been too dark.</li>
+<li>The memory limit (specified e.g. with the <tt>-memory</tt>
+option) is now by default set to 1 gigabyte on 32 bit
+architectures. This may affect the memory behaviour of mental ray
+on some scenes.</li>
+<li>The handling of lens shader with the rasterizer has been
+improved, lens shader are now called in the end like volume
+shaders. This could break some rare lens shaders which exchange
+data with material shaders through the state.</li>
+<li>The default low samples settings of area lights have been
+changed from 2 x 2 to 1 x 1. This is more appropriate for the low
+samples main use in final gathering.</li>
+<li>Texture file paths are substituted and replaced by absolute
+paths now on all machines contributing in network parallel
+rendering, not just on the master machine.</li>
+<li>Final gathering in combination with bump mapping now computes
+final gathering by default on the "unbumped" surface normals.</li>
+<li>The output and exit code of the <tt>imf_diff</tt> utility has
+been altered.</li>
+<li>If the <tt>min samples</tt> option is set to -2 or a lower
+number then mental ray no longer fills coverage buffers.</li>
+<li>The bias computations for shadow maps without the Woo trick
+have been improved.</li>
+<li>A limit for the number of auxiliary helper threads which mental
+ray uses for network rendering, has been removed. This may
+theoretically increase the number of threads created by mental ray
+but is not expected to cause a noticable difference.</li>
+<li>Some platform configurations have been changed. The platform
+nt-x86 is now compiled with the Microsoft Visual Studio .net 2003
+(VC 7.1) compiler, and no longer with the VC 6 compiler.</li>
+</ul>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="upgrading36.html">&laquo;&nbsp;prev</a></li>
+<li><a href="appendix.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

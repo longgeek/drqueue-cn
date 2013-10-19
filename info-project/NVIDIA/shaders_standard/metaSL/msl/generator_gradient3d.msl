@@ -1,0 +1,90 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Generator_gradient3d
+{
+  input:
+		Color   X0_Y0_Z0  = Color(0,0,0,1)
+		{			
+			display_name("X0 Y0 Z0");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The value at the X=0,Y=0,Z=0 corner of the "
+						 "gradient." );
+		};
+		Color   X1_Y0_Z0  = Color(1,0,0,1)
+		{		
+			display_name("X1 Y0 Z0");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));			
+			description( "The value at the X=1,Y=0,Z=0 corner of the "
+						 "gradient." );
+		};
+		Color   X0_Y1_Z0  = Color(0,1,0,1)
+		{		
+			display_name("X0 Y1 Z0");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The value at the X=0,Y=1,Z=0 corner of the "
+						 "gradient." );
+		};
+		Color   X1_Y1_Z0  = Color(1,1,0,1)
+		{		
+			display_name("X1 Y1 Z0");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The value at the X=1,Y=1,Z=0 corner of the "
+						 "gradient." );
+		};
+		Color   X0_Y0_Z1  = Color(0,0,1,1)
+		{		
+			display_name("X0 Y0 Z1");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The value at the X=0,Y=0,Z=1 corner of the "
+						 "gradient." );
+		};
+		Color   X1_Y0_Z1  = Color(1,0,1,1)
+		{		
+			display_name("X1 Y0 Z1");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The value at the X=1,Y=0,Z=1 corner of the "
+						 "gradient." );
+		};
+		Color   X0_Y1_Z1  = Color(0,1,1,1)
+		{		
+			display_name("X0 Y1 Z1");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The value at the X=0,Y=1,Z=1 corner of the "
+						 "gradient." );
+		};
+		Color   X1_Y1_Z1  = Color(1,1,1,1)
+		{		
+			display_name("X1 Y1 Z1");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The value at the X=1,Y=1,Z=1 corner of the "
+						 "gradient." );
+		};
+    
+  output:
+    Color result;
+    
+    void main()
+    {
+		float3 m = abs(position);
+
+		Color hbn, htn, hbf, htf;
+		hbn    = lerp(X0_Y0_Z0, X1_Y0_Z0, m.x);
+		htn    = lerp(X0_Y1_Z0, X1_Y1_Z0, m.x);
+		hbf    = lerp(X0_Y0_Z1, X1_Y0_Z1, m.x);
+		htf    = lerp(X0_Y1_Z1, X1_Y1_Z1, m.x);
+
+		Color vn, vf;
+		vn    = lerp(htn, hbn, m.y);
+		vf    = lerp(htf, hbf, m.y);
+		
+		result = lerp(vf, vn, m.z);
+    }
+}
+{
+	description( "Generates a smooth gradient between corners based on the "
+	             "location of the input in the unit cube." );
+}
+;

@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Light Mapping</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node14.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node16.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION13"></a>
+
+  <h2>Light Mapping</h2>
+
+  <p>mental ray supports light mapping. This is a two-stage
+  process that runs on certain objects (whose materials contain a
+  lightmap shader) to compute illumination or other information,
+  and write the result into a texture or elsewhere. The first stage
+  calls the lightmap shader in <i>vertex mode</i> once for every
+  vertex of the object, and collects the returned information. The
+  second stage calls the lightmap shader in <i>output mode</i> to
+  use the collected information to paint a texture or other output
+  data by looping over all triangles of the object.</p>
+
+  <p>The lightmap shaders in the base shader library collect direct
+  and indirect illumination, and create a writable texture map from
+  it. Although mental ray knows only about one lightmap shader, the
+  base lightmap shader is split into the main shader that handles
+  the output stage, and a separate shader for the vertex stage that
+  is called by the main shader. This makes it easier to substitute
+  only one stage with another user-written shader.</p>
+
+  <h3>Illumination Sampling</h3>
+
+  <p>The lightmap illumination sampling shader is a simple color
+  shader that samples the surface light influx density. It gathers
+  direct illumination and optionally indirect illumination. It
+  should not be used in a material; instead, it should be assigned
+  to the <var>input</var> parameter of the
+  <i><a href="node15.html#INDEX62">mib_lightmap_write</a></i> shader.</p>
+
+  <a id="INDEX61"></a>
+  <h5 id="mi_shader__mib_lightmap_sample">mib_lightmap_sample</h5>
+  <pre>
+    color "mib_lightmap_sample" (
+        boolean         "indirect",
+        integer         "flip",
+        array light     "lights"
+    )
+</pre>
+
+<dl>
+  <dt>indirect<dd> tells the shader to sample indirect illumination too.
+
+  <dt>flip<dd> is an integer value, selecting the side of the
+  geometry to be illuminated. A value of 0 selects the direction of
+  the normal (front side), 1 selects the opposite direction (back
+  side) and 2 selects that illumination be sampled from both
+  directions and combined.
+
+  <dt>lights<dd> is the array of lights from which direct
+  illumination should be sampled.
+</dl>
+
+  <h3>Lightmap Generation</h3>
+
+  <p>The lightmap generation shader is the main lightmap shader. It
+  gathers geometric information and texture coordinates on the
+  triangle vertices and then writes a triangular region of texture
+  for each triangle. For each pixel of the texture that the
+  triangle covers, a sampling function is called and the results
+  are written to the shader. The lightmap shader is attached to a
+  material using the <tt>lightmap</tt> keyword.</p>
+
+  <a id="INDEX62"></a>
+  <h5 id="mi_shader__mib_lightmap_write">mib_lightmap_write</h5>
+  <pre>
+    struct {
+        vector          "point",
+        vector          "normal",
+        vector          "tex"
+    } "mib_lightmap_write" (
+        color texture   "texture",
+        vector texture  "coord",
+        color texture   "input",
+        integer         "fg_mode"
+    )
+</pre>
+
+<dl>
+  <dt>texture<dd> is the writable texture where the lightmap will
+  be written. It must have been declared with the <tt>writable</tt>
+  keyword.
+
+  <dt>coord<dd> is a shader that returns the texture UV
+  coordinates at the current particular point, such as
+  <i><a href="node4.html#INDEX3">mib_texture_remap</a></i>.
+
+  <dt>input<dd> is a shader returning the data to be written to
+  each texture pixel. For example, using
+  <tt>mib_lightmap_sample</tt> here is useful to gather
+  illumination to write into the light map.
+
+  <dt>fg_mode<dd> when final gathering is enabled this mode allows to
+  tune quality by controlling the placement of final gather points all
+  over the surface. This is usually required to achieve quality on the
+  backside of objects or in areas which are out of view of the camera,
+  places that mental ray final gather view dependent optimizations might
+  not cover. Supported values are:
+  <table class="table"><tgroup>
+  <tr><td>-1<td>off
+  <tr><td>&nbsp;0<td>force FG point on every vertex (of the tessellated geometry)
+  <tr><td>&nbsp;1<td>force FG point on every texture pixel (texel)
+  <tr><td>&nbsp;2<td>... every second texel
+  <tr><td>&nbsp;3<td>... every third texel (default)
+  <tr><td><var>n</var> (<var>n</var> > 3)<td>... every <var>n</var>-th texel
+  </tgroup></table>
+</dl>
+
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node14.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node16.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

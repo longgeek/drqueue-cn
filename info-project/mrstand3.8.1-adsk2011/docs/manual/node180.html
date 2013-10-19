@@ -1,0 +1,645 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Examples</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="chapter4.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node181.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION178"></a>
+
+<h2>Examples</h2>
+
+<p><a id="INDEX861"></a> The following example
+shader creates an axis-aligned unit cube at the origin. Using unit
+sizes and centering objects at the origin is usually a good idea
+because the position, orientation, and sizes of objects are better
+adjusted with instances than by hardcoding them into the object.
+This assumes that mental ray is switched to
+<a href="node101.html#INDEX369">object space</a> mode, which is recommended
+for all scenes anyway (this is done in the <tt>options</tt>
+statement).</p>
+<pre>
+     #include &lt;shader.h&gt;
+     #include &lt;geoshader.h&gt;
+
+     int geocube_version(void) {return(1);}
+
+     #define add_vector(X, Y, Z) \
+        v.x = X; v.y = Y; v.z = Z;\
+        mi_api_geovector_xyz_add(&amp;v);
+
+     static int vertex_order[] = {
+        0, 3, 5, 4,
+        3, 2, 6, 5,
+        2, 1, 7, 6,
+        1, 0, 4, 7
+     };
+
+     static void init_object_flags(miObject * object)
+     {
+        object-&gt;visible     = miTRUE;
+        object-&gt;shadow      =
+        object-&gt;reflection  =
+        object-&gt;refraction  =
+        object-&gt;finalgather = 0x03;
+     }
+
+     miBoolean geocube(
+        miTag           *result,
+        miState         *state,
+        miTag           *mtl)      /* only one parameter */
+     {
+        int             i, k, ix=0;
+        miObject        *obj;
+        miGeoVector     v;
+        miTag           mtl_tag;
+
+        mtl_tag = *mi_eval_tag(mtl);
+        obj = mi_api_object_begin(NULL);
+        init_object_flags(obj);
+        mi_api_basis_list_clear();
+        mi_api_object_group_begin(0.0);
+
+        add_vector(-0.5, -0.5, -0.5);
+        add_vector(-0.5,  0.5, -0.5);
+        add_vector( 0.5,  0.5, -0.5);
+        add_vector( 0.5, -0.5, -0.5);
+
+        add_vector(-0.5, -0.5,  0.5);
+        add_vector( 0.5, -0.5,  0.5);
+        add_vector( 0.5,  0.5,  0.5);
+        add_vector(-0.5,  0.5,  0.5);
+
+        for (i=0; i &lt; 4; i++)
+                mi_api_vertex_add(i);
+
+        for (i=4; i &lt; 8; i++)
+                mi_api_vertex_add(i);
+
+        for (i=0; i &lt; 16; i++)
+                mi_api_vertex_add(vertex_order[i]);
+
+        for (i=0; i &lt; 6; i++) {
+                mi_api_poly_begin_tag(1, mtl_tag);
+                for (k=0; k &lt; 4; k++)
+                        mi_api_poly_index_add(ix++);
+                mi_api_poly_end();
+        }
+        mi_api_object_group_end();
+        return(mi_geoshader_add_result(result,
+                                       mi_api_object_end()));
+     }
+</pre>
+<p>The next example creates a trimmed B-Spline free-form surface.
+There is one trimming curve defined which is used as a hole curve
+to cut a square hole out of the surface. It also shows how a
+texture surface can be added to a surface.</p>
+<pre>
+     #include &lt;shader.h&gt;
+     #include &lt;geoshader.h&gt;
+
+     static void init_object_flags(miObject * object)
+     {
+        object-&gt;visible     = miTRUE;
+        object-&gt;shadow      =
+        object-&gt;reflection  =
+        object-&gt;refraction  =
+        object-&gt;finalgather = 0x03;
+     }
+
+     int bspline_surface_version(void) { return 1; }
+
+     miBoolean bspline_surface(
+        miTag           *result,
+        miState         *state,
+        void            *paras)          /* no parameters used */
+     {
+        int             i, k;
+        miObject        *obj;
+        miGeoScalar     knot;
+        miDlist         *params, *uparams, *vparams;
+        miGeoRange      range;
+        miApprox        approx;
+        miTag           otag;
+        miVector cp[] = {
+                /* ----- 16 surface control points */
+                {0, 2, 0}, {1, 2, 0}, {2, 2, 0}, {3, 2, 0},
+                {0, 3, 0}, {1, 3, 1}, {2, 3, 1}, {3, 3, 0},
+                {0, 4, 0}, {1, 4, 1}, {2, 4, 1}, {3, 4, 0},
+                {0, 5, 0}, {1, 5, 0}, {2, 5, 0}, {3, 5, 0},
+                /* ----- 4 (2d) curve control points */
+                {0.4, 0.4, 0}, {0.6, 0.4, 0},
+                {0.6, 0.6, 0}, {0.4, 0.6, 0},
+                /* ----- 4 (3d) texture surface control points */
+                {0, 0, 0}, {1, 0, 0}, {0, 1, 0}, {1, 1, 0}};
+
+        miGeoScalar curve_knots[] = {0, 1, 2, 3, 4};
+        miUint      curve_v    [] = {16, 17, 18, 19, 16}; /* closed loop */
+        miUint      texsurf_v  [] = {20, 21, 22, 23};
+        miGeoScalar tex_uknots [] = {0.0, 1.0};
+        miGeoScalar tex_vknots [] = {0.0, 1.0};
+
+        /* ************ create object ************ */
+        obj = mi_api_object_begin(NULL);
+        init_object_flags(obj);
+
+        mi_api_basis_list_clear();
+        mi_api_basis_add(mi_mem_strdup("bspline_3"),
+                miFALSE, miBASIS_BSPLINE, 3, 0, 0);
+        mi_api_basis_add(mi_mem_strdup("bezier_1"),
+                miFALSE, miBASIS_BEZIER, 1, 0, 0);
+
+        mi_api_object_group_begin(0.0);
+
+        /* control points and references */
+        for(i=0; i &lt; 24; i++)
+                mi_api_vector_xyz_add(&amp;cp[i]);
+        for(i=0; i &lt; 24; i++)
+                mi_api_vertex_add(i);
+
+        /* ************ create trim-curve ************ */
+        mi_api_curve_begin(mi_mem_strdup("curve_0"),
+                mi_mem_strdup("bezier_1"), miFALSE);
+
+        /* curve knot sequence */
+        params = mi_api_dlist_create(miDLIST_GEOSCALAR);
+        for(i=0; i &lt; 5; i++)
+                mi_api_dlist_add(params, &amp;curve_knots[i]);
+
+        /* curve control point references,
+           non-rational (w=1) */
+        for(i=0; i &lt; 5; i++)
+                mi_api_vertex_ref_add(curve_v[i], 1.0);
+
+        mi_api_curve_end(params);
+
+        /* ********** create free-form surface ********** */
+        mi_api_surface_begin_tag(mi_mem_strdup("surf_0"), 0);
+
+        /* create the uv knot vectors for the (bezier) surface */
+        for (k=0; k &lt; 2; k++) {
+                params = mi_api_dlist_create(
+                                         miDLIST_GEOSCALAR);
+                knot = 0.0;
+                for(i=0; i &lt; 4; i++)
+                        mi_api_dlist_add(params, &amp;knot);
+                knot = 1.0;
+                for(i=0; i &lt; 4; i++)
+                        mi_api_dlist_add(params, &amp;knot);
+                mi_api_surface_params(k == 0 ? miU : miV,
+                        mi_mem_strdup("bspline_3"),
+                                   0., 1., params, miFALSE);
+        }
+
+        /* control point references, nonrational(w=1) */ 
+        for(i=0; i &lt; 16; i++)                            
+                mi_api_vertex_ref_add(i, 1.0);
+
+        /* ************ add a texture surface *********** */
+        uparams = mi_api_dlist_create(miDLIST_GEOSCALAR);
+        for (i=0; i &lt; 2; i++)                            
+                mi_api_dlist_add(uparams, &amp;tex_uknots[i]);
+        vparams = mi_api_dlist_create(miDLIST_GEOSCALAR);
+        for (i=0; i &lt; 2; i++)                            
+                mi_api_dlist_add(vparams, &amp;tex_vknots[i]);
+        mi_api_surface_texture_begin(miFALSE,  /* is_volume */
+                                 miFALSE,      /* is_bump */
+                                 mi_mem_strdup("bezier_1"),
+                                 uparams,            
+                                 miFALSE,      /* v_rational */
+                                 mi_mem_strdup("bezier_1"),
+                                 vparams,            
+                                 miFALSE);     /* v_rational */
+
+        /* texture surface control point references, nonrational */
+        for(i=0; i &lt; 4; i++)                             
+                mi_api_vertex_ref_add(texsurf_v[i], 1.0);
+
+        /* define one hole curve on the surface */       
+        range.min = 0.0;                                 
+        range.max = 4.0;                                 
+        mi_api_surface_curveseg(miTRUE,        /* new loop */
+                                miCURVE_HOLE,            
+                                mi_mem_strdup("curve_0"),
+                                &amp;range);                 
+                                                         
+        mi_api_surface_end();                            
+                                                         
+        /* set approximation method for the surface */   
+        miAPPROX_DEFAULT(approx);                        
+        approx.method = miAPPROX_CURVATURE;              
+        approx.cnst[miCNST_DISTANCE] = 0.01;             
+        mi_api_surface_approx(mi_mem_strdup("surf_0"), &amp;approx);
+                                                         
+        /* set approximation method for the curve */     
+        miAPPROX_DEFAULT(approx);                        
+        approx.method = miAPPROX_PARAMETRIC;             
+        approx.cnst[miCNST_UPARAM] = 1;                  
+        mi_api_curve_approx(mi_mem_strdup("curve_0"), &amp;approx);
+                                                         
+        mi_api_object_group_end();
+        otag = mi_api_object_end();
+        return(mi_geoshader_add_result(result, otag));
+}
+</pre>
+<p>The next example accepts an object as input, and creates a new
+object based on the input object. The new object is identical to
+the old one except that only points in space are copied and all
+normals, texture vectors, motion, and other information is ignored.
+Also, it deals with groups correctly only if it does not contain
+multiple local spaces because it ignores the transformation
+matrices in the instance loop.</p>
+<pre>
+     #include &lt;assert.h&gt;
+     #include "shader.h"
+     #include "geoshader.h"
+
+     static void init_object_flags(miObject * object)
+     {
+        object-&gt;visible     = miTRUE;
+        object-&gt;shadow      =
+        object-&gt;reflection  =
+        object-&gt;refraction  =
+        object-&gt;finalgather = 0x03;
+     }
+
+     int facet_version(void) {return(1);}
+
+     static miBoolean box_to_object(
+        miTag         *result,
+        miGeoBox      *box)
+     {
+        int           i, vs = box-&gt;vert_info.sizeof_vertex;
+        miObject      *obj;
+        miGeoIndex    *vert = miBOX_GET_VERTICES(box);
+        miTriangle    *tri  = miBOX_GET_PRIMITIVES(box);
+
+        assert(box-&gt;type == miBOX_TRIANGLES);
+        obj = mi_api_object_begin(NULL);
+        init_object_flags(obj);
+        mi_api_basis_list_clear();
+        mi_api_object_group_begin(0.0);
+
+        for (i=0; i &lt; box-&gt;vect_info.no_points; i++)
+                mi_api_vector_xyz_add(box-&gt;vectors + i);
+
+        for (i=0; i &lt; box-&gt;no_vertices; i++, vert+=vs)
+                mi_api_vertex_add(*vert);
+
+        /* the +=2 increment omits every other triangle */
+        for (i=0; i &lt; box-&gt;no_primitives; i++, tri+=2) {
+                mi_api_poly_begin_tag(1, 0);
+                mi_api_poly_index_add(tri-&gt;a);
+                mi_api_poly_index_add(tri-&gt;b);
+                mi_api_poly_index_add(tri-&gt;c);
+                mi_api_poly_end();
+        }
+        mi_api_object_group_end();
+        return(mi_geoshader_add_result(result, mi_api_object_end()));
+     }
+
+     miBoolean facet(
+        miTag           *result,
+        miState         *state,
+        miTag           *param)
+     {
+        miTag           leaves, scan, boxes, next;
+        miBoolean       ret;
+
+        ret = mi_geoshader_tesselate(state, &amp;leaves, *mi_eval_tag(param));
+
+        for (scan=leaves; scan; scan=next) {
+                miInstance *inst = mi_db_access(scan);
+                /*
+                 * in mental ray 3.0, the loop is unnecessary,
+                 * box-&gt;next_box will always be a null tag
+                 */
+                for (boxes=inst-&gt;boxes; boxes; boxes=next) {
+                        miGeoBox *box = mi_db_access(boxes);
+                        ret &amp;= box_to_object(result, box);
+                        next = box-&gt;next_box;
+                        mi_db_unpin(boxes);
+                }
+                next = inst-&gt;next;
+                mi_db_unpin(scan);
+        }
+        mi_geoshader_tesselate_end(leaves);
+        return(ret);
+     }
+</pre>
+<p>The main <i>facet</i> shader first tessellates the input
+geometry. This builds a <b><a id="INDEX862"></a>leaf instance</b>
+list containing a sequence of instances that contain both an <i>item</i>
+field pointing to the source geometry (which may be difficult to handle
+because it may include many different types of complex free-form surface
+and polygonal geometry), and a <i>boxes</i> field that points to triangles.
+Without <i><a href="node150.html#INDEX760">mi_geoshader_tesselate</a></i>,
+the <i>boxes</i> field may be empty, and the shader would have to do
+its own traversal to find the instances.</p>
+<p>The following nested loops consider all instances, and all boxes in each
+instance. There are multiple instances if the input object passed to the
+shader as its only parameter is an instance group.
+In mental ray 2.1, an instance may contain multiple boxes if the object has
+too many vectors, vertices, or triangles to fit into a single box.
+mental ray always generates a single box for each instance. For each box, a
+new object is generated by calling <i>box_to_object</i>, which is similar to
+the previous example except that it gets its information from a box. Every
+new object is appended to the result using
+<i><a href="node179.html#INDEX860">mi_geoshader_add_result</a></i>.</p>
+<p>Finally, the shader calls
+<i><a href="node150.html#INDEX762">mi_geoshader_tesselate_end</a></i> to
+release the instance list, including all triangle boxes, that was
+created by <i><a href="node150.html#INDEX760">mi_geoshader_tesselate</a></i>. This is
+important because this list may be very large, and would introduce
+a large memory leak if not freed.</p>
+<!-- p>This example works only for mental ray 3.0. To make it work with
+mental ray 2.1, change <tt>miGeoBox</tt> to <tt>miBox</tt>, and
+<tt>miGeoIndex</tt> to <tt>miIndex</tt>. The reason for this change
+is that mental ray 3.0 must always pack all geometry in a single
+box to build a nondiverging dataflow dependency graph, so the box
+had to be extended to handle arbitrary amounts of geometry.</p -->
+<p>Here is a scene that uses the facet shader in the third example.
+It assumes that the shader was compiled to a library named
+<tt>facet.so</tt>.</p>
+<pre>
+    link "base.so"
+    link "facet.so"
+    $include &lt;base.mi&gt;
+
+    declare shader
+        geometry "facet" (geometry "obj")
+        version 1
+    end declare
+
+    options "opt"
+        samples         0 2
+        object space
+    end options
+
+    camera "cam"
+        output          "rgb" "x.rgb"
+        focal           50
+        aperture        44
+        aspect          1
+        resolution      500 500
+    end camera
+
+    instance "cam_inst" "cam"
+        transform       0.7719  0.3042 -0.5582 0.0
+                        0.0000  0.8781  0.4785 0.0
+                        0.6357 -0.3693  0.6778 0.0
+                        0.0000  0.0000 -25.000 1.0
+    end instance
+
+    light "light1"
+        "mib_light_point" ("color" 1 1 1)
+        origin          0 0 0
+    end light
+
+    instance "light1_inst" "light1"
+        transform        1  0  0  0
+                         0  1  0  0
+                         0  0  1  0
+                        -20 -30 -20  1
+    end instance
+
+    material "mtl" opaque
+        "mib_illum_phong" (
+            "exponent"  50,
+            "ambient"   0.5  0.5  0.5,
+            "diffuse"   0.7  0.7  0.7,
+            "specular"  1.0  1.0  1.0,
+            "ambience"  0.3  0.3  0.3,
+            "lights"    ["light1_inst"]
+        )
+    end material
+
+    object "sphere" visible shadow trace tag 1
+        basis "bs" bspline 3
+        group
+                 0.0000  5.0000  0.0000          0.7957  5.0000  1.3781
+                -0.7956  5.0000  1.3781         -1.5913  5.0000  0.0000
+                -0.7957  5.0000 -1.3781          0.7956  5.0000 -1.3781
+                 1.5913  5.0000  0.0000          2.3448  3.9181  4.0613
+                -2.3448  3.9181  4.0613         -4.6896  3.9181  0.0000
+                -2.3448  3.9181 -4.0613          2.3448  3.9181 -4.0613
+                 4.6896  3.9181  0.0000          3.3276  0.0000  5.7636
+                -3.3276  0.0000  5.7636         -6.6552  0.0000  0.0000
+                -3.3276  0.0000 -5.7636          3.3276  0.0000 -5.7636
+                 6.6552  0.0000  0.0000          2.3448 -3.9181  4.0613
+                -2.3448 -3.9181  4.0613         -4.6896 -3.9181  0.0000
+                -2.3448 -3.9181 -4.0613          2.3448 -3.9181 -4.0613
+                 4.6896 -3.9181  0.0000          0.7957 -5.0000  1.3781
+                -0.7956 -5.0000  1.3781         -1.5913 -5.0000  0.0000
+                -0.7957 -5.0000 -1.3781          0.7956 -5.0000 -1.3781
+                 1.5913 -5.0000  0.0000          0.0000 -5.0000  0.0000
+
+                v 0     v 1     v 2     v 3     v 4     v 5     v 6     v 7
+                v 8     v 9     v 10    v 11    v 12    v 13    v 14    v 15
+                v 16    v 17    v 18    v 19    v 20    v 21    v 22    v 23
+                v 24    v 25    v 26    v 27    v 28    v 29    v 30    v 31
+
+                surface "surf" ""
+                        "bs" 0 6   -3. -2. -1. 0. 1. 2. 3. 4. 5. 6. 7. 8. 9.
+                        "bs" 0 4    0.  0.  0. 0. 1. 2. 3. 4. 4. 4. 4.
+
+                        31 31 31 31 31 31 31 31 31 26 25 30 29 28 27 26
+                        25 30 20 19 24 23 22 21 20 19 24 14 13 18 17 16
+                        15 14 13 18  8  7 12 11 10  9  8  7 12  2  1  6
+                         5  4  3  2  1  6  0  0  0  0  0  0  0  0  0
+
+                approximate surface parametric 1 1 "surf"
+        end group
+    end object
+
+    instance "sphere_inst1" "sphere"
+        material        "mtl"
+        transform       1  0  0  0
+                        0  1  0  0
+                        0  0  1  0
+                        -6 0  0  1
+    end instance
+
+    instance "sphere_inst2"
+        geometry        "facet" ("obj" "sphere")
+        material        "mtl"
+        transform       1  0  0  0
+                        0  1  0  0
+                        0  0  1  0
+                        5  0  0  1
+    end instance
+
+    instgroup "rootgrp"
+        "cam_inst" "light1_inst" "sphere_inst1" "sphere_inst2"
+    end instgroup
+
+    render "rootgrp" "cam_inst" "opt"
+</pre>
+<p>
+Here is the resulting image when this scene is rendered. The smooth
+sphere on the right is the original sphere, which got passed to the
+<i>facet</i> example shader to generate the front sphere. The
+shader has copied every other triangle of the sphere but omitted
+the normals.</p>
+
+<div class="pic">
+<img style="width:60%" src="images/geoshader.jpg" />
+</div>
+
+<a id="api:assembly_callback_example"></a>
+<p>In the following example the geometry shader
+<span style="font-style: italic;">geom_create</span> creates a
+procedural assembly. The assembly callback
+<span style="font-style: italic;">asm_exec</span> is executed when the assembly
+is loaded. The callback creates two geometric objects (a
+subdivision surface and a triangle object) and returns them as
+members of a group (which <span style="font-style: italic;">mi_geoshader_add_item</span>
+will create automatically).</p>
+<pre>
+// assembly test: geometry shader "geom_create" creates an assembly.
+// upon execution the assembly returns a group containing two objects:
+// miBox and a subdivision surface.
+
+#include &lt;string.h&gt;
+#include &lt;shader.h&gt;
+#include &lt;geoshader.h&gt;
+
+extern "C" DLLEXPORT int geom_create_version(void) {return(1);}
+
+static miTag create_subdiv_object()
+{
+    miObject *res_obj = mi_api_object_begin(mi_mem_strdup("sd_sphere"));
+
+    res_obj-&gt;mtl_is_label = miTRUE;
+    mi_api_object_group_begin(0);
+
+    miVector v;
+    v.x = 0; v.y = 0; v.z = 0;
+    mi_api_vector_xyz_add(&amp;(v));
+    v.x = 1; v.y = 0; v.z = 0;
+    mi_api_vector_xyz_add(&amp;(v));
+    v.x = 1; v.y = 1; v.z = 0;
+    mi_api_vector_xyz_add(&amp;(v));
+    v.x = 0; v.y = 1; v.z = 0;
+    mi_api_vector_xyz_add(&amp;(v));
+    v.x = 0; v.y = 0; v.z = 1;
+    mi_api_vector_xyz_add(&amp;(v));
+    v.x = 1; v.y = 0; v.z = 1;
+    mi_api_vector_xyz_add(&amp;(v));
+    v.x = 1; v.y = 1; v.z = 1;
+    mi_api_vector_xyz_add(&amp;(v));
+    v.x = 0; v.y = 1; v.z = 1;
+    mi_api_vector_xyz_add(&amp;(v));
+
+    miUint i;
+    for (i=0; i &lt; 8; i++)
+  mi_api_vertex_add(i);
+
+    miApi_ccmesh_options opt = {6, 24};
+    mi_api_ccmesh_begin(mi_mem_strdup("s1"), &amp;opt);
+
+    miUint q[6][4] = {{0,1,5,4},{1,2,6,5},{2,3,7,6},{3,0,4,7},{4,5,6,7},{0,3,2,1}};
+    for (i=0; i &lt; 6; i++)
+        mi_api_ccmesh_polygon(4, q[i], 1);      // 1 = material index
+
+    mi_api_ccmesh_end();
+
+    miApprox approx;                                 
+    miAPPROX_DEFAULT(approx);                       
+    approx.cnst[miCNST_UPARAM]  = (miGeoScalar)3;
+    approx.method               = miAPPROX_PARAMETRIC;
+    approx.subdiv[miMIN]     = 0;    
+    approx.subdiv[miMAX]    = 5;
+
+    mi_api_ccmesh_approx(mi_mem_strdup("s1"), &amp;approx);
+
+    mi_api_object_group_end();
+    miTag obj_tag = mi_api_object_end();
+
+    return obj_tag;
+}
+
+static miTag create_triangle_object()
+{
+    miObject * res_obj = mi_api_object_begin(mi_mem_strdup("tri_plane"));
+
+    const miScalar lines[] = {
+      -1, -1, -2, 0, 0, 1,
+         1, -1, -2, 0, 0, 1,
+         1,  1, -2, 0, 0, 1,
+        -1,  1, -2, 0, 0, 1 };
+    const miUint ind[] = {0,1,2,2,3,0};
+
+    miVertex_info info;
+    memset(&amp;info, 0, sizeof(info));
+    info.line_size = 6;
+    info.normal_offset = 3;
+
+    miBox * box = mi_api_primlist_begin_2(&amp;info,4,1,6,2,0,0,2);
+
+    miScalar * box_lines = miBOX_VERTEX_LINES(box);
+    memcpy(box_lines, lines, sizeof(lines));
+
+    miUint * prims = miBOX_PRIMS(box);
+    *prims++ = miSCENE_PRIMLIST_MAKE_CODE(miSCENE_PRIM_TRI, 6);
+    memcpy(prims, ind, sizeof(ind));
+
+    miUint * mtls = miBOX_MATERIALS(box);
+    mtls[0] = 0;
+    mtls[1] = 0;
+
+    mi_api_primlist_end();
+
+    miTag obj_tag = mi_api_object_end();
+
+    return obj_tag;
+}
+
+static miTag asm_exec(const miState * state, void * args)
+{
+    miTag result = 0;
+    mi_geoshader_add_result(&amp;result, create_subdiv_object());
+    mi_geoshader_add_result(&amp;result, create_triangle_object());
+    return result;
+}
+
+extern "C" DLLEXPORT miBoolean
+geom_create(miTag *result, miState *state, void *paras)
+{
+    mi_info("--&gt; geometry shader");
+
+    miAssembly * assem = mi_api_assembly_begin(mi_mem_strdup("asm"));
+    assem-&gt;bbox_min.x = assem-&gt;bbox_min.y = -1;
+    assem-&gt;bbox_min.z = -2;
+    assem-&gt;bbox_max.x = assem-&gt;bbox_max.y =  1;
+    assem-&gt;bbox_max.z =  1;
+    mi_api_assembly_callback(asm_exec, 0, 0);
+    *result = mi_api_assembly_end();
+
+    return miTRUE;
+}
+</pre>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="chapter4.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node181.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

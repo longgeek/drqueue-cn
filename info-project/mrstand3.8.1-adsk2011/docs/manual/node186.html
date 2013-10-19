@@ -1,0 +1,89 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Light Profiles</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node185.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node187.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION184"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_api_lightprofile_begin">mi_api_lightprofile_begin</a></li>
+<li><a href="#api:mi_api_lightprofile_end">mi_api_lightprofile_end</a></li>
+<li><a href="#api:mi_api_lightprofile_lookup">mi_api_lightprofile_lookup</a></li>
+</ul>
+
+<h3>Light Profiles</h3>
+<p><a id="INDEX921"></a><a id="INDEX922"></a>
+Light profiles such as IES or Eulumdat are files
+provided by physical lamp vendors to specify the light emission
+characteristics of their products. The profile files can be read
+and preprocessed by mental ray, and access and measurement
+functions are supplied to shaders. The following API calls
+implement the <tt>lightprofile...end lightprofile</tt> blocks in
+.mi scene files, which attach a name to a profile that can be
+passed to shaders as an argument of type <tt>lightprofile</tt>.</p>
+<p><a id="INDEX923"></a></p>
+<h5 class="anchor" id="api:mi_api_lightprofile_begin">mi_api_lightprofile_begin</h5>
+<pre>
+    miLight_profile *mi_api_lightprofile_begin(
+        char            *name)          /* name of light profile */
+</pre>
+<p>Begin the definition of a light profile named <i>name</i>, and
+return a pointer to the new light profile. The caller should set
+the following fields:</p>
+<ul>
+<li><i>filename</i>: the name of the profile file, as a tag of type
+<tt>miSCENE_STRING</tt>.</li>
+<li><i>format</i>: either <tt>miLP_STD_IES</tt> or
+<tt>miLP_STD_EULUMDAT</tt>.</li>
+<li><i>base</i>: always <tt>miLP_BASIS_HERMITE</tt>.</li>
+<li><i>quality</i>: the hermite degree, 1 or 3, 1 is default.</li>
+<li><i>n_vert_angles</i>, <i>n_horz_angles</i>: the number of
+measurement points interpolated from the mesh in the light profile
+file. If either is 0 (the default), mental ray will use the
+resolution in the profile file.</li>
+<li><i>flags</i>: if 0 (the default), use the sample order defined
+in the profile. If 1, force horizontal angles to grow clockwise
+when observed from zenith. If 2, force horizontal angles to grow
+counterclockwise when observed from zenith.</li>
+</ul>
+<p>After all fields are defined, call
+<i><a href="node186.html#INDEX924">mi_api_lightprofile_end</a></i>.</p>
+<p><a id="INDEX924"></a></p>
+<h5 class="anchor" id="api:mi_api_lightprofile_end">mi_api_lightprofile_end</h5>
+<pre>
+    miTag mi_api_lightprofile_end(void)
+</pre>
+<p>Completes the definition of the light profile.</p>
+<p><a id="INDEX925"></a></p>
+<h5 class="anchor" id="api:mi_api_lightprofile_lookup">mi_api_lightprofile_lookup</h5>
+<pre>
+    miTag mi_api_lightprofile_lookup(
+        char            *name)          /* symbolic profile name */
+</pre>
+<p>Returns the tag associated with the symbolic name of a light
+profile. This function is not required; it may be useful when
+defining shader parameter values for parameters of type
+<tt>lightprofile</tt>.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node185.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node187.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

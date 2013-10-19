@@ -1,0 +1,398 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Subdivision Surface Geometry</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node87.html">&laquo;&nbsp;prev</a></li>
+<li><a href="catmullclark.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION86"></a>
+<h3>Subdivision Surface Geometry</h3>
+<p><a id="INDEX326"></a><a id="INDEX327"></a>
+Subdivision surfaces are created by repeated
+refinement of polyhedral control meshes according to certain
+subdivision rules. The control mesh is basically a polygon mesh
+with certain restrictions (triangles and quads only) and certain
+extensions (for creases, for example), which is approximated more
+and more finely to generate a smooth limit surface. The limit
+surface obtained by this process is tangent-plane smooth at
+extraordinary vertices and curvature smooth at regular vertices.
+The main advantage of subdivision surfaces over NUBRS is their
+ability to define arbitrary topology geometry, that is, they do not
+require a rectangular parameter domain.</p>
+<p>Subdivision surfaces are available in mental ray as an optional
+product, called <b><a id="INDEX328"></a>mental
+matter</b>. Subdivision surfaces support can be added to mental ray
+either by linking the <i>libmisubdiv.so</i> in the same way a
+shader library is linked, or by using an integrated version of
+mental ray that combines mental ray and mental matter. The library
+implements approximation and management of subdivision surfaces,
+and has a powerful C++ API allowing multiresolution modeling
+operations. The <tt>.mi</tt> format allows definition of
+subdivision surfaces. For complex modeling operations geometry
+shaders using the above mentioned C++ API can be written. This API
+comes with a separate documentation, see [CAPI2].</p>
+<p>The subdivision surface implementation supports the
+<b><a id="INDEX329"></a>Loop scheme</b>, which operates on a
+control mesh consisting of triangles, and the
+<b><a id="INDEX330"></a>Catmull-Clark scheme</b>, which operates on a
+control mesh consisting of quads (polygons with four vertices).
+Face refinement is adaptive, supporting the LDA approximation
+criteria described in section <a href="node89.html#approx">approx</a>.
+Vertices may have features
+assigned which modify the subdivision rules. Detail vectors may be
+specified for vertices on any level in the face hierarchy for
+multiresolution representation. Trim edges can be specified on any
+level to cut holes into the surface. Edges can be tagged as a
+crease with fractional sharpness to model for example wrinkle
+features. All these features are described in the following
+sections.</p>
+<p>Other features such as multiresolution modeling, approximation
+precision per face, face visibility, animation capabilities and
+NURBS export and import are not accessible from the <tt>.mi</tt>
+format. See [CAPI2] for details on these advanced modeling
+capabilities.</p>
+<p>Subdivision surface geometry, like polygonal geometry, is
+defined by a series of sections. An object containing only
+subdivision surface geometry follows this broad outline:</p>
+<pre>
+    object "<i>object_name</i>"  
+        ... # flags, boxes, data, etc.  
+        group  
+            <i>vector list</i>  
+            <i>vertex list</i>  
+            <i>subdivision surface</i>  
+            ... # more subdivision surfaces  
+            [ <i>approximation list</i> ]  
+        end group  
+    end object  
+</pre>
+<p>The <i>vector list</i> in the group is a list of <i>(x, y,
+z)</i> vectors used for face vertex positions,
+<a href="node88.html#INDEX331">detail vector</a>s, texture and
+<a href="node32.html#INDEX62">motion vector</a>s.</p>
+<p>The <i>vertex list</i> that follows the vector list builds
+control vertices from the vectors. This works like the vertex list
+of polygonal geometry, except that no normals can be defined here.
+Here position vectors, <a href="node108.html#INDEX409">texture
+coordinate</a>s and motion vectors can be referenced.</p>
+<p>Features may be associated with vertices by specifying either
+<tt>corner</tt>, <tt>conic</tt>, <tt>cusp</tt>, <tt>dart</tt> or
+<tt>smooth</tt> behind the regular vertex definition:</p>
+<pre>
+    v <i>vec_ref</i> [ <i>tex_list</i> ] [ m <i>motion_ref</i> ] [ corner [ level <i>level</i> ] ]  
+    v <i>vec_ref</i> [ <i>tex_list</i> ] [ m <i>motion_ref</i> ] [ conic [ level <i>level</i> ] ]  
+    v <i>vec_ref</i> [ <i>tex_list</i> ] [ m <i>motion_ref</i> ] [ cusp [ level <i>level</i> ] ]  
+    v <i>vec_ref</i> [ <i>tex_list</i> ] [ m <i>motion_ref</i> ] [ dart [ level <i>level</i> ] ]  
+    v <i>vec_ref</i> [ <i>tex_list</i> ] [ m <i>motion_ref</i> ] [ smooth [ level <i>level</i> ] ]  
+</pre>
+<p>Here <i>vec_ref</i> is the reference of a position or
+<b><a id="INDEX331"></a>detail vector</b>,
+<i>tex_list</i> is a list of <a href="node108.html#INDEX409">texture coordinate</a>s with <tt>t</tt>
+keywords and corresponding coordinate indices, and
+<i>motion_ref</i> is an optional <a href="node32.html#INDEX62">motion vector</a>. Only one motion vector may
+be specified for each vertex with mental ray 2.1 and 3.0, and up to
+15 with mental ray 3.1.</p>
+<p>The optional <b><a id="INDEX332"></a>vertex
+feature</b> follows, and an optional level can be specified if the
+feature is active on a level above vertex definition level. Texture
+coordinates may only be specified for base face level vertices. The
+vertex features are described in more detail in a separate section
+below.</p>
+<p>The subdivision surface geometry list consists of
+<tt>subdivision surface</tt> statements, much like Free-Form
+geometry consists of <tt>surface</tt> statements. For a description
+of vector lists and vertex lists, refer to page <a href="node83.html#vector">vector</a>.</p>
+<p>The approximation statements are very similar to the free-form
+case, except that <tt>approximate surface</tt> is replaced by
+<tt>approximate subdivision surface</tt>. See section
+<a href="node89.html#approx">approx</a> for details.</p>
+<h4>Subdivision Surfaces</h4>
+<p>A subdivision surface specifies a name and a list of optionally
+refined base faces, followed by optional derivative request:</p>
+<pre>
+        subdivision surface "<i>surface_name</i>"  
+            [ <i>texture_interpolation</i> ]  
+            [ <i>base_mesh</i> ]  
+            [ <i>derivative_request</i> ]  
+        end subdivision surface  
+</pre>
+<p>Triangles and quads can be mixed in the same
+<a href="node189.html#INDEX993">subdivision surface</a>, but they may not
+share vertices.</p>
+<h4>Base and Hierarchy Faces</h4>
+<p>The base mesh of a subdivision surface is very similar to
+polygons. It uses the same syntax, but only faces with three or
+four vertices are allowed, since the Loop subdivision scheme
+operates on triangle meshes and and the Catmull-Clark scheme on
+quad meshes. The face vertices must be specified in
+counter-clockwise order, the mesh must be 2-manifold.</p>
+<pre>
+    p <i>[</i>"<i>material_name</i>"<i>]</i> <i>vertex_ref_list</i>  
+        <i>[</i> crease <i>crease_mask</i> <i>sharpness_list</i> <i>]</i>  
+        <i>[</i> trim <i>trim_mask</i> <i>]</i>  
+        <i>[</i> { <i>hira_spec</i> } <i>]</i>  
+</pre>
+<p>The <tt>p</tt> keyword begins definition of a base face. An
+optional material name may follow, otherwise the material of the
+previous base face is assigned to the current base face. It the
+current object is marked as <tt>tagged</tt>, a label integer must
+be given instead of the material name (this is not shown here).
+Face vertices must be specified in the <i>vertex_ref_list</i>.</p>
+<p>The optional <tt>crease</tt> statement allows specification of
+crease edges. With <i>crease_mask</i> up to four edges are selected
+for crease, the floating point sharpness values follow in the
+<i>sharpness_list</i>. <i>crease_mask</i> is a bitmap where crease
+edge indices are associated with corresponding bit positions in the
+mask. The diagram below shows the vertex and edge labeling of a
+base triangle:</p>
+<div class="pic"><img style="width:40%" src="images/basetriangle.jpg" /></div>
+<p>The numbers inside the triangle indicate vertex numbers, the
+numbers at the three edges indicate the corresponding bit position
+in the crease bitmap. Bit 0 is assumed to be the least significant
+bit. Here is an example where edges 0 and 1 in a triangle should be
+crease edges, with corresponding sharpness values of 0.7 and
+1.0:</p>
+<pre>
+    crease 3 0.7 1
+</pre>
+<p>For quads the vertex and edge labeling is similar, as shown in
+this diagram:</p>
+<div class="pic"><img style="width:40%" src="images/basequad.jpg" /></div>
+<p>For more information on crease edges, see section
+<a href="node88.html#vertexfeature">vertexfeature</a> below. A base face
+may be trimmed with the <tt>trim</tt> statement. The
+<i>trim_mask</i> is a bitmap where trim edges are selected
+according to their index in the face, in a way very similar to the
+crease bitmap described above. For more information on trim edges,
+see section <a href="node88.html#sdstrim">sdstrim</a> below.</p>
+<h4>Face Subdivision</h4>
+<p>It is possible to explicitly subdivide faces and to specify
+detail. The surface begins with a base mesh, which is subdivided
+into finer and finer levels, until the final smooth limit surface
+is reached. These levels form a hierarchy with the base mesh at its
+root. Modeling allows control over the levels of the hierarchy,
+such that the subdivision is guided by predefining how the
+subdivision takes place by predefining vertices on higher levels.
+This is useful to introduce local detail. For example, a head can
+be modeled by defining the general shape as the base mesh, and the
+nose can be introduced by defining one or more higher levels that
+introduce the required local detail. It is sufficient to define
+higher levels only where detail is needed; it is not necessary to
+define all parts of a higher level. (This would very quickly
+require very large numbers of vertices, even where no detail is
+required.)</p>
+<p>Definition of detail on higher levels of the hierarchy is done
+by subdividing a face of the next-lower hierarchy level. High-level
+vertices can not be placed just anywhere, but only by subdividing a
+triangle or quad that already exists on the next-lower level, in a
+fixed way by dividing its edges.</p>
+<p>In the .mi scene language, a face is subdivided by specifying a
+pair of curly brackets around <i>hira_spec</i>. Inside the
+<i>hira_spec</i> block a configuration of four children on the next
+level is selected, called a <i>kit</i>. The kit specification
+<i>hira_spec</i> is defined as:</p>
+<pre>
+    [ child <i>child_index { hira_spec }</i> ]  
+    [ detail <i>detail_mask detail_list</i> ]  
+    [ trim <i>child_index trim_mask</i> ]  
+    [ crease <i>child_index crease_mask sharpness_list</i> ]  
+    [ material <i>child_index material_name</i> ]  
+    [ material <i>child_index label</i>  
+</pre>
+<p>In all the statements above, the child within the kit is
+selected with a <i>child_index</i>. A child may be further
+subdivided explicitly by specifying a <i>hira_spec</i> block inside
+curly brackets. The maximum number of subdivision levels that can
+be specified is 15.</p>
+<p>A detail vector specifies the offset to be added to the result
+of subdivision on a certain level for a certain vertex. The detail
+vector is specified in <a href="node83.html#INDEX271">object
+coordinate</a>s, but is transformed using local reference frames.
+Adjacent subdivided faces automatically create a shared midpoint on
+the edge they share. A detail vector can be assigned using both
+faces, but a single assignment is sufficient since the vertex is
+shared.</p>
+<p>Detail vectors may be specified for the current kit vertices for
+the current subdivision level. A triangle kit has six vertices
+where detail vectors can be assigned, a quad kit has nine vertices.
+Detail vectors may be defined also on higher hierarchy levels above
+the current vertex definition level by explicitly subdividing the
+face and specifying details on the higher level kits.</p>
+<p>The same detail vector may be assigned to different vertices,
+even on different levels, since there is no relationship between
+the vertices in the <i>vertex_list</i> and the vertices that are
+created automatically for the limit surface. Here the detail
+vectors are simply looked up in the vector list and their value is
+assigned to internal subdivision surface vertices.</p>
+<p>Detail vertices for the current kit are selected with the bitmap
+<i>detail_mask</i>. Each vertex of the kit has a corresponding bit
+in the bitmap. The vertex labeling for a triangle kit is shown
+below:</p>
+<div class="pic"><img style="width:40%" src="images/trikitmask.jpg" /></div>
+<p>For a quad kit the labeling is similar:</p>
+<div class="pic"><img style="width:40%" src="images/quadkitmask.jpg" /></div>
+<p>The detail vectors are specified with the <i>detail_list</i>,
+which is a list of vertex indices. For example, if a detail vector
+is given by vertex index 10 and it should be assigned to the
+central vertex of a quad kit, one would have to specify 256 for the
+<i>detail_mask</i>, followed by 10.</p>
+<p>Crease edges on the kit subdivision level can be specified by
+selecting a child in the kit with <i>child_index</i>, followed by
+an edge mask selecting the edges within that child, and finally
+followed by floating point values specifying the sharpness of the
+selected edges.</p>
+<p>Trim edges on the kit subdivision level can be specified by
+selecting a child in the kit with <i>child_index</i>, selecting one
+of the four children, followed by an edge mask similar to the trim
+mask for base faces.</p>
+<p>Materials can be assigned to individual faces by using the
+<tt>material</tt> keyword, followed by a child index selecting the
+face within the kit, finally followed by the material name (or
+label index if the object is tagged). Materials are inherited in
+the hierarchy.</p>
+<h4>Vertex Features</h4>
+<p><a id="vertexfeature"></a> Vertices may be
+tagged with the following features to modify the subdivision
+rules:</p>
+<ul>
+<li>A <tt>conic</tt> vertex is interior, isolated and has no well
+defined tangent plane. The tip of a cone is an example.</li>
+<li>At a <tt>cusp</tt> vertex all approaching tangent vectors
+converge to a single direction. The tangent space at this point
+collapses to a line, like a rubber sheet pulled at a single point
+to become a needle-shaped tip. The cusp vertex is
+interpolated.</li>
+<li>At a <tt>corner</tt> vertex more than two crease or boundary
+edges are incident, the limit surface has no tangent plane at this
+location, and the vertex is interpolated. The surface is
+partitioned into smooth patches separated by the crease lines and
+converge at the corner vertex.</li>
+<li>At a <tt>dart</tt> vertex one or several crease lines terminate
+in a smooth vertex; the surface has a well defined tangent
+plane.</li>
+<li>At a <tt>smooth</tt> vertex no feature is defined. This is the
+default.</li>
+</ul>
+<h4>Smooth Creases</h4>
+<p>Creases are discontinuities introduced into the surface in oder
+to define sharp geometric details such as wrinkles. Crease edges
+may be specified for edges which are not on the geometric boundary.
+Connecting crease edges must be defined on the same level.</p>
+<p>A vertex with exactly two incident crease edges is internally
+marked as a crease vertex. Normal vectors for vertices on an
+infinite sharp crease line are not shared; instead, two normal
+vectors are created for the faces on each of the two sides on the
+crease line. A crease sharpness value of 0 assigned to an edge will
+result in smooth subdivision, a value of 1 results will generate an
+infinite sharp crease, and fractional values between 0 and 1 will
+generate smooth creases. Sharpness values of subsequent higher
+subdivision levels are computed using a quadratic B-Spline function
+applied to the sharpness values of the parent edges.</p>
+<h4>Trimming</h4>
+<p><a id="sdstrim"></a> Trim edges may not be
+defined on the boundary or on crease edges. Connecting trim edges
+must be defined on the same level. Trim loops may not intersect or
+touch. Regions where faces are located inside a closed trim loop
+will generate a hole in the surface. It is not allowed to create
+trim regions within trim regions. It is legal to specify open trim
+loops, but here no holes are created in the surface.</p>
+<p>When vertex features must be defined for vertices on trim loops
+above level 0, one has to reference a vertex defining that feature.
+If this vertex does not have significant detail, a zero length
+detail vector must be referenced to satisfy the <tt>.mi</tt>
+grammar in the vertex section.</p>
+<p>At trim loops, boundary subdivision rules are applied.</p>
+<h4>Derivatives</h4>
+<p><a id="sdsderiv"></a> mental ray can generate
+<b><a id="INDEX333"></a>surface derivative</b>
+vectors for subdivision surfaces if requested. They are computed
+and stored only if requested by <i>derivative_request</i>
+statements in the subdivision surface definition:</p>
+<pre>
+    derivative <i>number</i><sub>int</sub> [ <i>space</i><sub>int</sub> ]  
+</pre>
+<p>For <i>number</i> 1 must be specified, higher derivatives are
+not supported. Since subdivision surfaces allow arbitrary topology,
+there is no intrinsic surface parameterization available, so a
+texture space which defines orientation of the derivative vectors
+must always be specified with the <i>space</i> number. The first
+<tt>t</tt> vectors in the vertex definition is space 0, the second
+is space 1, and so on.</p>
+<h4>Texture Space Interpolation</h4>
+<p><a id="sdstexinterp"></a> Subdivision
+surface texture spaces can be created either using subdivision
+rules (interpolated between vertices, which is the default) or
+computed once per face, which linearly interpolates the texture
+coordinates within the face. The subdivision rule interpolated
+spaces will in general give a better mapping compared with the
+linear interpolation method. The interpolation method can be
+specified separately for each texture space with the optional
+<i>texture_interpolation</i> statement:</p>
+<pre>
+    texture space [<i>options</i>]  
+</pre>
+<p><i>options</i> is a comma-separated list of either <tt>face</tt>
+for linear interpolation or <tt>subdivision</tt> for subdivision
+rule interpolation. The first <tt>t</tt> texture vertex statement
+in the vertex section corresponds to the first entry in this array;
+the <i>options</i> list has one member for each <tt>t</tt>
+statement in each vertex. (All vertices must have equal numbers of
+<tt>t</tt> statements.)</p>
+<h4>Example</h4>
+<p>In the example below a cube base mesh is created, the four
+bottom level 0 edges are marked for infinite crease (1.0 for each
+edge), the top face is subdivided once and a detail vector is
+assigned to the central vertex on level 1.</p>
+<pre>
+    object "quadcube"
+        group
+            -1 -1 -1
+             1 -1 -1
+             1  1 -1
+            -1  1 -1
+
+            -1 -1  1
+             1 -1  1
+             1  1  1
+            -1  1  1
+             0  0  0.4
+
+             v 0 v 1 v 2 v 3 v 4 v 5 v 6 v 7 v 8
+
+             subdivision surface "surf1"
+
+                 p 0 1 5 4
+                 p 1 2 6 5
+                 p 2 3 7 6
+                 p 3 0 4 7
+                 p 4 5 6 7 {
+                     detail 256 8
+                 }
+                 p 0 3 2 1 crease 15 1 1 1 1
+
+             end subdivision surface
+             approximate subdivision surface angle 7 "surf1"
+        end group
+    end object
+</pre>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node87.html">&laquo;&nbsp;prev</a></li>
+<li><a href="catmullclark.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

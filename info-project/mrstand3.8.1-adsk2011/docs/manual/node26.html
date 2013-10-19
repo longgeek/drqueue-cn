@@ -1,0 +1,83 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Multipass Rendering</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node25.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node27.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION24"></a>
+
+<a id="fo:multipass"></a>
+<h2>Multipass Rendering</h2>
+<p><a id="INDEX51"></a><a id="INDEX52"></a>
+Sometimes, very large scenes are not rendered in one
+pass but in multiple passes, because they are too large for the
+machine, or because different passes are rendered on different
+machines to increase parallelism, or because some passes are
+expected to change while others stay the same, so only the modified
+passes need to be rerendered (which is very common in entertainment
+content production).</p>
+<p>mental ray supports two types of pass renderings: the standard
+pixel-based passes using <a href="node37.html#fo:framebuffers">frame
+buffers</a> and regular image
+<a href="node38.html#fo:outfiles">output files</a>, and advanced
+<a href="#fo:samplepass">samples passes</a> using multiple values
+per pixel which are stored in special sample files.</p>
+<p>It is generally not sufficient to render multiple images and
+then composite them into one. Pass compositing is not simple alpha
+blending but a complex user-defined process that involves at least
+the Z depth. Although mental ray supports saving the Z buffer to
+files, there is only one Z value per pixel.
+</p>
+<a id="fo:samplepass"></a>
+<h3>Sample Passes</h3>
+<p>mental ray supports advanced <a href="node97.html#INDEX354">pass
+rendering</a> by saving rendering results not as image files but as
+sample files. Every primary ray
+is a sample, and is stored with all available frame buffer values.
+If the scene contains motion, an averaged result over all temporal
+samples is stored. The file format used for sample files is
+unpublished and may change with new versions of mental ray, it is
+not useful as a data interchange format for other programs, and is
+not intended for long-term storage. Merging is done by a
+user-defined function (if absent, a simple Z switcher is used) that
+has access to all frame buffer results of all passes, one sample at
+a time. Sample pass rendering is controlled with a pass statement
+script in the camera definition that is similar to
+<a href="node77.html#INDEX227">output statement</a>s.</p>
+<p>mental ray uses compression to reduce the size of sample pass
+files. Sample pass files are generally backwards-compatible, but
+not forward-compatible. Also, passes created with and without the
+<a href="node34.html#INDEX67">rasterizer</a> (formerly called
+<a href="node34.html#INDEX66">Rapid Motion</a>) should not be
+merged because the sampling patterns do not agree: passes rendered
+with the rasterizer are based on sampling of (sub)pixels, whenever
+passes rendered without it are based on sampling of (sub)pixel
+corners. For this reason, in most cases passes rendered without the
+rasterizer have 1 sample higher resolution per rendered tile.
+mental ray can also merge sample pass files that were created with
+dissimilar max sampling rates using appropriate upsampling or
+downsampling, although it is recommended to use matching sampling
+densities. Sample pass rendering does not work with slave
+hosts.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node25.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node27.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,662 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Symbol Tables</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node181.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node183.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION180"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_api_name_lookup">mi_api_name_lookup</a></li>
+<li><a href="#api:mi_api_decl_lookup">mi_api_decl_lookup</a></li>
+<li><a href="#api:mi_api_variable_set">mi_api_variable_set</a></li>
+<li><a href="#api:mi_api_variable_lookup">mi_api_variable_lookup</a></li>
+<li><a href="#api:mi_api_tag_lookup">mi_api_tag_lookup</a></li>
+<li><a href="#api:mi_api_light_lookup">mi_api_light_lookup</a></li>
+<li><a href="#api:mi_api_material_lookup">mi_api_material_lookup</a></li>
+<li><a href="#api:mi_api_texture_lookup">mi_api_texture_lookup</a></li>
+<li><a href="#api:mi_api_surface_lookup">mi_api_surface_lookup</a></li>
+<li><a href="#api:mi_api_curve_lookup">mi_api_curve_lookup</a></li>
+<li><a href="#api:mi_api_camera_end">mi_api_camera_end</a></li>
+<li><a href="#api:mi_api_framebuffer_add">mi_api_framebuffer_add</a></li>
+<li><a href="#api:mi_api_output_colorprofile">mi_api_output_colorprofile</a></li>
+<li><a href="#api:mi_api_output_file_def">mi_api_output_file_def</a></li>
+<li><a href="#api:mi_api_output_file_parameter">mi_api_output_file_parameter</a></li>
+<li><a href="#api:mi_api_output_function_def">mi_api_output_function_def</a></li>
+<li><a href="#api:mi_api_output_file_override">mi_api_output_file_override</a></li>
+<li><a href="#api:mi_api_output_type_identify">mi_api_output_type_identify</a></li>
+<li><a href="#api:mi_api_output_imfdisp_handle">mi_api_output_imfdisp_handle</a></li>
+<li><a href="#api:mi_api_output_list">mi_api_output_list</a></li>
+<li><a href="#api:mi_api_output_shaders">mi_api_output_shaders</a></li>
+<li><a href="#api:mi_api_framebuffer">mi_api_framebuffer</a></li>
+<li><a href="#api:mi_api_pass_save_def">mi_api_pass_save_def</a></li>
+<li><a href="#api:mi_api_pass_prep_def">mi_api_pass_prep_def</a></li>
+<li><a href="#api:mi_api_pass_merge_def">mi_api_pass_merge_def</a></li>
+<li><a href="#api:mi_api_pass_delete_def">mi_api_pass_delete_def</a></li>
+</ul>
+
+<h3>Symbol Tables</h3>
+<p>The API module identifies all entities by name. Different name
+spaces are provided for different purposes. In particular, the API
+module supports the current .mi language and, to some extent, its
+predecessor, which have a different name space concept. The current
+.mi module uses a shared global name space for all element types, while
+the old .mi format uses separate name spaces for each element type.</p>
+<p>Note that shader parameter names do not use a persistent name
+space and have no assigned symbol table. Shader parameters are
+stored in declarations and are not accessible in any symbol table.
+There are also other short-lived sub-entities such as curves or
+surfaces that are not stored in symbol tables.</p>
+<p>In general, symbol tables are used by the API module internally
+only. There is normally no need for another module to access
+specific symbol tables. However, API provides lookup functions for
+symbol tables that return the tag for individual named entities.
+This can be used for accessing the tessellated renderable
+representation of a geometric object, or for applying low-level
+scene access functions to entities created with API functions.</p>
+<p>For example, the API module can be used to set up a small scene
+consisting of a single free-form surface object, which is then
+"rendered" using a render function that does not call any renderer,
+but uses the symbol table to find the object's tag, accesses the
+tessellated geometry, and displays a wireframe of the tessellation
+in a GUI window. This is a useful application of API because it
+visualizes the effects of user-defined approximation modes.</p>
+<p>The following table lists the symbol tables. All symbol tables
+except the first three in the table below are used for old .mi
+syntax entities (bracketed by <tt>frame</tt> and <tt>end frame</tt>
+statements) only; all .mi entities except declarations are put into
+the global table instead. Current mental ray puts all scene entities
+into a single name space. For example, a material and an instance
+cannot both have the same name. Only declarations have a separate namespace
+because they are named after C/C++ shader names, which are not scene entities.
+This makes it possible to have shader parameters of type <tt>geometry</tt>
+that can be arbitrarily assigned any geometric scene entity, or instances
+that accept objects, lights, cameras, or groups without ambiguity.</p>
+<div align="center">
+<table class="table">
+<tbody>
+<tr>
+<th>table</th>
+<th>purpose</th>
+</tr>
+<tr>
+<td>S_GLOBAL</td>
+<td>all .mi2 entities</td>
+</tr>
+<tr>
+<td>S_FUNCDECL</td>
+<td>Function declarations ( <tt>declare</tt> statements)</td>
+</tr>
+<tr>
+<td>S_VARIABLE</td>
+<td>For internal use only</td>
+</tr>
+<tr>
+<td>S_OPTIONS</td>
+<td>Options ( <tt>options</tt> statements)</td>
+</tr>
+<tr>
+<td>S_CAMERA</td>
+<td>Cameras ( <tt>camera</tt> statements)</td>
+</tr>
+<tr>
+<td>S_LIGHT</td>
+<td>Lights ( <tt>light</tt> statements)</td>
+</tr>
+<tr>
+<td>S_OBJECT</td>
+<td>Geometric objects ( <tt>object</tt> statements)</td>
+</tr>
+<tr>
+<td>S_INSTANCE</td>
+<td>Instances ( <tt>instance</tt> statements)</td>
+</tr>
+<tr>
+<td>S_INSTGROUP</td>
+<td>Instance groups ( <tt>group</tt> statements)</td>
+</tr>
+<tr>
+<td>S_MATERIAL</td>
+<td>Materials ( <tt>material</tt> statements)</td>
+</tr>
+<tr>
+<td>S_CTEXTURE</td>
+<td>Color textures ( <tt>color texture</tt> statements)</td>
+</tr>
+<tr>
+<td>S_STEXTURE</td>
+<td>Scalar textures ( <tt>scalar texture</tt> statements)</td>
+</tr>
+<tr>
+<td>S_VTEXTURE</td>
+<td>Vector textures ( <tt>vector texture</tt> statements)</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>API defines a number of specialized functions that perform
+lookups required during parsing:</p>
+<a id="INDEX863"></a>
+<h5 class="anchor" id="api:mi_api_name_lookup">mi_api_name_lookup</h5>
+<pre>
+    miTag mi_api_name_lookup(
+        char *          name)
+</pre>
+<p>Look up the element <i>name</i> in the scene element and function
+declaration symbol tables ( <tt>S_GLOBAL</tt> and <tt>S_FUNCDECL</tt>,
+and return the tag if found. Otherwise, return a null tag. Other symbol
+tables are not searched.</p>
+<a id="INDEX864"></a>
+<h5 class="anchor" id="api:mi_api_decl_lookup">mi_api_decl_lookup</h5>
+<pre>
+    miTag mi_api_decl_lookup(
+        char *          name)
+</pre>
+<p>Same thing but just for shader declarations. This is a separate
+function because if an object and a declaration have the same name
+(this is legal because they are in different name spaces),
+<i><a href="node182.html#INDEX863">mi_api_name_lookup</a></i> will
+never see the declaration and always return the other object.</p>
+<a id="INDEX865"></a>
+<h5 class="anchor" id="api:mi_api_variable_set">mi_api_variable_set</h5>
+<pre>
+    miBoolean mi_api_variable_set(
+        char            *name,    /* variable name */
+        char            *value)   /* value or 0 to unset */
+</pre>
+<p>Set a variable <i>name</i> to a value <i>value</i>. If
+<i>value</i> is a null pointer, delete the variable. Variables can
+be redefined. The main purpose is to store meta-data in .mi scene
+files using the <tt>set</tt> command for variables such as author,
+translator, creation date, etc, whose values can be picked up by
+the client application or even a shader.</p>
+<a id="INDEX866"></a>
+<h5 class="anchor" id="api:mi_api_variable_lookup">mi_api_variable_lookup</h5>
+<pre>
+    const char *mi_api_variable_lookup(
+        char            *name)    /* variable name */
+</pre>
+<p>Return the value of the variable <i>name</i>, as set with a
+preceding <i>mi_api_variable_set</i>. If the variable is not
+defined, a null pointer is returned. The returned string should not
+be modified or released.</p>
+<a id="INDEX867"></a>
+<h5 class="anchor" id="api:mi_api_tag_lookup">mi_api_tag_lookup</h5>
+<pre>
+    const char *mi_api_tag_lookup(
+        miTag           tag)
+</pre>
+<p>This is a reverse lookup function. Given a tag, it scans all
+symbol tables for an element with this tag and returns its name.
+This function is intended for printing more helpful error messages
+if only a tag is known, and to allow database dumps containing
+names. If the tag cannot be found, a null pointer is returned. A
+non-null pointer should not be modified or released, it points
+directly into the symbol table.</p>
+<a id="INDEX868"></a>
+<h5 class="anchor" id="api:mi_api_light_lookup">mi_api_light_lookup</h5>
+<pre>
+    miTag mi_api_light_lookup(
+        char            *name)    /* instance to look up */
+</pre>
+<p><span class="depr">Deprecated</span>
+Look up a light by name and return its tag. If no
+light by this name is found, return a null tag. This function is
+obsolete and supported only to access very old .mi scenes;
+use <i><a href="node182.html#INDEX863">mi_api_name_lookup</a></i>
+instead.</p>
+<a id="INDEX869"></a>
+<h5 class="anchor" id="api:mi_api_material_lookup">mi_api_material_lookup</h5>
+<pre>
+    miTag mi_api_material_lookup(
+        char            *name)    /* material to look up */
+</pre>
+<p><span class="depr">Deprecated</span>
+Look up a material by name and return its tag. If
+no material by this name is found, return a null tag. This function
+is obsolete and supported only to access very old .mi scenes; use
+<i><a href="node182.html#INDEX863">mi_api_name_lookup</a></i> instead.
+</p>
+<a id="INDEX870"></a>
+<h5 class="anchor" id="api:mi_api_texture_lookup">mi_api_texture_lookup</h5>
+<pre>
+    miTag mi_api_texture_lookup(
+        char            *name,    /* texture to find */
+        int             type)     /* 0=col, 1=scal, 2=vec */
+</pre>
+<p><span class="depr">Deprecated</span>
+Look up a texture by name and return its tag. If
+no texture by this name is found, return a null tag. <i>type</i> is
+the desired texture type: 0 for color textures, 1 for scalar
+textures, and 2 for vector textures. This function is obsolete and
+supported only to access very old .mi scenes; use
+<i><a href="node182.html#INDEX863">mi_api_name_lookup</a></i>
+instead.</p>
+<a id="INDEX871"></a>
+<h5 class="anchor" id="api:mi_api_surface_lookup">mi_api_surface_lookup</h5>
+<pre>
+    miBoolean mi_api_surface_lookup(
+        char            *name,     /* name of face */
+        miTag           *instance, /* instance with face */
+        miGeoIndex      *idx)      /* index of face */
+</pre>
+<p>Look up a surface by name and return its tag. If no surface by
+this name is found, return <tt>miFALSE</tt>, otherwise return
+<tt>miTRUE</tt>. This function can be used only while defining a
+geometric <a href="node83.html#mi:group">object group</a>, between
+<i>mi_object_group_begin</i> and <i>mi_object_group_end</i>. Its
+purpose is finding surfaces to be connected for <tt>connection</tt>
+statements. The surface instance tag (not currently used) and the
+surface index (a sequential number beginning with 0 in every object
+that enumerates the surfaces in the object) are also returned.</p>
+<a id="INDEX872"></a>
+<h5 class="anchor" id="api:mi_api_curve_lookup">mi_api_curve_lookup</h5>
+<pre>
+    void *mi_api_curve_lookup(
+        char              *name,    /* existing curve */
+        enum miCurve_type type,     /* type of curve */
+        miBoolean         newloop,  /* is this a new loop */
+        miGeoRange        *range,   /* range of the curve */
+        int               *no_scalars)
+</pre>
+<p>Look up a curve by name and type and return an identifying
+pointer. If no curve by this name is found, return a null pointer.
+The curve type is one of <tt>miCURVE_TRIM</tt>,
+<tt>miCURVE_HOLE</tt>, and <tt>miCURVE_SPECIAL</tt>, as defined by
+the SCENE module. This function is used when a surface references a
+curve as a trim, hole, or special curve with the given range. This
+function not only looks up the curve, but also creates a new curve
+reference entry containing the curve identifier, the <i>type</i>,
+whether this curve begins a new loop or continues an old one (
+<i>newloop</i>), and the parameter <i>range</i> of the curve to
+use. The number of parameters of the curve is returned in *
+<i>no_scalars</i>. This function may only be used during the
+definition of a surface. Because of the side effects, this is not a
+true lookup function.</p>
+
+<a id="INDEX873"></a>
+<h5 class="anchor" id="api:mi_api_camera_end">mi_api_camera_end</h5>
+<pre>
+    miTag mi_api_camera_end(void)
+</pre>
+<p>Complete the definition of the camera, after all parameters have
+been adjusted. If an error occurs, a null tag is returned;
+otherwise the tag of the new camera element is returned. The type
+of the returned element is <tt>miSCENE_CAMERA</tt>.</p>
+
+<h5 class="anchor" id="api:mi_api_framebuffer_add">mi_api_framebuffer_add</h5>
+<pre>
+    miBoolean mi_api_framebuffer_add( 
+        miTag   buffertag,
+        char    *datatype,
+        char    *filetype,
+        float   *fileparams,
+        char    *filename)
+</pre>
+<p>
+Define a standard frame buffer with optional file output, or enable file
+output for a previously defined user frame buffer.
+The <var>buffertag</var> argument should be the buffer tag of the current
+camera. The <var>datatype</var> specifies the type of the framebuffer (like
+<code>"rgba_fb"</code>). Optional <var>filetype</var> is the file format of
+the output image file. Optional <var>fileparams</var> give the list of
+parameters, an array of 8 floats should be passed. The optional
+<var>filename</var> provides the name of the file to which the frame buffer
+image should be written to.</p>
+<p>Note, that this function <em>replaces</em> the functions
+<dfn>mi_api_output_file_parameter</dfn> and
+<dfn>mi_api_output_file_def</dfn> functions used to attach file output
+to a frame buffer. It is provided for use with the C-style API in order to
+support compatibility with existing output and framebuffer handling in
+mental ray. It is <em>not</em> utilizing nor replacing the new
+<a href="shader_if_cpp.html">Framebuffer</a> API, which is recommended for
+new applications.</p>
+
+<a id="INDEX874"></a>
+<h5 class="anchor" id="api:mi_api_output_colorprofile">mi_api_output_colorprofile</h5>
+<pre>
+    miBoolean mi_api_output_colorprofile(
+        char            *cprof_name)
+</pre>
+<p><span class="depr">Deprecated</span>
+Establish the named color profile for later use. The color profile
+is used to convert the color frame buffer to the requested color
+space while writing it to a file. The routine has to be called
+before <i>mi_api_output_file_def</i> is invoked. The transformation
+will only be performed if a color profile for the rendering color
+space has also been provided. The memory associated with the
+function parameter is released by the routine.</p>
+<p>New applications are recommended to use the improved
+<a href="node77.html#mi:framebuffer">frame buffers</a> and
+<a href="shader_if_cpp.html">API</a> for color profile support.</p>
+
+<a id="INDEX875"></a>
+<h5 class="anchor" id="api:mi_api_output_file_def">mi_api_output_file_def</h5>
+<pre>
+    miTag mi_api_output_file_def(
+        miUint          typemap,   /* data type bitmap */
+        miUint          interpmap, /* interp req bitmap */
+        char            *format,   /* file type string */
+        char            *fname)    /* file name */
+</pre>
+<p><span class="depr">Deprecated</span>
+Define an output file and return an output function describing
+the file to write. The returned function has a special type code
+that tells <i>mi_api_output_shaders</i> to write a file instead of
+calling an output shader, and has the given format and file name
+encoded in its parameter area. It is not a normal shading function
+but can be treated as one by the caller, and can be appended to the
+camera's <i>output</i> function list.</p>
+<p>When the output list is evaluated after rendering, this
+definition will write a frame buffer to the named file
+<i>fname</i>, using the file format <i>format</i>. Valid formats
+are extension strings such as <tt>"rgb"</tt> or <tt>"rla"</tt>;
+refer to the user's manual for a complete list. The <i>typemap</i>
+is a bitmap. Valid bit numbers are
+defined by the <tt>miImg_type</tt> enum as defined by the IMG
+module. Each bit informs the renderer that this shader requires a
+frame buffer of this type; at rendering time all active bitmaps
+(those defined in the camera used for rendering) are OR-ed. Only
+one bit should be set.</p>
+<p>The <i>interpmap</i> bitmap uses the same pattern as
+<i>typemap</i>. It has a bit set if the frame buffer described by
+the corresponding set bit in <i>typemap</i> should be
+interpolated.</p>
+<p>The new function
+<i><a href="#api:mi_api_framebuffer_add">mi_api_framebuffer_add</a></i>
+should be used instead.</p>
+
+<a id="INDEX876"></a>
+<h5 class="anchor" id="api:mi_api_output_file_parameter">mi_api_output_file_parameter</h5>
+<pre>
+    miBoolean mi_api_output_file_parameter(
+        miTag           function,       /* output file function */
+        miInteger       code,           /* parameter value code */
+        void            *value)         /* parameter value pointer */
+</pre>
+<p><span class="depr">Deprecated</span>
+Supply one parameter value identified by its code to an output
+file function. The <i>function</i> tag identifies the output file
+function returned by a call to <i>mi_api_output_file_def</i>. The
+output file function is able to store 8 float parameter values. The
+<i>code</i> determines which one of these values will be changed.
+The actual meaning of a parameter value is not predefined and
+depends on the file format used. Currently, the
+<tt>miIMG_FORMAT_JPEG</tt> format interprets the first parameter
+value as compression quality.</p>
+<p>The new function
+<i><a href="#api:mi_api_framebuffer_add">mi_api_framebuffer_add</a></i>
+should be used instead.</p>
+
+<a id="INDEX877"></a>
+<h5 class="anchor" id="api:mi_api_output_function_def">mi_api_output_function_def</h5>
+<pre>
+    miTag mi_api_output_function_def(
+        miUint          typemap,     /* data type bitmap */
+        miUint          interpmap,   /* interp req bitmap */
+        miTag           function)    /* output shader */
+</pre>
+<p>Define an output shader. Like output files, output shaders
+require a <i>typemap</i>. Unlike output files, output shaders may
+have multiple bits set. The <i>function</i> tag identifies the
+shader to be called. Shader tags are obtained during shader
+definition, they are returned by <i>mi_api_function_call_end</i>.
+The returned function tag can be appended to the camera's
+<i>output</i> function list by the caller.</p>
+<p>The <i>interpmap</i> bitmap uses the same pattern as
+<i>typemap</i>. It has a bit set if the frame buffer described by
+the corresponding set bit in <i>typemap</i> should be
+interpolated.</p>
+
+<a id="INDEX878"></a>
+<h5 class="anchor" id="api:mi_api_output_file_override">mi_api_output_file_override</h5>
+<pre>
+    miBoolean mi_api_output_file_override(
+        char            *format,
+        char            *fname)
+</pre>
+<p>Specify a file type and a file name that overrides the
+corresponding arguments of the next
+<i><a href="node182.html#INDEX875">mi_api_output_file_def</a></i> call. This
+call is not normally used to define a scene; it is intended for
+command-line option parsers that accept overrides for the file type
+and name specified in the scene. The override function must be
+called before the call to
+<i><a href="node182.html#INDEX875">mi_api_output_file_def</a></i> whose
+arguments should be overridden.</p>
+
+<a id="INDEX879"></a>
+<h5 class="anchor" id="api:mi_api_output_type_identify">mi_api_output_type_identify</h5>
+<pre>
+    miBoolean mi_api_output_type_identify(
+        miUint          *typemap,    /* type bitmap */
+        miUint          *interpmap,  /* interp bitmap */
+        char            *typename)   /* data type */
+</pre>
+<p>This function converts a type string to a type map as required
+by the output file and output shader definition functions above. A
+type string is a comma-separated list of types, such as
+<tt>"rgba,n,contour"</tt>. The special type <tt>contour</tt> is
+accepted also; it is the only one that is handled by RC only and
+not by IMG. All other types are identified in the same way as done
+by <i>mi_img_type_identify</i>. The type bitmap is returned in
+<tt>*</tt> <i>typemap</i>; the bits correspond to 1 shifted left by
+the <tt>miIMG_TYPE_*</tt> code.</p>
+<p>Types can be prefixed with `<tt>+</tt>' or `<tt>-</tt>' to turn
+interpolation on or off for the frame buffer, respectively.
+Interpolation means that unsampled pixels get a value interpolated
+from its neighbors, rather than becoming a copy of one of its
+neighbors. Interpolation is on by default for all kinds of color
+frame buffers and off for all others. The interpolation bitmap is
+returned in <tt>*</tt> <i>interpmap</i>; the bit layout is the same
+as for <tt>*</tt> <i>typemap</i>.</p>
+
+<a id="INDEX880"></a>
+<h5 class="anchor" id="api:mi_api_output_imfdisp_handle">mi_api_output_imfdisp_handle</h5>
+<pre>
+    miBoolean mi_api_output_imfdisp_handle(
+        miTag           camera_tag)    /* camera tag */
+</pre>
+<p><span class="depr">Deprecated</span>
+This function should be called after all output files have been defined.
+For every output file in the camera's output list of camera specified by
+<i>camera_tag</i>, a 128-byte file is created, containing the image resolution
+and the gamma factor from the camera, as well as information about how to open
+a socket to mental ray and version information. This information is
+understood by programs such as <tt>imf_disp</tt> which can connect
+to mental ray during rendering and show the rendered image as it is
+being created. Note that mental ray, when connected to in this way,
+will always transfer the RGBA picture regardless of the type of the
+file used to establish the connection.<br />
+mental ray does not require calling this function any more.</p>
+
+<a id="INDEX881"></a>
+<h5 class="anchor" id="api:mi_api_output_list">mi_api_output_list</h5>
+<pre>
+    miBoolean mi_api_output_list(
+        miTag           cam_tag)   /* camera tag */
+        miTag           opt_tag)   /* options tag */
+</pre>
+<p>This function calls <i>mi_phen_output_list</i>, which collects
+all the type maps from the output list in the given camera and
+places appropriate frame buffer records into the options structure
+specified by <i>tag</i>. This function is no longer used; RC calls
+<i>mi_phen_output_list</i> directly after output shaders introduced
+by phenomena have been added. <i>mi_api_output_list</i> may be
+removed in a future version of mental ray because it doesn't take
+phenomena into account, which means it generates incomplete frame
+buffer lists.</p>
+
+<a id="INDEX882"></a>
+<h5 class="anchor" id="api:mi_api_output_shaders">mi_api_output_shaders</h5>
+<pre>
+    miBoolean mi_api_output_shaders(
+        miTag           cam_inst_tag,   /* camera inst */
+        miTag           opt_tag,        /* options tag */
+        miTag           *images)        /* frame bufs */
+</pre>
+<p><span class="depr">Deprecated</span>
+This function is obsolete since output shaders
+are called from <i>mi_rc_render</i>. Therefore it prints a warning
+and always returns <tt>miTRUE</tt>. The output list remains
+unchanged in the process.</p>
+
+<a id="INDEX883"></a>
+<h5 class="anchor" id="api:mi_api_framebuffer">mi_api_framebuffer</h5>
+<pre>
+    miBoolean mi_api_framebuffer(
+        miOptions       *opt,           /* set framebuffer here */
+        int             n,              /* frame buffer 0..7 to set */
+        char            *type)          /* frame buffer type: "+rgba" etc */
+</pre>
+<p>This function sets or clears the definition of a user-defined
+frame buffer. There are up to eight user frame buffers numbered 0
+through 7. Each can have an arbitrary user-defined type. The same
+types as for <a href="node77.html#INDEX227">output statement</a>s
+are available, such as <tt>+rgba</tt>, <tt>-z</tt>, <tt>m</tt>,
+etc. As for <a href="node77.html#INDEX227">output statement</a>s,
+"<tt>+</tt>" indicates sample interpolation and " <tt>-</tt>"
+indicates padding. If the type is a null pointer, the frame buffer
+is deleted from the options. Shaders can access these frame buffers
+with the <i>mi_fb_get</i> and <i>mi_fb_put</i> functions. There is no
+inherit limitation on the number of frame buffers in mental ray.</p>
+
+<a id="INDEX884"></a>
+<a id="INDEX885"></a>
+<a id="INDEX886"></a>
+<h5 class="anchor" id="api:mi_api_pass_save_def">mi_api_pass_save_def</h5>
+<pre>
+    miTag mi_api_pass_save_def(
+        miUint          typemap,        /* data type bitmap */
+        miUint          interpmap,      /* interpolation req bitmap */
+        int             max_samples,    /* opt. max samples to write, or 0 */
+        char            *out_fn)        /* output pass file name */
+</pre>
+<p>The pass list in a camera is largely analogous to the output
+list, and uses similar functions. However, each statement is not
+concerned with writing pass files and calling preprocess or merge
+functions. This statement implements the <tt>pass write</tt>
+statement. Like <a href="node77.html#INDEX227">output
+statement</a>s (and <i>mi_api_output_*_def</i> calls), the order is
+significant; each <i>*_def</i> call appends another statement to
+the script that is executed in order after rendering. Assuming that
+<i>cam</i> is a pointer of type <tt>miCamera</tt>, pass statements
+can be created with code like this:</p>
+<pre>
+    cam-&gt;pass = mi_api_function_append(cam-&gt;pass, mi_api_pass_*_def(...));
+</pre>
+<p>The <i>typemap</i> defines which frame buffers should go into
+the pass file. It is used only to enable these frame buffers but does not
+exclude other rendered frame buffers from being written to the file; all
+rendered frame buffers will be written. The color and depth frame buffers
+are always rendered and written if there are pass statements. The
+<i>interpmap</i> specifies which frame buffers in the
+<i>typemap</i> should be interpolated (have the <tt>+</tt> sign in
+the type list in the pass statement).</p>
+<p>The <i>max_samples</i> value controls the number of samples per
+pixel to write to the pass file. It is equivalent to the
+<tt>max_samples</tt> setting in the options, but allows resampling
+of the rendered image to write pass files with fewer samples than
+rendered. Specifying a higher sampling for the pass file than in
+the options is not useful. A value of 0 will use the
+<tt>max_samples</tt> setting from the options. Negative values are
+not allowed. Note that for the rasterizer, the
+<tt>rapid_collect_rate</tt> setting from the options is used
+instead.</p>
+<p>Finally, <i>out_fn</i> is the name of the pass file to write.</p>
+
+<a id="INDEX887"></a>
+<a id="INDEX888"></a>
+<a id="INDEX889"></a>
+<h5 class="anchor" id="api:mi_api_pass_prep_def">mi_api_pass_prep_def</h5>
+<pre>
+    miTag mi_api_pass_prep_def(
+        miUint          typemap,        /* data type bitmap */
+        miUint          interpmap,      /* interpolation req bitmap */
+        int             max_samples,    /* opt. max samples to write, or ~0 */
+        char            *in_fn,         /* input pass file name */
+        char            *out_fn,        /* output pass file name */
+        miTag           function)       /* pass preprocessing function */
+</pre>
+<p>This function defines a pass preprocessing
+function in the camera. The <i>typemap</i>, <i>interpmap</i>, and
+<i>max_samples</i> arguments are similar to
+<i><a href="node182.html#INDEX886">mi_api_pass_save_def</a></i> arguments.
+This function also specifies the pass file name <i>in_fn</i> to
+read from, the <i>function</i> to execute, and the pass file name
+<i>out_fn</i> to write to. The function must be a tag of a
+<i>miFunction</i> that is created like any other shader, using
+<i><a href="node191.html#INDEX1032">mi_api_function_call</a></i>
+and related calls. A pass preprocessing function is a shader that
+has read access to a single pass file and write access to another
+single pass file, and can access any sample in random order by
+sample raster coordinate.</p>
+
+<a id="INDEX890"></a>
+<a id="INDEX891"></a>
+<a id="INDEX892"></a>
+<h5 class="anchor" id="api:mi_api_pass_merge_def">mi_api_pass_merge_def</h5>
+<pre>
+    miTag mi_api_pass_merge_def(
+        miUint          typemap,        /* data type bitmap */
+        miUint          interpmap,      /* interpolation req bitmap */
+        int             max_samples,    /* opt. max samples to write, or 0 */
+        miDlist         *in_fn_list,    /* input pass file name list */
+        char            *out_fn,        /* output pass file name, or 0 */
+        miTag           function)       /* pass preprocessing function */
+</pre>
+<p>This function defines a pass merge function in
+the camera. The arguments are analogous to
+<i><a href="node182.html#INDEX889">mi_api_pass_prep_def</a></i>, except that
+the input file name is replaced with an input file name list, which
+is a dynamic list containing strings. Dynamic lists can be created
+with the <i>mi_api_dlist_create</i> <tt>(miDLIST_POINTER)</tt> and
+<i>mi_api_dlist_add</i> with a <i>mi_mem_strdup</i>'ed string. It
+is not necessary to release the dynamic list. Pass merge functions
+are shaders that have access to any number of input pass files, one
+output pass file, and only one sample coordinate at a time.</p>
+
+<a id="INDEX893"></a>
+<a id="INDEX894"></a>
+<a id="INDEX895"></a>
+<h5 class="anchor" id="api:mi_api_pass_delete_def">mi_api_pass_delete_def</h5>
+<pre>
+    miTag mi_api_pass_delete_def(
+        char            *fn)            /* pass file name to delete */
+</pre>
+<p>This function defines a delete instruction in the
+camera. It simply deletes the file <i>fn</i>. This is useful to
+clean up temporary pass files after they have been preprocessed or
+merged, to avoid leaving very large files behind after rendering
+and pass processing finishes. Note that any file can be deleted
+with this statement, but it is not recommended to have a pass
+script consisting of a single delete instruction in order to
+delete, say, an unnecessary image file - the existence of any pass
+statement, even if it just a delete, will put mental ray into pass
+mode, which will enable an obligatory depth frame buffer and
+disable certain optimizations such as blank window rectangle
+elimination.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node181.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node183.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,30 @@
+shader specular {
+
+input:
+
+        Color ambient_color;
+        Color diffuse_color;
+        Color specular_color;
+        texture2D tex;
+
+output:
+
+        Color result;
+
+        void main()
+        {
+            Color specular_contribution;
+            result = ambient_color;
+            Light_iterator light;
+            foreach(light)
+                result += diffuse_color
+                                * abs(light.dot_nl)
+                                * light.contribution
+                                * tex2d(tex,texture_coordinate[0].xy);
+            Trace_options trace_options;
+            Ray ray(position,reflect(direction,normal)), ray_dx, ray_dy;
+            if(trace_immediate(ray,ray_dx,ray_dy,trace_options, "result",specular_contribution))
+                result += specular_color * specular_contribution;
+        }
+
+};

@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Scopes</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node193.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node195.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION192"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_api_scope_begin">mi_api_scope_begin</a></li>
+<li><a href="#api:mi_api_scope_end">mi_api_scope_end</a></li>
+<li><a href="#api:mi_api_scope_apply">mi_api_scope_apply</a></li>
+</ul>
+
+<h3>Scopes</h3>
+<p>Scopes disambiguate name spaces. The current scope is defined by
+a string that is prepended to all toplevel element names (objects,
+materials, lights, functions, declarations, etc) passed to API.
+Non-toplevel entities such as surfaces, curves, and shader
+parameters whose lifetime are limited to the enclosing toplevel
+element are not scoped. The scope string is initially empty. Scopes
+can be nested. Scopes in the scope string are separated by double
+colons; the scope string "<tt>a::b::</tt>" is the result of first
+beginning scope "<tt>a</tt>" and then scope "<tt>b</tt>". If
+applied to a name "<tt>x</tt>", the resulting name is
+"<tt>a::b::x</tt>". Since symbol tables contain scoped names, this
+can be used to distinguish different "<tt>x</tt>".</p>
+<p>For example, <i><a href="node192.html#INDEX1048">mi_api_phen_begin</a></i> automatically
+begins a new scope with the phenomenon name. This causes the
+phenomenon name and a double colon to be prepended to all shaders
+defined inside the phenomenon, which allows different phenomena to
+have subshaders with the same name. If phenomena " <tt>phen1</tt>"
+and "<tt>phen2</tt>" both have a subshader "<tt>shader</tt>", no
+conflict arises because their internal names are
+"<tt>phen1::shader</tt>" and " <tt>phen2::shader</tt>". The scoping
+functions are available to other modules, for example to allow the
+shader editor to read a declaration file without causing conflicts
+with the loaded scene. The name of the declared phenomenon itself,
+like the name of any other declaration, is global and does not get
+a scope prepended.</p>
+<p>Every context has its own scope string (see LIB module about
+contexts).</p>
+<p><a id="INDEX1053"></a></p>
+<h5 class="anchor" id="api:mi_api_scope_begin">mi_api_scope_begin</h5>
+<pre>
+    miBoolean mi_api_scope_begin(
+        char             *name)    /* new scope name */
+</pre>
+<p>Enter a scope. The given <i>name</i> and two colons (in this
+order) are appended to the scope string.</p>
+<p><a id="INDEX1054"></a></p>
+<h5 class="anchor" id="api:mi_api_scope_end">mi_api_scope_end</h5>
+<pre>
+    miBoolean mi_api_scope_end(void)
+</pre>
+<p>Exit a scope. The last name and double colon is stripped off the
+scope string.</p>
+<p><a id="INDEX1055"></a></p>
+<h5 class="anchor" id="api:mi_api_scope_apply">mi_api_scope_apply</h5>
+<pre>
+    char *mi_api_scope_apply(
+        char             *name)   /* name to put in scope */
+</pre>
+<p>Prepend the scope string to <i>name</i>, if any. If <i>name</i>
+contains double colons, check the scope part of <i>name</i> against
+the scope, and return a null pointer if the check fails. For
+example, it is an error for <i>name</i> to contain double colons if
+there is no scope; assuming that the scope is "<tt>a::b::</tt>",
+the <i>name</i>s "<tt>x</tt>", "<tt>b::x</tt>", and
+"<tt>a::b::x</tt>" are all ok and return the same string
+"<tt>a::b::x</tt>" but " <tt>a::x</tt>" is an error. As usual,
+<i>name</i> must have been allocated using MEM functions. The
+returned string is allocated with MEM and may be identical to
+<i>name</i>.</p>
+<p>The following functions accept <tt>char*</tt> arguments that are
+passed through <i><a href="node194.html#INDEX1055">mi_api_scope_apply</a></i> automatically
+by API:</p>
+<table class="table">
+<tr>
+<td><i><a href="node195.html#INDEX1056">mi_api_delete</a></i></td>
+<td><i><a href="node195.html#INDEX1057">mi_api_delete_tree</a></i></td>
+<td><i><a href="node183.html#INDEX898">mi_api_options_begin</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node183.html#INDEX896">mi_api_camera_begin</a></i></td>
+<td><i>mi_api_render</i></td>
+<td><i><a href="node184.html#INDEX901">mi_api_light_begin</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node182.html#INDEX868">mi_api_light_lookup</a></i></td>
+<td><i><a href="node184.html#INDEX903">mi_api_material_begin</a></i></td>
+<td><i><a href="node182.html#INDEX869">mi_api_material_lookup</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node184.html#INDEX905">mi_api_texture_begin</a></i></td>
+<td><i><a href="node182.html#INDEX870">mi_api_texture_lookup</a></i></td>
+<td><i><a href="node188.html#INDEX935">mi_api_instance_begin</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node188.html#INDEX936">mi_api_instance_end</a></i></td>
+<td><i><a href="node188.html#INDEX937">mi_api_instgroup_begin</a></i></td>
+<td><i><a href="node188.html#INDEX939">mi_api_instgroup_additem</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node189.html#INDEX942">mi_api_object_begin</a></i></td>
+<td><i><a href="node189.html#INDEX958">mi_api_poly_begin</a></i></td>
+<td><i><a href="node189.html#INDEX964">mi_api_surface_begin</a></i>
+(material name only)</td>
+</tr>
+<tr>
+<td><i><a href="node191.html#INDEX1045">mi_api_function_assign</a></i></td>
+<td><i><a href="node191.html#INDEX1032">mi_api_function_call</a></i></td>
+<td><i><a href="node191.html#INDEX1036">mi_api_parameter_shader</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node191.html#INDEX1044">mi_api_shader_add</a></i></td>
+<td><i><a href="node191.html#INDEX1047">mi_api_shader_call</a></i></td>
+<td></td>
+</tr>
+</table>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node193.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node195.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

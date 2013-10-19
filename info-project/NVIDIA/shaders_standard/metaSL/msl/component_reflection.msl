@@ -1,0 +1,77 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Component_reflection
+{
+	output:
+            Color result;
+
+	void main()
+	{
+            // Compute reflected direction using the interpolated normal.
+            float3 reflected = reflect(direction, normal);
+
+            // Check if the reflected direction points below the surface.
+            if (dot(reflected, geometry_normal) < 0.0)
+            {
+                // Instead of shooting the ray below the surface
+                // or returning a black pixel, we use the geometric
+                // normal to compute the reflection direction.
+                reflected = reflect(direction, geometry_normal);
+            }
+
+            // Initialize the color to black, in case the trace call fails.
+            result = Color(0.0);
+
+            // Shoot the reflection ray.
+            Ray ray(position, reflected);
+            Ray ray_dx(float3(0), float3(0));
+            Ray ray_dy(float3(0), float3(0));
+            Trace_options trace_opt;
+            trace_opt.set_ray_type("reflect");
+            // Try a reflection ray first. 
+            // If that fails, we will attempt an environment look-up.
+            if (!trace(ray, ray_dx, ray_dy, trace_opt, "result", result))
+            {
+                trace_opt.set_ray_type("environment");
+                trace(ray, ray_dx, ray_dy, trace_opt, "result", result);
+            }
+	}
+}
+{
+	description( "Computes the result of reflecting a ray specularly." );
+}
+;
+
+shader Component_refraction
+{
+	output:
+            Color result;
+
+	void main()
+	{
+            // Initialize the color to black, in case the trace call fails.
+            result = Color(0.0);
+
+            Trace_options trace_opt;
+            trace_opt.set_ray_type("refract");
+            Ray ray(position, refract(
+                    direction, normal, incident_ior / refracted_ior));
+            Ray ray_dx(float3(0), float3(0));
+            Ray ray_dy(float3(0), float3(0));
+            // Try a refraction ray first. 
+            // If that fails, we will attempt an environment look-up.
+            if (!trace(ray, ray_dx, ray_dy, trace_opt, "result", result))
+            {
+                trace_opt.set_ray_type("environment");
+                trace(ray, ray_dx, ray_dy, trace_opt, "result", result);
+            }
+	}
+}
+{
+	description( "Computes the result of refracting a ray through the "
+	             "current surface." );
+}
+;

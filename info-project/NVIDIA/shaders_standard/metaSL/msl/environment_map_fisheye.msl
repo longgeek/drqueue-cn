@@ -1,0 +1,50 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Environment_map_fisheye
+{
+  input:
+	Texture2d env_tex = "default_reflection_fisheye.dds"
+	{
+		display_name("Environment Texture");
+		description("The environment texture from which the colors will be sampled.");
+	};
+	float intensity = 1.0
+	{		
+		display_name("Intensity");
+		soft_range(0.0,10.0);
+		description( "How brightly the environment map will be reflected in "
+					 "the scene." );
+	};
+   
+  output:
+	Color result;
+	
+	void main()
+	{
+		float3 v = transform_vector("internal", "world", direction);
+		
+		float theta, gamma;
+	
+		theta = acos(v.y);
+		gamma = atan2(v.z, v.x);
+
+		float2 texture;
+		texture.x = (cos(gamma)*theta/PI*2.0);
+		texture.y = (sin(gamma)*theta/PI*2.0);
+		
+		texture = (texture + 1.0) * 0.5;
+		texture = clamp(texture, float2(0,0), float2(1,1));
+			
+		result  = tex2D(env_tex, texture);
+		result *= intensity;
+	}
+} 
+{ 
+	shader_type( "environment" );
+	description( "Uses the fisheye mapping to map the texture to environment "
+				 "reflection directions." );
+}
+;

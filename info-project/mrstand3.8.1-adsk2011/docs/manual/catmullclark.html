@@ -1,0 +1,196 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Catmull-Clark Mesh Geometry</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node88.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node89.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h3 id="SECTION87">Catmull-Clark Mesh Geometry</h3>
+<p>
+<a id="INDEX335"></a> A Catmull-Clark polygon mesh (ccmesh) is defined
+very similar to a regular polygon mesh, however it is further
+subdivided to get a smooth limit surface.</p>
+<p>The polygons in the ccmesh can have an arbitrary number of
+edges. In the subdivision process each polygon is split into
+quadrilaterals using generalized Catmull-Clark subdivision
+rules.</p>
+<p>Similar to subdivision surfaces a fractional sharpness value can
+be assigned to the polygon edges and vertices can be tagged with a
+corner feature. The sharpness values introduces a local crease on
+the surface.</p>
+<p>There are two main differences between a ccmesh and a
+subdivision surface. First, a ccmesh cannot define hierarchies, and
+second, a ccmesh can define polygons with an arbitrary number of
+edges, not just triangles and quads.</p>
+<pre>
+   object "<i>object_name</i>"
+      ... # flags, boxes, data, etc.
+      group
+         <i>vector list</i>
+         <i>vertex list</i>
+         <i>ccmesh</i>
+          ... # more surfaces
+         [ <i>approximation list</i> ]
+      end group
+  end object
+</pre>
+<p>The <i>vector list</i> in the group is a list of <i>(x, y,
+z)</i> vectors used for polygon vertex positions, texture and
+<a href="node32.html#INDEX62">motion vector</a>s.</p>
+<p>The <i>vertex list</i> that follows the vector list builds
+control vertices from the vectors. This works like the vertex list
+of polygonal geometry, except that normals should not be defined.
+Here position vectors, <a href="node108.html#INDEX412">texture
+coordinate</a>s and motion vectors can be referenced.</p>
+<p>A corner features may be associated with vertices by specifying
+<tt>corner</tt> behind the regular vertex definition:</p>
+<pre>
+ v <i>vec_ref</i> [ <i>tex_list</i> ] [ m <i>motion_ref</i> ] [ corner [ level <i>level</i> ] ]
+</pre>
+<p>Here <i>vec_ref</i> is the reference of a position,
+<i>tex_list</i> is a list of
+<a href="node108.html#INDEX412">texture coordinate</a>s with <tt>t</tt>
+keywords and corresponding coordinate indices, and
+<i>motion_ref</i> is an optional <a href="node32.html#INDEX62">motion vector</a>.
+Up to 15 motion vectors may be specified for each vertex.
+<p>The optional <b><a id="INDEX336">vertex feature</a></b> follows, and
+an optional level can be specified if
+the feature is active on a level above vertex definition level. The
+corner vertex feature is described in more detail in a separate
+section below.</p>
+<p>The ccmesh geometry list consists of <tt>ccmesh</tt> statements,
+much like Free-Form geometry consists of <tt>surface</tt>
+statements. For a description of vector lists and vertex lists,
+refer to page <a href="node83.html#vector">vector</a>.</p>
+<p>The approximation statements are very similar to the free-form
+case, except that <tt>approximate surface</tt> is replaced by
+<tt>approximate ccmesh</tt>. See section
+<a href="node89.html#approx">approx</a> for details.</p>
+<h4>Catmull-Clark Mesh</h4>
+<p>A ccmesh specifies a name, size options and a list of polygons,
+followed by optional derivative request:</p>
+<pre>
+  ccmesh "<i>surface_name</i>"
+     [ <i>polygon</i> <i>np</i><sub>int</sub> <i>vertex</i> <i>nv</i><sub>int</sub> ]
+     [ <i>mesh</i> ]
+     [ <i>derivative_request</i> ]
+  end ccmesh
+</pre>
+<p>The <i>polygon</i> statement specifies the total number of
+polygons which are defined in the mesh, the <i>vertex</i> statement
+specifies the total number of vertices used by the polygons.</p>
+<p>The mesh is very similar to polygons, it uses the same
+syntax.</p>
+<pre>
+   p [ "<i>material_name</i>" ] <i>vertex_ref_list</i>
+     [ crease <i>sharpness_list</i> ]
+</pre>
+<p>The <tt>p</tt> keyword begins definition of a polygon. An
+optional material name may follow, otherwise the material of the
+previous polygon is assigned to the current polygon. If the current
+object is marked as <tt>tagged</tt>, a label integer must be given
+instead of the material name (this is not shown here). Polygon
+vertices must be specified in the <i>vertex_ref_list</i>.</p>
+<p>The optional <tt>crease</tt> statement allows specification of
+crease edges. If the crease statement is given, then for each
+polygon edge a floating point sharpness values follows in the
+<i>sharpness_list</i>. Any edge not creased in this list must be
+given with a zero sharpness.</p>
+<h4>Vertex Feature</h4>
+<p>Vertices may be tagged with a corner feature to modify the
+subdivision rule. At a <tt>corner</tt> vertex more than two crease
+or boundary edges are incident, the limit surface has no tangent
+plane at this location, and the vertex is interpolated. The surface
+is partitioned into smooth patches separated by the crease lines
+and converge at the corner vertex.</p>
+<h4>Smooth Creases</h4>
+<p>Creases are discontinuities introduced into the surface in oder
+to define sharp geometric details such as wrinkles. Crease edges
+may be specified for edges which are not on the geometric
+boundary.</p>
+<p>A vertex with exactly two incident crease edges is internally
+marked as a crease vertex. Normal vectors for vertices on an
+infinite sharp crease line are not shared; instead, two normal
+vectors are created for the polygons on each of the two sides on
+the crease line. A crease sharpness value of 0 assigned to an edge
+will result in smooth subdivision, a value of 1 results will
+generate an infinite sharp crease, and fractional values between 0
+and 1 will generate smooth creases. Sharpness values of subsequent
+higher subdivision levels are computed using a quadratic B-Spline
+function applied to the sharpness values of the parent edges.</p>
+<h4>Derivatives</h4>
+<p><a id="ccmeshderiv"></a> mental ray can
+generate <b><a id="INDEX337">surface
+derivative</a></b> vectors for ccmesh if requested. They are
+computed and stored only if requested by <i>derivative_request</i>
+statements in the ccmesh definition:</p>
+<pre>
+   derivative <i>number</i><sub>int</sub> [ <i>space</i><sub>int</sub> ]
+</pre>
+<p>For <i>number</i> 1 must be specified, higher derivatives are
+not supported. Since a ccmesh allow arbitrary topology, there is no
+intrinsic surface parameterization available, so a texture space
+which defines orientation of the derivative vectors must always be
+specified with the <i>space</i> number. The first <tt>t</tt>
+vectors in the vertex definition is space 0, the second is space 1,
+and so on.</p>
+<h4>Example</h4>
+<p>In the example below a cylinder with hexagonal caps is created.
+Infinitely sharp creases are assigned to the cap polygons.</p>
+<pre>
+   object "hexacylinder"
+        group
+             2    0 0
+             1.5 -2 0
+            -1.5 -2 0
+            -2    0 0
+            -1.5  2 0
+             1.5  2 0
+             2    0 6
+             1.5 -2 6
+            -1.5 -2 6
+            -2    0 6
+            -1.5  2 6
+             1.5  2 6
+
+            v 0 v 1 v 2 v 3 v 4 v 5 v 6 v 7 v 8 v 9 v 10 v 11
+
+            ccmesh "surf1"
+                polygon 8 vertex 36
+                    p 0 1 2 3 4 5    crease 1 1 1 1 1 1
+                    p 6 11 10 9 8 7  crease 1 1 1 1 1 1
+                    p 2 1 7 8
+                    p 1 0 6 7
+                    p 0 5 11 6
+                    p 5 4 10 11
+                    p 4 3 9 10
+                    p 3 2 8 9
+            end ccmesh
+            approximate ccmesh parametric 2 "surf1"
+    end group
+end object
+
+</pre>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node88.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node89.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a><br /></p>
+</body>
+</html>

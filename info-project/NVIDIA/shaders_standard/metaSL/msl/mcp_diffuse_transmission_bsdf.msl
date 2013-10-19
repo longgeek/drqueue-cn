@@ -1,0 +1,157 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product BSDF for a diffuse transmission
+ *****************************************************************************/
+
+bsdf Mcp_diffuse_transmission_bsdf {
+  input:
+    float3   bump = normal;
+
+  member:
+    //the worst case of active attributes for this bsdf, independent of what actual input parameters are.
+    Bsdf_attributes get_attributes()
+    {
+        return Bsdf_attributes{geometry_dependent};
+    }
+    //the list of all possible bsdf components computed by this bsdf
+    Bsdf_components get_components()
+    {
+        return Bsdf_components{transmit_diffuse};
+    }
+    //the list of active attributes, given the actual input parameters. 
+    //For this bsdf it equals the worst case described by get_attributes(), so we do not need to implement this
+    Bsdf_attributes get_active_attributes() 
+    {
+        return get_attributes();
+    }
+    Bsdf_components get_active_components() 
+    {
+        return get_components();
+    }
+
+    
+    Spectrum eval( float3 fixed_direction, 
+                   float3 sampled_direction, 
+                   Bsdf_components allowed_components, 
+                   bool transport_source)
+    {
+        float d_Ng = dot(fixed_direction,geometry_normal);
+        // Check if fixed_direction and sampled_direction cross the geometric plane
+        // to avoid light leaks.
+        allowed_components = bsdf_check_type(
+                geometry_normal,fixed_direction,sampled_direction,allowed_components);
+        if (Bsdf_components{transmit_diffuse} in allowed_components ) {
+            // When tracing from light, apply adjoint correction
+            // term which compensates for the fact that particle
+            // density is proportional to projected area with
+            // respect to the non-interpolated normal.
+            if (transport_source == light) {
+
+                return Spectrum(1.) * abs(dot(fixed_direction,normal)
+                              / (abs(d_Ng) * PI));
+            }
+            else {
+                return Spectrum(1.) / PI;
+            }
+        }
+        else
+            return Spectrum(0.);
+    }
+
+//dummy pdf and sample for gpu
+    float pdf(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        allowed_components = bsdf_check_type(
+            geometry_normal, fixed_direction, sampled_direction, allowed_components);
+        return (Bsdf_components{transmit_diffuse} in allowed_components) ? 1.0 / PI : 0.0;
+    }
+
+    Bsdf_components sample(
+        in float3           fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        return bsdf_invalid_sample(sampled_direction, sample_weight);
+        if (Bsdf_components{transmit_diffuse} in allowed_components)
+        {
+
+        // sample direction
+        sampled_direction = cosine_hemisphere_sample( float(primary_sample.polar),
+                                                      float(primary_sample.azimuthal));
+        float d_Ng = dot(fixed_direction,geometry_normal);
+
+        // transform to internal space
+        if (transport_source == eye) {
+            sampled_direction = transform_from_local(
+                sampled_direction,
+                normal,
+                texture_tangent_u[0],
+                texture_tangent_v[0]);
+            // Check if direction is on the correct side of the surface.
+            if (dot(sampled_direction,geometry_normal) * d_Ng > 0.0)
+                sampled_direction = -sampled_direction;
+
+            // sample_weight is f/p, i.e., the BSDF's value
+            // for (fixed_direction,sampled_direction) divided by the
+            // probability of sampling the direction
+            sample_weight = Spectrum(1.);
+        }
+        else {
+            sampled_direction = transform_from_local(
+                sampled_direction,
+                geometry_normal,
+                geometry_tangent_u[0],
+                geometry_tangent_v[0]);
+            // Transformed direction cannot
+            // be below geometry plane, no need
+            // to check.
+            sample_weight = Spectrum(1.)
+                          * abs(dot(fixed_direction,normal)
+                          / d_Ng);
+            if (d_Ng < 0.0)  // reverse?
+                sampled_direction = -sampled_direction;
+        }
+        if (sample_probability != 0.0)
+            sample_probability = 1.0 / PI;
+
+        return Bsdf_components{transmit_diffuse};
+        }
+        else
+            return bsdf_invalid_sample(sampled_direction, sample_weight);
+    }
+    float3 cosine_hemisphere_sample(float u1, float u2)
+    {
+        if ((u1 == 0.0) && (u2 == 0.0))
+            return float3(0.0,1.0,0.0);
+        u1 += u1;
+        u2 += u2;
+        if (u1 >= 1.0)
+            u1 -= 2.0;
+        if (u2 >= 1.0)
+            u2 -= 2.0;
+
+        bool flip = ((u1 > -u2) != (u1 < u2));
+        float r = flip ?  u1 : u2;
+
+        float y = 1.0 - r*r;
+        if (y <= 0.0)
+            return float3(0.0,1.0,0.0);
+
+        float s = flip ? -u2 : u1;
+        float phi = (PI/4.0) * s/r + (flip ? (PI*1.5) : (PI));
+
+        return float3(r * sin(phi),sqrt(y),r * cos(phi));
+    }
+};

@@ -1,0 +1,560 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Upgrading from mental ray 3.5 to 3.6</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="upgrading37.html">&laquo;&nbsp;prev</a></li>
+<li><a href="upgrading35.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<div class="toc">
+<dl>
+<dt>Upgrading from mental ray 3.5 to 3.6</dt>
+<dd>
+<dl>
+<dt><a href="#whatsnew">What's new in Version 3.6</a></dt>
+<dt><a href="#mi">Scene Description Language</a></dt>
+<dt><a href="#shader">Shader Writing and Integration</a></dt>
+<dt><a href="#incompatible">Incompatible Changes</a></dt>
+</dl>
+</dd>
+</dl>
+</div>
+
+<h3 id="whatsnew">
+What's new in Version 3.6</h3>
+
+<p>Here is a summary of some of the new features and feature
+improvements in version 3.6 of mental ray. Please refer to the
+<a href="../relnotes/relnotes.html">release notes</a> for more
+details and for other changes which are not mentioned here.</p>
+
+<h4>Assemblies</h4>
+
+<p>An assembly is a subscene attached to a bounding box, which is
+loaded on demand when the bounding box is hit by a ray, or is
+contained and not completely occluded in a rendering tile, if the
+rasterizer is used. In cases of insufficient memory, assemblies are
+unloaded automatically and reloaded the next time they are
+required.<br />
+An assembly may contain all scene DAG elements, such as objects,
+instances and groups, as well as textures, materials, shaders,
+phenomena, lightprofiles and other scene elements. Lights and
+cameras can be contained in an assembly, but they will be ignored
+in the rendering process. An assembly can be created procedurally
+as a result of geometry shadercall, or loaded from a <tt>.mi</tt>
+file. See also <a href="#limitations">Known Limitations</a>.
+
+<h4>New BSP Acceleration Technique</h4>
+
+<p>A new BSP acceleration technique (BSP2) has been developed for
+efficient rendering of large BSP trees. The new technique does not
+require manual tuning for BSP traversal performance and memory
+consumption improvements. The memory requirements are much lower
+compared to the traditional BSP. Thus, the new BSP2 is recommended
+for rendering of large scenes, like those which do not fit into the
+physical memory of a machine, and scenes containing assemblies.</p>
+
+<h4>New Subdivision Surface Support</h4>
+
+<p>This <strong>completely new subdivision surface
+implementation</strong> is based on a mixed triangle-quad
+subdivision scheme. The new implementation is <strong>several times
+faster</strong> than the previous one, at a reduced feature set
+compared to the full hierarchical subdivision surface support. The
+new code path is used for triangle-quad <code>ccmesh</code> input
+objects not containing features listed below:</p>
+<ul>
+<li>semi-sharp creases</li>
+<li>vertex features</li>
+<li>arbitrary polygons (not only triangles and quads) in
+<code>ccmesh</code>.</li>
+</ul>
+<p>For objects containing containing one of the above features or
+other types of approximations, the mental ray 3.5-based subdivision
+surface implementation is used.<br />
+The following approximation types are supported by the new
+implementation:</p>
+<ul>
+<li><code>parametric</code></li>
+<li><code>[fine] [view] length [min max]</code></li>
+</ul>
+<p>See also <a href="#limitations">Known Limitations</a>.
+
+<h4>Importons</h4>
+
+<p>Importons are "particles" similar to photons. However, they are
+shot from the camera and traverse the scene in the opposite order.
+Instead of "energy", they hold a quality which is an importance of
+the contribution to the final image. The information from importons
+is used by the kernel for distribution of rendering efforts
+according to the final contribution to the rendered image, i.e.
+so-called importance-driven sampling. Importons are thus a
+foundation for new view-dependent indirect illumination techniques.
+As a first of them, mental ray 3.6 adds an importance-driven photon
+map described below.</p>
+
+<h4>Importance-driven Photon Maps</h4>
+
+<p>A new technique based on the importon map described above has
+been implemented. This technique is superior to the photon merging
+introduced in mental ray 3.5. If importons are enabled, they are
+used to control the density of the globillum photon maps and to
+improve the lookup time.</p>
+
+<h4>Native Ambient Occlusion with Caching</h4>
+
+<p>A native implementation of ambient occlusion has been added,
+which can be used by shaders to replace custom probe ray tracing
+solutions and benefit from advanced features like caching.
+See also <a href="#limitations">Known Limitations</a>.
+
+<h4>MetaSL Support</h4>
+
+<p>MetaSL is a powerful shading language targeting current and
+future shading requirements. mental ray shading functionality has
+been extended to allow efficient support for the MetaSL shaders. It
+is possible to use a mixture of native and MetaSL shaders in the
+same scene. It is also possible to combine "native" software mental
+ray shaders and MetaSL shaders in a shader tree or in a mental ray
+Phenomena at rendering time.
+See also <a href="#limitations">Known Limitations</a>.
+
+<h4>Exact Final Gathering</h4>
+
+<p>Added new finalgather mode <tt>"force"</tt>, where finalgather
+map creation and interpolation will be disabled. A set of
+finalgather ray will be shot each time
+<tt>mi_compute_irradiance</tt> or <tt>mi_compute_avg_radiance</tt>
+is called. The rendering speed would be much slower than in other
+finalgather modes, delivering a superior image quality.</p>
+
+<h4>Other improvements</h4>
+
+<ul>
+<li>Added support for frame buffer file caching, to store only fragments
+of frame buffers in disk files on demand. See also <a href="#limitations">Known
+Limitations</a>.
+<li>Added support for the DDS image file format for single textures
+and cubemaps. Internally cubemaps are stored as a single texture
+containing all 6 faces.</li>
+<li>For OpenEXR files, any number of buffers can be written to a
+single file, including an arbitrary number of user buffers. All
+files with the same output filename will be added to the same EXR
+file. The primary buffer channels are named "R", "G", "B", and "A",
+and all other buffers retain their buffer names, and get RGBA or
+XYZ extensions, as appropriate. For example, a <code>rgba</code>
+buffer named "diffuse" will have channels named "diffuse.R",
+"diffuse.G", "diffuse.B" and "diffuse.A". If the camera is defined
+with <code>output</code> statements instead of the new
+<code>framebuffer</code> statements, then mental ray will
+automatically assign names to the channels.</li>
+<li>For the rasterizer and scanline rendering, significantly
+improved performance for scenes with displacement, there a very
+conservative value for the maximal displacement value was given and
+the <tt>displace presample</tt> option was not used.</li>
+<li>Significantly improved rasterizer performance for high depth
+complexity scenes (such as scenes with hair) rendered with the new
+transparency depth limit.</li>
+<li>Fixed several issues with view dependent tessellation for
+orthographic cameras.</li>
+<li>For finalgathering, significantly reduced the requirement for
+<strong>continuous</strong> memory block size. This may give memory
+usage benefits on 32-bit machines rendering with large finalgather
+maps.</li>
+<li>For the rasterizer, increased the precision of the inversion of
+transformation matrices. This reduces the differences between
+images rendered on different platforms for transformations matrices
+close to degenerate ones.</li>
+<li>For the rasterizer, improved the statistics output.</li>
+<li>New standard shader packages are delivered with mental ray:
+<em>architectural</em> and <em>production</em>. They provide
+shaders for creation of common materials typically used in
+architectural and design applications, as well as shaders for
+typical workflows used in visual effects production.</li>
+</ul>
+
+<h3 id="mi">Scene Description Language</h3>
+
+<p>The following changes were made in the .mi scene description
+syntax:</p>
+<ul>
+<li>New interface for named frame buffers. The camera definition in
+the <tt>.mi</tt> file the following statement could be added:
+<pre>
+framebuffer "<var>name</var>"
+    datatype "<var>string</var>"
+    filtering <var>boolean</var>
+    primary <var>boolean</var>
+    user <var>boolean</var>
+    filename "<var>string</var>"
+    filetype "<var>string</var>"
+    colorprofile "<var>string</var>"
+    compression "<var>string</var>"
+    quality "<var>string</var>"
+    dod <var>boolean</var>
+    dpi <var>int</var>
+</pre>
+The new syntax replaces file output statements. The old syntax is still
+supported.</li>
+<li>Added binary format for hair objects using the following
+syntax:
+<pre>
+hair
+    <var>...</var>
+    scalar [ <var>&lt;number of scalars&gt;</var> ]
+    binary `<var>&lt;binary block of scalars&gt;</var>`
+    hair   [ <var>&lt;number of offsets&gt;</var> ]
+    binary `<var>&lt;binary block of hair offsets&gt;</var>`
+    <var>...</var>
+end hair
+</pre></li>
+<li>Adding a file assembly to the main scene uses the following
+syntax:
+<pre>
+assembly "<var>assembly_name</var>"
+    box <dfn>[</dfn><var>min<sub>x</sub> min<sub>y</sub> min<sub>z</sub> max<sub>x</sub> max<sub>y</sub> max<sub>z</sub></var><dfn>]</dfn>
+    <dfn>[</dfn> motion box <dfn>[</dfn><var>min<sub>x</sub> min<sub>y</sub> min<sub>z</sub> max<sub>x</sub> max<sub>y</sub> max<sub>z</sub></var><dfn>]</dfn <dfn>]</dfn>
+    file "<i>file_name</i>"
+end assembly
+</pre>
+<p>The individual parameters are:</p>
+<ul>
+<li>The <tt>box</tt> statement specifies a bounding box for the
+assembly, <b>in the space of the assembly</b>. It is the union of
+all bounding boxes of all geometric objects defined in the assembly
+transformed to the assembly space. The <tt>box</tt> parameter must
+always be specified since it is not possible to compute the
+bounding box without loading the assembly.</li>
+<li>The <tt>motion box</tt> is similar to the box, but contains the
+minimum and maximum components of all motion vectors. For
+assemblies with motion the motion box <b>must</b> be specified.
+Unlike object motion bounding boxes, the assembly motion bounding
+box should take into account not only object motion vectors, but
+also motion transforms inside of the assembly.</li>
+<li>The <tt>file</tt> statement specifies the name of the file
+where the subscene is stored. A list of directories for looking up
+the file can be specified with the <tt>-assembly_path
+<i>path_list</i></tt> command line option, with the
+<tt>{_MI_REG_ASSEMBLY}</tt> registry, or with the
+<tt>MI_ASSEMBLY_PATH</tt> environment variable.</li>
+</ul>
+<p>Assemblies files should contain a root statement at the end:</p>
+<pre>
+root "<var>group_name</var>"
+</pre>
+The group <i>"group_name"</i> would be attached to the main scene
+of the assembly.</li>
+<li>The new BSP2 can be enabled with the <code>"acceleration
+bsp2"</code> option in the <tt>.mi</tt> file.</li>
+<li>The following string options can be used to specify global
+defaults for ambient occlusion options:
+<ul>
+<li><tt>"ambient occlusion rays"</tt> sets the number of probe rays
+shot at a shading point. The default value is 256.</li>
+</ul>
+</li>
+<li>The following string options can be used for controlling the
+ambient occlusion cache:
+<ul>
+<li><tt>"ambient occlusion cache"</tt> enables the caching. If set
+to <tt>off</tt>, the ambient occlusion passes are skipped and the
+occlusion value is computed for each <tt>mi_ambient_occlusion</tt>
+function call. The default is <tt>off</tt>.</li>
+<li><tt>"ambient occlusion cache density"</tt> specifies the
+maximal density of ambient occlusion points <i>after</i> all
+refinement passes, in points per pixel. The default is 1 ambient
+occlusion point per pixel.</li>
+<li><tt>"ambient occlusion cache points"</tt> specifies the number
+of ambient occlusion points used for interpolation. The default
+value is 64.</li>
+</ul>
+</li>
+<li>For the rasterizer, added a new string option <tt>"rast motion
+factor"</tt>, float value. If set, it adjusts the effective shading
+rate on moving objects. It can be used to improve rendering
+performance for motion scenes without a visual quality
+decrease.</li>
+<li>For the rasterizer, added a string option <code>"rast
+transparency depth"</code> and the corresponded
+<code>-rast_transparency_depth</code> to limit the depth
+complexity. For high depth scenes this option may be used to
+significantly improve performance without noticeable changes to the
+rendered image.</li>
+<li>Added new boolean string option <tt>"contrast all buffers"</tt>.
+If set, the contrast oversampling test is done based
+on all color buffers, including user frame buffers.</li>
+</ul>
+<h3 id="shader">Shader Writing and Integration</h3>
+<p>
+The following changes were made in the shader and integration interfaces.
+</p>
+<p><b>Note:</b> All shaders and integrations should be recompiled
+for mental ray version 3.6. Common data structures in the shader
+interface and integration API have been changed, especially with
+regard to assemblies. Shaders compiled for an earlier version of
+mental ray may crash without error indication if they access
+changed data structures in the shader interface.</p>
+<ul>
+<li>Added a new mi_query mode miQ_STAGE. Shaders may use the
+resulting queried value to detect the current rendering stage. The
+shader.h file lists possible values: normal tile rendering,
+finalgather precomputing, ambient occlusion cache creation, photon
+and importon emission and lightmapping.</li>
+<li>Added a new function to support backwards compatible frame buffer
+interface.
+<pre>
+miBoolean mi_api_framebuffer_add(
+    miTag   buffertag,
+    char   *datatypes,
+    char   *filetype,
+    float  *fileparams,
+    char   *filename);
+</pre>
+which should be used for the C-style framebuffer API. It is not using the new
+named frame buffers. The functions <tt>mi_api_output_file_parameter</tt> and
+<tt>mi_api_output_file_def</tt> are deprecated. The parser has been changed
+to use the new function. Here is an example how the new code should look like.
+<pre>
+void camera_set_output(
+    miCamera*   camera,
+    const char* datatype,   /* like "+rgba" */
+    const char* filetype,   /* like "tif"  */
+    const char* filename)   /* like "myfile.tif" */
+{
+    float file_options[8] = {
+            0.0f, // QUALITY [jpg] or COMPRESS [exr]
+            0.0f, // EVEN or ODD
+            0.0f, // spare
+            0.0f, // spare
+            0.0f, // DOD
+            0.0f, // spare
+            75f,  // DPI
+            0.0f  // spare
+            };
+
+    mi_api_framebuffer_add(
+                    camera->buffertag,
+                    mi_mem_strdup(datatype),
+                    mi_mem_strdup(filetype),
+                    file_options,
+                    mi_mem_strdup(filename));
+}
+</pre>
+</li>
+<li>The shader/integration interface is extended with the <tt>Framebuffer</tt>
+class for the new named frame buffers. The convenient wrapper classes
+<tt>Access_fb</tt> and <tt>Edit_fb</tt> allow easy reading and manipulation
+of the frame buffers though smart pointers.
+<br />
+For shaders, in order to get the frame buffer index needed for <tt>mi_fb_put</tt>
+and <tt>mi_fb_get</tt> functions, the <tt>Framebuffer::get_index</tt> method
+should be used in shaders as follows.
+<pre>
+const char* bufferName = ...;
+
+if (bufferName) {
+
+    mi::shader::Access_fb fb(state->camera->buffertag);
+
+    size_t bufferIndex(0);
+
+    if (fb->get_index(bufferName, bufferIndex)) {
+        miUint index = (miUint) bufferIndex;
+
+        mi_fb_put(state, index, ...);
+        ...
+        }
+    } // invalidates scope of smart pointer
+</pre>
+For integrations, here is an example for iterating through frame buffers.
+<pre>
+miCamera* camera = ...;
+
+if (camera) { // print the filename of all framebuffers
+
+    mi::shader::Access_fb fb(cam->buffertag);
+
+    size_t n_fbs(0);
+
+    fb->get_buffercount(n_fbs);
+
+    for (miUint i=0; i < n_fbs; i++) {
+        const char* bname;
+        const char* filename;
+        fb->get_buffername(i, bname);
+        fb->get(bname, "filename", filename);
+        mi_info("filename %s", filename);
+        }
+    } // invalidating the scope of the smart pointer
+
+if (camera) { // remove all framebuffers, and
+              // create new primary frame buffer with file output
+
+    mi::shader::Edit_fb fb(camera->buffertag);
+
+    fb->reset();    // delete all buffers
+    fb->set("first", "datatype", "rgba");
+    fb->set("first", "filtering", true);
+    fb->set("first", "primary", true);
+    fb->set("first", "filetype", "tif");
+    fb->set("first", "filename", "/tmp/image.tif");
+    ...
+    } // invalidating the scope of the smart pointer
+</pre>
+</li>
+<li>For state shader called in <tt>miSHADERSTATE_STATE_INIT</tt>
+mode, <tt>miState::type</tt> is initialized correctly. This may be
+used by a state shader to detect photon emission, lightmap or
+output shader stage.</li>
+<li>The <tt>miState::cache</tt> is no longer used for intersection
+optimization. The member is kept for compatibility reason, but
+should be considered deprecated. The marker functionality (setting
+<tt>miState::cache</tt> to 0 in order to allow certain shader types
+to call ray-tracing functions as documented in
+<a href="../manual/node106.html">the manual</a>) is still available. This
+change gives a small performance improvement.</li>
+<li>A new <tt>mi_query</tt> mode <tt>miQ_FUNC_IS_ROOT</tt> is
+added. The <tt>miBoolean</tt> argument is set to <tt>miTRUE</tt> if
+the shader called called directly by the kernel as a "root" of the
+shader graph or phenomenon. A shader returning a large structure
+could use it to prevent a possible crash from attaching it directly
+to a material or light.</li>
+<li>Light lists, when created, may specify the sampling cone by
+providing an axis of the sampling cone and a cosine of the spread
+angle, like in the code sample below:
+<pre>
+mi::shader::Interface* iface;
+mi_query(miQ_RAY_INTERFACE, state, 0, (void*)&amp;iface);
+auto_ptr&lt;MI::RAY::LightList&gt; llist(iface-&gt;createLightList(
+                                      state, state-&gt;normal, 0.5));
+for (mi::shader::LightIterator light = llist-&gt;begin();
+     light != llist-&gt;end(); ++light) {
+    while (light-&gt;sample()) {
+        miColor c = light-&gt;get_contribution();
+        // ...
+    }
+    if (light-&gt;get_number_of_samples()) {
+        // ...
+    }
+}
+</pre>
+<p>This could be used for sampling lights from both sides of the
+surface without the <tt>state-&gt;pri=0</tt> trick.</p>
+</li>
+<li>For the rasterizer, added new <tt>shading_samples</tt> field to
+<tt>miObject</tt> and <tt>miInstance</tt>, which allows overriding
+the global shading samples specified in the options. The
+corresponded syntax in <tt>.mi</tt> file: <tt>shading samples</tt>
+<i>float</i>.</li>
+<li>Added the new <tt>importance</tt> field to <tt>miState</tt>. It
+is propagated to child rays. For rendering quality/performance
+improvements, a shader written for scenes using indirect
+illumination may multiply this field by a certain factor before
+calling <tt>mi_compute_irradiance</tt> or <tt>mi_trace_...</tt>
+function. The factor may be chosen as an intensity of the color
+with which the result of the function call would be added to the
+result of the shader, or, in case of tracing multiple (glossy)
+rays, as the inverse of the number of rays shot.</li>
+<li>Added the new boolean field <tt>photons_only</tt> to the
+<tt>miLight</tt> structure. If set, the illumination from the light
+is treated as indirect. Light sampling of the light would return
+black. To compensate, photons emitted from the light would stored
+on the first bounce in addition to the second and further bounces.
+For a physically correct scene, the illumination model is thus the
+same.
+<p>This option can be used for significant performance improvement
+for scenes with a high number of low intensity lights: the length
+of the light lists, and thus the number of light shader calls and
+shadow rays is reduced significantly at the price of a larger
+photon map.</p>
+<p>The corresponding <tt>.mi</tt> syntax in the light section:
+<tt>photons only <i>boolean</i></tt>.</p>
+</li>
+<li>Restored <tt>mi_img_type_query</tt> function in the shader
+interface. For a given image type this convenience function returns
+the number of components, and the number of bits per component. It
+also sets values in the optional array of 4 booleans with <code>miTRUE</code>
+or <code>miFALSE</code> if the related component is used or not.</li>
+<li>For raylib integration: changed <tt>mi_disp_fbmap</tt> function
+to return 0 if called with out of range index. In particular this
+should simplify integration of the display callback in the
+finalgather precomputing preview mode.</li>
+</ul>
+<h3 id="incompatible">Incompatible Changes</h3>
+<p>The following changes were made in mental ray 3.6 which are not
+backwards compatible or which may cause different results than
+previous versions of mental ray:</p>
+<ul>
+<li>The functions <tt>mi_api_output_file_parameter</tt> and
+<tt>mi_api_output_file_def</tt> are deprecated, and the new function
+<code>mi_api_framebuffer_add</code> should be used instead. The
+original functions are still existing but don't perform any operations.
+<li>The <code>miState-&gt;pri_idx</code>, the index of triangle in
+the sub-object box, is removed. With the changes done for assembly
+support, the <code>miState-&gt;pri</code> completely identifies a
+primitive in a scene. Lightmap and some contour shaders should use
+the new <code>miQ_PRI_INDEX</code> query mode to obtain the
+triangle index. Lightmap shaders should use the new
+<code>mi_state_set_pri</code> function to set the current triangle
+index.</li>
+<li>Some missing const qualifiers were added to the interface
+functions. Compiler warnings or errors would indicated
+unintentional usage and should be taken seriously. There is at
+least one exception though: If GCC 4 is used, it may print out
+warning on the <code>mi_tri_vectors</code>, which should be
+ignored.</li>
+<li>The <code>mi::shader:Interface</code> class now has the new
+version 2. The new class is incompatible with the version 1 used in
+mental ray 3.5. However, the interface version 1 is still supported
+and can be obtained with <code>mi_ray_interface_version</code>, so
+mental ray 3.5 shader will <b>not</b> need a recompilation due to
+this change.</li>
+<li>The camera space (in particular used in the the old
+<code>.mi1</code> files) is no longer supported. The geometry will
+be loaded correctly, but the texture spaces and other coordinate
+systems may be wrong.</li>
+<li>Grid acceleration is no longer supported. The main advantage of
+grid was the low memory footprint in heavily multiply-instanced
+scenes. The BSP2 acceleration technique with assemblies is a
+superior replacement.</li>
+<li>In the <code>miOptions</code>, the fields
+<code>rapid_shading_samples</code>, <code>rapid_collect_rate</code>
+and <code>rapid_motion_resample</code> are renamed to more
+intuitive <code>rast_shading_samples</code>,
+<code>rast_collect_rate</code> and
+<code>rast_motion_resample</code> respectively.</li>
+<li>For the integrators on Windows: setting binary mode on the
+<i>stdin</i> is no longer applied. If raylib is integrated into a
+standalone-style product which could be used in the pipe mode, the
+mode must be set in the integrated code explicitly with the call:
+<code>_setmode( _fileno(stdin), _O_BINARY)</code>.</li>
+<li>mental ray 3.6 keeps file outputs and output statements
+separately. All output image files are written out after all output
+shaders are applied. Writing out a frame buffer to one file,
+applying an output shader to that frame buffer and writing the
+modified buffer to a different file is not possible.</li>
+</ul>
+
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="upgrading37.html">&laquo;&nbsp;prev</a></li>
+<li><a href="upgrading35.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

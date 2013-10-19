@@ -1,0 +1,104 @@
+/*****************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#import <bsdf_builtins_base.msl>
+
+//--- Lambert-----------------------------------------------------------------
+  
+shader Bsdf_lambert : Bsdf_lambert_base
+{	
+  output:
+    float lambert_diffuse_scalar;
+	Color lambert_diffuse_color;
+	
+	void main()
+	{
+		lambert_diffuse_scalar = diffuse_scalar;
+		lambert_diffuse_color  = diffuse_color;
+	}
+    
+} { brdf_type("Msl_lambert"); };
+
+shader Illumination_lambert : Bsdf_lambert {} { brdf_type("Msl_lambert"); };
+
+
+//--- Phong -------------------------------------------------------------------
+
+shader Bsdf_phong : Bsdf_phong_base
+{
+  output:
+    float phong_diffuse_scalar;
+	Color phong_diffuse_color;
+	float phong_specular_scalar;
+	Color phong_specular_color;
+	float phong_specular_shininess;
+	
+	void main()
+	{
+		phong_diffuse_scalar      = diffuse_scalar;
+		phong_diffuse_color       = diffuse_color;
+		phong_specular_scalar     = specular_scalar;
+		phong_specular_color      = specular_color;
+		phong_specular_shininess  = specular_shininess;
+	}
+} { brdf_type("Msl_phong"); };
+
+shader Illumination_phong : Bsdf_phong {} { brdf_type("Msl_phong"); };
+
+
+//--- Oren Nayar --------------------------------------------------------------
+
+	
+shader Bsdf_oren_nayar : Bsdf_oren_nayar_base
+{  
+  output:
+    float oren_nayar_diffuse_scalar;
+	Color oren_nayar_diffuse_color;
+	float oren_nayar_diffuse_deviation;
+	float oren_nayar_specular_scalar;
+	Color oren_nayar_specular_color;
+	float oren_nayar_specular_shininess;
+	
+	void main()
+	{
+		oren_nayar_diffuse_scalar      = diffuse_scalar;
+		oren_nayar_diffuse_color       = diffuse_color;
+		oren_nayar_diffuse_deviation   = diffuse_deviation;
+		oren_nayar_specular_scalar     = specular_scalar;
+		oren_nayar_specular_color      = specular_color;
+		oren_nayar_specular_shininess  = specular_shininess;
+	}
+} { brdf_type("Msl_oren_nayar"); };
+
+shader Illumination_oren_nayar : Bsdf_oren_nayar {} { brdf_type("Msl_oren_nayar"); };
+
+
+//--- Ashikhmin Shirley -------------------------------------------------------
+
+	
+shader Bsdf_ashikhmin_shirley : Bsdf_ashikhmin_shirley_base
+{	
+  output:
+    float ashikhmin_shirley_diffuse_scalar;
+	Color ashikhmin_shirley_diffuse_color;
+	float ashikhmin_shirley_specular_scalar;
+	Color ashikhmin_shirley_specular_color;
+	float ashikhmin_shirley_shininess_u;
+	float ashikhmin_shirley_shininess_v;
+	
+	void main()
+	{
+		ashikhmin_shirley_diffuse_scalar  = diffuse_scalar;
+		ashikhmin_shirley_diffuse_color   = diffuse_color;
+		ashikhmin_shirley_specular_scalar = specular_scalar;
+		ashikhmin_shirley_specular_color  = specular_color;
+		ashikhmin_shirley_shininess_u     = shininess_u;
+		ashikhmin_shirley_shininess_v     = shininess_v;
+	}
+} { brdf_type("Msl_ashikhmin_shirley"); };
+
+shader Illumination_ashikhmin_shirley : Bsdf_ashikhmin_shirley {} 
+{ brdf_type("Msl_ashikhmin_shirley"); };
+

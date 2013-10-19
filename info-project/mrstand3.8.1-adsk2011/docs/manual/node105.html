@@ -1,0 +1,134 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Image Samples</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node104.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node106.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h3 id="SECTION103">Image Samples</h3>
+<p id="INDEX400">
+The state variables in the next table describe an eye (primary) ray.
+There is one eye ray for every sample that contributes to a pixel
+in the output image. If a material shader that evaluates a material
+hit <a id="INDEX401"></a> by a primary ray casts secondary reflection,
+refraction, transparency, light, or shadow rays, all shaders called
+as a consequence will inherit these variables unmodified:</p>
+
+<p><a id="INDEX402"></a></p>
+<div align="center">
+<table class="table">
+<tr>
+<th><i>type</i></th>
+<th><i>name</i></th>
+<th><i>content</i></th>
+</tr>
+<tr>
+<td><tt>miScalar</tt></td>
+<td><tt>raster_x</tt></td>
+<td>X coordinate of image pixel</td>
+</tr>
+<tr>
+<td><tt>miScalar</tt></td>
+<td><tt>raster_y</tt></td>
+<td>Y coordinate of image pixel</td>
+</tr>
+<tr>
+<td><tt>miFunction *</tt></td>
+<td><tt>shader</tt></td>
+<td>current shader</td>
+</tr>
+<tr>
+<td><tt>miLock</tt></td>
+<td><tt>global_lock</tt></td>
+<td>lock shared by all shaders</td>
+</tr>
+<tr>
+<td><tt>short</tt></td>
+<td><tt>thread</tt></td>
+<td>current thread</td>
+</tr>
+</table>
+</div>
+
+<dl>
+<dt><code>raster_x</code><dd>
+The X coordinate of the point in <a href="node101.html#INDEX371">raster
+space</a> to be rendered. Raster space is the pixel grid of the rendered
+image file, with 0/0 at the lower left corner.
+
+<dt><code>raster_y</code><dd>
+The Y coordinate of the point in <a href="node101.html#INDEX371">raster
+space</a> to be rendered. In <a href="node126.html#INDEX492">output
+shader</a>s executing in parallel mode because <code>state&rarr;dist</code>
+is nonzero, it contains the number of the first scanline of the scanline
+block to write.
+
+<dt><code>shader</code><dd>
+This pointer points to a data structure describing the current shader.
+The fields usable by shaders are <tt>lock</tt>, which is a lock shared
+by all calls to this shader, <tt>miTag next_function</tt> for chained
+shaders such as lens shaders, and <tt>char parameters[]</tt> which
+contains the shader parameters. The latter is redundant for the current
+shader because the parameter pointer is also passed as the third shader
+argument, but it can be used to find the parameters of parent shaders.
+This should be used with care because the C data structure of parent
+shader parameter lists is not generally known. Note that mental ray
+no longer supports <code>state&rarr;shader&rarr;user.p</code>. It is
+necessary to use <i><a href="miquery.html#api:mi_query">mi_query</a></i>
+with <tt>miQ_FUNC_USERPTR</tt> to retrieve the
+<a href="node159.html#INDEX837">user pointer</a>.
+
+<dt><code>global_lock</code><dd>
+This lock is shared by all shaders, regardless of their name. It
+can be used to lock critical sections common to all shaders. For
+example, it could be used to protect a non-reentrant user-defined
+random-number generator, or initialization of a more specific set
+of locks. It is pre-initialized by mental ray; do not initialize or
+delete it.
+
+<dt><code>thread</code><dd>
+The current <a href="node156.html#INDEX802">thread</a> number.
+Note that mental ray may create and destroy threads at any time, and
+may create threads with arbitrary numbers unrelated to the value
+specified on the command line with <tt>-threads</tt>. <b>The thread
+number should not be used to index static arrays in mental ray</b>.
+
+<dt><code>count</code><dd>
+This field is valid only in <a href="node120.html#INDEX471">light
+shader</a>s. It specifies the number of times the light shader has already
+been called in order to oversample an <a href="node80.html#INDEX255">area
+light source</a>. It is 0 for the first call. The shader may change this
+value just before returning <tt>(miBoolean)2</tt>, which aborts the sample
+loop and changes the value that the material shader will divide by to
+compute the average. In particular, a light shader for a user area light
+might set the count to 1 so that the material shader considers each sample
+as a separate light. This is useful for natural light "chrome dome"
+illumination. The <i>count</i> field is also valid in
+<a href="node182.html#INDEX893">pass rendering</a> in
+<a href="node136.html#INDEX507">pass merge shader</a>s, where it
+contains the number of passes to merge.
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node104.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node106.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

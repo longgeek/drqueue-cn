@@ -1,0 +1,60 @@
+#! @file SubstanceShader.mi
+#! Mental ray SubstanceShader definition header
+#! @author Christophe Soum - Allegorithmic
+#! @copyright Allegorithmic. All rights reserved.
+#! .mi declarations for Substance Texture Shader
+
+declare shader
+	color "SubstanceShader"
+	(
+		# MR mode : 0=local 3ds Max rendering, 1=MR standalone or DBR or Backburner
+		integer "mode",
+		
+		# 3ds Max path
+		integer "level0w",
+		integer "level0h",
+		integer "bufferfmt",
+		integer "buffermsb",
+		integer "bufferlsb",
+		integer "bufferamsb",
+		integer "bufferalsb",
+		shader "coords",
+        integer "x_res", #parsed by iray to bake the texture 
+		integer "y_res", #parsed by iray to bake the texture
+		
+		# standalone path
+		string	"substanceFile",
+		string	"inputConfig",		
+		array integer "integerArray",
+		array vector "vectorArray",
+		array scalar "scalarArray",
+        array color "colorArray",
+		integer "networkDataBlockTag" #used only when we are rendering with network (DBR, backburner or standalone)
+	)
+	
+	# 3dsmax specifics GUI 
+	gui "gui_SubstanceShader"
+	{
+		control "Global" "Global"
+		(
+			"uiName" "SubstanceShader", "hidden"
+		)
+		
+		control "coords" "shader"
+		(
+			"value" "max_base_UVGenerator", "referenceTarget"
+		)
+
+		control "iray" "iray"
+		(
+			"bake_enable",
+			"bake_resolution_u" "x_res",
+			"bake_resolution_v" "y_res",
+			"bake_coord_shader" "coords"
+		)  
+	}
+	version 4
+	apply texture
+	#: nodeid 41001
+end declare
+

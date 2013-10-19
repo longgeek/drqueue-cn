@@ -1,0 +1,1301 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Functions for Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node137.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node139.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION136"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_call_shader">mi_call_shader</a></li>
+<li><a href="#api:mi_call_shader_x">mi_call_shader_x</a></li>
+<li><a href="#api:mi_call_material">mi_call_material</a></li>
+<li><a href="#api:mi_call_photon_material">mi_call_photon_material</a></li>
+<li><a href="#api:mi_call_shadow_material">mi_call_shadow_material</a></li>
+<li><a href="#api:mi_call_environment_material">mi_call_environment_material</a></li>
+<li><a href="#api:mi_call_volume_material">mi_call_volume_material</a></li>
+<li><a href="#api:mi_call_photonvol_material">mi_call_photonvol_material</a></li>
+<li><a href="#api:mi_call_contour_material">mi_call_contour_material</a></li>
+<li><a href="#api:mi_call">mi_call</a></li>
+<li><a href="#api:mi_call_boolean">mi_call_boolean</a></li>
+<li><a href="#api:mi_call_color">mi_call_color</a></li>
+<li><a href="#api:mi_call_integer">mi_call_integer</a></li>
+<li><a href="#api:mi_call_scalar">mi_call_scalar</a></li>
+<li><a href="#api:mi_call_transform">mi_call_transform</a></li>
+<li><a href="#api:mi_call_tag">mi_call_tag</a></li>
+<li><a href="#api:mi_call_vector">mi_call_vector</a></li>
+<li><a href="#api:mi_eval">mi_eval</a></li>
+<li><a href="#api:mi_eval_boolean">mi_eval_boolean</a></li>
+<li><a href="#api:mi_eval_color">mi_eval_color</a></li>
+<li><a href="#api:mi_eval_integer">mi_eval_integer</a></li>
+<li><a href="#api:mi_eval_scalar">mi_eval_scalar</a></li>
+<li><a href="#api:mi_eval_transform">mi_eval_transform</a></li>
+<li><a href="#api:mi_eval_tag">mi_eval_tag</a></li>
+<li><a href="#api:mi_eval_vector">mi_eval_vector</a></li>
+<li><a href="#api:mi_flush_cache">mi_flush_cache</a></li>
+</ul>
+
+<h2>Functions for Shaders</h2>
+
+<p><a id="INDEX510"></a>
+mental ray makes a range of functions available to shaders that can be used
+to access data, cast rays, looking up images, and perform standard mathematical
+computations. The functions are grouped by the module that supplies them.
+The shader writer may also use C library functions, but it is <b>mandatory</b>
+to include <code>&lt;stdio.h&gt;</code> and <code>&lt;math.h&gt;</code>
+<a id="INDEX511"></a> if printing functions such as <code>fprintf</code> (use
+<i><a href="node157.html#INDEX828">mi_info</a></i> or similar for console
+debugging messages) or math functions such as <code>sin</code> are used.
+Not including these headers may abort rendering at runtime, even though the
+compiler did not complain. All shaders must include the standard mental ray
+header file, <code>shader.h</code>.</p>
+<p>Here is a summary of functions provided by mental ray. Section
+<a href="node158.html#functype">functype</a> shows which functions
+can be used in which shaders. <a id="INDEX512"></a></p>
+
+<h3>Shader Calls</h3>
+
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_call_shader</td><td>*result, type, *state, tag</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_call_shader_x</td><td>*result, type, *state, tag, *arg</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_call_material</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_call_photon_material</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_call_shadow_material</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_call_environment_material</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_call_volume_material</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_call_photonvol_material</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_call_contour_material</td><td>*result, *void, *void, *state</td>
+</tr>
+<tr>
+<td>void *</td><td>mi_eval</td><td>*state, *param</td>
+</tr>
+<tr>
+<td>miBoolean *</td><td>mi_eval_boolean</td><td>*param</td>
+</tr>
+<tr>
+<td>miInteger *</td><td>mi_eval_integer</td><td>*param</td>
+</tr>
+<tr>
+<td>miScalar *</td><td>mi_eval_scalar</td><td>*param</td>
+</tr>
+<tr>
+<td>miVector *</td><td>mi_eval_vector</td><td>*param</td>
+</tr>
+<tr>
+<td>miScalar *</td><td>mi_eval_transform</td><td>*param</td>
+</tr>
+<tr>
+<td>miColor *</td><td>mi_eval_color</td><td>*param</td>
+</tr>
+<tr>
+<td>miTag *</td><td>mi_eval_tag</td><td>*param</td>
+</tr>
+<tr>
+<td>void</td><td>mi_flush_cache</td><td>*state</td>
+</tr>
+</table>
+<h3>Database Functions</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>int</td><td>mi_db_type</td><td>tag</td>
+</tr>
+<tr>
+<td>int</td><td>mi_db_size</td><td>tag</td>
+</tr>
+<tr>
+<td>void *</td><td>mi_db_access</td><td>tag</td>
+</tr>
+<tr>
+<td>void</td><td>mi_db_unpin</td><td>tag</td>
+</tr>
+<tr>
+<td>void</td><td>mi_db_flush</td><td>tag</td>
+</tr>
+</table>
+<h3>Rendering Functions</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_trace_eye</td><td>*result, *state, *org, *dir</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_trace_reflection</td><td>*result, *state, *dir</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_trace_refraction</td><td>*result, *state, *dir</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_trace_transparent</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_trace_environment</td><td>*result, *state, *dir</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_trace_probe</td><td>*state, *dir, *org</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_trace_transparent</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_trace_continue</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_trace_light</td><td>*result, *dir, *nl, *st, i</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_sample_light</td><td>*result, *dir, *nl, *st,i,*s</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_trace_shadow</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_trace_shadow_seg</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_continue_shadow_seg</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_ray_offset</td><td>*state, *offset</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_ray_falloff</td><td>*state, *start, *stop</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_inclusive_lightlist</td><td>*n, **lights, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_exclusive_lightlist</td><td>*n, **lights, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_instance_lightlist</td><td>*n, **lights, *state</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_lightprofile_value</td><td>*prof, phi, theta, *pos, rel</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_lightprofile_sample</td><td>*state, proftag, rel</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_compute_irradiance</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_compute_irradiance_backside</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_compute_avg_radiance</td><td>*result, *state, face, irrad_options</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_compute_volume_irradiance</td><td>*result, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_compute_directional_irradiance</td><td>*result, *state, r, g1, g2</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_finalgather_store</td><td>*result, *state, mode</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_sample</td><td>*sample, *i, *state, dim, *n</td>
+</tr>
+</table>
+<h3>Photon Functions</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_photon_light</td><td>*energy, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_photon_reflection_specular</td><td>*energy, *state, *dir</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_photon_reflection_glossy</td><td>*energy, *state, *dir</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_photon_reflection_diffuse</td><td>*energy, *state, *dir</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_photon_transmission_specular</td><td>*energy, *state, *dir</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_photon_transmission_glossy</td><td>*energy, *state, *dir</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_photon_transmission_diffuse</td><td>*energy, *state, *dir</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_photon_transparent</td><td>*energy, *state</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_photon_volume_scattering</td><td>*energy, *state, *dir</td>
+</tr>
+<tr>
+<td>void</td><td>mi_store_photon</td><td>*energy, *state</td>
+</tr>
+<tr>
+<td>void</td><td>mi_store_volume_photon</td><td>*energy, *state</td>
+</tr>
+</table>
+<h3>Direction Functions</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>void</td><td>mi_reflection_dir</td><td>dir, state</td>
+</tr>
+<tr>
+<td>void</td><td>mi_reflection_dir_specular</td><td>*dir, *state</td>
+</tr>
+<tr>
+<td>void</td><td>mi_reflection_dir_glossy</td><td>*dir, *state, shiny</td>
+</tr>
+<tr>
+<td>void</td><td>mi_reflection_dir_glossy_x</td><td>*dir, *state, shiny, *sample</td>
+</tr>
+<tr>
+<td>void</td><td>mi_reflection_dir_anisglossy</td><td>*dir, *state, u, v, shiny_u, shiny_v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_reflection_dir_anisglossy_x</td><td>*dir, *state, u, v, shiny_u, shiny_v, *sample</td>
+</tr>
+<tr>
+<td>void</td><td>mi_reflection_dir_diffuse</td><td>*dir, *state</td>
+</tr>
+<tr>
+<td>void</td><td>mi_reflection_dir_diffuse_x</td><td>*dir, *state, *sample</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_refraction_dir</td><td>dir, state, ior_in, ior_out</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_transmission_dir_specular</td><td>*dir, *state, *in, *out</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_transmission_dir_glossy</td><td>*dir, *state, *in, *out, shiny</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_transmission_dir_glossy_x</td><td>*dir, *state, *in, *out, shiny, *sample</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_transmission_dir_anisglossy</td><td>*dir, *state, *in, *out, u, v, shiny_u, shiny_v</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_transmission_dir_anisglossy_x</td><td>*dir, *state, *in, *out, u, v, shiny_u, shiny_v, *sample</td>
+</tr>
+<tr>
+<td>void</td><td>mi_transmission_dir_diffuse</td><td>*dir, *state</td>
+</tr>
+<tr>
+<td>void</td><td>mi_transmission_dir_diffuse_x</td><td>*dir, *state, *sample</td>
+</tr>
+<tr>
+<td>void</td><td>mi_scattering_dir_diffuse</td><td>*dir, *state</td>
+</tr>
+<tr>
+<td>void</td><td>mi_scattering_dir_directional</td><td>*dir, *state, directionality</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_scattering_pathlength</td><td>*state, density</td>
+</tr>
+</table>
+<h3>Vector and Matrix Math Functions</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_neg</td><td>*r</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_add</td><td>*r, *a, *b</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_sub</td><td>*r, *a, *b</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_mul</td><td>*r, f</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_div</td><td>*r, f</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_prod</td><td>*r, *a, *b</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_vector_dot</td><td>*a, *b</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_vector_norm</td><td>*a</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_normalize</td><td>*r</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_min</td><td>*r, *a, *b</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_max</td><td>*r, *a, *b</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_vector_det</td><td>*a, *b, *c</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_vector_dist</td><td>*a, *b</td>
+</tr>
+<tr>
+<td>void</td><td>mi_matrix_null</td><td>r</td>
+</tr>
+<tr>
+<td>void</td><td>mi_matrix_ident</td><td>r</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_matrix_isident</td><td>a</td>
+</tr>
+<tr>
+<td>void</td><td>mi_matrix_copy</td><td>r, a</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_matrix_invert</td><td>r, a</td>
+</tr>
+<tr>
+<td>void</td><td>mi_matrix_prod</td><td>r, a, b</td>
+</tr>
+<tr>
+<td>void</td><td>mi_matrix_rot_det</td><td>a</td>
+</tr>
+<tr>
+<td>void</td><td>mi_matrix_rotate</td><td>a, x, y, z</td>
+</tr>
+<tr>
+<td>void</td><td>mi_matrix_rotate_axis</td><td>a, *v, r</td>
+</tr>
+<tr>
+<td>void</td><td>mi_matrix_solve</td><td>*x, a, *b, c</td>
+</tr>
+</table>
+<h3>Transformation Math Functions</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>void</td><td>mi_point_transform</td><td>*r, *v, m</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_transform</td><td>*r, *v, m</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_transform_T</td><td>*r, *v, m</td>
+</tr>
+<tr>
+<td>void</td><td>mi_point_to_world</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_point_to_camera</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_point_to_object</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_point_to_light</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_point_to_raster</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_point_from_world</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_point_from_camera</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_point_from_object</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_point_from_light</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_to_world</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_to_camera</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_to_object</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_to_light</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_from_world</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_from_camera</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_from_object</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vector_from_light</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_normal_to_world</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_normal_to_camera</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_normal_to_object</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_normal_to_light</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_normal_from_world</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_normal_from_camera</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_normal_from_object</td><td>*state, *r, *v</td>
+</tr>
+<tr>
+<td>void</td><td>mi_normal_from_light</td><td>*state, *r, *v</td>
+</tr>
+</table>
+<h3>Noise Functions</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_random</td><td></td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_srandom</td><td>seed</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_erandom</td><td>seed[3]</td>
+</tr>
+<tr>
+<td>double</td><td>mi_par_random</td><td>*state</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_spline</td><td>t, n, *ctl</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_noise_1d</td><td>p</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_noise_2d</td><td>u, v</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_noise_3d</td><td>*p</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_noise_1d_grad</td><td>p, *g</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_noise_2d_grad</td><td>u, v, *gu, *gv</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_noise_3d_grad</td><td>*p, *g</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_unoise_1d</td><td>p</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_unoise_2d</td><td>u, v</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_unoise_3d</td><td>*p</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_unoise_1d_grad</td><td>p, *g</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_unoise_2d_grad</td><td>u, v, *gu, *gv</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_unoise_3d_grad</td><td>*p, *g</td>
+</tr>
+</table>
+<h3>Image Functions</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>void</td><td>mi_img_put_color</td><td>*image, *color, x, y</td>
+</tr>
+<tr>
+<td>void</td><td>mi_img_get_color</td><td>*image, *color, x, y</td>
+</tr>
+<tr>
+<td>void</td><td>mi_img_put_scalar</td><td>*image, scalar, x, y</td>
+</tr>
+<tr>
+<td>void</td><td>mi_img_get_scalar</td><td>*image, *scalar, x, y</td>
+</tr>
+<tr>
+<td>void</td><td>mi_img_put_vector</td><td>*image, *vector, x, y</td>
+</tr>
+<tr>
+<td>void</td><td>mi_img_get_vector</td><td>*image, *vector, x, y</td>
+</tr>
+<tr>
+<td>void</td><td>mi_img_put_depth</td><td>*image, depth, x, y</td>
+</tr>
+<tr>
+<td>void</td><td>mi_img_get_depth</td><td>*image, *depth, x, y</td>
+</tr>
+<tr>
+<td>void</td><td>mi_img_put_normal</td><td>*image, *normal, x, y</td>
+</tr>
+<tr>
+<td>void</td><td>mi_img_get_normal</td><td>*image, *normal, x, y</td>
+</tr>
+<tr>
+<td>void</td><td>mi_img_put_label</td><td>*image, label, x, y</td>
+</tr>
+<tr>
+<td>void</td><td>mi_img_get_label</td><td>*image, *label, x, y</td>
+</tr>
+<tr>
+<td>int</td><td>mi_img_get_width</td><td>*image</td>
+</tr>
+<tr>
+<td>int</td><td>mi_img_get_height</td><td>*image</td>
+</tr>
+<tr>
+<td>miImg_image*</td><td>mi_img_pyramid_get_level</td><td>*image, int</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_img_tonemap</td><td>*outimage, *inimage, *paras</td>
+</tr>
+</table>
+<h3>Color Profile Functions</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>miUint1</td><td>mi_colorprofile_renderspace_id</td><td></td>
+</tr>
+<tr>
+<td>miUint1</td><td>mi_colorprofile_internalspace_id</td><td></td>
+</tr>
+<tr>
+<td>miUint1</td><td>mi_colorprofile_ciexyz_id</td><td></td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_colorprofile_internal_to_render</td><td>*color</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_colorprofile_internal_to_ciexyz</td><td>*color</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_colorprofile_render_to_internal</td><td>*color</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_colorprofile_render_to_ciexyz</td><td>*color</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_colorprofile_ciexyz_to_render</td><td>*color</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_colorprofile_ciexyz_to_internal</td><td>*color</td>
+</tr>
+</table>
+<h3>Shading Models</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_fresnel</td><td>n1, n2, t1, t2</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_fresnel_reflection</td><td>*state, *i, *o</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_phong_specular</td><td>spec, *state, *dir</td>
+</tr>
+<tr>
+<td>void</td><td>mi_fresnel_specular</td><td>*ns, *ks, s, *st, *dir, *in, *out</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_blinn_specular</td><td>spec, *state, *dir</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_blong_specular</td><td>spec, *state, *dir</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_cooktorr_specular</td><td>*result, *di, *dr, *n, roughness, *ior</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_ward_glossy</td><td>*di, *dr, *n, shiny</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_ward_anisglossy</td><td>*di, *dr, *n, *u, *v, shiny_u, shiny_v</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_schlick_scatter</td><td>*di, *dr, directionality</td>
+</tr>
+<tr>
+<td>miRay_type</td><td>mi_choose_scatter_type</td><td>*state, transp, *specular, *glossy, *diffuse</td>
+</tr>
+<tr>
+<td>miRay_type</td><td>mi_choose_simple_scatter_type</td><td>*state, *rdiff, *rspec, *tdiff, *tspec</td>
+</tr>
+<tr>
+<td>miInteger</td><td>mi_choose_lobe</td><td>*state, r</td>
+</tr>
+</table>
+<h3>Auxiliary Functions</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_lookup_color_texture</td><td>*col, *state, tag, *v</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_lookup_scalar_texture</td><td>*scal, *state, tag, *v</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_lookup_vector_texture</td><td>*vec, *state, tag, *v</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_lookup_filter_color_texture</td><td>*col, *state, tag, *paras, ST</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_texture_filter_project</td><td>p[3], t[3], *state, disc_r, space</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_texture_filter_transform</td><td>ST, p[3], t[3]</td>
+</tr>
+<tr>
+<td>miScalar</td><td>mi_luminance</td><td>*state, color</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_tri_vectors</td><td>*state, wh, nt, **a, **b, **c</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_texture_interpolate</td><td>*state, space, *result</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_raster_unit</td><td>*state, *x, *y</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_query</td><td>query, *state, tag, *result, ...</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_shaderstate_enumerate</td><td>*state, *cb, *arg</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_shaderstate_set</td><td>*state, *key, ks, *val, vs, t</td>
+</tr>
+<tr>
+<td>void *</td><td>mi_shaderstate_get</td><td>*state, *key, ks, *vs</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_fb_put</td><td>*state, fb, *data</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_fb_get</td><td>*state, fb, *data</td>
+</tr>
+<tr>
+<td>miImg_image *</td><td>mi_output_image_open</td><td>*state, idx</td>
+</tr>
+<tr>
+<td>void</td><td>mi_output_image_close</td><td>*state, idx</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_geoshader_add_result</td><td>query, *state, tag, *result, ...</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_geoshader_tesselate</td><td>*state, *leaves, source</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_geoshader_tesselate_end</td><td>leaves</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_geoshader_echo_tag</td><td>*fp, tag, *eopt</td>
+</tr>
+<tr>
+<td>char *</td><td>mi_string_substitute</td><td>*new, *old, size</td>
+</tr>
+<tr>
+<td>miInteger</td><td>mi_volume_num_shaders</td><td>*state</td>
+</tr>
+<tr>
+<td>miInteger</td><td>mi_volume_cur_shader</td><td>*state</td>
+</tr>
+<tr>
+<td>miColor *</td><td>mi_volume_tags</td><td>*state</td>
+</tr>
+<tr>
+<td>miTag *</td><td>mi_volume_user_color</td><td>*state</td>
+</tr>
+<tr>
+<td>void</td><td>mi_opacity_set</td><td>*state, *color</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_opacity_get</td><td>*state, *color</td>
+</tr>
+</table>
+<h3>Samplepass Rendering Functions</h3>
+These functions are available only to pass merge (access) or pass
+preprocessing (get, put, flush, black) shaders.
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>void *</td><td>mi_renderpass_access</td><td>*state, pass, db</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_renderpass_sample_get</td><td>*result, sz, *state, fb, x, y</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_renderpass_sample_put</td><td>*result, sz, *state, fb, x, y</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_renderpass_samplerect_flush</td><td>*result, *state, x, y</td>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_renderpass_samplerect_black</td><td>*result, *state, x, y</td>
+</tr>
+</table>
+<h3>Obsolete Auxiliary Functions</h3>
+These functions are obsolete; use <i><a href="miquery.html#api:mi_query">mi_query</a></i> for future
+implementations.
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>void</td><td>mi_light_info</td><td>tag, *org, *dir, **paras</td>
+</tr>
+<tr>
+<td>int</td><td>mi_global_lights_info</td><td>**tag</td>
+</tr>
+<tr>
+<td>void</td><td>mi_texture_info</td><td>tag, *xres, *yres, **paras</td>
+</tr>
+<tr>
+<td>void *</td><td>mi_shader_info</td><td>*state</td>
+</tr>
+<tr>
+<td>int</td><td>mi_instance_info</td><td>*state, **paras, **p1, **p2, **p3</td>
+</tr>
+</table>
+<h3>Contour Functions</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>miBoolean</td><td>mi_get_contour_line</td><td>*p1, *p2</td>
+</tr>
+<tr>
+<td>void</td><td>mi_add_contour_lines</td><td>p1[], p2[], n</td>
+</tr>
+</table>
+<h3>Light Mapping Functions</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>miImg_image*</td><td>mi_lightmap_edit</td><td>**handle, tag</td>
+</tr>
+<tr>
+<td>void</td><td>mi_lightmap_edit_end</td><td>*handle</td>
+</tr>
+</table>
+<h3>Memory Allocation</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>void *</td><td>mi_mem_allocate</td><td>size</td>
+</tr>
+<tr>
+<td>void *</td><td>mi_mem_test_allocate</td><td>size</td>
+</tr>
+<tr>
+<td>void *</td><td>mi_mem_reallocate</td><td>mem, size</td>
+</tr>
+<tr>
+<td>void *</td><td>mi_mem_test_reallocate</td><td>mem, size</td>
+</tr>
+<tr>
+<td>void</td><td>mi_mem_release</td><td>mem</td>
+</tr>
+<tr>
+<td>void</td><td>mi_mem_check</td><td></td>
+</tr>
+<tr>
+<td>void</td><td>mi_mem_dump</td><td>mod</td>
+</tr>
+<tr>
+<td>char *</td><td>mi_mem_strdup</td><td>*text</td>
+</tr>
+</table>
+<h3>Thread Parallelism and Locks</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th>
+<th><i>name</i></th>
+<th><i>arguments</i></th>
+</tr>
+<tr>
+<td>void</td><td>mi_init_lock</td><td>*lock</td>
+</tr>
+<tr>
+<td>void</td><td>mi_delete_lock</td><td>*lock</td>
+</tr>
+<tr>
+<td>void</td><td>mi_lock</td><td>lock</td>
+</tr>
+<tr>
+<td>void</td><td>mi_unlock</td><td>lock</td>
+</tr>
+<tr>
+<td>int</td><td>mi_par_localvpu</td><td></td>
+</tr>
+<tr>
+<td>int</td><td>mi_par_nthreads</td><td></td>
+</tr>
+<tr>
+<td>int</td><td>mi_par_aborted</td><td></td>
+</tr>
+</table>
+<h3>Messages and Errors</h3>
+<table class="table">
+<tr>
+<th><i>type</i></th><th><i>name</i></th><th><i>arguments</i></th>
+</tr>
+<tr>
+<td>void</td><td>mi_fatal</td><td>*message, ...</td>
+</tr>
+<tr>
+<td>void</td><td>mi_error</td><td>*message, ...</td>
+</tr>
+<tr>
+<td>void</td><td>mi_warning</td><td>*message, ...</td>
+</tr>
+<tr>
+<td>void</td><td>mi_info</td><td>*message, ...</td>
+</tr>
+<tr>
+<td>void</td><td>mi_progress</td><td>*message, ...</td>
+</tr>
+<tr>
+<td>void</td><td>mi_debug</td><td>*message, ...</td>
+</tr>
+<tr>
+<td>void</td><td>mi_vdebug</td><td>*message, ...</td>
+</tr>
+</table>
+
+<h3>Shader Calls</h3>
+
+Shaders can be called either explicitly, or implicitly by evaluating a shader
+parameter that may be assigned to the output of another shader.
+
+<p><a id="INDEX513"></a></p>
+<h5 class="anchor" id="api:mi_call_shader">mi_call_shader</h5>
+<pre>
+    miBoolean mi_call_shader(
+        miColor * const result,
+        miShader_type   type,
+        miState * const state,
+        miTag           shader)
+</pre>
+<p><a id="INDEX514"></a></p>
+<h5 class="anchor" id="api:mi_call_shader_x">mi_call_shader_x</h5>
+<pre>
+    miBoolean mi_call_shader_x(
+        miColor * const result,
+        miShader_type   type,
+        miState * const state,
+        miTag           shader,
+        void            *arg)
+</pre>
+<p class="brief">Call the shader specified by the tag <i>shader</i>.</p>
+<p>
+The extended version passes an additional <i>arg</i> parameter as a fourth
+argument to the shader. The function
+<i><a href="node138.html#INDEX514">mi_call_shader_x</a></i> is slightly more
+efficient than <i><a href="node138.html#INDEX513">mi_call_shader</a></i>.</p>
+<p>
+The <var>shader</var>tag is normally a <a href="node166.html#INDEX846">texture
+shader</a> or <a href="node120.html#INDEX471">light shader</a> or some other
+type of shader found in the calling shader's parameter list. The caller must
+pass its own state and the shader type, which must be one of
+<code>miSHADER_LENS</code>, <code>miSHADER_MATERIAL</code>,
+<code>miSHADER_LIGHT</code>, <code>miSHADER_SHADOW</code>,
+<code>miSHADER_ENVIRONMENT</code>, <code>miSHADER_VOLUME</code>, and
+<code>miSHADER_TEXTURE</code>.
+The sequence of operations is:</p>
+<ol>
+<li><var>shader</var> is written into <code>state&rarr;shader</code>.</li>
+<li>If the called shader is dynamically loaded and has an init shader that
+has not been called yet, it is called now, with <var>state</var> as its only
+argument.</li>
+<li>The shader referenced by <var>shader</var> is called with three arguments:
+the <var>result</var> pointer, the given <var>state</var>, and the
+<a href="node65.html#INDEX142">shader parameter</a>s retrieved from
+<var>shader</var>.</li>
+<li>After the shader returns, <code>state&rarr;shader</code> is restored to
+its old value.</li>
+</ol>
+<p>The return value of the shader call is returned. The result value computed
+by the shader is returned in the variable pointed to by the <var>result</var>
+pointer. If the shader expects a result argument of a type other than
+<tt>miColor</tt>, the pointer must be cast to <tt>miColor</tt> when passed to
+<i><a href="node138.html#INDEX513">mi_call_shader</a></i>. Note, that the
+<i>shader</i> tag references an entire function call including
+<a href="node65.html#INDEX142">shader parameters</a> as defined in the scene,
+or in the .mi file with a <tt>texture</tt>, <tt>light</tt>, or some other
+statement, combining shading function and shader parameters to form a
+<a href="node65.html#mi:shader">shader instance</a>; it is not just a simple
+pointer or reference to a C function.</p>
+
+<p><a id="INDEX515"></a></p>
+<h5 class="anchor" id="api:mi_call_material">mi_call_material</h5>
+<pre>
+    miBoolean mi_call_material(
+        miColor         *result,
+        miState         *state);
+</pre>
+<p class="brief">Call the <a href="node115.html#INDEX440">material shader</a> in
+<code>state&rarr;material</code>.</p>
+<p>
+This works both for standard materials and Phenomenon materials.</p>
+
+<p><a id="INDEX516"></a></p>
+<h5 class="anchor" id="api:mi_call_photon_material">mi_call_photon_material</h5>
+<pre>
+    miBoolean mi_call_photon_material(
+        miColor         *result,
+        miState         *state);
+</pre>
+<p class="brief">Call the <a href="node142.html#INDEX580">photon shader</a> in
+<code>state&rarr;material</code>.</p>
+<p>
+This works both for standard materials and Phenomenon materials. It calls the
+photon shader of a material Phenomenon.</p>
+
+<p><a id="INDEX517"></a></p>
+<h5 class="anchor" id="api:mi_call_shadow_material">mi_call_shadow_material</h5>
+<pre>
+    miBoolean mi_call_shadow_material(
+        miColor         *result,
+        miState         *state);
+</pre>
+<p class="brief">Call the <a href="node121.html#INDEX481">shadow shader</a> in
+<code>state&rarr;material</code>.</p>
+<p>
+This works both for standard materials and Phenomenon materials.
+It calls the shadow shader of a material Phenomenon.</p>
+
+<p><a id="INDEX518"></a></p>
+<h5 class="anchor" id="api:mi_call_environment_material">mi_call_environment_material</h5>
+<pre>
+    miBoolean mi_call_environment_material(
+        miColor         *result,
+        miState         *state);
+</pre>
+<p class="brief">Call the <a href="node119.html#INDEX468">environment shader</a>
+in <code>state&rarr;material</code>.</p>
+<p>
+This works both for standard materials and Phenomenon materials.
+It calls the environment shader of a material Phenomenon.</p>
+
+<p><a id="INDEX519"></a></p>
+<h5 class="anchor" id="api:mi_call_volume_material">mi_call_volume_material</h5>
+<pre>
+    miBoolean mi_call_volume_material(
+        miColor         *result,
+        miState         *state);
+</pre>
+<p class="brief">Call the <a href="node117.html#INDEX460">volume shader</a> in
+<code>state&rarr;material</code>.</p>
+<p>
+This works both for standard materials and Phenomenon materials.
+It calls the volume shader of a material Phenomenon.</p>
+
+<p><a id="INDEX520"></a></p>
+<h5 class="anchor" id="api:mi_call_photonvol_material">mi_call_photonvol_material</h5>
+<pre>
+    miBoolean mi_call_photonvol_material(
+        miColor         *result,
+        miState         *state);
+</pre>
+<p class="brief">Call the photonvol shader in <code>state&rarr;material</code>.</p>
+<p>
+This works both for standard materials and Phenomenon materials. It
+calls the photonvol shader of a material Phenomenon.</p>
+
+<p><a id="INDEX521"></a></p>
+<h5 class="anchor" id="api:mi_call_contour_material">mi_call_contour_material</h5>
+<pre>
+    miBoolean mi_call_contour_material(
+        miContour_endpoint *result,
+        void               *info_near,
+        void               *info_far,
+        miState            *state);
+</pre>
+<p class="brief">Call the <a href="node133.html#INDEX499">contour shader</a> in
+<code>state&rarr;material</code>.</p>
+<p>
+This works both for standard materials and Phenomenon materials. It calls
+the contour shader of a material Phenomenon.
+<i><a href="node138.html#INDEX521">mi_call_contour_material</a></i> may only
+be called in contour mode, with a contour shader as parent of a
+shade tree. <var>info_near</var> and <var>info_far</var> must be
+passed from a parent contour shader. The contour contrast shader,
+the contour storage shader, and the contour shader itself must use
+matching <var>info_near</var> and <var>info_far</var> values. The
+info structures must have the same size and layout.</p>
+
+<a id="INDEX522"></a><a id="INDEX523"></a><a id="INDEX524"></a>
+<a id="INDEX525"></a><a id="INDEX526"></a><a id="INDEX527"></a>
+<a id="INDEX528"></a><a id="INDEX529"></a>
+<a id="api:mi_eval_boolean"></a><a id="api:mi_eval_color"></a>
+<a id="api:mi_eval_integer"></a><a id="api:mi_eval_scalar"></a>
+<a id="api:mi_eval_transform"></a><a id="api:mi_eval_tag"></a>
+<a id="api:mi_eval_vector"></a>
+<h5 class="anchor" id="api:mi_eval">mi_eval<br />
+mi_eval_boolean<br />
+mi_eval_color<br />
+mi_eval_integer<br />
+mi_eval_scalar<br />
+mi_eval_vector<br />
+mi_eval_transform<br />
+mi_eval_tag</h5>
+<pre>
+    void *mi_eval(
+        miState         *state,
+        void            *param)
+
+    miBoolean *mi_eval_boolean(
+        miBoolean       *param)
+
+    miColor *mi_eval_color(
+        miColor         *param)
+
+    miInteger *mi_eval_integer(
+        miInteger       *param)
+
+    miScalar *mi_eval_scalar(
+        miScalar        *param)
+
+    miScalar *mi_eval_transform(
+        miScalar        *param)
+
+    miVector *mi_eval_vector(
+        miVector        *param)
+
+    miTag *mi_eval_tag(
+        miTag           *param)
+</pre>
+<p class="brief"><a id="INDEX530"></a><a id="INDEX531"></a>
+Return the value of a <a href="node65.html#INDEX142">shader parameter</a>.</p>
+<p>
+If the shader parameter value is a constant, then
+<i><a href="node138.html#INDEX522">mi_eval</a></i> returns its argument.
+If the parameter is assigned to another shader, call that shader
+<a href="#shd:cache">if needed</a> and return a pointer to its return value.
+If the parameter is assigned to a Phenomenon interface, return a pointer to
+the value in the interface. The latter two cases let shaders operate in the
+contexts of shader assignments and phenomena without needing knowledge of the
+context, which is automatically handled. The pointer remains valid until the
+shader returns, which avoids the need to copy a large returned data structure
+such as a color or array to temporary variables. Shaders should always access
+their parameters with <i><a href="node138.html#INDEX522">mi_eval</a></i>. If
+parameters are accessed directly and the parameter is assigned to another
+shader or an interface, the shader will see garbage.</p>
+<p>
+The typed variants of <i><a href="node138.html#INDEX522">mi_eval</a></i> are
+convenient macros for shader writers to avoid explicit type casting.
+They all make the assumption that the shader has a local variable <i>state</i>
+of type <tt>miState*</tt> in scope. These typed variants make shader
+source code look much cleaner. Note, that there is only one macro
+<i><a href="node138.html#INDEX529">mi_eval_tag</a></i> that can be used for
+parameters of type <code>shader</code>, <code>color texture</code>,
+<code>vector texture</code>, <code>scalar texture</code>, <code>light</code>,
+<code>material</code>, and <code>geometry</code>. All typed variants have been
+designed to return the same type they accept as an argument.</p>
+<p class="advice">
+Always use the correct simple type. For example, if the parameter has type
+<code>color</code>, it must be evaluated as a single color using
+<i>mi_eval_color</i>. It is not possible to use four scalar evaluations to
+access the R, G, B, and A components separately. Also, by convention, arrays
+should be evaluated as a unit, evaluating two integers for the <tt>i_</tt>
+index, the <tt>n_</tt> member count, and the array itself. However, structures
+are not evaluated as a unit; a separate evaluation is necessary for every
+simple member it contains.</p>
+<a id="shd:cache"></a>
+<p class="note">
+<b>Note</b>, for performance reasons, the return value of a shader call or a
+phenomenon evaluation will be stored internally in a cache. The cached value
+will be returned from subsequent
+<i><a href="node138.html#INDEX522">mi_eval</a></i> calls on the same parameter
+of a shader during the current evaluation of the shading graph. Shaders which
+need to enforce a complete re-computation of a connected shader graph, for
+example to sample a texture shader at different texture coordinates set in the
+<i>state</i>, should use the corresponding <a href="#api:mi_call">mi_call</a>
+functions.</p>
+
+<a id="api:mi_call_boolean"></a><a id="api:mi_call_color"></a>
+<a id="api:mi_call_integer"></a><a id="api:mi_call_scalar"></a>
+<a id="api:mi_call_transform"></a><a id="api:mi_call_tag"></a>
+<a id="api:mi_call_vector"></a>
+<h5 class="anchor" id="api:mi_call">mi_call<br />
+mi_call_boolean<br />
+mi_call_color<br />
+mi_call_integer<br />
+mi_call_scalar<br />
+mi_call_vector<br />
+mi_call_transform<br />
+mi_call_tag</h5>
+<pre>
+    void *mi_call(
+        miState         *state,
+        void            *param)
+
+    miBoolean *mi_call_boolean(
+        miBoolean       *param)
+
+    miColor *mi_call_color(
+        miColor         *param)
+
+    miInteger *mi_call_integer(
+        miInteger       *param)
+
+    miScalar *mi_call_scalar(
+        miScalar        *param)
+
+    miScalar *mi_call_transform(
+        miScalar        *param)
+
+    miVector *mi_call_vector(
+        miVector        *param)
+
+    miTag *mi_call_tag(
+        miTag           *param)
+</pre>
+<p class="brief">
+Return the value of a <a href="node65.html#INDEX142">shader parameter</a>.</p>
+<p>
+These functions are equivalent to <a href="#api:mi_eval">mi_eval</a> family
+of functions, but do not utilize the caching mechanism. If a shader calls
+this function on a parameter which is connected, then all shaders in the
+sub-shader chain (only) will be forced to re-compute and the result value
+will be returned. The original shader result cache is not affected nor
+destroyed by these functions, meaning, that any previous or following
+<a href="#api:mi_eval">mi_eval</a> call on the same parameter will use the
+original cache. These functions are intended for multiple evaluation of same
+shader parameter with temporary modifications to state variables, such as
+normal or texture coordinates for bump mapping.</p>
+<p class="note">
+<b>Note</b>, this is a <b>performance critical</b> operation, and these functions
+should be used with care, <em>only</em> in cases where shader result caching
+is explicitly <em>not wanted</em>. They are intended to be used as replacement
+for the <a href="#api:mi_flush_cache">mi_flush_cache</a> function, since they
+allow to write advanced shaders with a more predictable performance impact.</p>
+
+<p><a id="INDEX532"></a></p>
+<h5 class="anchor" id="api:mi_flush_cache">mi_flush_cache</h5>
+<pre>
+    void mi_flush_cache(
+        miState         *state)
+</pre>
+<p class="brief"><span class="depr">Deprecated</span>
+Invalidates the shader result cache from being used by future calls to
+<i><a href="node138.html#INDEX522">mi_eval</a></i>.</p>
+<p>
+Future implementations should use the <a href="#api:mi_call">mi_call</a>
+family of functions. since they offer a more predictable way to re-evaluate
+dedicated sub-shader graphs which are attached to a certain parameter.</p>
+<p>
+If <i><a href="node138.html#INDEX522">mi_eval</a></i> calls another shader,
+the result value is stored in a cache, which is normally flushed only when the
+entire shader graph returns. This means that the other shader will only ever
+be called once during the evaluation of a shader graph, and all
+<i><a href="node138.html#INDEX522">mi_eval</a></i>s are satisfied from the
+cache. Note, that flushing applies to the entire sub-graph of shaders
+evaluated by subsequent <i><a href="node138.html#INDEX522">mi_eval</a></i>s;
+there is no way to flush the cache of individual shaders because that would
+leave their sub-shaders in a funny state. The result cache is still active
+for the shader which calls
+<i><a href="node138.html#INDEX532">mi_flush_cache</a></i>.</p>
+<p>
+This is useful if the code calls a another shader more than once, such as a
+texture shader to sample a texture at different locations to compute
+<a href="node115.html#INDEX453">bump mapping</a> gradients. Even if a shader
+itself, if called with
+<i><a href="node138.html#INDEX513">mi_call_shader</a></i> or
+<i><a href="node150.html#INDEX741">mi_lookup_color_texture</a></i>,
+will get called each time again, its sub-shaders inside the same Phenomenon
+will not if these subshaders are called as the result of
+<i><a href="node138.html#INDEX522">mi_eval</a></i> (since those results are
+cached). However, if <i><a href="node138.html#INDEX532">mi_flush_cache</a></i>
+is used before the second and every subsequent shader call, the called shader's
+<i><a href="node138.html#INDEX522">mi_eval</a></i> calls will cause a fresh
+subshader call.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node137.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node139.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

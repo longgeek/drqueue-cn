@@ -1,0 +1,71 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+#import <mi_msl_shared.msl>
+
+shader Component_ward
+{
+  input:    
+    float shininess_u = 5.0
+    {			
+	display_name("Specular Shininess U");
+	soft_range(float(0),float(100));
+	description( "Width of specular highlights along U-axis "
+	"of the textures mapped to the surface." );
+    };
+    float shininess_v = 60.0    
+    {	
+	display_name("Specular Shininess V");
+	soft_range(float(0),float(100));
+	description( "Width of specular highlights along U-axis "
+	"of the textures mapped to the surface." );
+    };
+
+  output:
+    Color diffuse;
+    Color specular;
+
+    void main() 
+    {        
+	diffuse  = Color(0,0,0,0);
+	specular = Color(0,0,0,0);
+
+	float3 vdir = direction;
+	float3 tangent_u = texture_tangent_u[0];
+	float3 tangent_v = texture_tangent_v[0];
+
+	// enumerate lights
+	Light_iterator light;
+	foreach (light)
+	{
+	    float d = saturate(light.dot_nl);
+	    if (d > 0.0) {
+		diffuse += (d / PI) * light.contribution;
+
+		float s = mi_ward_anisglossy(vdir, 
+			light.direction, 
+			normal,
+			tangent_u,
+			tangent_v,
+			shininess_u,
+			shininess_v);
+
+		specular += s * light.contribution;
+	    }
+	}
+
+	// irradiance term
+	Irradiance_options irradiance_options;
+	irradiance_options.set_importance(1.0);
+	diffuse += (1.0 / PI) * irradiance(irradiance_options);
+
+	diffuse.a = 1.0;
+	specular.a = 1.0;
+    }
+}
+{
+    description( "An illumination model for anisotropic "
+    "specular surfaces, such as brushed metal or cloth." );
+}
+;

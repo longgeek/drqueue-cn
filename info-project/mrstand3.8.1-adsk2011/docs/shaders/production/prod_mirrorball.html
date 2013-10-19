@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="Author" content="mental images GmbH">
+<meta name="Company" content="mental images">
+<meta name="Creator" content="hypertex">
+<meta name="CreatorVersion" content="1.0">
+<meta name="CreationDate" content="18 Feb 2010">
+<link rel="stylesheet" type="text/css" href="mental.css">
+<style type="text/css"> i {color:darkred} dfn {font-style:italic}
+var {font-weight:bold; color:black} </style><a name="mimirrorball"></a>
+<title>Mirror/Gray Ball Shaders</title>
+</head><body>
+<ul class="nav">
+<li><a href="production.html">home</a></li>
+<li><a href="prod_utility.html">&laquo;&nbsp;prev</a></li>
+<li><a href="prod_mattecamera.html">next&nbsp;&raquo;</a></li>
+</ul>
+<h1>Mirror/Gray Ball Shaders</h1>
+<p>
+<h2 id="Introduction">Introduction</h2>
+<p>
+In the visual effects industry it is common to shoot a picture of a 
+mirror ball (aka a &quot;light probe&quot;) on set, as well as a gray ball
+for lighting reference.
+<p>
+Ideally, one shoots these at multiple exposures and uses a tool
+<a href="#Foot1" title="For example Photosphere (Mac) or HDRShop (PC)"><sup>1</sup></a> to combine
+these into a single high dynamic range image and/or 
+unwrap the mirrored/gray ball into a spherical environment map.
+<p>
+However, it is often difficult to regain the proper orientation of
+spherical map so it matches the camera used to render the CG scene.
+Furthermore, a single photo of a mirror/gray ball contains poor data
+for certain angles that one want to avoid seeing in the final render.
+<p>
+These shaders are intended to simplify a special case: When the
+mirror/gray ball is already shot from the <em>exact camera angle</em>
+that the final image will be rendered from.
+<p>
+It simply utilizes the mental ray camera coordinate space and applies
+the mirror/gray ball in this space, hence the orientation of the
+reflections will always 'stick' to the rendering camera.
+<p>
+<h2 id="Mirror_Ball">Mirror Ball</h2>
+<p>
+This shader is intended as an <em>environment</em> shader, since it looks
+up based on the ray direction. It will map the proper direction to a
+point on the mirrored ball and retrieve its color.
+<p>
+<pre>
+declare shader "mip_mirrorball" (
+        color  texture "texture",
+        scalar "multiplier"   default 1.0,
+        scalar "degamma"      default 1.0,
+        scalar "blur"         default 0.0,
+    )
+    apply texture, environment
+    version 3
+end declare
+</pre>
+<p>
+The <b>texture</b> parameter should point to an image of a mirrored ball
+that is cropped so the ball exactly touches the edges of the image. 
+Ideally it should point directly to a mental ray color texture but it 
+<em>can</em> also be another shader. 
+<p>
+If necessary, the shader can apply an inverse gamma correction to
+the texture by the <b>degamma</b> parameter. If gamma is handled
+by other shaders in the chain, or if the global mental ray gamma 
+is used, use a value of 1.0, which means &quot;unchanged&quot;.
+<p>
+The color is multiplied by the <b>multiplier</b> and
+<em>if the <b>texture</em> parameter points to a literal mental ray texture</b>,
+the <b>blur</b> parameter can be used to blur it.
+<p>
+<h2 id="Gray_Ball">Gray Ball</h2>
+<p>
+This shader is can be used either as an <em>environment</em> shader or a 
+texture shader, since it looks up based on the direction of the surface 
+normal. It will map the normal vector direction to a point on the gray 
+ball and retrieve its color.
+<p>
+<pre>
+declare shader "mip_grayball" (
+        color  texture "texture",
+        scalar "multiplier"   default 1.0,
+        scalar "degamma"      default 1.0,
+        scalar "blur"         default 0.0,
+    )
+    apply texture, environment
+    version 3
+end declare
+</pre>
+<p>
+The parameters are identical to <b>mip_mirrorball</b>.
+<p>
+<h2 id="Examples">Examples</h2>
+<p>
+Here are the photos used for the example renderings:
+<div class="pic">
+<img width="80%" src="images/prod-mirrorball.jpg" alt="The mirror ball photo"><br />The mirror ball photo<br /><img width="80%" src="images/prod-grayball.jpg" alt="The gray ball photo"><br />The gray ball photo<br /></div>
+<p>
+Here are a few objects with an environment made using <b>mip_mirrorball</b>.
+The objects are also lit by final gathering based on same environment:
+<div class="pic">
+<img width="80%" src="images/prod-mirrorball-1.jpg" alt="One angle"><br />One angle<br /><img width="80%" src="images/prod-mirrorball-2.jpg" alt="Another angle"><br />Another angle<br /></div>
+<p>
+What is noteworthy in the above images is how the orientation of reflections 
+stay constant parallel to the camera. Therefore, this shader is only intended
+to be used when the rendering camera direction (roughly) matches the direction
+from which the mirror ball was photographed.
+<p>
+When using the gray ball shader:
+<div class="pic">
+<img width="80%" src="images/prod-grayball-1.jpg" alt="Raw mip_grayball shader"><br />Raw mip_grayball shader<br /><img width="80%" src="images/prod-grayball-2.jpg" alt="Using ambient occlusion"><br />Using ambient occlusion<br /></div>
+<p>
+The left image is the raw output of the <b>mip_grayball</b> shader,
+but in the right the shader is put into the <b>bright</b> slot of
+the <b>mib_amb_occlusion</b> shader, where it is occluded and looked 
+up with bent normals<a href="#Foot2" title="If one do not desire the bent normal lookup of mib_amb_occlusion, set its mode parameter to -1. Then the bright parameter is looked up using the original (un-bent) normal, which can yield a smoother result. "><sup>2</sup></a>.
+<p>
+More usage tips can be found on page <a href="prod_mattecamera.html#matteuseagetips">matteuseagetips</a>.
+<p><hr><p><dl>Footnotes
+<a name="Foot1"></a><dt>1
+<dd>For example Photosphere (Mac) or HDRShop (PC)
+<a name="Foot2"></a><dt>2
+<dd>
+   If one do not desire the bent normal lookup of <b>mib_amb_occlusion</b>,
+   set its <b>mode</b> parameter to -1. Then the <b>bright</b> parameter
+   is looked up using the original (un-bent) normal, which can yield a
+   smoother result.
+
+</dl>
+<ul class="nav">
+<li><a href="production.html">home</a></li>
+<li><a href="prod_utility.html">&laquo;&nbsp;prev</a></li>
+<li><a href="prod_mattecamera.html">next&nbsp;&raquo;</a></li>
+</ul>
+</body></html>

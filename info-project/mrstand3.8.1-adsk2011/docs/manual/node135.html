@@ -1,0 +1,582 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Lightmap Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node134.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node136.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION133"></a>
+<a id="api:lightmap"></a>
+<h2>Lightmap Shaders</h2>
+<p><a id="INDEX501"></a> Lightmap shaders can be
+attached to materials to sample the object that the material is
+attached to, and compute a map that contains information about the
+object. The most common application is sampling illumination, or
+just <a href="node80.html#INDEX259">indirect illumination</a>, and
+storing it into a <a href="node78.html#INDEX241">writable
+texture</a> file that can be texture-mapped later during rendering.
+This makes rendering much faster, although the illumination
+contribution is now frozen into the object and cannot change with
+changing lighting conditions.</p>
+<p>Lightmap shaders are called in two different modes:</p>
+<ul>
+<li>In vertex mode, <code>state&rarr;type</code> is
+<tt>miRAY_LM_VERTEX</tt>. mental ray will call the shader in this
+mode once for every triangle vertex. The shader is expected to
+collect data about the object in this mode.</li>
+<li>In mesh mode, <code>state&rarr;type</code> is
+<tt>miRAY_LM_MESH</tt>. After all vertex samples have been taken,
+the shader is called once in mesh mode. It can now use the
+collected information to generate the final output.</li>
+</ul>
+<p>This section describes the lightmap shaders in the base shader
+library that is included with mental ray. It puts direct, and
+optionally also indirect, illumination into a
+<a href="node78.html#INDEX241">writable texture</a>. It is split into two
+shaders, <a id="INDEX502"></a> and
+<b><a id="INDEX503"></a>mib_lightmap_sample</b>, to make it
+easy to write a new sampling function without having to rewrite the
+entire lightmap shader. The sample shader is attached to the main
+shader as a shader parameter.</p>
+<p>In vertex mode, the main shader could simply sample the
+illumination and store it in the texture, but this would result in
+a texture with only a few isolated dots. (This might be a good
+approach for generating vertex color for a hardware game engine
+though.) The shader could also sample and save the illumination and
+during vertex mode and then paint triangles into the texture in
+mesh mode by interpolating these points, but this would result in
+very coarse lightmap. Therefore, the standard shader in the base
+shader library that comes with mental ray and that is listed below
+only collects point, normal, and
+<a href="node108.html#INDEX409">texture coordinate</a>s in vertex mode, and
+paints triangles during mesh mode by sampling for every written
+pixel.</p>
+<a id="ex_lightmap_shader"></a>
+<p>Here is the standard lightmap base shader:</p>
+<p><a id="INDEX504"></a></p>
+<pre>
+    typedef struct mib_lightmap_write_result{
+        miVector        point;          /* point in space */
+        miVector        normal;         /* vertex normal */
+        miVector        tex;            /* texture coordinates of vertex */
+    } mib_lightmap_write_result;
+
+    typedef struct mib_lightmap_write_param{
+        miTag           texture;        /* writable texture */
+        miTag           coord;          /* texture coordinate shader */
+        miTag           sample_sh;      /* sampling shader */
+    } mib_lightmap_write_param;
+
+    DLLEXPORT miBoolean mib_lightmap_write(
+        mib_lightmap_write_result *result,
+        miState                   *state,
+        mib_lightmap_write_param  *param,
+        miRclm_mesh_render const  *arg)   /* argument */
+    {
+        int             i;
+        mib_lightmap_write_result const *resdata;
+        miImg_image     *img;
+        miTag           tex_tag;
+        miTag           shader_tag;
+        miTag           coordshader_tag;
+        void            *handle;
+        miBoolean       success;
+
+        switch (state-&gt;type) {
+          case miRAY_LM_VERTEX:
+                /* Gathering vertex data */
+                result-&gt;point  = state-&gt;point;
+                result-&gt;normal = state-&gt;normal;
+                mi_vector_normalize(&amp;result-&gt;normal);
+                coordshader_tag = *mi_eval_tag(&amp;param-&gt;coord);
+                /* need to call the shader to get access to the success value*/
+                success = mi_call_shader_x((miColor*)&amp;result-&gt;tex,
+                                miSHADER_TEXTURE, state, coordshader_tag, 0);
+                if (!success)
+                        result-&gt;tex.x = -1; /* mark this vertex as bad */
+                break;
+
+          case miRAY_LM_MESH:
+                if (!arg)
+                        return(miFALSE);
+
+                tex_tag    = *mi_eval_tag(&amp;param-&gt;texture);
+                shader_tag = *mi_eval_tag(&amp;param-&gt;sample_sh);
+
+                if (!tex_tag || !shader_tag)
+                        return(miFALSE);
+
+                if (!(img = mi_lightmap_edit(&amp;handle, tex_tag)))
+                        return(miFALSE);
+
+                resdata = (mib_lightmap_write_result const *)arg-&gt;vertex_data;
+
+                for (i=0; i &lt; arg-&gt;no_triangles; i++) {
+<div class="news">                        mi_state_set_pri(state, arg-&gt;pri, arg-&gt;triangles[i].pri_idx);
+</div>                        
+                        mib_lightmap_do_triangle(state, img,
+                                &amp;resdata[arg-&gt;triangles[i].a],
+                                &amp;resdata[arg-&gt;triangles[i].b],
+                                &amp;resdata[arg-&gt;triangles[i].c],
+                                shader_tag);
+                }
+                mi_lightmap_edit_end(handle);
+        }
+        return(miTRUE);
+    }
+</pre>
+<p>The marked line shows new functionality
+using <i><a href="node154.html#api:mi_state_set_pri">mi_state_set_pri</a></i>.
+<p>Note the use of the texture access functions
+<i><a href="node154.html#INDEX792">mi_lightmap_edit</a></i> and
+<i><a href="node154.html#INDEX793">mi_lightmap_edit_end</a></i>, which give
+the shader writing access to the
+<a href="node78.html#INDEX241">writable texture</a>. The texture must be
+defined with the <tt>writable</tt> flag for this to work. It is not
+sufficient to use standard access functions like
+<i><a href="node139.html#INDEX540">mi_db_access</a></i> because they do not
+permit writing access, and because they would not cause the
+finished texture to be written to disk.</p>
+<p>In mesh mode, mental ray uses the fourth argument <i>arg</i> of
+the lightmap shader to pass triangle information and the data
+collected in vertex mode:</p>
+<pre>
+    typedef struct miRclm_mesh_render {
+        struct miRc_intersection *pri;
+        int                     no_triangles;
+        miRclm_triangle const   *triangles;
+        void const              *vertex_data;
+    } miRclm_mesh_render;
+
+    typedef struct miRclm_triangle {
+        miInteger       a;
+        miInteger       b;
+        miInteger       c;
+        miGeoIndex      pri_idx;
+    } miRclm_triangle;
+</pre>
+<p>The <i>vertex_data</i> is an array of the data blocks stored by
+the lightmap shader in vertex mode. The <i>triangles</i> array
+contains <i>no_triangles</i> records of the type
+<tt>miRclm_triangle</tt>. The shader will loop over these
+triangles, scan-converting each into the writable texture. Each
+triangle has three vertex indices that are indices into the
+<i>vertex_data</i> array. For example, to find the data that the
+lightmap shader has stored when it was called for the first vertex
+of the fifth triangle, it uses this expression:</p>
+<pre>
+    typedef struct {...} Stored;
+    Stored *list   = (Stored *)arg-&gt;vertex_data;
+    Stored *vertex = &amp;list[arg-&gt;triangles[5].a];
+</pre>
+<p>This assumes that the fourth shader argument is named
+<i>arg</i>. The <i>pri</i> pointer identifies the object that is
+being lightmapped. If the shader needs to cast rays or call other
+mental ray functions, it should store this pointer in the state
+using the function
+<i><a href="node154.html#api:mi_state_set_pri">mi_state_set_pri</a></i>
+<span class="new">3.6</span>. Previous versions of mental ray had
+to store the
+pointer directly into <code>state&rarr;pri</code>, and also store
+the <i>pri_idx</i> in the <tt>miRclm_triangle</tt> struct in
+<code>state&rarr;pri_idx</code>.</p>
+<p>The data collected in vertex mode is stored in
+<i>vertex_data</i> by mental ray. For this to work, the main shader
+must be declared correctly with all return variables, so that
+mental ray knows how many bytes to allocate:</p>
+<pre>
+    declare shader
+        struct {
+                vector          "point",
+                vector          "normal",
+                vector          "tex"
+        }
+
+        "mib_lightmap_write" (
+                color texture   "texture",     # output texture
+                vector texture  "coord",       # texture coords to use
+                color texture   "input"        # evaluated texture
+        )
+        version 1
+    end declare
+</pre>
+<p>Here is the lightmap sample shader that generates colors for the
+main <a href="node135.html#INDEX501">lightmap shader</a> to store
+into the <a href="node78.html#INDEX241">writable texture</a>. It
+simply computes the light <a href="node48.html#INDEX97">irradiance</a>
+at the current intersection
+point. It relies on the point, normal, and tex data stored in mesh
+mode.</p>
+<p><a id="INDEX505"></a></p>
+<pre>
+    typedef struct mib_lightmap_sample_param{
+        miBoolean       indirect;       /* do indirect illumination? */
+        int             flip;           /* flip normals? */
+        int             i_light;
+        int             n_light;
+        miTag           light[1];       /* lights to sample */
+    } mib_lightmap_sample_param;
+
+    DLLEXPORT miBoolean mib_lightmap_sample(
+        miColor         *result,
+        miState         *state,
+        mib_lightmap_sample_param *param)
+    {
+        int             i_light;
+        int             n_light;
+        miTag           *light;
+        miColor         color, sum;
+        int             l, m;
+        int             flip;
+        int             times;
+
+        flip    = *mi_eval_integer(&amp;param-&gt;flip);
+        i_light = *mi_eval_integer(&amp;param-&gt;i_light);
+        n_light = *mi_eval_integer(&amp;param-&gt;n_light);
+        light   =  mi_eval_tag(param-&gt;light) + i_light;
+
+        times = flip==2 ? 2 : 1;
+
+        result-&gt;r = result-&gt;g = result-&gt;b = 0.0f;
+        for (m=0; m&lt;times; m++) {
+                if (flip == 1 || m==1) {
+                        mi_vector_neg(&amp;state-&gt;normal);
+                        mi_vector_neg(&amp;state-&gt;normal_geom);
+                }
+                for (l=0; l &lt; n_light; l++) {
+                        miVector dir;
+                        miScalar dot_nl;
+                        int      samples = 0;
+
+                        sum.r = sum.g = sum.b = 0.0f;
+                        while (mi_sample_light(&amp;color, &amp;dir, &amp;dot_nl,
+                                                state, light[l], &amp;samples)) {
+                                sum.r += dot_nl * color.r;
+                                sum.g += dot_nl * color.g;
+                                sum.b += dot_nl * color.b;
+                        }
+                        if (samples) {
+                                result-&gt;r += sum.r / samples;
+                                result-&gt;g += sum.g / samples;
+                                result-&gt;b += sum.b / samples;
+                        }
+                }
+                /* indirect illumination */
+                if (*mi_eval_boolean(&amp;param-&gt;indirect)) {
+                        mi_compute_irradiance(&amp;color, state);
+                        result-&gt;r += color.r;
+                        result-&gt;g += color.g;
+                        result-&gt;b += color.b;
+                }
+        }
+        if (flip &gt;= 0) {
+                mi_vector_neg(&amp;state-&gt;normal);
+                mi_vector_neg(&amp;state-&gt;normal_geom);
+        }
+        result-&gt;a = 1.0f;
+        return(miTRUE);
+    }
+</pre>
+<p>The main shader uses a static function to scan-convert triangles
+in mesh mode. The following function paints a single triangle into
+the writable texture, evaluating illumination for every painted
+pixel. The triangle extents are determined in pixel space. Next, a
+mapping from pixel space to barycentric coordinates is computed,
+and a loop over the pixels whose centers fall within the triangle
+performs the actual sampling. This is done by using a scanline
+approach where a line pair is generated for the upper and lower
+part of the triangle. This makes certain that inside detection for
+adjacent triangles is handled identically and so no pixels are
+missed. For each such center an intersection is computed and a
+source shader called to get a value which is then stored in the
+writable texture.</p>
+<pre>
+    typedef struct Line2d {
+        float           s;      /* slope */
+        float           o;      /* offset */
+    } Line2d;
+
+    static void mib_lightmap_do_triangle(
+        miState         *state,
+        miImg_image     *img,
+        mib_lightmap_write_result const *a,
+        mib_lightmap_write_result const *b,
+        mib_lightmap_write_result const *c,
+        miTag           shader_tag)
+    {
+
+        miVector        pixa, pixb, pixc;
+        miMatrix        tmp1, tmp2;
+        miMatrix        pixel_to_bary;
+        miVector        p;
+        miVector        d1, d2;
+        miVector const  *pix_y[3], *tmp;
+        Line2d          line[3];
+        Line2d const    *left[2], *right[2];
+        float           y_min, y_max;
+        miBoolean       long_right;
+
+        /* give up if any of the vertices was marked as not-to-use */
+        if (a-&gt;tex.x &lt; 0 || b-&gt;tex.x &lt; 0 || c-&gt;tex.x &lt; 0)
+                return;
+        /*
+         * compute pixel coordinates from texture coordinates. They are offset
+         * by half so that integer values land in the center of the pixels.
+         */
+        pixa.x = a-&gt;tex.x * img-&gt;width  - 0.5f;
+        pixb.x = b-&gt;tex.x * img-&gt;width  - 0.5f;
+        pixc.x = c-&gt;tex.x * img-&gt;width  - 0.5f;
+        pixa.y = a-&gt;tex.y * img-&gt;height - 0.5f;
+        pixb.y = b-&gt;tex.y * img-&gt;height - 0.5f;
+        pixc.y = c-&gt;tex.y * img-&gt;height - 0.5f;
+
+        pix_y[0] = &amp;pixa;       /* sort vertices in y increasing order */
+        pix_y[1] = &amp;pixb;
+        pix_y[2] = &amp;pixc;
+        if (pix_y[0]-&gt;y &gt; pix_y[1]-&gt;y) {
+                tmp = pix_y[0]; pix_y[0] = pix_y[1]; pix_y[1] = tmp;
+        }
+        if (pix_y[1]-&gt;y &gt; pix_y[2]-&gt;y) {
+                tmp = pix_y[1]; pix_y[1] = pix_y[2]; pix_y[2] = tmp;
+        }
+        if (pix_y[0]-&gt;y &gt; pix_y[1]-&gt;y) {
+                tmp = pix_y[0]; pix_y[0] = pix_y[1]; pix_y[1] = tmp;
+        }
+
+        if (pix_y[0]-&gt;y &gt;= pix_y[2]-&gt;y)         /* avoid empty triangles */
+                return;
+
+        /* compute lines */
+        line[0].s = (pix_y[1]-&gt;x - pix_y[0]-&gt;x) / (pix_y[1]-&gt;y - pix_y[0]-&gt;y);
+        line[0].o = pix_y[0]-&gt;x  - pix_y[0]-&gt;y * line[0].s;
+
+        line[1].s = (pix_y[2]-&gt;x - pix_y[1]-&gt;x) / (pix_y[2]-&gt;y - pix_y[1]-&gt;y);
+        line[1].o = pix_y[1]-&gt;x  - pix_y[1]-&gt;y * line[1].s;
+
+        line[2].s = (pix_y[2]-&gt;x - pix_y[0]-&gt;x) / (pix_y[2]-&gt;y - pix_y[0]-&gt;y);
+        line[2].o = pix_y[0]-&gt;x  - pix_y[0]-&gt;y * line[2].s;
+
+        /* remove degenerate line */
+        if (pix_y[1]-&gt;y == pix_y[0]-&gt;y) {
+                line[0] = line[1];
+                long_right = line[1].s &gt; line[2].s;
+        } else if (pix_y[2]-&gt;y == pix_y[1]-&gt;y) {
+                line[1] = line[0];
+                long_right = line[0].s &lt; line[2].s;
+        } else
+                long_right = line[0].s &lt; line[2].s;
+
+        if (long_right) {                       /* arrange the lines */
+                left[0]  = &amp;line[0];
+                left[1]  = &amp;line[1];
+                right[0] = &amp;line[2];
+                right[1] = &amp;line[2];
+        } else {
+                left[0]  = &amp;line[2];
+                left[1]  = &amp;line[2];
+                right[0] = &amp;line[0];
+                right[1] = &amp;line[1];
+        }
+
+        /*
+         * pixel to barycentric coordinate transform. This is a 2D homogeneous
+         * problem (to allow for translation) so the third component is set to
+         * 1 and we have a 3-by-3 matrix equation.
+         */
+        mi_matrix_ident(tmp1);
+        tmp1[ 0] = pixa.x;
+        tmp1[ 4] = pixb.x;
+        tmp1[ 8] = pixc.x;
+        tmp1[ 1] = pixa.y;
+        tmp1[ 5] = pixb.y;
+        tmp1[ 9] = pixc.y;
+        tmp1[ 2] = 1.0f;
+        tmp1[ 6] = 1.0f;
+        tmp1[10] = 1.0f;
+        mi_matrix_ident(tmp2);  /* corresponds to barycentric vectors */
+        /* solve pix * pix_to_space = bary */
+        if (!mi_matrix_solve(pixel_to_bary, tmp1, tmp2, 4))
+                return;
+                                /* compute geometric normal of the triangle */
+        mi_vector_sub(&amp;d1, &amp;b-&gt;point, &amp;a-&gt;point);
+        mi_vector_sub(&amp;d2, &amp;c-&gt;point, &amp;a-&gt;point);
+        mi_vector_prod(&amp;state-&gt;normal_geom, &amp;d1, &amp;d2);
+        mi_vector_normalize(&amp;state-&gt;normal_geom);
+
+        state-&gt;pri     = pri;   /* set up primitive */
+        state-&gt;pri_idx = pri_idx;
+
+        p.z = 1.0f;             /* Loop over the texture y range */
+        y_min = ceil(pix_y[0]-&gt;y);
+        if (y_min &lt; 0)
+                y_min = 0;
+
+        y_max = floor(pix_y[2]-&gt;y);
+        if (y_min &gt;= img-&gt;height)
+                y_min = img-&gt;height-1;
+
+        for (p.y=y_min; p.y &lt;= y_max; p.y++) {
+                float   left_x, right_x;
+                int     i = p.y &lt; pix_y[1]-&gt;y ? 0 : 1;
+
+                /* Loop over texture X range */
+                left_x  = ceil(left[i]-&gt;o  + p.y*left[i]-&gt;s);
+                if (left_x&lt;0)
+                        left_x = 0;
+
+                right_x = floor(right[i]-&gt;o + p.y*right[i]-&gt;s);
+                if (right_x&gt;=img-&gt;width)
+                        right_x = img-&gt;width-1;
+
+                for (p.x=left_x; p.x &lt;= right_x; p.x++) {
+                        miVector bary;
+                        miColor  color;
+
+                        mi_vector_transform(&amp;bary, &amp;p, pixel_to_bary);
+
+                        /* constrain barycentric coordinates to triangle */
+                        mib_lightmap_bary_fixup(&amp;bary);
+
+                        /* pixel center is inside triangle */
+                        mib_lightmap_combine_vectors(&amp;state-&gt;point,
+                                        &amp;a-&gt;point, &amp;b-&gt;point, &amp;c-&gt;point,
+                                        &amp;bary);
+                        mib_lightmap_combine_vectors(&amp;state-&gt;normal,
+                                        &amp;a-&gt;normal, &amp;b-&gt;normal, &amp;c-&gt;normal,
+                                        &amp;bary);
+                        mi_vector_normalize(&amp;state-&gt;normal);
+
+                        /* get the color to write */
+                        mi_call_shader_x(&amp;color, miSHADER_MATERIAL,
+                                                state, shader_tag, 0);
+                        /* write to the image */
+                        mi_img_put_color(img, &amp;color, (int)p.x, (int)p.y);
+                }
+        }
+    }
+
+
+    /*
+     * combine vectors using weights
+     */
+
+    static void mib_lightmap_combine_vectors(
+        miVector        *res,
+        miVector const  *a,
+        miVector const  *b,
+        miVector const  *c,
+        miVector const  *bary)
+    {
+        res-&gt;x = bary-&gt;x * a-&gt;x + bary-&gt;y * b-&gt;x + bary-&gt;z * c-&gt;x;
+        res-&gt;y = bary-&gt;x * a-&gt;y + bary-&gt;y * b-&gt;y + bary-&gt;z * c-&gt;y;
+        res-&gt;z = bary-&gt;x * a-&gt;z + bary-&gt;y * b-&gt;z + bary-&gt;z * c-&gt;z;
+    }
+
+
+    /*
+     * Correct barycentric coordinates by projecting them to the
+     * barycentric plane.  The plane equation is (P-u)*n = 0, where
+     * 'u' is e.g. (1 0 0) and 'n' is the plane normal (1 1 1).
+     * We seek a scalar s so that
+     * (B-sn-u)*n = 0 =&gt; s = ((u-B)*n) / (n*n)
+     * and then add s*n to B.
+     *
+     * We then clip the barycentric coordinates and as a final touch,
+     * compute z as a function of x and y since they are not independent.
+     * This means that we can leave z out of the projection and
+     * clipping phase
+     */
+
+    static void mib_lightmap_bary_fixup(
+        miVector        *bary)
+    {
+        float           s;
+
+        s = (1.0f - bary-&gt;x - bary-&gt;y - bary-&gt;z)/3.0f;
+        bary-&gt;x += s;
+        bary-&gt;y += s;
+
+        /* now clip coordinates */
+        if (bary-&gt;x &lt; 0.0f)
+                bary-&gt;x = 0.0f;
+        else if (bary-&gt;x &gt; 1.0f)
+                bary-&gt;x = 1.0f;
+
+        if (bary-&gt;y &lt; 0.0f)
+                bary-&gt;y = 0.0f;
+        else if (bary-&gt;y + bary-&gt;x &gt; 1.0f)
+                bary-&gt;y = 1.0f-bary-&gt;x;
+
+        /* Finally, compute the dependent z */
+        bary-&gt;z = 1.0f - bary-&gt;x - bary-&gt;y;
+    }
+</pre>
+<p><a id="miqpixelsample"></a> If the
+lightmap shader wishes to cast rays, and apply proper jittering,
+mental ray offers special jittering support. Suppose the shader
+needs to sample the lightmap texture raster coordinate <i>p</i>, it
+can derive a jittered raster coordinate <i>p</i> like this:</p>
+<pre>
+    double jitter[2];
+    state-&gt;raster_x = p.x;
+    state-&gt;raster_y = p.y;
+    if (mi_query(miQ_PIXEL_SAMPLE, state, 0, jitter) &amp;&amp;
+        state-&gt;options-&gt;jitter) {
+        p.x += jitter[0];
+        p.y += jitter[1];
+    }
+</pre>
+<p>This code fragment initializes QMC sequences and provides a
+jittered subpixel coordinate offset. It uses the
+<tt>miQ_PIXEL_SAMPLE</tt> mode of
+<i><a href="miquery.html#api:mi_query">mi_query</a></i>. Note that
+the function should be called even if jittering is disabled. The
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> function in older versions
+of mental ray will return false if miQ_PIXEL_SAMPLE (or the numeric
+equivalent 143) is not supported.</p>
+<p>The full version of the shader source code is published and
+available on the mental images FTP server.</p>
+<p>Lightmapping used with finalgathering requires a special
+attention. In practice there are two commonly used types of
+lightmap shaders: shaders which compute illumination on vertices
+and interpolate the per-vertex results in the mesh mode, and
+shaders which compute per-pixel shading.</p>
+<p>For the former case, mental ray computes a new finalgather point
+if <i>mi_compute_irradiance</i> is called at a vertex. The
+interpolation among finalgather points is disabled.</p>
+<p>In the latter case, mental ray kernel delegates the control over
+the order of sampling to a lightmap shader. For optimal results, it
+is recommended to implement the two-pass approach similar to the
+camera image rendering with finalgathering. In the first pass the
+lightmap shader may call <i>mi_finalgather_store</i> function in
+the <i>miFG_STORE_COMPUTE</i> mode on some sparsely selected pixels
+to force finalgather point computations. The second pass could be
+the standard shader evaluation over the mesh.</p>
+<p>Future support for on-demand lightmap generation may require
+changes to the way that the shader finds the writable texture (or
+writable user data) to write to; the tag will be stored in
+<tt>miRclm_mesh_render</tt> instead of being passed as a shader
+parameter. Shader writers should avoid writing more than one
+texture per lightmap shader to remain compatible with future
+versions of mental ray.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node134.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node136.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

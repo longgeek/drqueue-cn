@@ -1,0 +1,888 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Auxiliary Functions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node149.html">&laquo;&nbsp;prev</a></li>
+<li><a href="miquery.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION148"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_lookup_color_texture">mi_lookup_color_texture</a></li>
+<li><a href="#api:mi_lookup_color_texture_x">mi_lookup_color_texture_x</a></li>
+<li><a href="#api:mi_lookup_filter_color_texture">mi_lookup_filter_color_texture</a></li>
+<li><a href="#api:mi_lookup_filter_color_texture_x">mi_lookup_filter_color_texture_x</a></li>
+<li><a href="#api:mi_lookup_scalar_texture">mi_lookup_scalar_texture</a></li>
+<li><a href="#api:mi_lookup_scalar_texture_x">mi_lookup_scalar_texture_x</a></li>
+<li><a href="#api:mi_lookup_vector_texture">mi_lookup_vector_texture</a></li>
+<li><a href="#api:mi_texture_filter_project">mi_texture_filter_project</a></li>
+<li><a href="#api:mi_texture_filter_transform">mi_texture_filter_transform</a></li>
+<li><a href="#api:mi_luminance">mi_luminance</a></li>
+<li><a href="#api:mi_tri_vectors">mi_tri_vectors</a></li>
+<li><a href="#api:mi_texture_interpolate">mi_texture_interpolate</a></li>
+<li><a href="#api:mi_raster_unit">mi_raster_unit</a></li>
+<li><a href="#api:mi_shaderstate_set">mi_shaderstate_set</a></li>
+<li><a href="#api:mi_shaderstate_get">mi_shaderstate_get</a></li>
+<li><a href="#api:mi_shaderstate_enumerate">mi_shaderstate_enumerate</a></li>
+<li><a href="#api:mi_fb_put">mi_fb_put</a></li>
+<li><a href="#api:mi_fb_get">mi_fb_get</a></li>
+<li><a href="#api:mi_output_image_open">mi_output_image_open</a></li>
+<li><a href="#api:mi_output_image_close">mi_output_image_close</a></li>
+<li><a href="#api:mi_geoshader_add_result">mi_geoshader_add_result</a></li>
+<li><a href="#api:mi_geoshader_tesselate">mi_geoshader_tesselate</a></li>
+<li><a href="#api:mi_geoshader_tesselate_end">mi_geoshader_tesselate_end</a></li>
+<li><a href="#api:mi_geoshader_echo_tag">mi_geoshader_echo_tag</a></li>
+<li><a href="#api:mi_string_substitute">mi_string_substitute</a></li>
+<li><a href="#api:mi_volume_num_shaders">mi_volume_num_shaders</a></li>
+<li><a href="#api:mi_volume_cur_shader">mi_volume_cur_shader</a></li>
+<li><a href="#api:mi_volume_tags">mi_volume_tags</a></li>
+<li><a href="#api:mi_volume_instances">mi_volume_instances</a></li>
+<li><a href="#api:mi_volume_user_color">mi_volume_user_color</a></li>
+<li><a href="#api:mi_opacity_set">mi_opacity_set</a></li>
+<li><a href="#api:mi_opacity_get">mi_opacity_get</a></li>
+</ul>
+
+<h3>Auxiliary Functions</h3>
+<p id="INDEX741"></p>
+<h5 class="anchor" id="api:mi_lookup_color_texture">mi_lookup_color_texture</h5>
+<pre>
+    miBoolean mi_lookup_color_texture(
+    miColor* const  color,
+    miState* const  state,
+    const miTag     tag,
+    miVector* const coord)
+</pre>
+<p>Return the value in a color texture at a given coordinate.
+<p>The <var>tag</var> is assumed to be a texture as taken from a color
+texture parameter of a shader. This function checks whether the tag
+refers to a shader (procedural texture) or an image (file texture or byte
+stream), depending on which type of <tt>color texture</tt> statement was used
+in the .mi file. If <i>tag</i> is a shader, <i>coord</i> is stored in
+<code>state&rarr;tex</code>, the referenced texture shader is called, and
+its return value is returned. If <i>tag</i> is an image, <i>coord</i> is
+brought into the range <i>(0&hellip;1, 0&hellip;1)</i> by removing the integer part,
+the image is looked up at the resulting 2D coordinate, and <tt>miTRUE</tt>
+is returned. If the texture has been marked for filtering, like with the
+<a href="node78.html#mi:filter_texture"><tt>filter</tt> keyword</a> in the
+.mi file, then multi-level pyramid filtering is performed, a procedure derived
+from classical <a href="node22.html#INDEX46">mip-map texture</a>s. In both
+cases, the color resulting from the lookup is stored in <var>*color</var>.
+
+<h5 class="anchor" id="api:mi_lookup_color_texture_x">mi_lookup_color_texture_x
+<span class="new">3.8</span></h5>
+<pre>
+miBoolean mi_lookup_color_texture_x(
+    miColor* const  color,
+    miState* const  state,
+    const miTag     tag,
+    miVector* const coord,
+    const miScalar  filter)
+</pre>
+<p>Return the value in a filtered color texture at a given coordinate.
+<p>This function is similar to the previous function
+<i><a href="#api:mi_lookup_color_texture">mi_lookup_color_texture</a></i>
+but accepts an explicit <i>filter</i> parameter. Calling this function will
+enforce that the texture gets filtered on demand even if the texture scene
+element has not been marked with the <a href="node78.html#mi:filter_texture"><tt>filter</tt>
+keyword</a> in the scene description. If the texture has already been
+pre-filtered then the existing texture pyramid will be used for filtered
+lookup, taking the <var>filter</var> parameter into account and ignoring
+any given <code>filter</code> <var>scale</var> on the
+<a href="node78.html#mi:textures">texture</a> scene element.
+The <i>filter</i> parameter allows to adjust the filtering dynamically based
+upon properties computed in the shader, like the facing angle of the
+triangle. Its value range is between <var>(0.0&hellip;1.0)</var>. A value
+of <var>0.0</var> results in non-filtered lookup on the highest level of the
+texture pyramid.
+
+<p id="INDEX742"></p>
+<h5 class="anchor" id="api:mi_lookup_filter_color_texture">mi_lookup_filter_color_texture</h5>
+<pre>
+    typedef struct {
+        miScalar        eccmax;
+        miScalar        max_minor;
+        miScalar        circle_radius;
+        miBoolean       bilinear;
+        miScalar        spare[10];
+    } miTexfilter;
+
+    miBoolean mi_lookup_filter_color_texture(
+    miColor* const  color,
+    miState* const  state,
+    const miTag     tag,
+    const miTexfilter *paras,
+        miMatrix        ST)
+</pre>
+<p>Return the value in a elliptically filtered color texture at a given coordinate.
+<p>This function provides higher quality filtering than the multi-level
+pyramid filtering of
+<i><a href="node150.html#INDEX741">mi_lookup_color_texture</a></i> described
+above using a transformation <i>ST</i> which transforms the coordinate system
+centered in the current raster position in
+<a href="node101.html#INDEX372">screen space</a> to
+<a href="node85.html#INDEX314">texture space</a>. The functions
+<i><a href="node150.html#INDEX745">mi_texture_filter_project</a></i> and
+<i><a href="node150.html#INDEX746">mi_texture_filter_transform</a></i> are
+provided for helping to calculate this transformation matrix.</p>
+<p>This function expects that <i>tag</i> does not refer to a
+<a href="node166.html#INDEX846">texture shader</a>, that is, it
+works only on texture images. It will return <tt>miFALSE</tt> when
+used with incorrect parameters or if a projection failed.</p>
+<p>In the filtering algorithm a circle around the current raster
+position is projected to an ellipse in <a href="node85.html#INDEX314">texture
+space</a>, and returns the average
+color of all texture pixels inside the ellipse. If the texture
+defined by <i>tag</i> is a <a href="node249.html#INDEX1089">pyramid
+texture</a>, multi-level lookup of the texture pixels is performed
+to speed up the filtering. In the algorithm the level calculation
+is based on the minor radius of the ellipse.</p>
+<p>The filtering can be controlled by choosing different values in
+<i>paras</i>. If <i>paras</i> is a null, default values for medium
+filter quality are used.</p>
+<p>The <i>eccmax</i> field in <tt>miTexfilter</tt> specifies the
+maximum allowed eccentricity of the ellipse. It must be equal to or
+greater than 1.0. The eccentricity is defined by the ratio of the
+major and minor radius. Under severe projective distortion the
+ellipse can have a very large eccentricity and too many texture
+pixels would be covered by the elliptical area, resulting in long
+rendering times. In order to limit the filtering time in these
+cases, the eccentricity threshold can be specified. If the
+eccentricity is greater than this value, the minor radius of the
+ellipse is made larger allowing for a potentially higher level in
+the texture image pyramid since the level calculation is based on
+the minor radius.</p>
+<p>In this calculation a level is selected where the minor radius
+of the ellipse has a maximum length of <i>max_minor</i> texture
+pixels. In each successive level in the image pyramid the radius is
+divided by two, and there are fewer pixels inside the elliptical
+area. The useful range for <i>eccmax</i> is approximately 10 to 30,
+higher values will result in better antialiasing. For
+<i>max_minor</i> the range should be 3 to 8. Higher values result
+in better antialiasing.</p>
+<p>The size of the projected screen-space circle can be modified
+with the <i>circle_radius</i> parameter. Larger values will result
+in more blurring since the elliptical area is also made larger.
+Smaller values will increase the aliasing. The useful range for
+this field is 0.4 to 1.0.</p>
+<p>When a magnification area is detected, that is, an area in which
+the pixels are not compressed (the elliptical area is smaller than
+a texture pixel), bilinear texture pixel interpolation can be
+switched on by setting the <i>bilinear</i> field to
+<tt>miTRUE</tt>, which results in a more blurry image.</p>
+<p>
+See <a href="node116.html#elltexex">elliptical texture filtering</a>
+for an example.</p>
+
+<h5 class="anchor" id="api:mi_lookup_filter_color_texture_x">mi_lookup_filter_color_texture_x
+<span class="new">3.8</span></h5>
+<pre>
+miBoolean mi_lookup_filter_color_texture_x(
+    miColor* const  color,
+    miState* const  state,
+    const miTag     tag,
+    const miTexfilter *paras,
+    miMatrix        ST,
+    miScalar        filter)
+</pre>
+<p>Return the value in a elliptically filtered color texture at a given coordinate.
+<p>This function works similar to the previous function
+<i><a href="#api:mi_lookup_filter_color_texture">mi_lookup_filter_color_texture</a></i>
+but accepts an explicit
+<i>filter</i> parameter. Calling this function will enforce that the texture
+gets filtered on demand even if the texture scene element has not been marked
+with the <a href="node78.html#mi:filter_texture"><tt>filter</tt> keyword</a>
+in the scene description. If the texture has already been pre-filtered then
+the existing texture pyramid will be used for filtered lookup, taking the
+<var>filter</var> parameter into account and ignoring any given <code>filter</code>
+<var>scale</var> on the <a href="node78.html#mi:textures">texture</a> scene
+element. The <i>filter</i> parameter allows to adjust the filtering dynamically
+based upon properties computed in the shader, like the facing angle of the
+triangle. Its value range is between <var>(0.0&hellip;1.0)</var>. A value
+of <var>0.0</var> results in non-filtered lookup on the highest level of the
+texture pyramid.
+
+<p id="INDEX743"></p>
+<h5 class="anchor" id="api:mi_lookup_scalar_texture">mi_lookup_scalar_texture</h5>
+<pre>
+    miBoolean mi_lookup_scalar_texture(
+    miScalar* const scalar,
+    miState* const  state,
+    const miTag     tag,
+    miVector* const coord)
+</pre>
+<p>Return the value in a scalar texture at a given coordinate.
+<p>This function is equivalent to
+<i><a href="node150.html#api:mi_lookup_color_texture">mi_lookup_color_texture</a></i>,
+except that <i>tag</i> is assumed to refer to a scalar texture shader or
+scalar image, as defined in the .mi file with a <tt>scalar texture</tt>
+statement, and a scalar is looked up returned in <tt>*</tt> <i>scalar</i>.
+Filtering of scalar textures (enabled with <tt>filter scalar texture</tt>
+statements) is supported.</p>
+
+<h5 class="anchor" id="api:mi_lookup_scalar_texture_x">mi_lookup_scalar_texture_x
+<span class="new">3.8</span></h5>
+<pre>
+miBoolean mi_lookup_scalar_texture_x(
+    miScalar* const scalar,
+    miState* const  state,
+    const miTag     tag,
+    miVector* const coord,
+    const miScalar  filter)
+</pre>
+<p>Return the value in a filtered scalar texture at a given coordinate.
+<p>This function is equivalent to the previous function
+<i><a href="node150.html#api:mi_lookup_scalar_texture">mi_lookup_scalar_texture</a></i>,
+but offers on demand filtering support and dynamic filter scale adjustment
+similar to
+<i><a href="node150.html#api:mi_lookup_color_texture_x">mi_lookup_color_texture_x</a></i>.
+
+<p id="INDEX744"></p>
+<h5 class="anchor" id="api:mi_lookup_vector_texture">mi_lookup_vector_texture</h5>
+<pre>
+    miBoolean mi_lookup_vector_texture(
+    miVector* const vector,
+    miState* const  state,
+    const miTag     tag,
+    miVector* const coord)
+</pre>
+<p>This function is also equivalent to
+<i><a href="node150.html#INDEX741">mi_lookup_color_texture</a></i>, except
+that <i>tag</i> is assumed to refer to a vector texture shader or vector
+image, as defined in the .mi file with a <tt>vector texture</tt> statement,
+and a vector is looked up returned in <tt>*</tt> <i>vector</i>. Vector
+textures cannot be filtered.</p>
+
+<p><a id="INDEX745"></a></p>
+<h5 class="anchor" id="api:mi_texture_filter_project">mi_texture_filter_project</h5>
+<pre>
+    miBoolean mi_texture_filter_project(
+        miVector        p[3],
+        miVector        t[3],
+        miState *const  state,
+        miScalar        disc_r,
+        miUint          space)
+</pre>
+<p>This function helps in calculating the screen to
+<a href="node85.html#INDEX314">texture space</a> transformation matrix
+required by <i><a href="node150.html#INDEX742">mi_lookup_filter_color_texture</a></i>. It
+projects three points including the current raster position onto
+the current intersection primitive (<code>state&rarr;pri</code>) plane
+and calculates the <a href="node108.html#INDEX409">texture
+coordinate</a>s in the intersections. If <code>state&rarr;pri</code> is
+null, or if the projection fails, <tt>miFALSE</tt> is returned.</p>
+<p>This function assumes that the current intersected object has a
+<a href="node85.html#INDEX314">texture space</a> associated and
+uses <i>space</i> as an index into the <a href="node85.html#INDEX314">texture space</a>.
+The three <a href="node101.html#INDEX372">screen space</a> points are returned in
+<i>p</i>, the corresponding two dimensional <a href="node85.html#INDEX314">texture
+space</a> points are put into
+<i>t</i>. The first point in the array is always the central raster
+position (0,0), the others are inside a disc with radius of
+<i>disc_r</i> from this central position. Note that the points are
+relative to the central position, absolute <a href="node101.html#INDEX372">screen
+space</a> coordinates are not used.
+The value of <i>disc_r</i> should be set to 0.5 in most cases,
+since the full pixel is projected to <a href="node85.html#INDEX314">texture
+space</a>. However, when there are
+highly curved objects in the scene, a smaller value can effectively
+remove projection problems where the projected points are far
+outside the hit triangle primitive.</p>
+<p><a id="INDEX746"></a></p>
+<h5 class="anchor" id="api:mi_texture_filter_transform">mi_texture_filter_transform</h5>
+<pre>
+    miBoolean mi_texture_filter_transform(
+        miMatrix        ST,
+        miVector        p[3],
+        miVector        t[3])
+</pre>
+<p>This function helps in calculating the screen to
+<a href="node85.html#INDEX314">texture space</a> transformation matrix
+required by <i><a href="node150.html#INDEX742">mi_lookup_filter_color_texture</a></i>. The
+three two dimensional <a href="node101.html#INDEX372">screen
+space</a> points in <i>p</i> and the corresponding three two
+dimensional <a href="node85.html#INDEX314">texture space</a> points
+form a linear equation which is solved for the transformation
+matrix. See <a href="node116.html#elltexex">elliptical texture filtering</a>
+for an example. This function returns <tt>miFALSE</tt> if the linear
+equation mentioned above has no solution.</p>
+<p><a id="INDEX747"></a></p>
+<h5 class="anchor" id="api:mi_luminance">mi_luminance</h5>
+<pre>
+    miScalar mi_luminance(
+        miState         *state,
+        miColor         *color);
+</pre>
+<p>Return the luminance of <i>color</i>, by multiplying each RGB
+component by a factor (default 1&thinsp;&frasl;&thinsp;3;) and
+adding the results. The factors can be changed with the
+<tt>luminance weight</tt> statement, or the <i>luminance_weight</i>
+field in the <i>miOptions</i> structure. The purpose of having a
+single function to do this calculation is to make luminance
+calculations in shaders consistent across all shaders, and making
+the weight easily changeable in one central place. This is for
+shaders only; mental ray does not calculate luminances or use the
+weights in any way.</p>
+<p><a id="INDEX748"></a></p>
+<h5 class="anchor" id="api:mi_tri_vectors">mi_tri_vectors</h5>
+<pre>
+    miBoolean mi_tri_vectors(
+        miState         *state,
+        int             which,
+        int             ntex,
+        miVector        **a,
+        miVector        **b,
+        miVector        **c)
+</pre>
+<p>All the information in the state pertains to the interpolated
+intersection point in a triangle. This function can be used to
+obtain information about the uninterpolated triangle vertices.
+Together with the <a href="node107.html#INDEX406">barycentric
+coordinates</a> in the state, parameters retrieved with
+<i><a href="node150.html#INDEX748">mi_tri_vectors</a></i> may be interpolated
+differently by the shader. The <i>which</i> argument is a character
+that controls which triple of vectors is to be retrieved:</p>
+<div align="center">
+<table class="table">
+<tr>
+<th><i>which</i></th>
+<th>vector</th>
+</tr>
+<tr>
+<td><tt>'p'</tt></td>
+<td>the points in space</td>
+</tr>
+<tr>
+<td><tt>'n'</tt></td>
+<td>the normal vectors</td>
+</tr>
+<tr>
+<td><tt>'m'</tt></td>
+<td>the motion vectors</td>
+</tr>
+<tr>
+<td><tt>'t'</tt></td>
+<td>the <a href="node108.html#INDEX409">texture coordinate</a>s of
+<a href="node85.html#INDEX314">texture space</a> <i>ntex</i></td>
+</tr>
+<tr>
+<td><tt>'u'</tt></td>
+<td>the U bump basis vectors</td>
+</tr>
+<tr>
+<td><tt>'v'</tt></td>
+<td>the V bump basis vectors</td>
+</tr>
+<tr>
+<td><tt>'U'</tt></td>
+<td>the first surface derivative in U (<i>d P du</i>)</td>
+</tr>
+<tr>
+<td><tt>'V'</tt></td>
+<td>the first surface derivative in U (<i>d P dv</i>)</td>
+</tr>
+<tr>
+<td><tt>'X'</tt></td>
+<td>the second surface derivative <i>d&sup2; P du&sup2;</i></td>
+</tr>
+<tr>
+<td><tt>'Y'</tt></td>
+<td>the second surface derivative <i>d&sup2; P dv&sup2;</i></td>
+</tr>
+<tr>
+<td><tt>'Z'</tt></td>
+<td>the second surface derivative <i>d&sup2; P du dv</i></td>
+</tr>
+<tr>
+<td><tt>'*'</tt></td>
+<td>the user vectors</td>
+</tr>
+</table>
+</div>
+<p>A pointer to the vectors is stored in <i>*a</i>,
+<i>*b</i>, and <i>*c</i>. The shader may not
+modify these vectors. They are stored in the space used when the
+scene was created (either <a href="node101.html#INDEX369">object
+space</a> or <a href="node101.html#INDEX370">camera space</a>
+depending on <code>state&rarr;options&rarr;render_space</code>; the
+original data is accessed without implicit transformation to
+<a href="node101.html#INDEX367">internal space</a>. If the
+requested triple is not available, <tt>miFALSE</tt> is returned.
+This function relies on <code>state&rarr;pri</code>; it only works
+if the shader has not modified this variable, as some ray-marching
+volume shaders do.</p>
+<p>This function may not be called in
+<a href="node127.html#INDEX494">displacement shader</a>s because triangles
+do not yet exist at that stage. Displacement displaces vertices,
+not triangles; triangles are built from final vertices later. It
+also may not be called for hair objects, because hair is not based
+on triangles. (mental ray 3.2 and later detect this case and return
+<tt>miFALSE</tt> for hair objects.)</p>
+<p><a id="INDEX749"></a></p>
+<h5 class="anchor" id="api:mi_texture_interpolate">mi_texture_interpolate</h5>
+<pre>
+    miBoolean mi_texture_interpolate(
+        miState         *state,
+        miUint          space,
+        miScalar        *result)
+</pre>
+<p>This function interpolates the current
+intersection <code>state&rarr;pri</code> texture coordinates, using
+the barycentric coordinates from the state. The texture space index
+is given with <i>space</i>. The coordinates are written to the
+array <i>result</i> which must be allocated large enough according
+to the dimension of the texture space. This function is needed only
+for geometry with texture coordinates that have more or fewer than
+three dimensions. Standard 3D texture coordinates should be read
+from <code>state&rarr;tes_list</code>. Non-3D texture coordinates
+are supported only for <a href="node189.html#INDEX993">subdivision
+surface</a>s and raw primitive lists. Use the
+<tt>miQ_TEXTURE_DIM</tt> mode of
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> to find the dimension of a
+texture coordinate.</p>
+<p><a id="INDEX750"></a></p>
+<h5 class="anchor" id="api:mi_raster_unit">mi_raster_unit</h5>
+<pre>
+    miBoolean mi_raster_unit(
+        miState         *state,
+        miVector        *x,
+        miVector        *y)
+</pre>
+<p>Transforms a pair of X and Y unit vectors in
+<a href="node101.html#INDEX371">raster space</a> to the current
+<a href="node101.html#INDEX369">object space</a>. In other words,
+the returned <i>x</i> and <i>y</i> vectors specify the size of a
+pixel in object space. This information is useful for selecting
+filter parameters in the shader, such as bump map precisions or
+texture lookups. This function assumes a
+<a href="node124.html#INDEX488">pinhole camera</a>. The orientation of the
+surface at the current shading point is not taken into account.</p>
+
+<a id="INDEX752"></a>
+<h5 class="anchor" id="api:mi_shaderstate_set">mi_shaderstate_set</h5>
+<pre>
+    miBoolean mi_shaderstate_set(
+        miState         *state,
+        const char      *key,
+        void            *value,
+        int             valsize,
+        int             lifetime)
+</pre>
+<p>Store a data block <i>*value</i> under the name <i>key</i>. The
+data block can be retrieved by key with
+<i><a href="node150.html#INDEX753">mi_shaderstate_get</a></i> later. Shorter
+keys are slightly faster to hash and compare. <i>valsize</i> is the
+size of the value block to store. A copy of * <i>value</i> is made.
+If a data item with the same key exists, it is replaced with the
+new one. If <i>value</i> or <i>valsize</i> are null, an existing
+data item with the same key is deleted and none is created. The
+<i>lifetime</i> controls when the data item is deleted: at the end
+of the current eye ray if <i>lifetime</i> is
+<tt>miSS_LIFETIME_EYERAY</tt>, or at some later point, but no later
+than the end of the rectangle, if it is
+<tt>miSS_LIFETIME_RECT</tt>. The latter is slightly faster. In any
+case, data items are separate for each host, thread, and
+rectangle.</p>
+<p>Data items stored with this mechanisms are intended for
+communication between shaders called during evaluation of a single
+eye ray, both upstream and downstream. For example, a material
+shader may set a data item to be picked up by any later light
+shader, or by the root lens shader. It is a replacement for
+<code>state&rarr;user</code>, which works only downstream and
+causes conflicts if more than one data item is needed. The
+mechanism is only available in eye ray context during rendering,
+but not in geometry, output, displacement, or other shaders that do
+not get called as a consequence of an eye ray. As a special case,
+use in <a href="node135.html#INDEX501">lightmap shader</a>s is
+supported.</p>
+<p>Note that transparency in <a href="node34.html#INDEX67">rasterizer</a>
+mode (formerly called <a href="node34.html#INDEX66">Rapid Motion</a>) is
+not performed by casting
+rays that could carry shader state, but by compositing at a later
+stage. For this reason it is not possible to transport shader state
+through a call to <i>mi_trace_transparency</i> In rasterizer
+mode.</p>
+<a id="INDEX753"></a>
+<h5 class="anchor" id="api:mi_shaderstate_get">mi_shaderstate_get</h5>
+<pre>
+    void *mi_shaderstate_get(
+        struct miState  *state,
+        const char      *key,
+        int             *valsize)
+</pre>
+<p>Look up a data element previously stored with
+<i><a href="node150.html#INDEX752">mi_shaderstate_set</a></i>, under the same
+key, and return a pointer to the stored value. Also return the size
+of the stored value in *<i>valsize</i>, unless <i>valsize</i> is a
+null pointer. If no data element is found, a null pointer is
+returned and <i>valsize</i> is undefined.</p>
+<a id="INDEX754"></a>
+<h5 class="anchor" id="api:mi_shaderstate_enumerate">mi_shaderstate_enumerate</h5>
+<pre>
+    void mi_shaderstate_enumerate(
+        miState         *state,
+        miBoolean       (*cb)(void *arg, char *key, void *val, int vsz, int l),
+        void            *arg)
+</pre>
+<p>The callback <i>cb</i> is called for each known item, with the
+opaque <i>arg</i> pointer, key, value, value size, and lifetime. If
+<i>cb</i> is a null pointer, the list is printed using
+<i>mi_info</i>. This function is intended for debugging only; the
+implied linear search is inefficient. Callback mode is useful to
+interpret the contents of the value pointer; <i>mi_info</i> merely
+prints an address.</p>
+<a id="INDEX755"></a>
+<h5 class="anchor" id="api:mi_fb_put">mi_fb_put</h5>
+<pre>
+    miBoolean mi_fb_put(
+        miState         *state,
+        int             fb,
+        void            *data)
+</pre>
+<p>Store <i>data</i> into the sample so that it gets filtered and
+stored in <a href="node76.html#INDEX216">user frame buffer</a>
+<i>fb</i> later <a href="#foot1" class="biglinks"><sup>1</sup></a>.
+The type of the data to copy from * <i>data</i> is determined by the frame
+buffer type as defined in the options block. The
+<a href="node144.html#INDEX617">frame buffer</a> number <i>fb</i> must be
+a number equal to or greater than 0, corresponding to the <tt>fb</tt>
+<i>n</i> number in the <tt>frame buffer</tt> statements. If this frame
+buffer was not defined, this function has no effect and returns
+<tt>miFALSE</tt>. The data is stored in the current sample (i.e.,
+the current location for which the primary ray was cast), and is
+filtered to create frame buffer pixels after all samples in the
+region have been taken. There is no way to store user frame buffer
+data in arbitrary locations with this function. It should be called
+for all samples and all defined user frame buffers to avoid leaving
+holes; if user frame buffer data is left undefined in a sample
+because <i><a href="node150.html#INDEX755">mi_fb_put</a></i> was
+not called, the data defaults to zero and is filtered as such.</p>
+<p>Output shaders may not use this function because there is no
+notion of "samples" during output shading; instead, they must use
+the standard <i>mi_img_put_</i>* functions with an offset of
+<tt>miRC_IMAGE_USER +</tt> <i>fb</i>. <a href="node52.html#INDEX98">Final
+gathering</a>, <a href="node25.html#INDEX49">light map</a>ping, displacement,
+and geometry
+shaders may not use <i><a href="node150.html#INDEX755">mi_fb_put</a></i>
+and <i><a href="node150.html#INDEX756">mi_fb_get</a></i> because the frame buffers
+are only available during frame rendering. In previous versions of
+mental ray, the data type of a frame buffer was stored in
+<code>state&rarr;options&rarr;images_info</code>.</p>
+<p><a id="INDEX756"></a></p>
+<h5 class="anchor" id="api:mi_fb_get">mi_fb_get</h5>
+<pre>
+    miBoolean mi_fb_get(
+        miState         *state,
+        int             fb,
+        void            *data)
+</pre>
+<p>Retrieve <i>data</i> from <a href="node76.html#INDEX216">user
+frame buffer</a> <i>fb</i> <a href="#foot1" class="biglinks">
+<sup>1</sup></a>. The type
+of the data copied to * <i>data</i> is determined by the frame
+buffer type as defined in the options block. It will never be
+larger than 16 bytes (the size of a <tt>miColor</tt>). The frame
+buffer number <i>fb</i> must be in the range 0...7. If this frame
+buffer was not defined, this function returns <tt>miFALSE</tt>, and
+no data is stored. This function is intended to let shaders
+retrieve data that may have been stored by shaders called in later
+ray generations, but like <i>mi_fb_put</i> it is limited to the
+current sample. Again, output shaders may not use this function
+because there is no notion of "samples" during output shading;
+instead, they must use the standard <i>mi_img_get_</i>* functions
+with an offset of <tt>miRC_IMAGE_USER +</tt> <i>fb</i>.</p>
+<p><a id="INDEX757"></a></p>
+<h5 class="anchor" id="api:mi_output_image_open">mi_output_image_open</h5>
+<pre>
+    miImg_image *mi_output_image_open(
+        miState         *state,
+        miUint          idx)
+</pre>
+<p>Returns an image pointer for a frame buffer
+index. <i>idx</i> is one of the <tt>miRC_IMAGE_RGBA</tt>,
+<tt>miRC_IMAGE_USER</tt> etc. constants. May only be called from
+<a href="node126.html#INDEX492">output shader</a>s. Versions prior
+to 3.4 could obtain the output image from a static array in the
+state, which is no longer available in mental ray.
+This means that older <a href="node126.html#INDEX492">output
+shader</a>s <b>need to be rewritten</b> for mental ray.</p>
+<p><a id="INDEX758"></a></p>
+<h5 class="anchor" id="api:mi_output_image_close">mi_output_image_close</h5>
+<pre>
+    void mi_output_image_close(
+        miState         *state,
+        miUint          idx)
+</pre>
+<p>Closes an opened frame buffer image that has been
+opened with <i><a href="node150.html#INDEX758">mi_output_image_open</a></i>.
+<i>idx</i> is
+one of the <tt>miRC_IMAGE_RGBA</tt>, <tt>miRC_IMAGE_USER</tt> etc
+constants. May only be called from output shaders.</p>
+<p><a id="INDEX759"></a></p>
+<h5 class="anchor" id="api:mi_geoshader_add_result">mi_geoshader_add_result</h5>
+<pre>
+    miBoolean mi_geoshader_add_result(
+        miTag           *result,
+        const miTag     item)
+</pre>
+<p>This function should be called from
+<a href="node179.html#INDEX857">geometry shader</a>s for adding a scene
+element to the result. If <i>result</i> or <i>item</i> are null,
+<tt>miFALSE</tt> is returned. If <i>result</i> refers to a null
+tag, an <a href="node91.html#INDEX350">instance group</a> is
+created and returned in <i>result</i>. If <i>result</i> is non-null
+but does not refer to an instance group, an instance group is
+created, the <i>result</i> element is put into this group and the
+group is returned in <i>result</i>. Now that this function has
+enforced that an instance group element is always returned, the
+<i>item</i> element is put into the returned group. See page
+<a href="node128.html#geoshaderex">geoshaderex</a> for an
+example.</p>
+<p><a id="INDEX760"></a></p>
+<h5 class="anchor" id="api:mi_geoshader_tesselate">mi_geoshader_tesselate</h5>
+<pre>
+    miBoolean mi_geoshader_tesselate(
+        miState         *state,
+        miTag           *leaves,
+        miTag           source)
+</pre>
+<p>This function should be called from
+<a href="node179.html#INDEX857">geometry shader</a>s only. It builds a list
+of instances that describes the object, <a href="node91.html#INDEX350">instance
+group</a>, or <a href="node90.html#INDEX339">instance</a> <i>source</i>. If <i>source</i>
+contains more than one object, there will be multiple instances in
+the <i>leaves</i> list. The <i>leaves</i> argument is set to the
+tag of the first instance; the others are chained to one another
+with the <i>next</i> field in each instance. The last instance in
+the list has a null <i>next</i> field.</p>
+<p>The tessellation function also tessellates the geometry
+described by each instance, and attaches the triangles resulting
+from the tessellation to the <i>boxes</i> field of the instance.
+Triangles are stored in <b><a id="INDEX761"></a>box</b>es, which are
+data structures consisting of a
+header, a vector list, a vertex list, and a triangle list. In
+mental ray 2.x, boxes have a maximum size; if an object does not
+fit into one box, more are generated and chained using the
+<i>next_box</i> tag in each box.</p>
+<p><a id="INDEX762"></a></p>
+<h5 class="anchor" id="api:mi_geoshader_tesselate_end">mi_geoshader_tesselate_end</h5>
+<pre>
+    miBoolean mi_geoshader_tesselate_end(
+        miTag           leaves)
+</pre>
+<p>Release all memory allocated by
+<i><a href="node150.html#INDEX760">mi_geoshader_tesselate</a></i>. This
+function releases all instances and boxes attached to the instance
+chain <i>leaves</i>, which was created by
+<i><a href="node150.html#INDEX760">mi_geoshader_tesselate</a></i>. Multiple
+instance lists can exist at the same time; it is not necessary to
+release one before creating the next but since memory demands may
+be substantial if the tessellated geometry is large, it is
+recommended to not keep instance lists longer than necessary.</p>
+<p><a id="INDEX763"></a></p>
+<h5 class="anchor" id="api:mi_geoshader_echo_tag">mi_geoshader_echo_tag</h5>
+<pre>
+    typedef struct {
+        miBoolean       prefer_approx_polygons; /* triangles from polygons */
+        miBoolean       prefer_approx_faces;    /* triangles from surfaces */
+        miBoolean       ascii_output;           /* non-binary output */
+        miBoolean       verbatim_textures;      /* dump textures verbatim ? */
+        miBoolean       norendercommand;        /* disable rendercmd echo? */
+        miUint          explode_objects;        /* write objects to subfiles */
+        miTag           leaf_insts;             /* for prefer_approx_* lookup*/
+        miBoolean       nolinkcommand;          /* don't echo link statements*/
+        miUint          dont_echo;              /* EO_* bitmap: omit these */
+        miUint          dont_recurse;           /* EO_* bitmap: no prereqs */
+    } miEchoOptions;
+
+    miBoolean mi_geoshader_echo_tag(
+        FILE            *fp,
+        miTag           tag,
+        miEchoOptions   *eopt)
+</pre>
+<p>This function exists for debugging geometry shaders. It echos a
+.mi scene fragment, anchored at <i>tag</i>, to the stdio file
+<i>fp</i>. The options should be cleared with <i>memset</i> or
+similar, and then initialized (the structure occasionally grows;
+this way recompilation will suffice). The
+<i>prefer_approx_polygons</i>, <i>prefer_approx_faces</i>,
+<i>norendercommand</i>, and <i>nolinkcommand</i> must be
+<tt>miFALSE</tt> (0). <i>ascii_output</i> prints geometry vectors
+as ASCII numbers instead of the default binary vectors.
+<i>verbatim_textures</i> includes texture files in the echoed
+scene, instead of referencing them by file name.
+<i>explode_objects</i>, if nonzero, causes all objects with more
+than the given number of vectors to be echoed to independent
+subfiles; this is not generally useful for debugging. The
+<i>dont_echo</i> and <i>dont_recurse</i> bitmaps of <tt>miEO_</tt>
+bits allow excluding certain scene element types. In a geometry
+shader it may be useful to set <i>dont_recurse</i> to
+<code>&sim;0</code> to suppress echo of all tags that <i>tag</i> is
+referencing. See the command-line option <tt>-echo</tt> (appendix
+A) for more details.</p>
+<p><a id="INDEX764"></a></p>
+<h5 class="anchor" id="api:mi_string_substitute">mi_string_substitute</h5>
+<pre>
+    char *mi_string_substitute(
+        char            *newname,
+        char            *name,
+        long            size)
+</pre>
+<p>This function performs substitutions on the file path
+<i>name</i>, and returns the substituted path in <i>newname</i>,
+which must point to a char buffer of sufficient size (
+<tt>miPATHSIZE</tt> is recommended). The size of the buffer must be
+passed as <i>size</i> to prevent buffer overruns. Substitutions are
+taken from the <a id="INDEX765"></a>
+<tt>MI_RAY_SUBSTITUTE</tt> environment variable, the mental ray
+registry mechanism, and the (obsolete) Softimage Linktab mechanism.
+For details on the first two refer to [Driemeyer 01]. The value of
+<i>newname</i> is returned.</p>
+<p><a id="INDEX766"></a></p>
+<h5 class="anchor" id="api:mi_volume_num_shaders">mi_volume_num_shaders</h5>
+<pre>
+    miInteger mi_volume_num_shaders(
+        miState         *state)
+</pre>
+<p>In <a href="node118.html#INDEX466">autovolume</a> mode,
+<a href="node117.html#INDEX460">volume shader</a>s can use this function to
+determine the number of overlapping volumes whose volume shaders
+have the same (highest) <a href="node118.html#INDEX467">volume
+level</a> as the current volume shader. This is the length of the
+list of volume shaders to call. Refer to the autovolume section on
+page <a href="node118.html#autovolshd">autovolshd</a> for more
+information on autovolumes. mental ray also supports autovolume
+mode for photon emitters, so <a href="node142.html#INDEX580">photon
+shader</a>s can determine which photon volumes a photon passes
+through.</p>
+<p><a id="INDEX767"></a></p>
+<h5 class="anchor" id="api:mi_volume_cur_shader">mi_volume_cur_shader</h5>
+<pre>
+    miInteger mi_volume_cur_shader(
+        miState         *state)
+</pre>
+<p>In <a href="node118.html#INDEX466">autovolume</a> mode,
+<a href="node117.html#INDEX460">volume shader</a>s can use this function to
+determine their own position in the list of volume shaders to call.
+The first volume shader gets number 0.</p>
+<p><a id="INDEX768"></a></p>
+<h5 class="anchor" id="api:mi_volume_tags">mi_volume_tags</h5>
+<pre>
+    miTag *mi_volume_tags(
+        miState         *state)
+</pre>
+<p>In <a href="node118.html#INDEX466">autovolume</a> mode,
+<a href="node117.html#INDEX460">volume shader</a>s can use this function to
+retrieve the list of volume shader tags scheduled for being called
+for this ray segment. The length of the list can be obtained by
+calling <i><a href="node150.html#INDEX766">mi_volume_num_shaders</a></i>.</p>
+<p><a id="INDEX769"></a></p>
+<h5 class="anchor" id="api:mi_volume_instances">mi_volume_instances</h5>
+<pre>
+    miTag *mi_volume_instances(
+        miState         *state)
+</pre>
+<p>This function is a companion function to
+<i><a href="node150.html#INDEX768">mi_volume_tags</a></i>. It returns a
+constant pointer to the <a href="node180.html#INDEX862">leaf
+instance</a>s through which the current ray is traveling. The
+<i>n</i>-th instance tag in the returned array corresponds to the
+<i>n</i>-th volume shader tag in the array returned by
+<i><a href="node150.html#INDEX768">mi_volume_tags</a></i>. A volume shader
+could use this function to store the instance it is associated with
+to <code>state&rarr;instance</code> (which otherwise holds the
+instance of the hit primitive) to enable correct object
+transformations from the <i>vector_to_object</i> and
+<i>point_from_object</i> family. The instance tag can also be used
+to obtain instance-specific user data.</p>
+
+<p><a id="INDEX773"></a></p>
+<h5 class="anchor" id="api:mi_volume_user_color">mi_volume_user_color</h5>
+<pre>
+    miColor *mi_volume_user_color(
+        miState         *state)
+</pre>
+<p>In <a href="node118.html#INDEX466">autovolume</a> mode,
+<a href="node117.html#INDEX460">volume shader</a>s can use this function to
+store an arbitrary color value. This is useful for communication
+between different volume shaders in the list. For example, the
+first volume shader can initialize this value, and the last can
+return it.</p>
+
+<p><a id="INDEX770"></a></p>
+<h5 class="anchor" id="api:mi_opacity_set">mi_opacity_set</h5>
+<pre>
+    void mi_opacity_set(
+        miState         *state,
+        miColor         *color)
+  
+</pre>
+<p>This function has an effect in the
+<a href="node34.html#INDEX67">rasterizer</a> rendering mode (formerly
+called <a href="node34.html#INDEX66">Rapid Motion</a>) only. Since
+the rasterizer handles transparency in a separate shading sample
+combination pass and not inside the material shader, the shader
+cannot normally create <b><a id="INDEX771"></a>matte objects</b> by
+returning a transparent color
+regardless of other objects behind the shaded surface. The shading
+sample combination phase would fill in the obscured objects. In
+this case, the shader may use
+<i><a href="node150.html#INDEX770">mi_opacity_set</a></i> to explicitly set
+the opacity to be used for combining instead oif the result alpha.
+As a bonus, the opacity may be set for R, G, B, and A separately,
+instead of using the result alpha for all components. The
+<i>color</i> is saved along with the result color returned by the
+shader until the combination phase.</p>
+<p><a id="INDEX772"></a></p>
+<h5 class="anchor" id="api:mi_opacity_get">mi_opacity_get</h5>
+<pre>
+    miBoolean mi_opacity_get(
+        miState         *state,
+        miColor         *color)
+  
+</pre>
+<p>After <i><a href="node150.html#INDEX770">mi_opacity_set</a></i> has
+been called at
+any point for the current surface shading point and all its
+secondary rays, it remains in effect until the
+<a href="node34.html#INDEX67">rasterizer</a> (formerly called
+<a href="node34.html#INDEX66">Rapid Motion</a>) shades the next surface
+point. It is saved along with the returned color until shading
+sample combination. Since any of the shaders of a Phenomenon can
+call <i><a href="node150.html#INDEX770">mi_opacity_set</a></i>, the
+companion function <i><a href="node150.html#INDEX772">mi_opacity_get</a></i>
+can be used to
+retrieve the opacity color last set. This is also useful in
+<a href="node117.html#INDEX460">volume shader</a>s that need to
+control matte opacity. The function returns <tt>miFALSE</tt> if
+<i><a href="node150.html#INDEX770">mi_opacity_set</a></i> has not
+been called for the current shading point yet; in this case
+<i>color</i> is undefined.</p>
+
+<div class="foot">
+<p id="foot1"><sup><a>1</a></sup> This function is kept
+for backwards compatibility, new shaders should use the new
+<a href="classmi_1_1shader__v3_1_1Framebuffer.html">C++ shader
+interface</a> to refer to new frame buffers by name.
+</div>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node149.html">&laquo;&nbsp;prev</a></li>
+<li><a href="miquery.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

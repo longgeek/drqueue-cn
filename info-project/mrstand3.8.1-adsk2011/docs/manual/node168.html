@@ -1,0 +1,109 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shader Interfaces</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node167.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node169.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION166"></a>
+<h3>Shader Interfaces</h3>
+<p>
+<span class="depr">Deprecated</span>
+<p>
+To realize the goal of providing inaccurate but fast previews,
+it is important to replace any software node with a hardware node,
+or omit it altogether, and still obtain a reasonable simplified
+image. Global illumination has no hardware equivalent, but a
+software shader that renders an object layer (such as the three
+object nodes in the above graphs) may have an equivalent or
+simplified hardware version. This requires that a shader interface
+is introduced that allows defining hardware and software shaders
+that provide a similar interface to the scene. The following
+intrinsic differences need to be abstracted:</p>
+<ul>
+<li>Software shaders have inputs and outputs. It is possible to
+create graphs of shaders where shaders obtain their inputs from the
+outputs of other shaders. Such graphs can be used to create
+Phenomena, which encapsulate one or more shader graphs and other
+information such that the Phenomenon appears like a monolithic
+shader. This allows a separation of functions: different components
+of a complex effect may be built from simple shaders, each taking
+care of some aspect of the effect.</li>
+<li>Hardware shaders consist of two functions, one modifying
+geometry and precalculating data (called the <b><a name="INDEX850"
+id="INDEX850"></a>vertex shader</b>), and one doing the actual
+shading calculation (the <b><a id="INDEX851"></a>fragment shader</b>).
+There is also a constant
+shared data storage called <b><a id="INDEX852"></a>uniform variable</b>s.
+Both types of shaders are
+monolithic; it is not possible to build up complex effects from
+simple dedicated functions. Also, the <a href="node178.html#INDEX855">uniform
+variable</a>s are the only place to
+pass input parameters to both types of shaders. Most importantly,
+mental ray's separation of surface, volume, texture, and light
+shaders cannot be represented in hardware.
+<p>However, <a href="node178.html#INDEX854">NVIDIA</a>'s
+<a href="node173.html#INDEX853">Cg</a> 1.2 shader language compiler has the
+ability to compile the shader nodes of Phenomena and their
+connections into monolithic hardware shaders. This was developed in
+close cooperation between <a href="node178.html#INDEX854">NVIDIA</a>
+and mental images.</p>
+</li>
+</ul>
+<p>Although the implementation is obviously different, both
+software shaders and hardware shaders accept parameters in a
+similar way. mental ray supports mapping standard mental ray shader
+parameters to <a href="node178.html#INDEX855">uniform
+variable</a>s, unpacking information into a form that the hardware
+shaders can use:</p>
+<ul>
+<li>Simple data formats such as vectors, floats, and matrices can
+be stored in <a href="node178.html#INDEX855">uniform variable</a>s
+without change.</li>
+<li>Integers and booleans require conversion to floating-point
+format.</li>
+<li>Lights require obtaining light information from the referenced
+light instances and light elements, such as position, orientation,
+cone angles, and energy, storing the resulting data set in
+<a href="node178.html#INDEX855">uniform variable</a>s. Lights must be part
+of the material definition otherwise they will no be part of the
+illumination calculation in the <a href="node168.html#INDEX851">fragment
+shader</a>.</li>
+<li>Textures and other maps require preloading the necessary
+textures into hardware memory, probably at a reduced resolution to
+fit into the limited space. The necessary reference data is stored
+in <a href="node178.html#INDEX855">uniform variable</a>s.</li>
+</ul>
+<p>Software shaders have no inherent limit on the number of lights
+and textures. Hardware shaders do, because the number of
+<a href="node178.html#INDEX855">uniform variable</a>s, registers or number
+of instructions are rather limited. Effects that would exceed this
+limit require layering. For example, if there is only room for ten
+lights in the <a href="node178.html#INDEX855">uniform variable</a>s
+but the shader's light list contains twenty, the shader must be
+called twice to layer the effect. The design does not attempt to
+automate this at this time because it is not known how lights and
+other parameters interact. If the shader fails to load, it will
+either render with a default hardware material or with rendered the
+software version.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node167.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node169.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

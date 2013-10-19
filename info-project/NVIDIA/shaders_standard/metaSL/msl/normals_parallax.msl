@@ -1,0 +1,126 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+float2 phong_illum(
+	float n_dot_l,
+	float n_dot_h,
+	float e)
+{
+	float2 res;
+	res.x = saturate(n_dot_l);
+	res.y = (n_dot_l<0 || n_dot_h<0) ? 0 : pow(n_dot_h, e);
+	return res;
+}
+
+shader Normals_parallax
+{
+	input:
+		Texture2d color_tex  = "brickwall.dds"
+		{
+			display_name("Color Texture");
+			description( "The texture used to specify the diffuse color of "
+						 "the surface." );
+		};
+		Texture2d height_tex = "brickwall_height.dds"
+		{
+			display_name("Height Texture");
+			description( "The texture used to specify the height of the "
+						 "surface, relative to the base surface." );
+		};
+		Texture2d norm_tex   = "brickwall_normal.dds"
+		{
+			display_name("Normal Texture");
+			description( "The texture used to specify the surface normals." );
+		};
+		Color  specular_color = Color(1,1,1,1)
+		{
+			display_name("Specular Color");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The color of the specular reflections off of the "
+						 "surface." );
+		};
+		float specular_shininess = 100.0
+		{
+				display_name("Specular Shininess");
+				soft_range(float(0),float(100));
+				description( "The width of specular highlights across the "
+							 "surface." );
+		};
+		float amount        = 0.05
+		{
+				display_name("Amount");
+				soft_range(float(-1),float(1));
+				description( "The degree to which the normals and texture "
+							 "coordinates will be perturbed." );
+		};
+
+	output:
+		Color result;
+
+	void main()
+	{
+		// Sample the height and center on 0.0 (scaled down too)
+		float h = tex2D(height_tex, texture_coordinate[0].xy).x;
+		h = h*amount - amount*0.5;
+
+		// The view direction in tangent space.
+		float3 vtan = tangent_space[0]*direction;
+
+		// perturb the vertex coords. Move the texture torward the eye when
+		// the height is negative and away when positive
+		float2 uv = texture_coordinate[0].xy;
+		uv.x -= vtan.x*h;
+		uv.y -= vtan.y*h;
+
+		// get the normal from the normal map
+		float3 n = (tex2D(norm_tex, uv).xyz - 0.5) * 2.0;
+
+		// transform the normal out of tangent space and re-normalize
+		normal = normalize(n*tangent_space[0]);
+
+		// diffuse and specular results from lighting
+		Color diffuse  = Color(0,0,0,0);
+		Color specular = Color(0,0,0,0);
+
+		// iterate over scene lights
+		Light_iterator light;
+		foreach (light)
+		{
+			float3 vhalf = normalize(light.direction - direction);
+			float2 illum = phong_illum(
+				light.dot_nl, dot(normal, vhalf), specular_shininess);
+			diffuse  += illum.x * light.contribution/PI;
+			specular += illum.y * light.contribution/PI * specular_color;
+		}
+
+		// fresnel falloff
+		float fresnel = 1.0-saturate(dot(-direction, normal));
+
+		// sample the color texture
+		Color color = tex2D(color_tex, uv);
+
+		// build up result
+		result = color;
+		result *= diffuse;
+		result += specular;
+
+		// reflection
+		Trace_options topt;
+		topt.set_ray_type("reflect");
+		Ray ray(position, reflect(direction, normal));
+		Ray ray_dxy( float3(0.0), float3(0.0));
+		Color refl(0.0);
+		if (trace(ray, ray_dxy, ray_dxy, topt, "result", refl))
+			result += refl * fresnel;
+
+		result.a = 1.0;
+	}
+}
+{
+	description( "Uses viewing direction to modify shading point texture "
+	             "coords and computes a Phong model." );
+}
+;
+

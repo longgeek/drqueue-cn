@@ -1,0 +1,444 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// see max_texutil.cpp
+#define CR00     -0.5
+#define CR01      1.5
+#define CR02     -1.5
+#define CR03      0.5
+#define CR10      1.0
+#define CR11     -2.5
+#define CR12      2.0
+#define CR13     -0.5
+#define CR20     -0.5
+#define CR21      0.0
+#define CR22      0.5
+#define CR23      0.0
+#define CR30      0.0
+#define CR31      1.0
+#define CR32      0.0
+#define CR33      0.0
+
+// see max_texutil.cpp
+#define B 512 // 0x200
+#define RN 10000.0
+#define maxS_curve(t) ( t * t * (3.0 - 2.0 * t) )
+#define maxLerp(t, a, b) ( a + t * (b - a) )
+
+shader hlsl_PerlinMarble_EvalNormal {
+ input:
+  // TODO: Shader Map1
+  // TODO: Shader Map2
+  Color Color1 = Color(0.745, 0.745, 0.63, 1.0) {
+    display_name("Color 1");
+  };
+  Color Color2 = Color(0.235, 0.35, 0.235, 1.0) {
+    display_name("Color 2");
+  };
+  // TODO: bool Map1Enabled
+  // TODO: bool Map2Enabled
+  float Saturation1 = 85.0 {
+    display_name("Saturation 1");
+  };
+  float Saturation2 = 70.0 {
+    display_name("Saturation 2");
+  };
+  float Size = 50.0 {
+    display_name("Size");
+  };
+  const float Level = 8.0 {
+    display_name("Levels");
+    hard_range(1.0, 8.0);
+  };
+  Shader Coords;
+  // TODO: int GBufferID
+
+  // textures
+  Texture2d noise_tables = "noise_out.dds" {
+    disable_filtering();
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+
+ output:
+  Color result;
+
+  // additional functions for texture lookup
+  int p(in int i1) {
+    // int x_pix = i1 % 114;
+    int y_pix = i1 / 114; // 0 <= y < 9
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    // return int((511.0 * tex2d(noise_tables, float2(x, y)).r + 0.5));
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    return int((c.r + 0.5));
+  } // p
+
+  float g3(in int i1, in int i2) {
+    // int x_pix = i1 % 114;
+    int y_pix = 27 + i1 / 114; // 27 <= y < 36
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 0.0, "none").lookup(float2(x, y));
+    if (i2 == 0)
+      return c.r;
+    else if (i2 == 1)
+      return c.g;
+    else if (i2 == 2)
+      return c.b;
+    else {
+      error("g3(%d, %d)", i1, i2);
+      return 0.0;
+    }
+  } // g3
+
+  // see max_texutil.cpp
+  float maxClamp(in float x, in float a, in float b) {
+    return (x < a ? a: (x > b ? b: x));
+  } // maxClamp
+
+  // see max_texutil.cpp
+  Color color_spline(inout float x, in int nknots, inout Color knot[]) {
+    Color res = Color(0.0, 0.0, 0.0, 0.0);
+    int nspans = nknots - 3;
+    if (nspans < 1) { // illegal
+      // miASSERT(0);
+      error("miASSERT(0)");
+    } // if (nspans < 1)
+    // find the appropriate 4-point span of the spline
+    x = maxClamp(x, 0.0, 1.0) * (float) nspans;
+    int span = (int) x;
+    if (span >= nknots - 3) {
+      span = nknots - 3;
+    } // if (span >= nknots - 3)
+    x -= span;
+    // evaluate the span cubic at x using Horner's rule
+    Color c0 = Color(0.0, 0.0, 0.0, 0.0);
+    Color c1 = Color(0.0, 0.0, 0.0, 0.0);
+    Color c2 = Color(0.0, 0.0, 0.0, 0.0);
+    Color c3 = Color(0.0, 0.0, 0.0, 0.0);
+    c3.r = (CR00 * knot[span + 0].r + CR01 * knot[span + 1].r +
+	    CR02 * knot[span + 2].r + CR03 * knot[span + 3].r);
+    c3.g = (CR00 * knot[span + 0].g + CR01 * knot[span + 1].g +
+	    CR02 * knot[span + 2].g + CR03 * knot[span + 3].g);
+    c3.b = (CR00 * knot[span + 0].b + CR01 * knot[span + 1].b +
+	    CR02 * knot[span + 2].b + CR03 * knot[span + 3].b);
+    c2.r = (CR10 * knot[span + 0].r + CR11 * knot[span + 1].r +
+	    CR12 * knot[span + 2].r + CR13 * knot[span + 3].r);
+    c2.g = (CR10 * knot[span + 0].g + CR11 * knot[span + 1].g +
+	    CR12 * knot[span + 2].g + CR13 * knot[span + 3].g);
+    c2.b = (CR10 * knot[span + 0].b + CR11 * knot[span + 1].b +
+	    CR12 * knot[span + 2].b + CR13 * knot[span + 3].b);
+    c1.r = (CR20 * knot[span + 0].r + CR21 * knot[span + 1].r +
+	    CR22 * knot[span + 2].r + CR23 * knot[span + 3].r);
+    c1.g = (CR20 * knot[span + 0].g + CR21 * knot[span + 1].g +
+	    CR22 * knot[span + 2].g + CR23 * knot[span + 3].g);
+    c1.b = (CR20 * knot[span + 0].b + CR21 * knot[span + 1].b +
+	    CR22 * knot[span + 2].b + CR23 * knot[span + 3].b);
+    c0.r = (CR30 * knot[span + 0].r + CR31 * knot[span + 1].r +
+	    CR32 * knot[span + 2].r + CR33 * knot[span + 3].r);
+    c0.g = (CR30 * knot[span + 0].g + CR31 * knot[span + 1].g +
+	    CR32 * knot[span + 2].g + CR33 * knot[span + 3].g);
+    c0.b = (CR30 * knot[span + 0].b + CR31 * knot[span + 1].b +
+	    CR32 * knot[span + 2].b + CR33 * knot[span + 3].b);
+    res.r = ((c3.r *x + c2.r )*x + c1.r )*x + c0.r;
+    res.g = ((c3.g *x + c2.g )*x + c1.g )*x + c0.g;
+    res.b = ((c3.b *x + c2.b )*x + c1.b )*x + c0.b;
+    res.a = 1.0;
+    return res;
+  } // color_spline
+
+  // see max_support.h
+  // #define maxMAX3(a,b,c) ((a)>(b)?((a)>(c)?(a):(c)):((b)>(c)?(b):(c)))
+  float maxMAX3(in float a, in float b, in float c) {
+    return ((a > b) ? ((a > c) ? a : c) : ((b > c) ? b : c));
+  } // maxMAX3
+
+  // see max_support.h
+  // #define maxMIN3(a,b,c) ((a)>(b)?((a)>(c)?(a):(c)):((b)>(c)?(b):(c)))
+  float maxMIN3(in float a, in float b, in float c) {
+    return ((a < b) ? ((a < c) ? a : c) : ((b < c) ? b : c));
+  } // maxMIN3
+
+  // see tex_perlin.cpp
+  // #define LERP(x, lo, hi) ( (lo) + (x) * ((hi) - (lo)) )
+  float LERP(in float x, in float lo, in float hi) {
+    return (lo + x * (hi - lo));
+  } // LERP
+
+  // see max_hsv.cpp
+  void RGBtoHSV(in Color rgb, out Color res) {
+    res.r = 0.0;
+    res.g = 0.0;
+    res.b = 0.0;
+    res.a = 0.0;
+    float h = 0.0;
+    float s = 0.0;
+    float r = 0.0;
+    float g = 0.0;
+    float b = 0.0;
+    float vmx = 0.0;
+    float V = maxMAX3(rgb.r,rgb.g,rgb.b);
+    float X = maxMIN3(rgb.r,rgb.g,rgb.b);
+    if (V == X) {
+      h = 0.0;
+      s = 0.0;
+    } // if (V == X)
+    else {
+      vmx = V - X;
+      s = vmx / V;
+      r = (V - rgb.r) / vmx;
+      g = (V - rgb.g) / vmx;
+      b = (V - rgb.b) / vmx;
+      if (rgb.r == V) {
+	h = (rgb.g == X) ? 5.0 + b : 1.0 - g;
+      }
+      else if(rgb.g == V) {
+	h = (rgb.b == X) ? 1.0 + r : 3.0 - b;
+      }
+      else {
+	h = (rgb.r == X) ? 3.0 + g : 5.0 - r;
+      }
+      h /= 6.0;
+    } // else [ if (V == X) ]
+    res.r = h;
+    res.g = s;
+    res.b = V;
+  } // RGBtoHSV
+
+  // see max_hsv.cpp
+  void HSVtoRGB(in Color hsv, out Color res) {
+    res.r = 0.0;
+    res.g = 0.0;
+    res.b = 0.0;
+    res.a = 0.0;
+    float h = 6.0 * hsv.r;
+    float s = hsv.g;
+    int i = (int) h;
+    float f = h - i;
+    float m = (hsv.b * (1.0 - s));
+    float n = 0.0;
+    float k = 0.0;
+    if (i == 1)
+      n = (hsv.b * (1.0 - s * f));
+    else if (i == 2)
+      k = (hsv.b * (1.0 - s * (1.0 - f)));
+    else
+      error("TODO: HSVtoRGB in max_PerlinMarble");
+    switch(i) {
+    case 6:
+    case 0:
+      res.r = hsv.b;
+      res.g = k;
+      res.b = m;
+      break;
+    case 1:
+      res.r = n;
+      res.g = hsv.b;
+      res.b = m;
+      break;
+    case 2:
+      res.r = m;
+      res.g = hsv.b;
+      res.b = k;
+      break;
+    case 3:
+      res.r = m;
+      res.g = n;
+      res.b = hsv.b;
+      break;
+    case 4:
+      res.r = k;
+      res.g = m;
+      res.b = hsv.b;
+      break;
+    case 5:
+      res.r = hsv.b;
+      res.g = m;
+      res.b = n;
+      break;
+    } // switch(i)
+  } // HSVtoRGB
+
+  // see max_texutil.cpp
+  void maxSetup(in float v,
+		out int b0, out int b1,
+		out float r0, out float r1) {
+    float t = v + RN;
+    int it = (int) t;
+    b0 = it - (it / B) * B; // ((int)t) & BM;
+    // (b0+1) & BM;
+    b1 = b0 + 1;
+    if (b1 >= B) b1 = 0;
+    r0 = (float)(t - (int) t);
+    r1 = r0 - 1.0; // what if r0 < 1.0?
+  } // maxSetup
+
+  // see max_texutil.cpp
+  float maxNoise3(float vecx, float vecy, float vecz) {
+    int bx0 = 0;
+    int bx1 = 0;
+    float rx0 = 0.0;
+    float rx1 = 0.0;
+    maxSetup(vecx, bx0, bx1, rx0, rx1);
+    int by0 = 0;
+    int by1 = 0;
+    float ry0 = 0.0;
+    float ry1 = 0.0;
+    maxSetup(vecy, by0, by1, ry0, ry1);
+    int bz0 = 0;
+    int bz1 = 0;
+    float rz0 = 0.0;
+    float rz1 = 0.0;
+    maxSetup(vecz, bz0, bz1, rz0, rz1);
+    int i = p(bx0);
+    int j = p(bx1);
+    int b00 = p(i + by0);
+    int b10 = p(j + by0);
+    int b01 = p(i + by1);
+    int b11 = p(j + by1);
+    float sx = maxS_curve(rx0);
+    float sy = maxS_curve(ry0);
+    float sz = maxS_curve(rz0);
+    float u = 0.0;
+    float v = 0.0;
+    u = (rx0 * g3(b00 + bz0, 0) +
+	 ry0 * g3(b00 + bz0, 1) +
+	 rz0 * g3(b00 + bz0, 2));
+    v = (rx1 * g3(b10 + bz0, 0) +
+	 ry0 * g3(b10 + bz0, 1) +
+	 rz0 * g3(b10 + bz0, 2));
+    float a = maxLerp(sx, u, v);
+    u = (rx0 * g3(b01 + bz0, 0) +
+	 ry1 * g3(b01 + bz0, 1) +
+	 rz0 * g3(b01 + bz0, 2));
+    v = (rx1 * g3(b11 + bz0, 0) +
+	 ry1 * g3(b11 + bz0, 1) +
+	 rz0 * g3(b11 + bz0, 2));
+    float b = maxLerp(sx, u, v);
+    float c = maxLerp(sy, a, b);
+    u = (rx0 * g3(b00 + bz1, 0) +
+	 ry0 * g3(b00 + bz1, 1) +
+	 rz1 * g3(b00 + bz1, 2));
+    v = (rx1 * g3(b10 + bz1, 0) +
+	 ry0 * g3(b10 + bz1, 1) +
+	 rz1 * g3(b10 + bz1, 2));
+    a = maxLerp(sx, u, v);
+    u = (rx0 * g3(b01 + bz1, 0) +
+	 ry1 * g3(b01 + bz1, 1) +
+	 rz1 * g3(b01 + bz1, 2));
+    v = (rx1 * g3(b11 + bz1, 0) +
+	 ry1 * g3(b11 + bz1, 1) +
+	 rz1 * g3(b11 + bz1, 2));
+    b = maxLerp(sx, u, v);
+    float d = maxLerp(sy, a, b);
+    return maxLerp(sz, c, d);
+  } // maxNoise3
+
+  // see max_texutil.cpp
+  float maxNoise3DS(in float x, in float y, in float z) {
+    float r = 1.65 * maxNoise3(x, y, z);
+    if (r < -1.0) r = -1.0;
+    if (r > 1.0) r = 1.0;
+    return r;
+  } // maxNoise3DS
+
+  // see tex_perlin.cpp
+  float maxPerlinFunc(// others
+		      in float x, in float y, in float z) {
+    float turb = 0.0;
+    int level = 0;
+    float freq = 0.0;
+    float ptx = 0.0;
+    float pty = 0.0;
+    float ptz = 0.0;
+    for (level = 1, freq = 1.0;
+	 level < Level + 0.01 && level < 3;
+	 level++, freq *= 2.0) {
+      ptx = x * freq;
+      pty = y * freq;
+      ptz = z * freq;
+      turb += abs(((1.0 + maxNoise3DS(ptx, pty, ptz)) * 0.5) /
+		  freq);
+    } // for (level = 1, freq = 1.0; ...)
+    return turb;
+  } // maxPerlinFunc
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // xyz-coords
+    float3 xyz_coords = transform_point("internal", "object", position);
+    float3 xtra_dP = float3(0.0, 0.0, 0.0);
+    float3 xtra_bumpDP_0 = float3(1.0, 0.0, 0.0);
+    float3 xtra_bumpDP_1 = float3(0.0, 1.0, 0.0);
+    float3 xtra_bumpDP_2 = float3(0.0, 0.0, 1.0);
+    // try to call hlsl_base_UVGenerator
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Coords.call("output", "result", shader_return,
+		    "output", "xtra_dP", xtra_dP,
+		    "output", "xtra_bumpDP_0", xtra_bumpDP_0,
+		    "output", "xtra_bumpDP_1", xtra_bumpDP_1,
+		    "output", "xtra_bumpDP_2", xtra_bumpDP_2)) {
+      xyz_coords.xyz = shader_return.rgb;
+    }
+    else {
+      xyz_coords *= 100.0;
+    }
+    // use xyz-coords
+    float3 np = float3(0.0, 0.0, 0.0);
+    float size = (Size != 0.0) ? Size : 0.0001;
+    float3 q = float3(0.0, 0.0, 0.0);
+    q.x = xyz_coords.x / size;
+    q.y = xyz_coords.y / size;
+    q.z = xyz_coords.z / size;
+    float turb = maxPerlinFunc(// others
+			       q.x, q.y, q.z);
+    float delta = 20.0;
+    np.x = (maxPerlinFunc(q.x + delta, q.y, q.z) - turb) / delta;
+    np.y = (maxPerlinFunc(q.x, q.y + delta, q.z) - turb) / delta;
+    np.z = (maxPerlinFunc(q.x, q.y, q.z + delta) - turb) / delta;
+    // miMatrix  *tm;
+    // miMatrix  m;
+    // mi_query (miQ_TRANS_OBJECT_TO_INTERNAL, state, miNULLTAG, &tm);
+    float4x4 m = get_transform("object", "internal");
+    // mi_matrix_copy (m, *tm);
+    float3 v = float3(0.0, 0.0, 0.0);
+    float3 vn = float3(0.0, 0.0, 0.0);
+    // mi_vector_normalize ((miVector *)&(m)[0]);
+    v = float3(m[0][0], m[1][0], m[2][0]);
+    vn = normalize(v);
+    m[0][0] = vn.x;
+    m[1][0] = vn.y;
+    m[2][0] = vn.z;
+    // mi_vector_normalize ((miVector *)&(m)[4]);
+    v = float3(m[0][1], m[1][1], m[2][1]);
+    vn = normalize(v);
+    m[0][1] = vn.x;
+    m[1][1] = vn.y;
+    m[2][1] = vn.z;
+    // mi_vector_normalize ((miVector *)&(m)[8]);
+    v = float3(m[0][2], m[1][2], m[2][2]);
+    vn = normalize(v);
+    m[0][2] = vn.x;
+    m[1][2] = vn.y;
+    m[2][2] = vn.z;
+    float3x3 m2;
+    m2[0] = m[0].xyz;
+    m2[1] = m[1].xyz;
+    m2[2] = m[2].xyz;
+    // mi_vector_transform (&np, &np, m);
+    np = m2 * np;
+    // additional scale
+    np.x *= 100.0;
+    np.y *= 100.0;
+    np.z *= 100.0;
+    result.rgb = np.xyz;
+    result.a = 1.0;
+  } // main
+};

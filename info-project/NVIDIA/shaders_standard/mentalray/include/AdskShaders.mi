@@ -1,0 +1,391 @@
+#*****************************************************************************
+# Copyright 2008 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+#
+# ---------------------------------------------
+# Exports:
+#
+# ------------------------------------------------------- core utilities
+# - adsk_scale_meters_to_internal_inverse
+# - adsk_scale_meters_to_internal
+# - adsk_scale_internal_to_meters
+# - adsk_blurred_reflection_multiplier
+# - adsk_blurred_refraction_multiplier
+# - adsk_aspect_ratio_height_per_width
+# - adsk_aspect_ratio_width_per_height
+# - adsk_area_shadow_samples
+# - adsk_core_glossy_sampler
+#
+# - adsk_Utility_MiaDecomposer
+# - adsk_Utility_NodeVisibility
+# - adsk_mrStoreElements
+#
+# ------------------------------------------------------- user data
+# - adsk_SceneData
+# - adsk_NodeData
+# - adsk_ObjectData
+# - max_SceneData
+# - max_NodeData
+# - max_ObjectData
+#
+#****************************************************************************/
+
+min version "3.7"
+
+$ifndef "adsk_mi_included"
+set "adsk_mi_included" "true"
+
+
+
+#------------------------------------------------------------------------
+# adsk_scale_meters_to_internal_inverse
+#------------------------------------------------------------------------
+declare shader
+	scalar "adsk_scale_meters_to_internal_inverse" (
+		scalar "meterValue"
+	)
+	version 1
+	apply texture
+	
+    gui "gui_adsk_scale_meters_to_internal_inverse" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_scale_meters_to_internal
+#------------------------------------------------------------------------
+declare shader
+	scalar "adsk_scale_meters_to_internal" (
+		scalar "meterValue"
+	)
+	version 1
+	apply texture
+	
+    gui "gui_adsk_scale_meters_to_internal" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_scale_internal_to_meters
+#------------------------------------------------------------------------
+declare shader
+	scalar "adsk_scale_internal_to_meters" (
+		scalar "internalValue"
+	)
+	version 1
+	apply texture
+	
+    gui "gui_adsk_scale_internal_to_meters" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_blurred_reflection_multiplier
+#------------------------------------------------------------------------
+declare shader
+    integer "adsk_blurred_reflection_multiplier" (
+        integer "blurred_reflection_value"
+    )
+    version 1
+	apply texture
+	
+    gui "gui_adsk_blurred_reflection_multiplier" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_blurred_refraction_multiplier
+#------------------------------------------------------------------------
+declare shader
+    integer "adsk_blurred_refraction_multiplier" (
+        integer "blurred_refraction_value"
+    )
+    version 1
+	apply texture
+	
+    gui "gui_adsk_blurred_refraction_multiplier" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_aspect_ratio_height_per_width
+#------------------------------------------------------------------------
+declare shader
+    scalar "adsk_aspect_ratio_height_per_width" (
+        color texture "image_color",
+        scalar "scaling_value"
+    )
+    version 1
+	apply texture
+	
+    gui "gui_adsk_aspect_ratio_height_per_width" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_aspect_ratio_width_per_height
+#------------------------------------------------------------------------
+declare shader
+    scalar "adsk_aspect_ratio_width_per_height" (
+        color texture "image_color",
+        scalar "scaling_value"
+    )
+    version 1
+	apply texture
+	
+    gui "gui_adsk_aspect_ratio_width_per_height" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_area_shadow_samples
+#------------------------------------------------------------------------
+declare shader
+    integer "adsk_area_shadow_samples" (
+    )
+    version 1
+    
+    gui "gui_adsk_area_shadow_samples" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_core_glossy_sampler
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_core_glossy_sampler" (
+		boolean enableRejection,
+		scalar rejectionThreshold
+	)
+	version 1
+	apply lens
+	
+	gui "gui_adsk_core_glossy_sampler" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_MiaDecomposer
+#------------------------------------------------------------------------
+declare shader
+        color "adsk_Utility_MiaDecomposer" (
+                shader "mia_material",
+                integer "GBufferID"
+        )
+
+        gui "gui_adsk_Utility_MiaDecomposer" { control "Global" "Global" ( "hidden" )}
+        version 1
+end declare
+
+#------------------------------------------------------------------------
+# adsk_mrStoreElements, store multiple elements. For building phenomena
+#------------------------------------------------------------------------
+declare shader
+    color "adsk_mrStoreElements" (
+        color   "main_input",
+        string  "main_label",
+        
+        boolean "apply_render_elements",
+        integer "gbufferID",
+        array struct "inputs" {
+            color   "input",
+            string  "label",
+            integer "mr_element",
+            integer "max_element"
+        } 
+    )
+    version 3
+    apply material, texture
+    
+    gui "gui_adsk_mrStoreElements" { control "Global" "Global" ( "hidden" )}    
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_NodeVisibility
+#------------------------------------------------------------------------
+
+# This shader implements 3ds Max "node level" visibility.
+# The shader has an "input" which by default is passed through as is, 
+# and multiplied with the node visibility.
+
+declare shader "adsk_Utility_NodeVisibility" (
+        color    "input"   default 1 1 1,
+        integer  "mode"
+   )
+   version 1
+   apply texture, material
+   
+    gui "gui_adsk_Utility_NodeVisibility" { control "Global" "Global" ( "hidden" )}   
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Mia_Optimizer
+#------------------------------------------------------------------------
+
+# This shader will adapt the settings which are passed down to the mia_material
+# shader based on the render quality settings in the scene data, as well as on
+# heuristics of some of the material properties.
+
+declare shader
+	struct {
+		# reflection settings
+		integer  "refl_gloss_samples",
+		boolean  "refl_interpolate",
+		boolean  "refl_hl_only",
+		# refraction settings
+		integer  "refr_gloss_samples",
+		boolean  "refr_interpolate",
+		# interpolation settings
+		integer  "intr_grid_density",
+		integer  "intr_refl_samples",
+		boolean  "intr_refl_ddist_on",
+		scalar   "intr_refl_ddist",
+		integer  "intr_refr_samples",
+		boolean  "single_env_sample",
+		# reflection optimization settings
+		boolean  "refl_falloff_on",
+		scalar   "refl_falloff_dist",
+		integer  "refl_depth",
+		scalar   "refl_cutoff",
+		# refraction optimization settings
+		boolean  "refr_falloff_on",
+		scalar   "refr_falloff_dist",
+		integer  "refr_depth",
+		scalar   "refr_cutoff",
+		# factors
+		scalar   "indirect_multiplier",
+		scalar   "fg_quality",
+		scalar   "fg_quality_w"
+	}
+	"adsk_Mia_Optimizer" (
+		integer "material_type",
+		scalar  "reflectivity",
+		scalar  "brdf_0_degree_refl",
+		scalar  "brdf_90_degree_refl",
+		scalar  "transparency",
+		scalar  "refl_gloss",
+		scalar  "refr_gloss",
+		integer "refl_gloss_samples",
+		integer "refr_gloss_samples",
+		integer "refl_depth",
+		integer "refr_depth"
+	)
+	apply texture
+	version 1
+	gui "gui_adsk_Mia_Optimizer" { control "Global" "Global" ( "hidden" )}
+end declare
+
+
+#-------------------------------------------- data declarations -------------------------------------------
+
+$ifdef "${?ADSK_USER_DATA}" 		# are we using the new user data format ?
+
+#------------------------------------------------------------------------
+# adsk_SceneData
+#------------------------------------------------------------------------
+declare data
+        "adsk_SceneData" (
+                boolean "isMaterialEdit",
+                color   "globalLightLevel",
+                scalar  "gammaCorrection",                
+                scalar  "physicalScale",
+                scalar  "pixelAspectRatio",
+                boolean "doingBakeToTexture",
+                scalar  "internalToMeterScale",
+                boolean "isProtein",
+                integer "areaShadowSamples",
+                scalar  "blurredReflectionMultiplier",
+                scalar  "blurredRefractionMultiplier",
+                boolean "toneOperatorInactive",
+                boolean "isYUp",
+                boolean "clientManagesUVTransforms",
+                integer "renderQuality" default -1 # -1 implies the mia optimizer will not touch any settings.
+        )
+        version 3
+end declare
+
+#------------------------------------------------------------------------
+# adsk_NodeData
+#------------------------------------------------------------------------
+declare data
+        "adsk_NodeData" (
+                color   "wireColor",
+                integer "lightIncludeExcludeID",
+                transform "texPreTransform"
+        )
+        version 2
+end declare
+
+#------------------------------------------------------------------------
+# adsk_ObjectData
+#------------------------------------------------------------------------
+declare data
+        "adsk_ObjectData" (
+                array integer "mapChannel",
+        )
+        version 1
+end declare
+
+$else 								# Legacy protein user data
+
+$ifndef "3ds_max_user_data_defined"
+set "3ds_max_user_data_defined" "true"
+
+#------------------------------------------------------------------------
+# max_SceneData
+#------------------------------------------------------------------------
+declare data
+	"max_SceneData" (
+		boolean "IsMtlEdit",
+			color "AmbientLight",
+			color "GlobalLightLevel",
+			boolean "ForceDoubleSided",
+			scalar "GammaCorrection",
+			scalar "NearRange",
+			scalar "FarRange",
+			scalar "PhysicalScale",
+			scalar "PixelAspectRatio",
+			shader "ToneOpShader",
+			color "backgroundColor",
+			boolean "doingBakeToTexture",
+			boolean "ToneOpInactive",
+			scalar "InternalToMeterScale",
+			boolean "IsProtein",
+			boolean "IsYUp",
+			scalar "BlurredReflectionMultiplier",
+			scalar "BlurredRefractionMultiplier",
+			integer "AreaShadowSamples",
+			boolean "clientManagesUVTransforms",
+			integer "renderQuality" default -1 # -1 implies the mia optimizer will not touch any settings.
+	)
+        version 8
+end declare
+
+#------------------------------------------------------------------------
+# max_NodeData
+#------------------------------------------------------------------------
+declare data
+	"max_NodeData" (
+		color "WireColor",
+		integer "NodeID",
+		integer "NodeRenderID",
+		array light "illuminators",
+		array light "shadowmakers",
+		boolean "useGlobalLights",
+		array integer "materialRequirements",
+		integer "lightIncludeExcludeID",
+		transform "texPreTransform"
+	)
+	version 3
+end declare
+
+#------------------------------------------------------------------------
+# max_ObjectData
+#------------------------------------------------------------------------
+declare data
+        "max_ObjectData" (
+                vector "bvmin",
+                vector "bvmax",
+                array integer "mapchannels",
+        data "particleData"
+        )
+        version 7
+end declare
+
+
+$endif # 3ds_max_user_data_defined
+$endif # ADSK_USER_DATA
+
+$endif # if not "adsk_mi_included"

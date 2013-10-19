@@ -1,0 +1,451 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Manipulating Spectra from Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node158.html">&laquo;&nbsp;prev</a></li>
+<li><a href="shader_if_cpp.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<ul class="nav tag">
+<li><a href="#enabled">mi_spectrum_enabled</a></li>
+<li><a href="#ensure">mi_spectrum_ensure</a></li>
+<li><a href="#check">mi_spectrum_check</a></li>
+<li><a href="#size">mi_spectrum_size</a></li>
+<li><a href="#rangeget">mi_spectrum_range_get</a></li>
+<li><a href="#linewidth">mi_spectrum_linewidth</a></li>
+<li><a href="#visible">mi_spectrum_visible_range</a></li>
+<li><a href="#blackbody">mi_spectrum_blackbody</a></li>
+<li><a href="#cieabcd">mi_spectrum_cie</a></li>
+<li><a href="#ciesky">mi_spectrum_cie_sky</a></li>
+<li><a href="#blueprint">mi_spectrum_blueprint</a></li>
+<li><a href="#create">mi_spectrum_create</a></li>
+<li><a href="#allocate">mi_spectrum_create_inheap</a></li>
+<li><a href="#clone">mi_spectrum_clone</a></li>
+<li><a href="#copy">mi_spectrum_copy</a></li>
+<li><a href="#assign">mi_spectrum_assign</a></li>
+<li><a href="#assigndata">mi_spectrum_assign_data</a></li>
+<li><a href="#add">mi_spectrum_add</a></li>
+<li><a href="#mul">mi_spectrum_mul</a></li>
+<li><a href="#scale">mi_spectrum_scale</a></li>
+<li><a href="#scaleadd">mi_spectrum_scale_add</a></li>
+<li><a href="#lerp">mi_spectrum_lerp</a></li>
+<li><a href="#coloradd">mi_spectrum_color_add</a></li>
+<li><a href="#colorrgb">mi_spectrum_rgb</a></li>
+<li><a href="#valget">mi_spectrum_value_get</a></li>
+<li><a href="#valset">mi_spectrum_value_set</a></li>
+<li><a href="#valadd">mi_spectrum_value_add</a></li>
+<li><a href="#clear">mi_spectrum_clear</a></li>
+<li><a href="#reset">mi_spectrum_reset</a></li>
+<li><a href="#delete">mi_spectrum_delete</a></li>
+<li><a href="#release">mi_spectrum_delete_fromheap</a></li>
+<li><a href="#ciexyz">mi_spectrum_ciexyz</a></li>
+<li><a href="#itercreate">mi_spectrum_iterator_create</a></li>
+<li><a href="#iterdestroy">mi_spectrum_iterator_destroy</a></li>
+<li><a href="#iterbegin">mi_spectrum_iterator_begin</a></li>
+<li><a href="#iternext">mi_spectrum_iterator_next</a></li>
+<li><a href="#iterend">mi_spectrum_iterator_end</a></li>
+<li><a href="#itersize">mi_spectrum_iterator_size</a></li>
+</ul>
+
+<h3>Spectrum Interface</h3>
+
+Unlike with the <code>miColor</code> structure, it is not possible
+to access the members of the <code>miSpectrum</code> structure
+directly. All manipulations of spectra have to be performed with
+the help of interface routines. If these routines create new
+spectra or spectrum iterators, then they will be created within
+thread-local memory pools. Hence, these structures cannot be shared
+between several threads. This issue becomes important for init
+shaders. Spectra and spectrum iterators in init shaders that will
+be used by the regular shaders should therefore be created with the
+<code>mi_spectrum_create_inheap</code> routine and deleted with the
+<code>mi_spectrum_delete_fromheap</code> routine. This approach
+requires mental ray to perform a memory locking and therefore is
+detremental to parallel performance. As a result it is recommended
+to avoid allocating on the heap whenever possible.
+
+<h4>Spectrum Utility Routines</h4>
+
+<h5 class="anchor" id="enabled">mi_spectrum_enabled</h5>
+
+<pre>
+const char* mi_spectrum_enabled()
+</pre>
+<p>
+If spectra have been enabled for this rendering, then the routine
+will return a pointer to character string identifying the spectrum
+implemention in use. If spectra are not enabled, then a null
+pointer is returned.</p>
+
+<h5 class="anchor" id="ensure">mi_spectrum_ensure</h5>
+<pre>
+miSpectrum* mi_spectrum_ensure(miSpectrum* s)
+</pre>
+<p>
+The routine checks if the passed in spectrum is a valid spectrum.
+If it is not, then the spectrum will be initizalized. The routine
+is used in the <code>mi_eval_spectrum</code> macro to ensure that
+passed in spectra are valid.</p>
+
+<h5 class="anchor" id="check">mi_spectrum_check</h5>
+<pre>
+miBoolean mi_spectrum_check(miSpectrum* s)
+</pre>
+<p>
+The routine takes a pointer to a spectrum as an argument. It
+returns <code>miTRUE</code> if the pointer refers to a valid
+spectrum. Else it returns <code>miFALSE</code>.</p>
+
+<h5 class="anchor" id="size">mi_spectrum_size</h5>
+<pre>
+unsigned int mi_spectrum_size(const miSpectrum* s)
+</pre>
+<p>Returns the size of the spectrum referenced by the argument
+pointer. If the pointer is <code>null</code>, then the size of a
+default spectrum structure is returned.</p>
+
+<h5 class="anchor" id="rangeget">mi_spectrum_range_get</h5>
+<pre>
+void mi_spectrum_range_get(const miSpectrum* s, miScalar*
+lo, miScalar* hi)
+</pre>
+<p>Retrieves the lowest and highest wavelengths values
+<code>lo</code> and <code>hi</code> associated with the spectrum
+<code>s</code>.</p>
+
+<h5 class="anchor" id="linewidth">mi_spectrum_linewidth</h5>
+<pre>
+miScalar mi_spectrum_linewidth(const miSpectrum* s, miScalar w)
+</pre>
+<p>Retrieves the width of the spectrum line at the given wavelength
+(given in nanometers) of the spectrum represented by <code>s</code>.</p>
+
+<h5 class="anchor" id="visible">mi_spectrum_visible_range</h5>
+<pre>
+void mi_spectrum_visible_range(miScalar* min_lambda, miScalar* max_lambda)
+</pre>
+<p>Returns the wavelength range representable by the the current
+spectrum representation. For the default mental ray spectrum
+representation the range is from 400 to 700 nano-meters.</p>
+
+<h5 class="anchor" id="blackbody">mi_spectrum_blackbody</h5>
+<pre>
+void mi_spectrum_blackbody(miSpectrum* bbody, miScalar temperature, miScalar intensity)
+</pre>
+<p>Stores a spectrum corresponding to a black body radiator at the
+given temperature (in Kelvin) in <code>bbody</code>. The spectrum
+is scaled such that the total intensity in the visible domain is
+the requested intensity.</p>
+
+<h5 class="anchor" id="cieabcd">mi_spectrum_cie</h5>
+<pre>
+void mi_spectrum_cie(miSpectrum* cie, miScalar intensity, const char* illuminant)
+</pre>
+<p>Stores a spectrum corresponding to one of the CIE A, B, C, or
+D65 standard illuminants, scaled to the given intensity in
+<code>cie</code>. Valid illuminants are selected by one of the
+strings <i>"A", "B", "C"</i> or <i>"D65"</i>.</p>
+
+<h5 class="anchor" id="ciesky">mi_spectrum_cie_sky</h5>
+<pre>
+void mi_spectrum_cie_sky(miSpectrum* sky, miScalar temperature, miScalar intensity)
+</pre>
+
+<p>Stores a spectrum corresponding to a CIE D spectrum at the given
+correlated color temperature, scaled to the given intensity, in
+<code>sky</code>.</p>
+
+<h4>Spectrum Manipulation Routines</h4>
+
+<h5 class="anchor" id="blueprint">mi_spectrum_blueprint</h5>
+<pre>
+miSpectrum* mi_spectrum_blueprint()
+</pre>
+<p>Returns a pointer to a reference spectrum. This routine may be
+used to obtain information about spectra by passing the pointer
+returned to other routines. The spectrum referenced by this pointer
+may not be altered.</p>
+
+<h5 class="anchor" id="create">mi_spectrum_create</h5>
+<pre>
+miSpectrum* mi_spectrum_create(miSpectrum_data* sd)
+</pre>
+<p>Creates a copy of the blueprint spectrum and returns a pointer
+to it. If the miSpectrum_data pointer passed in is non-null, then
+this data is used to initialize the spectrum. Otherwise the new
+spectrum is initialized with the contents of the blueprint.</p>
+
+<h5 class="anchor" id="allocate">mi_spectrum_create_inheap</h5>
+<pre>
+miSpectrum* mi_spectrum_create_inheap(miSpectrum_data* sd)
+</pre>
+<p>Creates a copy of the blueprint spectrum and returns a pointer
+to it. If the miSpectrum_data pointer passed in is non-null, then
+this data is used to initialize the spectrum. Otherwise the new
+spectrum is initialized with the contents of the blueprint. Unlike
+all other routines creating spectra, this routine allocates the
+spectum memory on the heap. Hence, this routine should be used if
+the spectrum is to be shared between several threads. A typicial
+situation requiring this appoach is the creation of a spectrum
+within an init shader. Note that allocating memory on the heap
+requires memory locking and therfore is detremental to parallel
+efficiency. This routine should only be used sparingly - in general
+<code>mi_spectrum_create</code> should be preferred.</p>
+
+<h5 class="anchor" id="clone">mi_spectrum_clone</h5>
+<pre>
+miSpectrum* mi_spectrum_clone(const miSpectrum* s)
+</pre>
+<p>Creates a one-to-one copy of the spectrum passed in and returns
+a pointer to this copy.</p>
+
+<h5 class="anchor" id="copy">mi_spectrum_copy</h5>
+<pre>
+void mi_spectrum_(miSpectrum* s, const miSpectrum* in)
+</pre>
+<p>Copies the entire contents of the spectrum referenced by
+<code>in</code> to the spectrum referenced by <code>s</code>.</p>
+
+<h5 class="anchor" id="assign">mi_spectrum_assign</h5>
+<pre>
+void mi_spectrum_assign(miSpectrum* s, const miSpectrum* in)
+</pre>
+<p>Assigns the spectrum values of the <code>in</code> spectrum to
+the corresponding wavelength values of the spectrum <code>s</code>.
+Only values are assigned, the wavelengths of spectrum
+<code>s</code> are unchanged. If the wavelength ranges of the
+<code>in</code> and <code>s</code> spectrum do not coincide, then
+values present within <code>in</code> but not in <code>s</code>
+will not be assigned. values present within <code>s</code> but
+outside the wavelength range of <code>in</code> will be assigned a
+zero value.</p>
+
+<h5 class="anchor" id="assigndata">mi_spectrum_assign_data</h5>
+<pre>
+void mi_spectrum_assign_data(miSpectrum *s, const miSpectrum_data* data)
+</pre>
+<p>Retrieves for each relevant wavelength within the wavelength
+range of the spectrum <code>s</code> a value from the spectrum data
+referenced by the <code>data</code> pointer. This assignment may be
+expensive. Hence, if possible this routine should be called in an
+init shader.</p>
+
+<h5 class="anchor" id="add">mi_spectrum_add</h5>
+<pre>
+void mi_spectrum_add(miSpectrum* s, const miSpectrum *in)
+</pre>
+<p>Adds to each component of the spectrum <code>s</code> the
+corresponding component of the <code>in</code> spectrum.</p>
+
+<h5 class="anchor" id="mul">mi_spectrum_mul</h5>
+<pre>
+void mi_spectrum_mul(miSpectrum* s, const miSpectrum *in)
+</pre>
+<p>Multiplies each component of the spectrum <code>s</code> with
+the corresponding component of the <code>in</code> spectrum.</p>
+
+<h5 class="anchor" id="scale">mi_spectrum_scale</h5>
+<pre>
+void mi_spectrum_scale(miSpectrum* s, Scalar scale)
+</pre>
+<p>Multiplies each component of the spectrum <code>s</code> with
+<code>scale</code>.</p>
+
+<h5 class="anchor" id="scaleadd">mi_spectrum_scale_add</h5>
+<pre>
+void mi_spectrum_scale_add(miSpectrum* s, const miSpectrum* in, Scalar scale)
+</pre>
+<p>Adds to each component of the spectrum <code>s</code> the
+corresponding component of the <code>in</code> spectrum, scaled by
+the factor<code>scale</code>.</p>
+
+<h5 class="anchor" id="lerp">mi_spectrum_lerp</h5>
+<pre>
+void mi_spectrum_lerpe(miSpectrum* s, const miSpectrum* in, Scalar lerp)
+</pre>
+<p>Multiplies each component of the spectrum <code>s</code> with
+the factor <code>(1-lerp)</code> and adds to it the corresponding
+component of the <code>in</code> spectrum, multiplied by the factor
+<code>lerp</code>.</p>
+
+<h5 class="anchor" id="coloradd">mi_spectrum_color_add</h5>
+<pre>
+void mi_spectrum_color_color_add(miSpectrum* s, const miColor* in)
+</pre>
+<p>Associates with the given CIE XYZ color <code>in</code> a
+spectrum. This choice of spectrum is based on a heuristic, since
+there are infinitely many spectra resulting in the same color. This
+spectrum is then added on a per component basis to spectrum
+<code>s</code>.</p>
+
+<h5 class="anchor" id="colorrgb">mi_spectrum_rgb</h5>
+<pre>
+void mi_spectrum_rgb(miColor* c, const miSpectrum* s)
+</pre>
+<p>Computes a tristimulus color representation of the provided
+spectrum in mental rays <i>BoxRGB</i> color space. The routine may
+be used to obtain a color representation that can be passed to
+shaders that do not understand spectra. Such shaders may not trace
+any rays or sample lights.</p>
+
+<h5 class="anchor" id="valget">mi_spectrum_value_get</h5>
+<pre>
+miScalar mi_spectrum_value_get(const miSpectrum* s, miScalar w)
+</pre>
+<p>Evaluates spectrum <code>s</code> at wavelength <code>w</code>,
+where the wavelength is given in nanometers. If the given
+wavelength is outside the range of wavelengths associated with the
+spectrum, then a value of 0 is returned.</p>
+
+<h5 class="anchor" id="valset">mi_spectrum_value_set</h5>
+<pre>
+miScalar mi_spectrum_value_set(const miSpectrum* s, miScalar w, miScalar v)
+</pre>
+<p>Sets the value of spectrum <code>s</code> at wavelength
+<code>w</code> to the provided value <code>v</code>. Again, the
+wavelength is given in nanometers. If the given wavelength is
+outside the range of wavelengths associated with the spectrum, then
+no value is assigned to the spectrum. The routine returns the
+previous value of the spectrum at this wavelength.</p>
+
+<h5 class="anchor" id="valadd">mi_spectrum_value_add</h5>
+<pre>
+miScalar mi_spectrum_value_add(const miSpectrum* s, miScalar w, miScalar v)
+</pre>
+<p>Adds to the value of spectrum <code>s</code> at wavelength
+<code>w</code> the provided value <code>v</code>. Again, the
+wavelength is given in nanometers. If the given wavelength is
+outside the range of wavelengths associated with the spectrum, then
+no value is added to the spectrum. The routine returns the previous
+value of the spectrum at this wavelength.</p>
+
+<h5 class="anchor" id="clear">mi_spectrum_clear</h5>
+<pre>
+void mi_spectrum_clear(const miSpectrum* s)
+</pre>
+<p>Sets all components of spectrum <code>s</code> to 0.</p>
+
+<h5 class="anchor" id="reset">mi_spectrum_reset</h5>
+<pre>
+void mi_spectrum_reset(miSpectrum* s)
+</pre>
+<p>Sets the passed in spectrum to the default spectrum.</p>
+
+<h5 class="anchor" id="delete">mi_spectrum_delete</h5>
+<pre>
+void mi_spectrum_delete(const miSpectrum* s)
+</pre>
+<p>Releases all resources associated with spectrum<code>s</code>.
+After this call the contents of <code>s</code> are no longer
+available. Calls to interface routines that would acccess these
+contents will fail.</p>
+
+<h5 class="anchor" id="release">mi_spectrum_delete_fromheap</h5>
+<pre>
+mi_spectrum_delete_fromheap(miSpectrum* s)
+</pre>
+<p>Releases all resources associated with spectrum<code>s</code>.
+After this call the contents of <code>s</code> are no longer
+available. Calls to interface routines that would acccess these
+contents will fail. This routine is the counter part to
+<code>mi_spectrum_create_inheap</code>. It may only be used to
+release spectra that had been allocated with
+<code>mi_spectrum_create_inheap</code>. For all other spectra
+<code>mi_spectrum_delete</code> is the appropriate call.</p>
+
+<h5 class="anchor" id="ciexyz">mi_spectrum_ciexyz</h5>
+<pre>
+miScalar mi_spectrum_ciexyz( miColor* c, const miSpectrum* s)
+</pre>
+<p>Computes the "CIE XYZ" coordinates of the spectrum
+<code>s</code> and writes them into the color <code>c</code>. The
+scalar value returned by the routine contains the unweighted
+integral of the spectrum.</p>
+
+<h4>Spectrum Iterators</h4>
+
+Since it is not possible to access the spectrum components directly
+we need iterators to perform some manipulations on spectra.
+
+<h5 class="anchor" id="itercreate">mi_spectrum_iterator_create</h5>
+<pre>
+miSpectrum_iterator* mi_spectrum_iterator_create(const miSpectrum* s, miScalar quality)
+</pre>
+<p>Returns a pointer to a spectrum iterator appropriate for
+spectrum <code>s</code>. The <code>quality</code> parameter may
+affect the number of spectra used begin the begin and the end of
+the iteratations performed. The value of the <code>quality</code>
+parameter is between 0 and 1.</p>
+
+<h5 class="anchor" id="iterdestroy">mi_spectrum_iterator_destroy</h5>
+<pre>
+void mi_spectrum_iterator_destroy(miSpectrum_iterator* iter)
+</pre>
+<p>Releases all resources associated with the iterator <code>iter</code>.</p>
+
+<h5 class="anchor" id="iterbegin">mi_spectrum_iterator_begin</h5>
+<pre>
+miSpectrum* mi_spectrum_iterator_begin(miSpectrum_iterator* iter)
+</pre>
+<p>Returns a pointer to the first spectrum containing components
+used to iterate over the original spectrum used to generate the
+iterator <code>iter</code>. The contents of the returned spectrum
+pointer become invalid after a call to
+<code>mi_spectrum_iterator_next</code>.</p>
+
+<h5 class="anchor" id="iternext">mi_spectrum_iterator_next</h5>
+<pre>
+miSpectrum* mi_spectrum_iterator_next(miSpectrum_iterator* iter)
+</pre>
+<p>Returns a pointer to the next spectrum in the list of spectra to
+be used to iterate over the spectrum passed to iterator
+<code>iter</code> during its construction. The returned pointer
+will usually reference the same memory as the pointer returned by
+the <code>mi_spectrum_iterator_begin</code> routine. Hence, the
+contents of the previous spectrum pointer of the iteration become
+invalid after a call to this routine. If the returned pointer is
+the same as the one obtained by the
+<code>mi_spectrum_iterator_end</code> routine, then the pointer
+will no refer to any valid spectrum and access to its contents is
+illegal.</p>
+
+<h5 class="anchor" id="iterend">mi_spectrum_iterator_end</h5>
+<pre>
+miSpectrum* mi_spectrum_iterator_end(miSpectrum_iterator* iter)
+</pre>
+<p>Returns a pointer to a spectrum struct. This pointer will not
+reference valid data. Hence, it may only be used to compare against
+another spectrum pointer obtained from
+<code>mi_spectrum_iterator_begin</code> or
+<code>mi_spectrum_iterator_next</code>. If such a comparision
+yields equality, then no further iterations are required.</p>
+
+<h5 class="anchor" id="itersize">mi_spectrum_iterator_size</h5>
+<pre>
+unsigned int mi_spectrum_iterator_size(void)
+</pre>
+<p>Yields the size occupied by a <code>miSpectrum_iterator</code>
+structure. This size does not inlcude the size of any spectra
+internally maintained by the iterator.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node158.html">&laquo;&nbsp;prev</a></li>
+<li><a href="shader_if_cpp.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

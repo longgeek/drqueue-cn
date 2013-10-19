@@ -1,0 +1,185 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Built-in Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node27.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node28.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<h2 id="builtinshaders">Built-in Shaders</h2>
+<dl class="toc">
+<dt class="h3"><a href="#builtin_material">builtin_material</a></dt>
+<dt class="h3"><a href="#builtin_constant_color">builtin_constant_color</a></dt>
+<dt class="h3"><a href="#builtin_directional_light">builtin_directional_light</a></dt>
+<dt class="h3"><a href="#builtin_point_light">builtin_point_light</a></dt>
+</dl>
+<p>mental ray has a small set of simple built-in shaders. These are
+intended for simple visualizations, where speed and simplicity of
+scene setup are more important than customization of shading
+elements. The shaders are designed to be fast, and offer only
+little control over shading details. Since the shaders are part of
+mental ray, their executation can be better optimized for
+performance by avoiding a few steps necessary when calling
+dynamically linked, external shaders.</p>
+<p>Built-in shaders are used just like other (dynamically linked)
+shaders in a scene. They are referenced by name, and shader
+arguments may be specified which must conform to the declarations
+of the shader. However, built-in shaders do not need to be declared
+in the .mi input files or linked with mental ray using
+<tt>link</tt> statements. The shaders and their declarations are
+known to mental ray.</p>
+<p class="note"><b>Note:</b>Textures, global illumination, and
+final gathering are not supported by built-in shaders. They can not
+be used in conjunction with any other (dynamically linked) shaders
+in this version of mental ray. A scene may contain either just
+built-in shaders or no built-in shaders at all, but not both.</p>
+<h3 id="builtin_material">builtin_material</h3>
+<p>mental ray provides a single material shader. It is similar to a
+typical Phong shader but uses a more realistic shading model which
+can model the characteristics of many actual materials better. In
+particular, the amount and directional characteristics of specular
+highlights at grazing angles are rendered more realistically. It
+also supports anisotropy for materials like brushed metals or
+velvet. The declaration of the built-in material in .mi syntax
+follows:</p>
+<pre>
+declare "builtin_material"(
+    color "ambient",
+    color "diffuse",
+    color "specular",
+    scalar "shininess" = 100.0,
+    scalar "anisotropy",
+    color "reflect",
+    color "transparency",
+    array light "lights")
+</pre>
+<h4 id="parameters">Parameters</h4>
+<dl>
+<dt>ambient</dt>
+<dd>A constant ambient color component. Set only the ambient color,
+in order to get constant color shading. Note that when this is set
+to something other than zero, energy in the scene is no longer
+preserved, which can lead to unrealistic and undesirable
+results.</dd>
+<dt>diffuse</dt>
+<dd>The diffuse color of the material.</dd>
+<dt>specular</dt>
+<dd>The specular color of the material</dd>
+<dt id="shininess">shininess</dt>
+<dd>This parameter specifies the shininess of the material, similar
+to the well-known Phong exponent. The higher the value is, the
+sharper and "more shiny" are the specular highlights. A useful
+range is between 10 and 1000, but any strictly positive number is
+valid. The default is 100.</dd>
+<dt>anisotropy</dt>
+<dd>If this is set to a value other than zero then shading will be
+anistropic, that is, the <a href="#shininess">shininess</a> of the
+surface varies depending on the surface orientation.
+<p>For positive values there are more specular reflections in the u
+direction of the surface, and for negative values there are more
+specular reflections in the v direction of the surface. A useful
+range is typically between -1 and 1, although values outside this
+range can be used, too.</p>
+</dd>
+<dt>reflect</dt>
+<dd>The reflective color of the material. If this is set to
+something else than black and if ray tracing is enabled then a
+reflection ray will be shot and added filtered by this color. The
+ray is shot in the ideal reflection direction, and does not
+simulate any glossiness or speculariy off the ideal reflection
+direction.</dd>
+<dt>transparency</dt>
+<dd>The transparency color of the material, similar to reflections,
+except that no index of refraction is used, and the ray continues
+straight through the material.</dd>
+<dt>lights</dt>
+<dd>An array of references to light instances which are used to
+illuminate the material. If it is not set, then only the ambient
+color is used.</dd>
+</dl>
+<h3 id="builtin_constant_color">builtin_constant_color</h3>
+<p>This shader returns a constant color. Its declaration is:</p>
+<pre>
+declare "builtin_constant_color"(
+    color "color")
+    
+</pre>
+<p>Parameters:</p>
+<dl>
+<dt>color</dt>
+<dd>The color returned by the shader.</dd>
+</dl>
+<h3 id="builtin_directional_light">builtin_directional_light</h3>
+<pre>
+declare "builtin_directional_light"(
+    color "color",
+    boolean "shadow",
+    scalar "factor")
+    
+</pre>
+<h4>Parameters:</h4>
+<dl>
+<dt>color</dt>
+<dd>The color of the light source</dd>
+<dt>shadow</dt>
+<dd>This flag indicates whether shadows should be computed for the
+light source. Shadows are turned off by default.</dd>
+<dt>factor</dt>
+<dd>The shadow factor determines how dark shadows cast by this
+light source are. A value of 0.0 renders black shadows, and a value
+of 1.0 uses full illumination without any shadowing. A useful range
+is between 0.0 and 1.0, the default is 0.0.</dd>
+</dl>
+<h3 id="builtin_point_light">builtin_point_light</h3>
+<pre>
+declare "builtin_point_light"(
+    color "color",
+    boolean "shadow"
+    scalar "factor",
+    boolean "attenuation",
+    scalar "start",
+    scalar "stop")
+    
+</pre>
+<h4>Parameters:</h4>
+<dl>
+<dt>color</dt>
+<dd>The color of the light source</dd>
+<dt>shadow</dt>
+<dd>This flag indicates whether shadows should be computed for the
+light source. Shadows are turned off by default.</dd>
+<dt>factor</dt>
+<dd>The shadow factor determines how dark shadows cast by this
+light source are. A value of 0.0 renders black shadows, and a value
+of 1.0 uses full illumination without any shadowing. A useful range
+is between 0.0 and 1.0, the default is 0.0.</dd>
+<dt>attenuation</dt>
+<dd>This flag indicates whether light is attenuated with distance.
+It is turned off by default.</dd>
+<dt>start</dt>
+<dd>The distance from the light source at which light begins to be
+attenuated if <em>attenuation</em> is set.</dd>
+<dt>stop</dt>
+<dd>The distance from the light source at which light is fully
+attenuated to black if <em>attenuation</em> is set.</dd>
+</dl>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node27.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node28.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a><br /></p>
+</body>
+</html>

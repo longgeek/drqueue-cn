@@ -1,0 +1,59 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Generator_gradient2d
+{
+  input:
+		Color   bottom_left  = Color(0,0,0,0)
+		{			
+			display_name("Bottom Left");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The value at the Bottom Left of the gradient." );
+		};
+		Color   bottom_right = Color(1,0,0,1)
+		{		
+			display_name("Bottom Right");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The value at the Bottom Right of the gradient." );
+		};
+		Color   top_left     = Color(0,1,0,1)
+		{		
+			display_name("Top Left");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The value at the Top Left of the gradient." );
+		};
+		Color   top_right    = Color(1,1,0,1)
+		{		
+			display_name("Top Right");
+			soft_range(Color(0,0,0,0),Color(1,1,1,1));
+			description( "The value at the Top Right of the gradient." );
+		};
+		int texture_space = 0 
+		{ 
+			display_name("Texture Space");
+			literal(); 
+			description( "Texture coordinates to use when sampling the "
+						 "input texture." );		
+			hard_range(0, 3);
+		};
+    
+  output:
+    Color result;
+    
+    void main()
+    {
+		Color hb, ht;
+		float2 m = abs(texture_coordinate[texture_space].xy);
+
+		hb     = lerp(bottom_right, bottom_left, m.x);
+		ht     = lerp(top_right, top_left, m.x);
+		result = lerp(ht, hb, m.y);
+    }
+}
+{
+	description( "Generates a smooth gradient between corners based on the "
+	             "location of the input in the unit square." );
+}
+;

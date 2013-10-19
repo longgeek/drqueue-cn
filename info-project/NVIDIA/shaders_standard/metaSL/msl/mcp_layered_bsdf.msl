@@ -1,0 +1,310 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product shader for layering BSDFs.
+ *****************************************************************************/
+
+// If builtin Bsdf definitions are not builtin, use this include.
+//#include <bsdf_defs.msl>
+#include <mcp_lib.msl>
+
+bsdf Mcp_layered_bsdf
+{
+
+input:
+    // Only Mcp_mixed_bsdf nodes, or elementary BSDF too?
+    const Bsdf bsdfs[]
+    {
+        // recommend Mcp_mixed_bsdf and elemental BSDF per annotation
+        recommended_set( "Mcp_mixed_bsdf",
+                               "Mcp_diffuse_reflection_bsdf",
+                               "Mcp_diffuse_transmission_bsdf",
+                               "Mcp_simple_glossy_bsdf",
+                               "Mcp_backscattering_glossy_bsdf");
+    };
+    // Bsdf_layer bsdf_layers[bsdfs.count];
+    Bsdf_layer bsdf_layers[] = Bsdf_layer[](Bsdf_layer(), Bsdf_layer(), Bsdf_layer(), Bsdf_layer());
+
+member:
+//    uniform Bsdf_components potential_components;
+//    uniform Bsdf_attributes potential_attributes;
+/*
+    uniform Mcp_layered_bsdf()
+    {
+        // COMPILER ERROR: no overloaded version of function: "operator=(Bsdf_attributes, Bsdf_attributes)
+        //potential_attributes = Bsdf_attributes{};
+        //potential_components = Bsdf_components{};
+
+        for (int i=0; i < bsdf_layers.count; ++i)
+        {
+            Bsdf_attributes attr = bsdfs[i].get_attributes();
+            if ((Bsdf_attributes{geometry_dependent} in potential_attributes) !=
+                (Bsdf_attributes{geometry_dependent} in attr))
+            {
+                error("cannot mix geometryless and geometry-dependent BSDFs");
+            }
+            potential_attributes |= attr;
+            potential_components |= bsdfs[i].get_components();
+        }
+
+    }
+*/
+
+    varying Bsdf_components sampling_types[4];
+    varying Bsdf_components active_components;
+    varying Mcp_layered_bsdf()
+    {
+        active_components=Bsdf_components{};
+//		int count = bsdfs.count;
+        if(bsdfs.count >0)	{
+            sampling_types[0] = bsdfs[0].get_active_components();
+            active_components=active_components|sampling_types[0];
+        if(bsdfs.count >1)	{
+            sampling_types[1] = bsdfs[1].get_active_components();
+            active_components=active_components|sampling_types[1];
+        if(bsdfs.count >2)	{
+            sampling_types[2] = bsdfs[2].get_active_components();
+            active_components=active_components|sampling_types[2];
+        if(bsdfs.count >3)	{
+            sampling_types[3] = bsdfs[3].get_active_components();
+            active_components=active_components|sampling_types[3];
+        }}}}
+    }
+
+
+    //the list of all possible bsdf components computed by this bsdf
+    Bsdf_components get_components()
+    {
+        return all_components;//Bsdf_components{reflect_glossy,transmit_glossy};
+    }
+
+    //the worst case of active attributes for this bsdf, independent of what actual input parameters are.
+    Bsdf_attributes get_attributes()
+    {
+        return Bsdf_attributes{geometry_dependent};
+    }
+    
+    //the list of active attributes, given the actual input parameters. 
+    //For this bsdf it equals the worst case described by get_attributes(), so we do not need to implement this
+    Bsdf_attributes get_active_attributes() 
+    {
+        return get_attributes();
+    }
+    Bsdf_components get_active_components() 
+    {
+        return active_components;
+    }
+
+    Spectrum calculate_fresnel(
+         Spectrum ior,
+         float cos_h)
+    {
+        Spectrum rn = (ior - Spectrum(1.)) / (ior + Spectrum(1.));
+        rn *= rn;
+        float c = 1.f - cos_h;
+        float c2 = c * c;
+        return rn + (Spectrum(1.) - rn) * (c * c2 * c2);
+    }
+
+    float calculate_schlick_factor(float cos_h,Blend_curve blend_curve)
+    {
+        float edge_level = pow(1.0 - abs(cos_h), blend_curve.exponent);
+        return blend_curve.grazing_reflectivity * edge_level + blend_curve.normal_reflectivity * (1.0 - edge_level);
+    }
+
+    Spectrum calculate_directional_factor(
+            Bsdf_layer layer,
+            float cos_h)
+    {
+        switch (layer.blend_mode) {
+        case weighted_blend: 
+            return Spectrum(1.);
+        case fresnel_blend:
+            return calculate_fresnel(layer.ior, cos_h);
+        case curve_blend:
+            return Spectrum(calculate_schlick_factor( cos_h,layer.blend_curve));
+        }
+        return Spectrum(0.);
+    }
+
+
+    Spectrum eval(
+         float3              fixed_direction,
+         float3              sampled_direction,
+         Bsdf_components     allowed_components,
+         bool                transport_source)
+    {
+        // For now, just the same implementation as mixed bsdf, TODO: improve
+        allowed_components = bsdf_check_type(
+                geometry_normal,fixed_direction,sampled_direction,allowed_components);
+        Spectrum res(0.0);
+        Spectrum current_weight;
+        Spectrum directional_factor;
+        float cos_h = dot(fixed_direction,normal);
+        if(bsdfs.count >0)	{
+            directional_factor=calculate_directional_factor(bsdf_layers[0],cos_h);
+            current_weight=bsdf_layers[0].weight*directional_factor;
+                res = res*(Spectrum(1.-max_value(current_weight)))+current_weight * bsdfs[0].eval(
+                            fixed_direction, sampled_direction,
+                            allowed_components, transport_source);
+        if(bsdfs.count >1)	{
+            directional_factor=calculate_directional_factor(bsdf_layers[1],cos_h);
+            current_weight=bsdf_layers[1].weight*directional_factor;
+                res = res*(Spectrum(1.-max_value(current_weight)))+current_weight * bsdfs[1].eval(
+                            fixed_direction, sampled_direction,
+                            allowed_components, transport_source);
+        if(bsdfs.count >2)	{
+            directional_factor=calculate_directional_factor(bsdf_layers[2],cos_h);
+            current_weight=bsdf_layers[2].weight*directional_factor;
+                res = res*(Spectrum(1.-max_value(current_weight)))+current_weight * bsdfs[2].eval(
+                            fixed_direction, sampled_direction,
+                            allowed_components, transport_source);
+        if(bsdfs.count >3)	{
+            directional_factor=calculate_directional_factor(bsdf_layers[3],cos_h);
+            current_weight=bsdf_layers[3].weight*directional_factor;
+                res = res*(Spectrum(1.-max_value(current_weight)))+current_weight * bsdfs[3].eval(
+                            fixed_direction, sampled_direction,
+                            allowed_components, transport_source);
+        }}}}
+//        }
+        return res;
+   }
+
+
+   float pdf(
+        float3           fixed_direction,
+        float3           sampled_direction,
+        Bsdf_components  allowed_components,
+        bool             transport_source)
+    {
+        float p = 0.0;
+        float cos_h = dot(fixed_direction,normal);
+        float current_weight=0.;
+        if(bsdfs.count >0)	{
+            current_weight = max_value(bsdf_layers[0].weight*calculate_directional_factor(bsdf_layers[0],cos_h));
+            p = p*(1.-current_weight) +current_weight *
+                 bsdfs[0].pdf(
+                     fixed_direction, sampled_direction,
+                     allowed_components, transport_source);
+        if(bsdfs.count >1)	{
+            current_weight = max_value(bsdf_layers[1].weight*calculate_directional_factor(bsdf_layers[1],cos_h));
+            p = p*(1.-current_weight) +current_weight *
+                 bsdfs[1].pdf(
+                     fixed_direction, sampled_direction,
+                     allowed_components, transport_source);
+        if(bsdfs.count >2)	{
+            current_weight = max_value(bsdf_layers[2].weight*calculate_directional_factor(bsdf_layers[2],cos_h));
+            p = p*(1.-current_weight) +current_weight *
+                 bsdfs[2].pdf(
+                     fixed_direction, sampled_direction,
+                     allowed_components, transport_source);
+        if(bsdfs.count >3)	{
+            current_weight = max_value(bsdf_layers[3].weight*calculate_directional_factor(bsdf_layers[3],cos_h));
+            p = p*(1.-current_weight) +current_weight *
+                 bsdfs[3].pdf(
+                     fixed_direction, sampled_direction,
+                     allowed_components, transport_source);
+        }}}}
+        return  p;
+    }
+
+
+    Bsdf_components sample(
+        float3              fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        Bsdf_components     allowed_components,
+        bool                transport_source)
+    {
+        if(bsdfs.count == 0)
+            return bsdf_invalid_sample(sampled_direction, sample_weight);
+            
+        float norm;
+        int comp;
+
+        float[4] sampling_weights={0.,0.,0.,0.};
+        float p = 1.0;
+        float current_weight=0.;
+        switch(bsdfs.count){
+        case 4:
+            current_weight = max_value(bsdf_layers[3].weight);
+            sampling_weights[3]=current_weight*p;
+            p -= p*current_weight;
+        case 3:
+            current_weight = max_value(bsdf_layers[2].weight);
+            sampling_weights[2]=current_weight*p;
+            p -= p*current_weight;
+        case 2:
+            current_weight = max_value(bsdf_layers[1].weight);
+            sampling_weights[1]=current_weight*p;
+            p -= p*current_weight;
+        case 1:
+            current_weight = max_value(bsdf_layers[0].weight);
+            sampling_weights[0]=current_weight*p;
+            p -= p*current_weight;
+        }
+
+        
+        comp = bsdf_choose_component(sampling_weights, sampling_types,
+                primary_sample.component_select, allowed_components, norm);
+
+        if (comp < 0) {
+            return bsdf_invalid_sample(sampled_direction, sample_weight);
+        }
+        
+        Bsdf_components active;
+        switch(comp){
+            case 0:
+            active= bsdfs[0].sample(
+                    fixed_direction, sampled_direction,
+                    primary_sample, sample_weight, sample_probability,
+                    allowed_components, transport_source);
+            break;
+            case 1:
+            active= bsdfs[1].sample(
+                    fixed_direction, sampled_direction,
+                    primary_sample, sample_weight, sample_probability,
+                    allowed_components, transport_source);
+            break;
+            case 2:
+            active= bsdfs[2].sample(
+                    fixed_direction, sampled_direction,
+                    primary_sample, sample_weight, sample_probability,
+                    allowed_components, transport_source);
+            break;
+            case 3:
+            active= bsdfs[3].sample(
+                    fixed_direction, sampled_direction,
+                    primary_sample, sample_weight, sample_probability,
+                    allowed_components, transport_source);
+            break;
+            default:
+            return bsdf_invalid_sample(sampled_direction, sample_weight);
+        }		
+                
+        if (no_components == active)
+        {
+            return bsdf_invalid_sample(sampled_direction, sample_weight);
+        }
+		
+		// The fp40 profile does not support array indexes that are NOT loop variables, so add this loop
+		for (int i = 0; i < bsdf_layers.count; ++i) {
+			if (i == comp) {
+				float fweight = sampling_weights[i];
+				//normalize weight
+				float cos_h = dot(fixed_direction,normal);
+				sample_weight *= bsdf_layers[i].weight*calculate_directional_factor(bsdf_layers[i],cos_h); 
+				sample_probability*= fweight/norm ;
+			}
+		}
+
+        return active;
+    }
+
+
+};

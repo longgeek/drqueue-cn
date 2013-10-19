@@ -1,0 +1,230 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Sampling with mi_sample</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node140.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node142.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION139"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_sample">mi_sample</a></li>
+</ul>
+
+<h3 id="api:sampling">Sampling with mi_sample</h3>
+
+<a id="INDEX577"></a>
+<h5 class="anchor" id="api:mi_sample">mi_sample</h5>
+<pre>
+    miBoolean mi_sample(
+        double          *sample,
+        int             *instance,
+        miState         *state,
+        const miUshort  dimension,
+        const miUint    *n)
+</pre>
+<p>This is mental ray's primary generic sampling function. It can
+be used to sample arbitrary functions for evaluating integrals by
+deterministic sample points, which converge faster than their
+random counterparts and thus reduce rendering time. The
+<i><a href="node141.html#INDEX577">mi_sample</a></i> function is a high-level
+easy-to-use interface hiding all mathematical details of advanced
+quasi-Monte Carlo integration from the shader writer. <i>sample</i>
+is an array with <i>dimension</i> members that the new sample point
+will be stored into. Sample results are uniformly distributed in the
+range [0,1)<sup>dim</sup>. <i>instance</i> is the current sample number;
+it must point to an integer that is initialized to 0 before the first
+loop iteration. If there is no loop, a null pointer may be passed.
+<i>state</i> is the current shader state.
+<i>dimension</i> is the dimension of the sample, such as 3 for XYZ
+vectors. <i>n</i> must point to an integer that specifies the number
+of samples to take. If only a single sample is taken, <i>n</i> may
+be a null pointer. The body of the
+<i><a href="node141.html#INDEX577">mi_sample</a></i> loop may not write to
+<i>*sample</i> or <i>*n</i> or vary <i>dimension</i> between any
+subsequent calls in the same loop because
+<i><a href="node141.html#INDEX577">mi_sample</a></i> computes the next sample
+incrementally from the previous.</p>
+<p><i><a href="node141.html#INDEX577">mi_sample</a></i> has three
+main applications:</p>
+<ol>
+<li>generating single samples, which can be used in photon and
+other shaders for deciding on the kind of physical interaction like
+glossy, specular, or diffuse scattering, and then selecting a new
+quasi-random direction. This is the classical case of implementing
+random walk simulations with the von-Neumann-Ulam scheme.</li>
+<li>controlling an adaptive sampling loop, where the number of
+samples is not known in advance and the sampling loop will be
+terminated adaptively by the caller. This is the only mode where
+the caller may and must decide when to break from the loop.</li>
+<li>controlling a finite sampling loop. This is the classical case
+of quasi-Monte Carlo integration, where <i>n</i> samples are drawn
+and averaged. This can be used for sampling area light sources or
+depth of field shaders. The advantage of knowing the number of
+samples <i>n</i> in advance is an increased convergence speed.</li>
+</ol>
+<p>Note that the returned sample point <i>sample</i> must be used
+as <i>one</i> point. This means that several one dimensional
+samples must not be assembled to yield a multidimensional sample,
+and that a multidimensional sample must not be used in order to
+simulate consecutive events. If, for example, 3D sampling vectors
+are computed with <i><a href="node141.html#INDEX577">mi_sample</a></i>,
+a single loop with
+<i>dimension</i> 3 must be used, rather than a higher dimension to
+obtain other sampling values at the same time, or fewer to compute
+the X, Y, and Z direction separately. Samples from
+<i><a href="node141.html#INDEX577">mi_sample</a></i> must be used
+consecutively. The sequence should not be terminated prematurely,
+nor should samples be dropped, since rejection sampling will result
+in biased approximations.</p>
+<p>A call to <tt>mi_sample</tt> in single sample mode looks
+like:</p>
+<pre>
+    void a_single_sample(..., miState *state, ...)  
+    {  
+        double sample[2];  
+             
+        mi_sample(sample, 0, state, 2, 0);  
+        /* use sample[0] and sample[1] */  
+    }  
+</pre>
+<p>The sampling dimension in this example is 2. Since only a single
+sample is required, no sample counting is indicated by passing a
+null pointer as <tt>*instance</tt> counter and to the required
+number of samples <i>n</i>. After the call to <tt>mi_sample</tt>,
+the array <tt>x</tt> holds a two-dimensional sample point of
+[0,1)<sup>2</sup>. The function call always returns
+<tt>miFALSE</tt> in single sample mode.</p>
+<p>In the adaptive sampling mode, the number of samples to be taken
+is not known in advance, and the code must decide when to break
+from the loop (which it may not in the other two modes, where
+<i><a href="node141.html#INDEX577">mi_sample</a></i> returns
+<tt>miFALSE</tt>). <i><a href="node141.html#INDEX577">mi_sample</a></i>
+is then used the following way:</p>
+<pre>
+    void adaptive_sampling(..., miState *state, ...)
+    {
+        double sample[5];
+        int sample_number = 0;
+             
+        while (mi_sample(sample, &amp;sample_number, state, 5, 0)) {
+            /* use sample[0], ..., sample[4] */
+            if (enough samples taken)
+                break;
+        }
+    }
+</pre>
+<p>Adaptive sampling is indicated to
+<i><a href="node141.html#INDEX577">mi_sample</a></i> by passing a null
+pointer as the number of samples <i>n</i>. The <tt>while</tt> loop is then
+controlled by the <i><a href="node141.html#INDEX577">mi_sample</a></i> call,
+which always returns <tt>miTRUE</tt> in adaptive sampling mode. The current
+sample number starting with 1 for the first sample is kept in
+<i>sample_number</i>. This variable must be initialized to zero in order to
+force initialization in <i><a href="node141.html#INDEX577">mi_sample</a></i>.
+Note that
+in deterministic sampling, adaptive sampling (here, the <tt>break</tt>
+condition) cannot be controlled by the calculation of variance as
+in Monte Carlo context. This will result in biased approximations.
+Adaptive sampling here could be based on contrast calculations, for
+example. <i>sample</i> holds a sample point in the five-dimensional
+unit cube [0,1)<sup>5</sup>.</p>
+<p>In the classical case, where the number of samples is known in advance,
+the deterministic sampling controlled by
+<i><a href="node141.html#INDEX577">mi_sample</a></i> very much resembles
+a Monte Carlo quadrature:</p>
+<pre>
+    void finite_sampling(..., miState *state, ...)
+    {
+        const miUint samples = 16;
+        double sample[2];
+        int sample_number = 0;
+
+        while (mi_sample(sample, &amp;sample_number, state, 2, &amp;samples)) {
+            /* use sample[0], sample[1] */
+        }
+    }
+</pre>
+<p>Here, all arguments of <tt>mi_sample</tt> are used. Unlike the
+previous adaptive sampling case, the number of samples is passed
+explicitly to <i><a href="node141.html#INDEX577">mi_sample</a></i>.
+Again the integer variable <i>sample_number</i> is initialized to
+zero and passed by reference to <i>instance</i>. <i>*state</i> is
+the current state of the shader.
+<i><a href="node141.html#INDEX577">mi_sample</a></i> returns <tt>miTRUE</tt>
+for <i>samples</i> iterations of the loop, until finally <tt>miFALSE</tt> is
+returned to terminate the loop. The loop <i>should not</i> be terminated
+with a <tt>break</tt> or <tt>return</tt> statement, because then the
+internal state of <i>state</i> does not guarantee convergence of rendering
+any longer (that is, <code>state&rarr;qmc_instance</code> and
+<code>state&rarr;qmc_component</code> are wrong until the shader terminates).
+In the loop, <i>*instance</i> provides the current sample number, starting
+at 1, until <i>samples</i> is reached. The loop controls a two-dimensional
+integration, where <i>sample</i> is an array of <tt>double</tt>s with two
+elements. The vector <i>sample</i> is the sample point in the two-dimensional
+unit cube [0,1)<sup>2</sup>. The finite sampling mode exposes a faster
+convergence than the adaptive sampling mode.</p>
+<p>
+Exceptional convergence can be achieved if the number of samples is
+</p>
+<table class="math" border="0" cellspacing="0" cellpadding="0"
+style="margin:1em 8em;width:auto;background-color:white">
+<tr>
+<td>
+<td style="padding:0;text-align:center;white-space:nowrap"><var>dimension</var>&minus;1
+<td>
+<tr>
+<td style="padding:0;text-align:right">samples =
+<td style="padding:0;font-size:1.7em;text-align:center">&prod;
+<td style="padding:0;text-align:left">p<sub>i</sub> <sup>k<sub>i</sub></sup>
+<tr style="background-color:white">
+<td>
+<td style="padding:0;text-align:center">i = 1
+<td>
+</table>
+<p>where <i>p<sub>i</sub></i> are the prime numbers, i.e.,
+<i>p<sub>1</sub> = 2</i>, <i>p<sub>2</sub> = 3</i>, etc., and
+<i>k<sub>i</sub></i> is a (positive) natural number. In two dimensions,
+i.e., <i>dimension = 2</i>, <i>samples</i> should be a power of 2.
+In the special case of <i>dimension = 1</i>, any number of samples can be
+used in order to achieve optimal convergence.</p>
+<p>Note that if <i><a href="node141.html#INDEX577">mi_sample</a></i>
+controls the loop, it may
+take fewer samples than expected. For example, consider a sun,
+modeled as a disk area light source, with sampling set to request 8
+samples. Assuming the sun is setting and only half of it is visible
+over the horizon, sampling the lower half cannot contribute any
+light. In this case, a light sampling function such as
+<i><a href="node140.html#INDEX555">mi_sample_light</a></i> (which is a
+specialization of <i>mi_sample</i>) may return <tt>miTRUE</tt> four
+times, and then abort the loop by returning <tt>miFALSE</tt> for
+the fifth call. The shader should work for such early aborts, even
+if the very first call returns <tt>miFALSE</tt>. The shader should
+also not assume any valid result parameters, such as
+<tt>dot_nl</tt>, for a call to
+<i><a href="node141.html#INDEX577">mi_sample</a></i> that has returned
+<tt>miFALSE</tt>.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node140.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node142.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

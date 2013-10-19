@@ -1,0 +1,295 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product shader for mixing BSDFs.
+ *****************************************************************************/
+
+// If builtin Bsdf definitions are not builtin, use this include.
+//#include <bsdf_defs.msl>
+#include <mcp_lib.msl>
+
+
+bsdf Mcp_mixed_bsdf
+{
+
+input:
+    
+   uniform Normalization_mode  normalization_mode = normalize_weights;//todo: use it
+    
+   const Bsdf  bsdfs[]        // only elementary BSDF, fixed list for iray
+   {
+        // recommend elemental BSDF per annotation
+        recommended_set( "Mcp_diffuse_reflection_bsdf",
+                               "Mcp_diffuse_transmission_bsdf",
+                               "Mcp_simple_glossy_bsdf",
+                               "Mcp_backscattering_glossy_bsdf");
+    };
+    //Spectrum    weights[bsdfs.count];
+    Spectrum    weights[] = Spectrum[](Spectrum(0), Spectrum(0), Spectrum(0), Spectrum(0));
+
+member:
+/*    uniform Bsdf_components potential_components;
+    uniform Bsdf_attributes potential_attributes;
+    uniform Mcp_mixed_bsdf()
+    {
+        // COMPILER ERROR: no overloaded version of function: "operator=(Bsdf_attributes, Bsdf_attributes)
+        //potential_attributes = Bsdf_attributes{};
+        //potential_components = Bsdf_components{};
+        for (int i=0; i < bsdfs.count; ++i)
+        {
+            Bsdf_attributes attr = bsdfs[i].get_attributes();
+//            if ((Bsdf_attributes{geometry_dependent} in potential_attributes) !=
+//                (Bsdf_attributes{geometry_dependent} in attr))
+//            {
+//                error("cannot mix geometryless and geometry-dependent BSDFs");
+//            }
+            potential_attributes |= attr;
+            potential_components |= bsdfs[i].get_components();
+        }
+
+    }*/
+    varying float sampling_weights[4];
+    varying Spectrum sampling_spectral_weights[4];
+    varying Bsdf_components sampling_types[4];
+    varying	float re_norm ;
+    varying Bsdf_components active_components;
+
+    varying Mcp_mixed_bsdf()
+    {
+        active_components=Bsdf_components{};
+        sampling_weights[0]=sampling_weights[1]=sampling_weights[2]=sampling_weights[3]=0.;
+        sampling_spectral_weights[0]=sampling_spectral_weights[1]=sampling_spectral_weights[2]=sampling_spectral_weights[3]=Spectrum(0.);
+        re_norm = 0.;
+        switch(bsdfs.count)
+        {
+            case 4:
+            sampling_types[3] = bsdfs[3].get_active_components();
+            active_components=active_components|sampling_types[3];
+            case 3:
+            sampling_types[2] = bsdfs[2].get_active_components();
+            active_components=active_components|sampling_types[2];
+            case 2:
+            sampling_types[1] = bsdfs[1].get_active_components();
+            active_components=active_components|sampling_types[1];
+            case 1:
+            sampling_types[0] = bsdfs[0].get_active_components();
+            active_components=active_components|sampling_types[0];
+        }
+        
+        for(int i=0;i<weights.count && i<4;i++)
+        {
+            sampling_weights[i] = max_value(weights[i]);
+            sampling_spectral_weights[i]=weights[i];
+            if((normalization_mode == clamp_weights) && (re_norm+sampling_weights[i] > 1.))
+            {
+                float rest_weight = 1.-re_norm;
+                sampling_spectral_weights[i]*=rest_weight/sampling_weights[i];
+                sampling_weights[i]=rest_weight;
+            }
+            re_norm+=sampling_weights[i];
+        }
+        re_norm = max(re_norm,1.);
+    }
+
+    //the list of all possible bsdf components computed by this bsdf
+    Bsdf_components get_components()
+    {
+        return all_components;//Bsdf_components{reflect_glossy,transmit_glossy};
+    }
+
+    //the worst case of active attributes for this bsdf, independent of what actual input parameters are.
+    Bsdf_attributes get_attributes()
+    {
+        return Bsdf_attributes{geometry_dependent};
+    }
+    //the list of active attributes, given the actual input parameters. 
+    //For this bsdf it equals the worst case described by get_attributes(), so we do not need to implement this
+    Bsdf_attributes get_active_attributes() 
+    {
+        return get_attributes();
+    }
+    Bsdf_components get_active_components() 
+    {
+        return active_components;
+    }
+    
+    Spectrum eval(
+         float3              fixed_direction,
+         float3              sampled_direction,
+         Bsdf_components     allowed_components,
+         bool                transport_source)
+    {
+        // Check if fixed_direction and sampled_direction cross the geometric plane
+        // to avoid light leaks.
+        allowed_components = bsdf_check_type(
+                geometry_normal,fixed_direction,sampled_direction,allowed_components);
+
+        //implement fixed layer handling instead of loop to work around compiler limitation
+        if(	bsdfs.count==0 ) //nothing to do
+            return Spectrum(0.);
+
+        Spectrum res(0.0);
+        switch(bsdfs.count)
+        {
+            case 4:
+            if (any(sampling_spectral_weights[3]) && (Bsdf_components{} != (allowed_components & bsdfs[3].get_active_components())))
+            {
+                res += sampling_spectral_weights[3] * bsdfs[3].eval(
+                            fixed_direction, sampled_direction,
+                            allowed_components, transport_source);
+            }
+            case 3:
+            if (any(sampling_spectral_weights[2]) && (Bsdf_components{} != (allowed_components & bsdfs[2].get_active_components())))
+            {
+                res += sampling_spectral_weights[2] * bsdfs[2].eval(
+                            fixed_direction, sampled_direction,
+                            allowed_components, transport_source);
+            }
+            case 2:
+            if (any(sampling_spectral_weights[1]) && (Bsdf_components{} != (allowed_components & bsdfs[1].get_active_components())))
+            {
+                res += sampling_spectral_weights[1] * bsdfs[1].eval(
+                            fixed_direction, sampled_direction,
+                            allowed_components, transport_source);
+            }
+            case 1:
+            if (any(sampling_spectral_weights[0]) && (Bsdf_components{} != (allowed_components & bsdfs[0].get_active_components()))  )
+            {
+                res += sampling_spectral_weights[0] * bsdfs[0].eval(
+                            fixed_direction, sampled_direction,
+                            allowed_components, transport_source);
+            }
+        }
+        return res/re_norm;
+        
+    }
+    
+    
+        float pdf(
+        float3           fixed_direction,
+        float3           sampled_direction,
+        Bsdf_components  allowed_components,
+        bool             transport_source)
+    {
+        if(bsdfs.count==0)
+            return 0.;
+        float p = 0.0;
+        float norm = 0.0;
+        switch(bsdfs.count)
+        {
+            case 4:
+            if (any(sampling_spectral_weights[3]) &&
+            (Bsdf_components{} != (allowed_components & bsdfs[3].get_active_components())))
+            {
+                norm += sampling_weights[3];
+                p += sampling_weights[3] *
+                     bsdfs[3].pdf(
+                         fixed_direction, sampled_direction,
+                         allowed_components, transport_source);
+            }
+            case 3:
+            if (any(sampling_spectral_weights[2]) &&
+            (Bsdf_components{} != (allowed_components & bsdfs[2].get_active_components())))
+            {
+                norm += sampling_weights[2];
+                p += sampling_weights[2] *
+                     bsdfs[2].pdf(
+                         fixed_direction, sampled_direction,
+                         allowed_components, transport_source);
+            }
+            case 2:
+            if (any(sampling_spectral_weights[1]) &&
+            (Bsdf_components{} != (allowed_components & bsdfs[1].get_active_components())))
+            {
+                norm += sampling_weights[1];
+                p += sampling_weights[1] *
+                     bsdfs[1].pdf(
+                         fixed_direction, sampled_direction,
+                         allowed_components, transport_source);
+            }
+            case 1:
+            if (any(sampling_spectral_weights[0]) &&
+            (Bsdf_components{} != (allowed_components & bsdfs[0].get_active_components())))
+            {
+                norm += sampling_weights[0];
+                p += sampling_weights[0] *
+                     bsdfs[0].pdf(
+                         fixed_direction, sampled_direction,
+                         allowed_components, transport_source);
+            }
+        }
+        return any(norm) ? p /norm : 0.0;
+    }
+
+
+    Bsdf_components sample(
+        float3              fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        Bsdf_components     allowed_components,
+        bool                transport_source)
+    {
+        if(bsdfs.count == 0)
+            return bsdf_invalid_sample(sampled_direction, sample_weight);
+            
+        float norm;
+        int comp;
+        comp = bsdf_choose_component(sampling_weights, sampling_types,
+                primary_sample.component_select, allowed_components, norm);
+
+        if (comp < 0) {
+            return bsdf_invalid_sample(sampled_direction, sample_weight);
+        }
+        
+        Bsdf_components active;
+        switch(comp){
+            case 0:
+            active= bsdfs[0].sample(
+                    fixed_direction, sampled_direction,
+                    primary_sample, sample_weight, sample_probability,
+                    allowed_components, transport_source);
+            break;
+            case 1:
+            active= bsdfs[1].sample(
+                    fixed_direction, sampled_direction,
+                    primary_sample, sample_weight, sample_probability,
+                    allowed_components, transport_source);
+            break;
+            case 2:
+            active= bsdfs[2].sample(
+                    fixed_direction, sampled_direction,
+                    primary_sample, sample_weight, sample_probability,
+                    allowed_components, transport_source);
+            break;
+            case 3:
+            active= bsdfs[3].sample(
+                    fixed_direction, sampled_direction,
+                    primary_sample, sample_weight, sample_probability,
+                    allowed_components, transport_source);
+            break;
+            default:
+            return bsdf_invalid_sample(sampled_direction, sample_weight);
+        }		
+                
+        if (no_components == active)
+        {
+            return bsdf_invalid_sample(sampled_direction, sample_weight);
+        }
+		// The fp40 profile does not support array indexes that are NOT loop variables, so add this loop
+		for (int i = 0; i < sampling_spectral_weights.count; ++i) {
+			if (i == comp) {
+				//normalize weight
+				sample_weight *= sampling_spectral_weights[i]/re_norm; 
+				sample_probability*= sampling_weights[i]/norm ;
+			}
+		}
+        return active;
+    }
+
+
+};

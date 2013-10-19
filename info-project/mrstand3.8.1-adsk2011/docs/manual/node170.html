@@ -1,0 +1,239 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shader Implementation</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node169.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node171.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION168"></a>
+<h3>Shader Implementation</h3>
+<p>
+<span class="depr">Deprecated</span>
+<p>
+After the declaration is known, the shader must be implemented.
+This example uses <a href="node178.html#INDEX854">NVIDIA</a>'s
+<a href="node173.html#INDEX853">Cg</a> language, version 1.2. Only
+a rough outline of a <a href="node148.html#INDEX721">Phong
+shading</a> <a href="node79.html#INDEX242">material</a> is given,
+the light shaders are omitted to keep this short.</p>
+<p>The hardware performs shading in two stages: the
+<a href="node168.html#INDEX850">vertex shader</a> is run per vertex, and
+the <a href="node168.html#INDEX851">fragment shader</a> is run per
+shaded point on the triangle defined by three vertices that have
+passed through the vertex shader. Here is an overview over the data
+flow in the example:</p>
+<div class="pic"><img src="images/hw_vert2frag.jpg" /></div>
+<p>mental ray installs the shaders on the graphics board, and
+provides two sets of information to them: <tt>app2vert</tt> is a
+structure that contains information about the current vertex. It is
+basically equivalent to the <tt>miState</tt> structure passed to
+software shaders. mental ray passes it in standard hardware
+registers, such as <tt>POSITION</tt>, that are defined by the
+hardware. (By convention, <a href="node178.html#INDEX854">NVIDIA</a>
+uses all-capitals names for
+these registers.) In <a href="node173.html#INDEX853">Cg</a> syntax,
+this structure is defined as</p>
+<pre>
+    struct app2vert
+    {
+        float4 position    : POSITION;
+        float3 normal      : NORMAL;
+        float2 texCoord0   : TEXCOORD0;
+        float2 texCoord1   : TEXCOORD1;
+        float3 derivU      : ATTR1;
+        float3 derivV      : ATTR2;
+    };
+</pre>
+<p>The colon notation describes how the fields (left) are mapped to
+the hardware registers (right). The
+<a href="node168.html#INDEX850">vertex shader</a> performs some
+computations and creates a new structure called <i>vert2frag</i>.
+Since rendering is done per triangle, a
+<a href="node168.html#INDEX851">fragment shader</a>, which is called for
+every pixel in that triangle, receives an interpolated
+<i>vert2frag</i> structure every time it is called for a point in
+the triangle. In this example, the fields of that structure are
+declared in <a href="node173.html#INDEX853">Cg</a> as:</p>
+<pre>
+    struct vert2frag
+    {
+        float4 hPosition   : POSITION;
+        float2 texCoord0   : TEXCOORD0;
+        float2 texCoord1   : TEXCOORD1;
+        float3 cPosition   : TEXCOORD2;    // camera-space position
+        float3 cNormal     : TEXCOORD3;    // camera-space normal
+        float3 position    : TEXCOORD4;    // object-space position
+        float3 normal      : TEXCOORD5;    // object-space normal
+        float3 derivU      : TEXCOORD6;    // U derivative
+        float3 derivV      : TEXCOORD7;    // V derivative
+        float3 screen      : WPOS;         // screen-space position
+    };
+</pre>
+<p>This structure contains the projected position,
+<a href="node108.html#INDEX409">texture coordinate</a>s, normals, and
+derivatives. Again, the named parameters are mapped to a fixed set
+of all-uppercase hardware registers, such as
+<tt>TEXCOORD0</tt>.</p>
+<p>Finally, shaders also receive shader parameters. The set of
+parameters must be declared to mental ray in a shader declaration.
+Unlike the previous two structure definitions, which are read by
+the <a href="node173.html#INDEX853">Cg</a> compiler, the parameter
+declaration uses .mi syntax and is read by mental ray:</p>
+<pre>
+    declare shader
+        color "mib_phong_specular" (
+            color           "ambience",
+            color           "ambient",
+            color           "diffuse",
+            color           "specular",
+            scalar          "exponent",
+            array light     "lights",
+        )
+    end declare
+</pre>
+<p>This declaration is for the shader named
+<i>mi_phong_specular</i>, which has six parameters. The name will
+be used by mental ray to locate the <a href="node173.html#INDEX853">Cg</a>
+shader to load (this will be
+explained in more detail later). There is no equivalent
+<a href="node173.html#INDEX853">Cg</a> declaration for the parameter list;
+instead, <a href="node173.html#INDEX853">Cg</a> expects parameters
+to be declared with the keyword <tt>uniform</tt> embedded in the
+<a href="node173.html#INDEX853">Cg</a> function implementation.</p>
+<p>Here is the implementation of the example main
+<a href="node168.html#INDEX850">vertex shader</a>. The same
+<a href="node168.html#INDEX850">vertex shader</a> can often be combined
+with many different <a href="node168.html#INDEX851">fragment
+shader</a>s to implement a variety of effects, so it is stored in a
+separate file:</p>
+<pre>
+    vert2frag main(
+        app2vert IN,
+        uniform cgglMatrix mx)
+    {
+        vert2frag OUT;
+
+#ifdef PROFILE_ARBVP1
+        ModelViewProj = glstate.matrix.mvp;
+        ModelView = glstate.matrix.modelview[0];
+        ModelViewIT = glstate.matrix.invtrans.modelview[0];
+#endif
+
+        // copy the object space information
+        OUT.position = IN.position.xyz;
+        OUT.normal   = IN.normal.xyz;
+
+        // set the homogeneous camera-space position of the vertex
+        // and compute the camera-space position for lighting
+        OUT.hPosition = mul(mx.ModelViewProj, IN.position);
+        OUT.cPosition = mul(mx.ModelView,     IN.position).xyz;
+
+        // make derivative vector in camera space
+        float3x3 rot  = (float3x3)mx.ModelView;
+        OUT.derivU    = mul(rot, IN.derivU).xyz;
+        OUT.derivV    = mul(rot, IN.derivV).xyz;
+
+        // transform normal from model space to camera space
+        OUT.cNormal = normalize(mul((float3x3)mx.ModelViewIT, IN.normal.xyz));
+
+        // transfer the texture
+        OUT.texCoord0 = IN.texCoord0;
+        OUT.texCoord1 = IN.texCoord1;
+
+        return OUT;
+    }
+</pre>
+<p>Each shader is stored in a separate <a href="node173.html#INDEX853">Cg</a>
+file, and the shader mainline must
+be named <i>main</i>. Note that the shader is declared to return a
+<i>vert2frag</i> structure, which is the data later passed to the
+<a href="node168.html#INDEX851">fragment shader</a> after
+interpolation.</p>
+<p>This is the corresponding <a href="node168.html#INDEX851">fragment shader</a>:</p>
+<pre>
+    struct mib_illum_phong : miiColor
+    {
+        // shader parameter definition, must agree with .mi declaration
+        miiColor        ambience, ambient, diffuse, specular;
+        miiScalar       exponent;
+        miiLight        lights[];
+
+        float4 eval(vert2frag p) {
+            float4 result;
+            float4 lambience = ambience.eval(p);
+            float4 lambient  = ambient.eval(p);
+            float4 ldiffuse  = diffuse.eval(p);
+            float4 lspecular = specular.eval(p);
+            float  lexponent = exponent.eval(p);
+            float3 vdir      = normalize(p.cPosition);
+
+            result = lambience * lambient;
+
+            // Material calculation for each light
+            for (int i=0; i &lt; lights.length; i++) {
+                misLightOut light = lights[i].eval(p);
+
+                // Lambert's cosine law
+                result += light.dot_nl * ldiffuse * light.color;
+
+                // Phong's cosine power
+                float s = mi_phong_specular(lexponent, light.dir,
+                                            -vdir, p.cNormal);
+                result += s * lspecular * light.color;
+            }
+            return result;
+        }
+    };
+</pre>
+<p>To keep this example simple, the light shaders have been
+omitted, and the <a href="node173.html#INDEX853">Cg</a> code of the
+<i>light_illum</i> and <i>mi_phong_specular</i> functions is not
+shown. Note the <tt>uniform</tt> arguments of this function: they
+correspond exactly to the .mi declaration shown above, with thew
+<i>mii</i> prefix replacing the <i>mi</i> prefix. Since
+<a href="node178.html#INDEX854">NVIDIA</a> hardware registers store
+floating-point values, the integer mode is stored as a
+floating-point number. Also note that the shader returns a color,
+indicated by the <tt>miiColor</tt> return type after the colon.</p>
+<p>The <a href="node173.html#INDEX853">Cg</a> 1.2 language
+simplifies inter-shader communication greatly, which is important
+for automatic translation of mental ray's Phenomena to
+<a href="node173.html#INDEX853">Cg</a> shader graphs. The need to
+explicitly reference sub-shaders for multiple light sources or
+texture generation is handled automatically. The key function is
+the <i>eval</i> member function, which plays the same role as the
+<i>mi_eval</i> functions in mental ray software shaders.</p>
+<p>Shader writing for other hardware boards, such as ATI boards, is
+very similar. The <a href="node173.html#INDEX853">Cg</a> 1.2
+compiler can be used with its ARB profile, which generates code
+that conforms to the OpenGL Architecture Review Board (ARB)
+baseline definition. (<a href="node178.html#INDEX854">NVIDIA</a>'s
+<a href="node173.html#INDEX853">Cg</a> compiler is not expected to
+cater to ATI's special extensions.) However, all the components are
+the same. The forthcoming OpenGL 2 standard will define a shader
+language equivalent to <a href="node173.html#INDEX853">Cg</a> to
+avoid having to use the less intuitive assembly language. At this
+time (March 2004), this new language does not accept interface
+constructs required for mental ray Phenomena.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node169.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node171.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

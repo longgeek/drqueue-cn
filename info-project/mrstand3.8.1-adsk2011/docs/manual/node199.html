@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Cameras</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node198.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node200.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION197"></a>
+<h3>Cameras</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_CAMERA</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miCamera</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>-</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>as described below</td>
+</tr>
+</table>
+<pre>
+typedef struct miCamera {
+        miBoolean       orthographic;           /* orthographic rendering? */
+        float           focal;                  /* focal length */
+        float           aperture;               /* aperture */
+        float           aspect;                 /* aspect ratio of the image */
+        miRange         clip;                   /* min/max clipping */
+        int             x_resolution;           /* x resolution */
+        int             y_resolution;           /* y resolution */
+        struct {int xl, yl, xh, yh;}
+                        window;                 /* corners of subwindow */
+        miTag           volume;                 /* opt. volume shader */
+        miTag           environment;            /* opt. environment shader */
+        miTag           lens;                   /* opt. lens shader */
+        miTag           output;                 /* opt. output shaders/files */
+        int             frame;                  /* current frame number */
+        float           frame_time;             /* ... as time in seconds */
+        int             frame_field;            /* 0=frame, 1/2=field number */
+        float           x_offset;               /* x image offset in pixels */
+        float           y_offset;               /* y image offset in pixels */
+        miTag           userdata;               /* optional user data blocks */
+        miTag           pass;                   /* opt. pass function chain */
+        float           focus;                  /* not used */
+        float           radius;                 /* not used */
+        miBoolean       pass_mask;              /* not used */
+        miTag           buffertag;              /* frame buffer object */
+        miCamera_stereo stereo;                 /* stereo rendering method */
+        float           eye_separation;         /* left-right eye distance */
+        int             spare[8];               /* not used */
+} miCamera;
+</pre>
+<p>A translator must provide: nothing.<br />
+<br />
+A translator may provide: all fields.</p>
+<p><b>orthographic</b> (default <tt>miFALSE</tt>) switches the
+camera from the standard <a href="node124.html#INDEX488">pinhole
+camera</a> to an orthographic camera.</p>
+<p><b>focal</b> (default 1.0) is the <a href="node28.html#INDEX56">focal
+length</a> of the camera (the distance
+between the camera and the viewing plane).</p>
+<p><b>aperture</b> (default 1.0) is the width of the viewing plane
+in 3D space.</p>
+<p><b>aspect</b> (default 1.0) is the height of a pixel 1 unit
+wide.</p>
+<p><b>clip</b> (default 0.001, 1000000.0) describes the minimum
+(hither) and maximum (yon) limits of the scene for scanline
+rendering. Geometry outside these limits will not be rendered.</p>
+<p><b>x_resolution</b> (default 768) is the width of the rendered
+image in pixels.</p>
+<p><b>y_resolution</b> (default 576) is the height of the rendered
+image in pixels.</p>
+<p><b>window</b> (default 0, 0, 65535, 65535) describes the lower
+left and upper right corners of the rendered subwindow. Pixels
+outside this window will be black. If the upper right pixel exceeds
+the resolution, it is clipped to the resolution.</p>
+
+<p><b>volume</b> (default <tt>miNULLTAG</tt>) is the optional
+atmosphere volume shader.</p>
+
+<p><b>environment</b> (default <tt>miNULLTAG</tt>) is the optional
+view environment shader that is called for all (including primary)
+rays leaving the scene (the active environment shader for secondary
+rays may be overridden by materials).</p>
+
+<p><b>lens</b> (default <tt>miNULLTAG</tt>) is the optional first
+lens shader.</p>
+<p><b>output</b> (default <tt>miNULLTAG</tt>) is the optional first
+output shader or output file.</p>
+
+<p><b>frame</b> (default 0) is the <b><a id="INDEX1061"></a>frame
+number</b> of the current render. It is not
+used by mental ray but is accessible to shaders.</p>
+<p><b>frame_time</b> (default 0.0) is the same as the
+<a href="node199.html#INDEX1061">frame number</a>, but expressed in
+seconds. It is not used by mental ray.</p>
+
+<p><b>frame_field</b> (default 0) is the number after the
+<tt>field</tt> substatement in a <tt>frame</tt> statement. Since
+<a href="node199.html#INDEX1061">frame number</a>s are integers,
+the field number must be used to distinguish the first and second
+field of the frame, if field rendering is in effect. By convention,
+0 means that the entire frame is rendered; 1 is the first (odd) and
+2 is the second (even) field. It is not used by mental ray.</p>
+
+<p><b>x_offset</b> (default 0.0) is the x offset of the rendered
+image from the center of the camera axis in pixel units.</p>
+
+<p><b>y_offset</b> (default 0.0) is the y offset of the rendered
+image from the center of the camera axis in pixel units.</p>
+
+<p><b>userdata</b> allows attaching a user data block (miUserdata)
+or a chain of user data blocks. Shaders can retrieve the data with
+<i>mi_query</i>.</p>
+<p><b>pass</b> (default <tt>miNULLTAG</tt>) is the optional first
+pass statement for <a href="node182.html#INDEX893">pass rendering</a>.
+</p>
+
+<p><b>buffertag</b> is the database tag that carries the collection of
+frame buffers for this camera.</p>
+
+<p><b>stereo</b> (default <code>miCAMERA_STEREO_OFF</code>)
+<br /><b>eye_separation</b> (default 0.0) the method and left-right eye distance
+in case of <a href="node77.html#mi:stereo">stereoscopic rendering</a>.
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node198.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node200.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

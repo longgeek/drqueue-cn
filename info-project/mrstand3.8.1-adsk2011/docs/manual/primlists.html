@@ -1,0 +1,142 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Primitive Lists</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node84.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node85.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h3 id="mi:primlist">Primitive Lists</h3>
+<p>
+Primitive lists provide tessellated surface geometry in the form of
+triangles or quads which is close to the internal data layout in mental ray.
+The vertices of faces may be shared to form a mesh. Extra custom data can be
+attached per face.</p>
+<p>There are two versions for the syntax of primitive lists,
+<a href="#mi:primlist_ascii">ascii</a> or <a href="#mi:primlist_binary">binary</a>.
+<p>The <dfn id="mi:primlist_ascii">ascii version</dfn> syntax is as follows:</p>
+<pre>
+    trilist
+        vertex <i>nlines lineformat</i>
+        triangle <i>ntriangles nborder</i>
+        [ <i>vertex lines</i> ]
+        [ <i>vertex reference indices</i> ]
+        <dfn>[</dfn>[ <i>vertex reference indices for border triangles</i> ]<dfn>]</dfn>
+    end trilist
+</pre>
+<p>
+The <code>vertex</code> statement provides:</p>
+<dl>
+<dt><var>nlines</var><dd> as the number of vertex lines.
+<dt><var>lineformat</var><dd> as a sequence of codes to describe the content and
+format of a <i>vertex line</i> in the following block. The supported codes
+are:
+<dl COMPACT>
+<dt style="font-weight:normal"><code>p</code>
+<dd>position, always present
+<dt style="font-weight:normal"><code>n</code>
+<dd>normal
+<dt style="font-weight:normal"><code>d</code>
+<dd>derivatives (two 3d vectors as x y z, respectively)
+<dt style="font-weight:normal"><code>d2</code>
+<dd>second derivs (three 3d vectors as x y z, respectively)
+<dt style="font-weight:normal"><code>b</code> [ <var>count</var> ]
+<dd>bump basis vectors (two 3d vectors as x y z, respectively),<br />
+with optional number of multiple sets of vectors
+<dt style="font-weight:normal"><code>m</code> [ <var>count</var> ]
+<dd>motion vector (one 3d vector as x y z, respectively),<br />
+with optional number of multiple motion vectors
+<dt style="font-weight:normal"><code>t</code> <var>dim</var> [ <var>dim</var> ... ]
+<dd>texture scalars, with dimension <var>dim</var> for each of multiple spaces
+<dt style="font-weight:normal"><code>u </code> <var>dim</var> [ <var>dim</var> ... ]
+<dd>user scalars, with dimension <var>dim</var> for each of multiple spaces
+</dl>
+<dd>If <var>count</var> is not given a value of 1 is assumed.
+</dl>
+<p>The <i>vertex lines</i> contains a list of entries each defining a vertex
+completely. The scalars need to be given in the format specified by
+<var>lineformat</var>. Here is an example:</p>
+<pre>
+    vertex 184 p n t 2 3
+</pre>
+<p>The following example will define a line in this format:</p>
+<pre>
+    [ 0.1 0.2 0.3   0 0 1   0.2 0.3     0.1 0.2 0.3]
+    # position      normal  2d texture  3d texture
+</pre>
+<p>The <code>triangle</code> statement provides:</p>
+<dl>
+<dt><var>ntriangles</var><dd> is the number of triangles.
+<dt><var>nborder</var><dd> optional number of border triangles.
+<dt><var>vertex reference indices</var><dd>
+For each triangle there are three integers, referencing the corresponding
+vertex lines. In <a href="node83.html#mi:tagged">tagged</a> mode, there are
+four integers, the first specifying the material index.
+<dt><var>vertex reference indices for border triangles</var><dd>
+triangles in the border section define 1-rings of triangles at border faces
+of the regular region triangles. This is used to specify displacement-mapped
+multi-object placeholder input.
+</dl>
+<p>Here is a complete example for a primitive list:</p>
+<pre>
+    trilist
+        vertex 4 p n t 2
+        triangle 2
+        # pos   normal  tex1 (2-dimensional)
+        [
+        0 0 0   0 0 1   0. 0.     # <-- line 0
+        1 0 0   0 0 1   1. 0.     #
+        1 1 0   0 0 1   1. 1.     #
+        0 1 0   0 0 1   0. 1.     # <-- line 3
+        ]
+        # 2 triangles (non-tagged)
+        [
+        0 1 2
+        2 3 0
+        ]
+    end trilist
+</pre>
+
+<p>The <dfn id="mi:primlist_binary">binary version</dfn> of syntax for
+primitive lists is as follows:</p>
+<pre>
+    trilist
+        vertex <i>nlines lineformat</i>
+        triangle <i>ntriangles nborder</i>
+        scalar  ` <var>32-bit float data: vertex lines</var> `
+        integer ` <var>32-bit integer data: triangle indices</var> `
+        integer ` <var>32-bit integer data: triangle material tags</var> `
+        # optional: border section
+        integer ` <var>32-bit integer data: triangle indices</var> `
+        integer ` <var>32-bit integer data: triangle material tags</var> `
+    end trilist
+</pre>
+<p>Each material in the list corresponds to exactly one triangle.
+For non-tagged objects the triangle section is specified similar to the
+<a href="#mi:primlist_ascii">ascii version</a>.
+<p>The 32-bit data is defined as a stream of network byte-order 32-bit words,
+interpreted either as scalars or integers.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node84.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node85.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,48 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Comp_color_mixer
+{
+  input:
+	struct Color_input 
+	{
+		Color  color;
+		float scalar;
+		bool   enable;
+	};
+    
+    Color_input inputs[] = {
+	Color_input(Color(0,0,0,0), 1.0, true),
+	Color_input(Color(0,0,0,0), 1.0, true),
+	Color_input(Color(0,0,0,0), 1.0, true)
+    }
+    {
+		description( "Each entry contains a value, scale on "
+		             "the value and a boolean to enable." );
+    };
+   
+  output:
+    Color result;
+    
+  void main()
+  {
+	int i;
+	result = Color(0,0,0,0);
+	for(i=0;i<inputs.count;i++)
+	{
+		if( inputs[i].enable )
+		{
+			result += inputs[i].color * inputs[i].scalar;
+		}
+		
+	}
+  }
+}
+{
+	description( "Mixes input values, where each has a scaling and enabling "
+	             "control." );
+}
+;
+

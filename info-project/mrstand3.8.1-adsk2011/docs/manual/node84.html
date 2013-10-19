@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Polygonal Geometry</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node83.html">&laquo;&nbsp;prev</a></li>
+<li><a href="primlists.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION82"></a>
+<h3 id="mi:polygon">Polygonal Geometry</h3>
+
+<p>Polygonal geometry consists of polygons. For efficiency reasons,
+mental ray distinguishes simple <b><a id="INDEX299"></a>convex
+polygon</b>s from general <b><a id="INDEX300"></a>concave polygon</b>s
+or <b><a name="INDEX301" id="INDEX301"></a>polygons with holes</b>. Both are
+distinguished by keyword:</p>
+<pre>
+    c ["<i>material_name</i>"] <i>vertex_ref_list</i>  
+    cp ["<i>material_name</i>"] <i>vertex_ref_list</i>  
+    p ["<i>material_name</i>"] <i>vertex_ref_list</i>  
+    p ["<i>material_name</i>"] <i>vertex_ref_list</i> hole <i>vertex_ref_list</i> ...  
+</pre>
+<p>If the enclosing object has the <tt>tagged</tt> flag set,
+mandatory label integers must be given instead of the optional
+materials:</p>
+<pre>
+    c <i>label_number</i><sub>int</sub> <i>vertex_ref_list</i>  
+    cp <i>label_number</i><sub>int</sub> <i>vertex_ref_list</i>  
+    p <i>label_number</i><sub>int</sub> <i>vertex_ref_list</i>  
+    p <i>label_number</i><sub>int</sub> <i>vertex_ref_list</i> hole <i>vertex_ref_list</i> ...  
+</pre>
+<p>The <tt>c</tt> keyword selects convex polygons without holes.
+The results are unpredictable if the polygon is not convex. The
+<tt>cp</tt> keyword is a synonym for <tt>c</tt> for backwards
+compatibility; <tt>c</tt> should be used in new translators. The
+<tt>p</tt> keyword also renders concave polygons correctly, and
+allows specification of holes, using one or more <tt>hole</tt>
+keywords, each followed by a <i>vertex_ref_list</i>. If all
+polygons within the same <a href="node83.html#mi:group">object
+group</a> are simple convex polygons containing three sides
+(triangles), mental ray will pre-process them in a more efficient
+manner than non-triangular polygons.</p>
+<p>A <i>vertex_ref_list</i> is a list of non-negative integers
+<i>index</i> that reference vertices in the vertex list of the
+group described in the previous section. The first vertex in the
+vertex list is numbered 0.</p>
+<p>Any <a href="node83.html#INDEX295">vertex index</a> can be used
+in both polygon and hole <i>vertex_ref_list</i>s. A polygon with
+<i>n</i> vertices is defined by <i>n</i> index values in the vertex
+list following the <a href="node79.html#INDEX242">material</a>
+name. The order of the polygon vertices is important. A
+counter-clockwise ordering of the vertices yields a front-facing
+polygon. The vertex list of a hole may be ordered either way. Any
+displaced polygon violating this rule, for example because it has
+been displaced such that its new normal points the wrong way,
+causes the error message "orientation of triangles inconsistent"
+and the surface to be dropped.</p>
+<p>The material name must have been defined before the object
+definition that contains the polygon definition, in a statement
+like</p>
+<pre>
+    material "<i>material_name</i>"  
+        ...  
+    end material  
+</pre>
+<p>In both cases, it is recommended to quote the material name to
+avoid conflicts with reserved words, and to allow arbitrary
+characters in the name. For a detailed description of material
+definitions, see section <a href="node79.html#material">material</a>.
+Once a material name has been
+specified for a polygon, it becomes the default material. All
+following polygons may omit the material name. Polygons without
+explicit material use the same material as the last polygon that
+does have an explicit material. Not specifying materials improves
+parsing speed because no names must be looked up in the symbol
+table.</p>
+<p>If no material is specified, polygons remain without material;
+in this case the material from the closest instance up the
+<a href="node83.html#INDEX286">scene DAG</a> is used instead. This is
+called <a href="node90.html#INDEX344">material inheritance</a>.
+Tagged objects always inherit their material from the instance. It
+can distinguish polygons by using the <tt>miQ_GEO_LABEL</tt> mode
+of the <i><a href="miquery.html#api:mi_query">mi_query</a></i> function
+during rendering (not in displacement shaders).</p>
+<p>The tessellation of polygons assumes that polygons are
+"reasonably" planar. This means that every polygon will be
+tessellated, but the exact subdivision into triangles does not
+attempt to minimize curvature. If the curvature is low, different
+tessellations cannot be distinguished, but consider the extreme
+case where the four corners of a regular tetrahedron are given as
+polygon vertices: the resulting polygon will consist of two
+triangles, but it cannot be predicted which of the four possible
+triangles will be chosen.</p>
+<p>The behavior will be different for convex polygons without holes
+(<tt>c</tt> keyword) and polygons which contain holes or are
+concave ( <tt>p</tt> keyword). Convex polygons without holes are
+triangulated by picking a vertex on the outer loop and connecting
+it with every other vertex except its direct neighbors. If polygons
+are not flagged with the <tt>c</tt> keyword but do not have any
+holes an automatic convexity test is performed and if they are
+indeed convex they are triangulated as described. Convex polygons
+with holes and concave polygons are triangulated with a different
+algorithm. In any case a projection plane is chosen such that the
+extents of the projection of the bounding box of the (outer) loop
+have maximal size. If the projection of the polygon onto that plane
+is not one-to-one the results of the triangulation will be
+erroneous.</p>
+<p>If a textured polygon's material contains a
+<a href="node21.html#INDEX41">displacement map</a> the vertices are shifted
+along the normals accordingly. If an
+<a href="node89.html#INDEX334">approximation</a> statement is given
+triangles are subdivided until the specified criteria are
+fulfilled; see section <a href="node89.html#approx">approx</a> for
+details.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node83.html">&laquo;&nbsp;prev</a></li>
+<li><a href="primlists.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

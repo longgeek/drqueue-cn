@@ -1,0 +1,365 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Image Functions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node143.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node145.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION142"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_img_put_color">mi_img_put_color</a></li>
+<li><a href="#api:mi_img_get_color">mi_img_get_color</a></li>
+<li><a href="#api:mi_img_put_scalar">mi_img_put_scalar</a></li>
+<li><a href="#api:mi_img_get_scalar">mi_img_get_scalar</a></li>
+<li><a href="#api:mi_img_put_vector">mi_img_put_vector</a></li>
+<li><a href="#api:mi_img_get_vector">mi_img_get_vector</a></li>
+<li><a href="#api:mi_img_put_depth">mi_img_put_depth</a></li>
+<li><a href="#api:mi_img_get_depth">mi_img_get_depth</a></li>
+<li><a href="#api:mi_img_put_normal">mi_img_put_normal</a></li>
+<li><a href="#api:mi_img_get_normal">mi_img_get_normal</a></li>
+<li><a href="#api:mi_img_put_label">mi_img_put_label</a></li>
+<li><a href="#api:mi_img_get_label">mi_img_get_label</a></li>
+<li><a href="#api:mi_img_tonemap">mi_img_tonemap</a></li>
+</ul>
+
+<h3>Image Functions</h3>
+<p>The IMG module of mental ray provides functions that deal with
+images. There are functions to read and write <b><a name="INDEX616"
+id="INDEX616"></a>image file</b>s in various formats, and to access
+in-core <b><a id="INDEX617"></a>frame buffer</b>s
+such as image <a href="node78.html#INDEX236">texture</a>s. First,
+the functions that access <a href="node144.html#INDEX617">frame
+buffer</a>s are listed. These functions are typically used by
+<a href="node166.html#INDEX846">texture shader</a>s, which can
+obtain an image pointer by calling <i>mi_db_access</i> with the
+image tag as an argument. All these functions do nothing or return
+defaults if the <i>image</i> pointer is 0, or if the <i>x</i> or
+<i>y</i> coordinate is out of bounds. They do not check whether the
+frame buffer has the correct data type. All these functions are
+available in all shaders, including displacement, geometry, and
+output shaders.</p>
+<p><a id="INDEX618"></a></p>
+<h5 class="anchor" id="api:mi_img_put_color">mi_img_put_color</h5>
+<pre>
+    void mi_img_put_color(
+        miImg_image *image,
+        miColor     *color,
+        int         x,
+        int         y)
+</pre>
+<p>Store the color <i>color</i> in the color frame buffer
+<i>image</i> at coordinate <i>x y</i>, after performing
+<a href="node36.html#INDEX72">desaturation</a> or
+<a href="node245.html#INDEX1071">color clipping</a>,
+<a href="node76.html#INDEX215">gamma correction</a>, compensating for
+<a href="node76.html#INDEX211">premultiplication</a>, and
+<a href="node76.html#INDEX214">dithering</a>. Not all of these steps may be
+performed, and the behavior is dependent on the options
+<i>colorclip</i>, <i>premultiply</i>, <i>desaturate</i>,
+<i>gamma</i>, and <i>dither</i> as given on the command line or in
+the .mi file. This function works with 1, 2, or 4 components per
+pixel, and with 8, 16, or 32 (float) bits per component. The normal
+range for the R, G, B, and A color components is <i>[0, 1]</i>
+inclusive. For 32 bit (float) frame buffers only compensation for
+<a href="node76.html#INDEX211">premultiplication</a> is done.</p>
+<p><a id="INDEX619"></a></p>
+<h5 class="anchor" id="api:mi_img_get_color">mi_img_get_color</h5>
+<pre>
+    void mi_img_get_color(
+        miImg_image *image,
+        miColor     *color,
+        int         x,
+        int         y)
+</pre>
+<p>This is the reverse function to
+<i><a href="node144.html#INDEX618">mi_img_put_color</a></i>. It returns the
+color stored in a frame buffer at the specified coordinates. Gamma
+compensation and <a href="node76.html#INDEX211">premultiplication</a>, if
+enabled by <i>mi_img_mode</i>, are applied in reverse. The returned color may
+differ from the original color given to
+<i><a href="node144.html#INDEX618">mi_img_put_color</a></i> because of color
+clipping and color <a href="node76.html#INDEX213">quantization</a>.</p>
+<p><a id="INDEX620"></a></p>
+<h5 class="anchor" id="api:mi_img_put_scalar">mi_img_put_scalar</h5>
+<pre>
+    void mi_img_put_scalar (
+        miImg_image *image,
+        float       scalar,
+        int         x,
+        int         y)
+</pre>
+<p>Store the scalar <i>scalar</i> in the scalar frame buffer
+<i>image</i> at coordinate <i>x y</i>, after clipping to the range
+<i>[0, 1]</i>. Scalars are stored as 8-bit or 16-bit unsigned
+values. This function is intended for scalar texture files of type
+<tt>miIMG_S</tt> or <tt>miIMG_S_16</tt>.</p>
+<p><a id="INDEX621"></a></p>
+<h5 class="anchor" id="api:mi_img_get_scalar">mi_img_get_scalar</h5>
+<pre>
+    void mi_img_get_scalar (
+        miImg_image *image,
+        float       *scalar,
+        int         x,
+        int         y)
+</pre>
+<p>This is the reverse function to
+<i><a href="node144.html#INDEX620">mi_img_put_scalar</a></i>. It returns the
+scalar stored in a frame buffer at the specified coordinates,
+converted to a scalar in the range <i>[0, 1]</i>. If the frame
+buffer pointer is 0, or if the <i>x</i> or <i>y</i> coordinate is
+out of bounds, the scalar is set to 0.</p>
+<p><a id="INDEX622"></a></p>
+<h5 class="anchor" id="api:mi_img_put_vector">mi_img_put_vector</h5>
+<pre>
+    void mi_img_put_vector (
+        miImg_image *image,
+        miVector    *vector,
+        int         x,
+        int         y)
+</pre>
+<p>Store the X and Y components of the vector <i>vector</i> in the
+vector frame buffer <i>image</i> at coordinate <i>x y</i>, after
+clipping to the range <i>[-1, 1]</i>. Vectors are stored as 16-bit
+signed values. This function is intended for vector texture files
+of type miIMG_VTA or miIMG_VTS. <b>Warning</b>: this function
+accesses 16-bit UV vectors, not the floating-point XYZ normal and
+motion vectors stored in frame buffers. This means it's largely
+obsolete because hardly anyone still uses explicit bump basis
+vectors, and output shaders should almost certainly use
+<i><a href="node144.html#INDEX626">mi_img_put_normal</a></i> instead!</p>
+<p><a id="INDEX623"></a></p>
+<h5 class="anchor" id="api:mi_img_get_vector">mi_img_get_vector</h5>
+<pre>
+    void mi_img_get_vector (
+        miImg_image *image,
+        miVector    *vector,
+        int         x,
+        int         y)
+</pre>
+<p>This is the reverse function to
+<i><a href="node144.html#INDEX622">mi_img_put_vector</a></i>. It returns the
+UV vector stored in a frame buffer at the specified coordinates,
+with coordinates converted to the range <i>[-1, 1]</i>. The Z
+component of the vector is always set to 0. If the frame buffer
+pointer is 0, or if the <i>x</i> or <i>y</i> coordinate is out of
+bounds, all components are set to 0. Again, make sure you should
+not be using <i><a href="node144.html#INDEX627">mi_img_get_normal</a></i>.</p>
+<p><a id="INDEX624"></a></p>
+<h5 class="anchor" id="api:mi_img_put_depth">mi_img_put_depth</h5>
+<pre>
+    void mi_img_put_depth(
+        miImg_image *image,
+        float       depth,
+        int         x,
+        int         y)
+</pre>
+<p>Store the depth value <i>depth</i> in the frame buffer
+<i>image</i> at the coordinates <i>x y</i>. The depth value is not
+changed in any way. The standard interpretation of the depth is the
+(positive) distance of objects from the camera origin. mental ray
+uses this function internally to store
+<code>&minus;(state&rarr;dist)</code> if the depth frame buffer is
+enabled with an appropriate <tt>output</tt> statement. By
+convention, the value 0.0 signifies infinite distance.</p>
+<p><a id="INDEX625"></a></p>
+<h5 class="anchor" id="api:mi_img_get_depth">mi_img_get_depth</h5>
+<pre>
+    void mi_img_get_depth(
+        miImg_image *image,
+        float       *depth,
+        int         x,
+        int         y)
+</pre>
+<p>Read the depth value to the float pointed to by <i>depth</i>
+from frame buffer <i>image</i> at the coordinates <i>x y</i>. If
+the image pointer is 0, or if the <i>x</i> or <i>y</i> coordinate
+is out of bounds, return the <tt>MAX_FLT</tt> constant from
+limits.h.</p>
+<p><a id="INDEX626"></a></p>
+<h5 class="anchor" id="api:mi_img_put_normal">mi_img_put_normal</h5>
+<pre>
+    void mi_img_put_normal(
+        miImg_image *image,
+        miVector    *normal,
+        int         x,
+        int         y)
+</pre>
+<p>Store the <a href="node83.html#INDEX289">normal vector</a>
+<i>normal</i> in the frame buffer <i>image</i> at the coordinates
+<i>x y</i>. The normal vector is not changed in any way. This
+function can also be used for the motion vector frame buffer.</p>
+<p><a id="INDEX627"></a></p>
+<h5 class="anchor" id="api:mi_img_get_normal">mi_img_get_normal</h5>
+<pre>
+    void mi_img_get_normal(
+        miImg_image *image,
+        miVector    *normal,
+        int         x,
+        int         y)
+</pre>
+<p>Read the normal vector <i>normal</i> from frame buffer
+<i>image</i> at the coordinates <i>x y</i>. If the image pointer is
+0, or if the <i>x</i> or <i>y</i> coordinate is out of bounds,
+return a null vector. This function can also be used for the
+<a href="node32.html#INDEX62">motion vector</a>
+<a href="node144.html#INDEX617">frame buffer</a>.</p>
+<p><a id="INDEX628"></a></p>
+<h5 class="anchor" id="api:mi_img_put_label">mi_img_put_label</h5>
+<pre>
+    void mi_img_put_label(
+        miImg_image *image,
+        miUint      label,
+        int         x,
+        int         y)
+</pre>
+<p>Store the <a href="node79.html#INDEX245">label</a> value
+<i>label</i> in the <a href="node38.html#INDEX82">label frame
+buffer</a> <i>image</i> at the coordinates <i>x y</i>. The label
+value is not changed in any way.</p>
+<p><a id="INDEX629"></a></p>
+<h5 class="anchor" id="api:mi_img_get_label">mi_img_get_label</h5>
+<pre>
+    void mi_img_get_label(
+        miImg_image *image,
+        miUint      *label,
+        int         x,
+        int         y)
+</pre>
+<p>Read the label value to the unsigned integer pointed to by
+<i>label</i> from frame buffer <i>image</i> at the coordinates <i>x
+y</i>. If the image pointer is 0, or if the <i>x</i> or <i>y</i>
+coordinate is out of bounds, return 0.</p>
+
+<a id="api:mi_img_get_width"></a>
+<pre>
+    int mi_img_get_width(
+        miImg_image *image)
+</pre>
+<p>Return the actual resolution of the <var>image</var> as number of pixels in
+x direction. This function should be used to determine the image size during
+rendering instead of directly accessing the field in the <var>image</var>
+structure, which may be changed by mental ray for
+<a href="texcache.html">texture caching</a>.
+
+<a id="api:mi_img_get_height"></a>
+<pre>
+    int mi_img_get_height(
+        miImg_image *image)
+</pre>
+<p>Return the actual resolution of the <var>image</var> as number of pixels in
+y direction. This function should be used to determine the image size during
+rendering instead of directly accessing the field in the <var>image</var>
+structure, which may be changed by mental ray for
+<a href="texcache.html">texture caching</a>.
+
+<a id="api:mi_img_pyramid_get_level"></a>
+<pre>
+    miImg_image *mi_img_pyramid_get_level(
+        miImg_image *image
+	int         level)
+</pre>
+<p>Return the subimage at <var>level</var> of the <var>image</var> pyramid.
+If <var>level</var> is out of range the image of the closest level is returned.
+The number of available pyramid images is stored
+in <code>image&rarr;dirsize</code>.
+
+<p><a id="INDEX630"></a></p>
+<h5 class="anchor" id="api:mi_img_tonemap">mi_img_tonemap</h5>
+<pre>
+    miBoolean mi_img_tonemap(
+        miImg_image *outimage,
+        miImg_image *inimage,
+        miImg_tonemap *para)
+</pre>
+<p>performs a <b><a id="INDEX631"></a>tone
+mapping</b> on the provided input image and stores the result in
+the given output image. Tone mapping is commonly performed from an
+output shader. The input and output image pointer may refer to the
+same image. The behaviour of the tone mapper is determined by the
+provided parameters. The structure is given as</p>
+<pre>
+    struct miImg_tonemap {
+        miScalar        ref;
+        miScalar        tolerance;
+        miScalar        low_out;
+        miScalar        hi_out;
+        miScalar        low_in;
+        miScalar        hi_in;
+        miColor         lum_weight;
+        int             n_bins;
+        int             x_res;
+        int             y_res;
+        int             x_lo;
+        int             y_lo;
+        int             x_hi;
+        int             y_hi;
+        miBoolean       linear;
+        miBoolean       desaturate;
+        miTag           map;
+    };
+</pre>
+<p>The fields of the <i>miImg_tonemap</i> structure have the
+following meanings</p>
+<ul>
+<li><b>ref</b> gives a reference intensity. The input color will be
+scaled by this value before any transformation is performed. Unless
+there is a specific reaason to the contrary the default value of 1
+should be used.</li>
+<li><b>tolerance</b> gives an error tolerance for the tone-mapping
+calculations. A good value is 0.01.</li>
+<li><b>low_out</b> gives the lowest non-black intensity to be
+contained in the output image.</li>
+<li><b>hi_out</b> gives the highest intensisty to be contained in
+the output image.</li>
+<li><b>low_in</b> gives the highest intensity of the input image on
+which the color transformation is to be based. All greater
+intensities are mapped to white.</li>
+<li><b>hi_in</b> gives the lowest intensity in the input image to
+be considered. All intensities below are mapped to black.</li>
+<li><b>lum_weight</b> gives the weights used to compute luminance
+from a color.</li>
+<li><b>n_bins</b> gives the number of bins into which color
+intensity values of an image are to be sorted. If the number of
+bins is 1, then a linear mapping of color intensities is performed,
+which is local and does not involve information from neighboring
+pixels. For non-local tone mapping values of around 100 are a good
+choice.</li>
+<li><b>x_res, y_res</b> gives the size of a rectangle over which
+the color values are averaged before they are tone mapped. The
+default values of zero for both fields is a good choice for most
+cases.</li>
+<li><b>x_lo, y_lo, x_hi, y_hi</b> give a sub-rectangle within the
+image. Tone mapping is only applied to this rectangle.</li>
+<li><b>linear</b>. If this flag is set, then local linear tone
+mapping is performed.</li>
+<li><b>desaturate</b> flags whether the resulting tone-mapped color
+values should be desaturated such that no color component is above
+the <i>hi_out</i> value.</li>
+<li><b>map</b> is a reference to a one-dimensional scalar array
+decribing how color intensities are mapped for tone mapping. This
+field allows overriding the internal mapping calculations of the
+tone map routines and is optional. The default value is a null
+tag.</li>
+</ul>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node143.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node145.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

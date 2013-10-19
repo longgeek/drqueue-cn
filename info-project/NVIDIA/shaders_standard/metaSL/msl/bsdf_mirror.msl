@@ -1,0 +1,81 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+ 
+native bsdf Bsdf_mirror
+{
+  input:
+    Color specular_color = Color(1,1,1,1)
+    {
+        display_name("Mirror Color");
+        hard_range(Color(0,0,0,0),Color(1,1,1,1));
+    };
+
+    float specular_scalar = 1.f
+    {
+        display_name("Mirror Float");
+        hard_range(Color(0,0,0,0),Color(1,1,1,1));
+    };
+
+  member:
+
+    // There's currently only a built-in software implementation
+    // for the BSDF. Thus this shader will not work in hardware
+    // rendering so far.
+    Spectrum eval(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        // black result
+        return Spectrum(0.0);
+    }
+
+    Bsdf_components sample(
+        in float3           fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        (void)fixed_direction;
+        (void)primary_sample;
+        (void)sample_probability;
+        (void)allowed_components;
+        (void)transport_source;
+        return state::bsdf_invalid_sample(sampled_direction, sample_weight);
+    }
+
+    float pdf(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        (void)fixed_direction;
+        (void)sampled_direction;
+        (void)allowed_components;
+        (void)transport_source;
+        return 0.f;
+    }
+
+    Bsdf_components get_components()
+    {
+        // nothing
+        return Bsdf_components{};
+    }
+
+    Bsdf_components get_active_components()
+    {
+        // nothing
+        return Bsdf_components{};
+    }
+}
+{
+    description( "Simple mirror BRDF." );
+}
+;

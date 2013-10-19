@@ -1,0 +1,489 @@
+/*****************************************************************************
+* Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+* Germany. All rights reserved.
+*****************************************************************************/
+#import <mi_msl_shared.msl>
+
+//--- Lambert-----------------------------------------------------------------
+native bsdf Bsdf_lambert
+{
+input:
+    Color diffuse_color = Color(1,1,1,1)
+    {
+        display_name("Diffuse Color");
+        hard_range(Color(0,0,0,0),Color(1,1,1,1));
+        description( "The color used to tint the Diffuse Reflectance Color." );
+    };
+    float diffuse_scalar = 0.7
+    {
+        display_name("Diffuse Float");
+        hard_range(0.0, 1.0);
+        description( "The intensity of the light diffusely "
+                "reflected from this surface." );
+    };
+
+member:
+	varying Spectrum m_Rd;
+	
+	varying Bsdf_lambert() {
+        Color Rd = diffuse_color * diffuse_scalar;
+        float max_c = max(max(Rd.r, Rd.g), Rd.b);
+        if (max_c > 1.0)
+            Rd /= max_c;
+        Rd /= PI;
+		
+		m_Rd = Spectrum(Rd);
+	}
+	
+    Spectrum eval(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+		void(transport_source);
+		
+		// Check if fixed_direction and sampled_direction cross the geometric plane
+		// to avoid light leaks.
+		Bsdf_components components = bsdf_check_type(
+			geometry_normal, fixed_direction, sampled_direction, allowed_components);
+
+		if (Bsdf_components{reflect_diffuse} in components) {
+            return m_Rd;
+        }
+		return Spectrum(0.0);
+    }
+
+    Bsdf_components sample(
+        in float3           fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        (void)fixed_direction;
+        (void)primary_sample;
+        (void)sample_probability;
+        (void)allowed_components;
+        (void)transport_source;
+        return state::bsdf_invalid_sample(sampled_direction, sample_weight);
+    }
+
+    float pdf(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        (void)fixed_direction;
+        (void)sampled_direction;
+        (void)allowed_components;
+        (void)transport_source;
+        return 0.f;
+    }
+
+    Bsdf_components get_components()
+    {
+        return Bsdf_components{reflect_diffuse};
+    }
+
+    Bsdf_components get_active_components()
+    {
+        return Bsdf_components{reflect_diffuse};
+    }
+};
+
+
+//--- Phong -------------------------------------------------------------------
+native bsdf Bsdf_phong
+{
+input:
+    Color diffuse_color = Color(1,1,1,1)
+    {
+        display_name("Diffuse Color");
+        hard_range(Color(0,0,0,0),Color(1,1,1,1));
+        description( "The color used to tint the Diffuse Reflectance Color." );
+    };
+
+    float diffuse_scalar = 0.7
+    {
+        display_name("Diffuse Float");
+        hard_range(0.0, 1.0);
+        description( "The intensity of the light diffusely reflected from "
+                "this surface." );
+    };
+
+    Color glossy_color = Color(1,1,1,1)
+    {
+        display_name("Glossy Color");
+        hard_range(Color(0,0,0,0),Color(1,1,1,1));
+        description( "The color used to tint the Glossy Reflectance "
+                "Color." );
+    };
+
+    float glossy_scalar = 0.06
+    {
+        display_name("Glossy Float");
+        hard_range(0.0, 1.0);
+        description( "The intensity of the glossy light reflections from "
+                "this surface." );
+    };
+
+    float glossy_shininess = 15.0
+    {
+        display_name("Glossy Shininess");
+        soft_range(0.0, 100.0);
+        description( "The width of glossy highlights across the "
+                "surface." );
+    };
+
+member:
+    varying Color Rd, Rg;
+	
+	varying Bsdf_phong() {
+        Rd = diffuse_color * diffuse_scalar;
+        Rg = glossy_color * glossy_scalar;
+
+        // normalize components
+        Color temp = Rd + Rg;
+        float maxc = max(max(temp.r,temp.g),temp.b);
+        if (maxc > 1.0) {
+            Rd /= maxc;
+            Rg /= maxc;
+        }
+		Rd /= PI;
+	}
+	
+    Spectrum eval(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+		void(transport_source);
+		Color res(0., 0., 0., 0.);
+		
+		// Check if fixed_direction and sampled_direction cross the geometric plane
+		// to avoid light leaks.
+		Bsdf_components components = bsdf_check_type(
+			geometry_normal, fixed_direction, sampled_direction, allowed_components);
+
+		if (Bsdf_components{reflect_diffuse} in components) {
+			res += Rd;
+		}
+
+		if (Bsdf_components{reflect_glossy} in components) {
+			float s = mi_phong_glossy(sampled_direction,
+				-fixed_direction, normal, glossy_shininess);
+			res += Rg * s;
+		}
+		return Spectrum(res);
+    }
+
+    Bsdf_components sample(
+        in float3           fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        (void)fixed_direction;
+        (void)primary_sample;
+        (void)sample_probability;
+        (void)allowed_components;
+        (void)transport_source;
+        return state::bsdf_invalid_sample(sampled_direction, sample_weight);
+    }
+
+    float pdf(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        (void)fixed_direction;
+        (void)sampled_direction;
+        (void)allowed_components;
+        (void)transport_source;
+        return 0.f;
+    }
+
+    Bsdf_components get_components()
+    {
+        return Bsdf_components{reflect_diffuse, reflect_glossy};
+    }
+
+    Bsdf_components get_active_components()
+    {
+        return Bsdf_components{reflect_diffuse, reflect_glossy};
+    }
+};
+
+
+//--- Oren Nayar --------------------------------------------------------------
+native bsdf Bsdf_oren_nayar
+{
+input:
+    Color diffuse_color = Color(1,1,1,1)
+    {
+        display_name("Diffuse Color");
+        hard_range(Color(0,0,0,0),Color(1,1,1,1));
+        description( "The color used to tint the Diffuse Reflectance Color." );
+    };
+    float diffuse_scalar = 0.7
+    {
+        display_name("Diffuse Float");
+        hard_range(0.0, 1.0);
+        description( "The intensity of the light diffusely reflected from "
+                "this surface." );
+    };
+    Color glossy_color = Color(1,1,1,1)
+    {
+        display_name("Glossy Color");
+        hard_range(Color(0,0,0,0),Color(1,1,1,1));
+        description( "The color used to tint the Glossy Reflectance "
+                "Color." );
+    };
+    float glossy_scalar = 0.06
+    {
+        display_name("Glossy Float");
+        hard_range(float(0),float(1));
+        description( "The intensity of the glossy light reflections from "
+                "this surface." );
+    };
+    float diffuse_deviation = 0.1
+    {
+        display_name("Diffuse Deviation");
+        soft_range(0.0, PI);
+        hard_range(0.0, TWO_PI);
+        description( "The standard deviation of the diffuse micofacets." );
+    };
+    float glossy_shininess = 15.0
+    {
+        display_name("Glossy Shininess");
+        soft_range(0.0, 100.0);
+        description( "The width of glossy highlights across the "
+                "surface." );
+    };
+
+member:
+	varying Color Rd, Rg;
+
+    varying Bsdf_oren_nayar()
+    {
+        Rd = diffuse_color * diffuse_scalar;
+        Rg = glossy_color * glossy_scalar;
+
+        // normalize components
+        Color temp = Rd + Rg;
+        float maxc = max(max(temp.r,temp.g),temp.b);
+        if (maxc>1.0) {
+            Rd /= maxc;
+            Rg /= maxc;
+        }
+	}
+
+    Spectrum eval(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+		void(transport_source);
+		Color res(0., 0., 0., 0.);
+		
+		// Check if fixed_direction and sampled_direction cross the geometric plane
+		// to avoid light leaks.
+		Bsdf_components components = bsdf_check_type(
+			geometry_normal, fixed_direction, sampled_direction, allowed_components);
+
+		if (Bsdf_components{reflect_diffuse} in components) {
+			float d = mi_orennayar_diffuse(sampled_direction,
+					-fixed_direction, normal, texture_tangent_u[0],
+                                        diffuse_deviation);
+			res += d * Rd;
+		}
+
+		if (Bsdf_components{reflect_glossy} in components) {
+			float s = mi_phong_glossy(sampled_direction,
+					-fixed_direction, normal, glossy_shininess);
+
+			res += s * Rg;
+        }
+
+        return Spectrum(res);
+    }
+
+    Bsdf_components sample(
+        in float3           fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        (void)fixed_direction;
+        (void)primary_sample;
+        (void)sample_probability;
+        (void)allowed_components;
+        (void)transport_source;
+        return state::bsdf_invalid_sample(sampled_direction, sample_weight);
+    }
+
+    float pdf(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        (void)fixed_direction;
+        (void)sampled_direction;
+        (void)allowed_components;
+        (void)transport_source;
+        return 0.f;
+    }
+
+    Bsdf_components get_components()
+    {
+        return Bsdf_components{reflect_diffuse, reflect_glossy};
+    }
+
+    Bsdf_components get_active_components()
+    {
+        return Bsdf_components{reflect_diffuse, reflect_glossy};
+    }
+};
+
+
+//--- Ashikhmin Shirley -------------------------------------------------------
+native bsdf Bsdf_ashikhmin_shirley
+{
+input:
+    Color diffuse_color = Color(1,1,1,1)
+    {
+        display_name("Diffuse Color");
+        hard_range(Color(0,0,0,0),Color(1,1,1,1));
+        description( "The color used to tint the Diffuse Reflectance Color." );
+    };
+    float diffuse_scalar = 0.8
+    {
+        display_name("Diffuse Float");
+        hard_range(0.0, 1.0);
+        description( "The intensity of the light diffusely reflected from "
+                "this surface." );
+    };
+    Color glossy_color = Color(1,1,1,1)
+    {
+        display_name("Glossy Color");
+        hard_range(Color(0,0,0,0),Color(1,1,1,1));
+        description( "The color used to tint the Glossy Reflectance "
+                "Color." );
+    };
+    float glossy_scalar = 0.1
+    {
+        display_name("Glossy Float");
+        hard_range(0.0, 0.3);
+        description( "The intensity of the glossy light reflections from "
+                "this surface." );
+    };
+    float glossy_shininess_u = 50
+    {
+        display_name("Shininess U");
+        soft_range(float(0),float(100));
+        description( "The width of glossy highlights along the U axis of "
+                "the textures mapped to the surface." );
+    };
+    float glossy_shininess_v = 50
+    {
+        display_name("Shininess V");
+        soft_range(0.0, 100.0);
+        description( "The width of glossy highlights along the U axis of "
+                "the textures mapped to the surface." );
+    };
+
+member:
+	varying Color Rd, Rg;
+	
+    varying Bsdf_ashikhmin_shirley()
+    {
+        Rd = diffuse_color * diffuse_scalar;
+        Rg = glossy_color * glossy_scalar;
+	}
+	
+    Spectrum eval(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+		void(transport_source);
+		Color res(0., 0., 0., 0.);
+		
+		// Check if fixed_direction and sampled_direction cross the geometric plane
+		// to avoid light leaks.
+		Bsdf_components components = bsdf_check_type(
+			geometry_normal, fixed_direction, sampled_direction, allowed_components);
+
+		if (Bsdf_components{reflect_diffuse} in components) {
+			Color d = mi_ashikhmin_shirley_diffuse(sampled_direction,
+					-fixed_direction, normal, Rd, Rg);
+
+			res += d;
+		}
+
+		if (Bsdf_components{reflect_glossy} in components) {
+			Color s = mi_ashikhmin_shirley_glossy(glossy_shininess_u,
+					glossy_shininess_v, sampled_direction, -fixed_direction,
+                                        normal, texture_tangent_u[0], texture_tangent_v[0], Rg);
+
+			res += s;
+		}
+
+        return Spectrum(res);
+    }
+
+    Bsdf_components sample(
+        in float3           fixed_direction,
+        out float3          sampled_direction,
+        inout Bsdf_sample   primary_sample,
+        out Spectrum        sample_weight,
+        inout float         sample_probability,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        (void)fixed_direction;
+        (void)primary_sample;
+        (void)sample_probability;
+        (void)allowed_components;
+        (void)transport_source;
+        return state::bsdf_invalid_sample(sampled_direction, sample_weight);
+    }
+
+    float pdf(
+        in float3           fixed_direction,
+        in float3           sampled_direction,
+        in Bsdf_components  allowed_components,
+        in bool             transport_source)
+    {
+        (void)fixed_direction;
+        (void)sampled_direction;
+        (void)allowed_components;
+        (void)transport_source;
+        return 0.f;
+    }
+
+    Bsdf_components get_components()
+    {
+        return Bsdf_components{reflect_diffuse, reflect_glossy};
+    }
+
+    Bsdf_components get_active_components()
+    {
+        return Bsdf_components{reflect_diffuse, reflect_glossy};
+    }
+};

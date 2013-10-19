@@ -1,0 +1,557 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+    struct metallic_paint_return{
+        Color result;/* The overall result */
+        Color ambient_result;
+        Color ambient_raw;
+        Color ambient_level;
+
+        Color diffuse_result;
+        Color diffuse_raw;
+        Color diffuse_level;
+
+        Color indirect_result;
+        Color indirect_raw;
+        Color indirect_level;
+
+        Color spec1_result;
+        Color spec1_raw;
+        Color spec1_level;
+
+        Color spec2_result;
+        Color spec2_raw;
+        Color spec2_level;
+
+        Color flake_result;
+        Color flake_raw;
+        Color flake_level;
+        
+        Color flake_refl_result;
+        Color flake_refl_raw;
+        Color flake_refl_level;
+
+        float3 flake_normal;
+
+        Color spare1;
+        Color spare2;
+
+    };
+
+shader mi_metallic_paint {
+
+
+ input:
+    Color ambient = Color(0, 0, 0, 1){
+    };
+    Color base_color = Color(0.8, 0, 0, 1){
+    };
+    Color edge_color = Color(0.0, 0.0, 0.0, 1.0){
+    };
+    float edge_color_bias = 1.0{
+    };
+    Color lit_color = Color(0.6, 0.0, 0.2, 1.0){
+    };
+    float lit_color_bias = 8.0{
+    };
+    float diffuse_weight = 1.0{
+    };
+    float diffuse_bias = 1.5{
+    };
+    float irradiance_weight = 1.0{
+    };
+    Color spec = Color(1.0, 1.0, 1.0, 1.0){
+    };
+    float spec_weight = 0.2{
+    };
+    float spec_exp = 60.0{
+    };
+    Color spec_sec = Color(1.0, 1.0, 1.0, 1.0){
+    };
+    float spec_sec_weight = 0.3{
+    };
+    float spec_sec_exp = 25.0{
+    };
+    bool spec_glazing = true{
+    };
+    Color flake_color = Color(1.0, 1.0, 1.0, 1.0){
+    };
+    float flake_weight = 1.0{
+    };
+    float flake_reflect = 0.0{
+    };
+    float flake_exp = 45.0{
+    };
+    float flake_decay = 45.0{
+    };
+    Shader flake_bump = Shader(){
+    };
+    float global_weight = 1.0{
+    };
+    int mode = 3{
+    };
+    
+
+ output:
+  Color result;
+
+
+   /* smooth stepping function with hermite interpolation */
+    float hermite_step(in float x0, in float x1, in float v)
+    {
+        float f;
+
+        if (v <= x0) return (0.0f);
+        if (v >= x1) return (1.0f);
+        
+        f = (v-x0)/(x1-x0);
+        return (f*f*(3.0f-2.0f*f));
+    }
+
+
+
+  //from mib_shared.msl
+  float mi_phong_specular(	    
+	in float3		lightDir,        // Direction to light
+	in float3		eyeDir,          // Direction to eye
+	in float3		n,               // Normal in camera space
+	in float      specular_shininess) // Specular intensity
+    {	
+	    float	res = 0.0f;
+	    float3 half_ = lightDir - eyeDir;
+	    float phi = dot(half_, n);
+	    phi *= phi / dot(half_, half_);
+	    if (phi > 0.0)
+		    res = exp(log(phi) * 0.5f * specular_shininess);
+
+	    return res;
+    }
+
+
+   
+
+  //local functions
+  Color mi_metallic_paint_body(
+                              in Color paras_ambient,
+                              in Color paras_base_color,
+                              in Color paras_edge_tone,
+                              in float paras_edge_tone_bias,
+                              in Color paras_light_tone,
+                              in float paras_light_tone_bias,
+                              in float paras_diffuse_weight,
+                              in float paras_diffuse_bias,
+                              in float paras_irradiance_weight,
+                              in Color paras_spec,
+                              in float paras_spec_weight,
+                              in float paras_spec_exp,
+                              in Color paras_spec_sec,
+                              in float paras_spec_sec_weight,
+                              in float paras_spec_sec_exp,
+                              in bool paras_spec_glazing,
+                              in Color paras_flake_color,
+                              in float paras_flake_weight,
+                              in float paras_flake_reflect,
+                              in float paras_flake_exp,
+                              in float paras_flake_decay,
+                              in float3 paras_flake_normal,
+                              in float paras_global_weight,
+                              in int mode){
+
+   metallic_paint_return output = metallic_paint_return(Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                Color(0, 0, 0, 0),
+                                                                float3(0, 0, 0),
+                                                                Color(0, 0, 0, 0), 
+                                                                Color(0, 0, 0, 0));
+
+
+      Color black = Color(0, 0, 0, 0);
+     
+     
+      //bool do_flakes = paras_flake_weight > 0;
+
+      float3 p;// = float3(0, 0, 0);
+      float3 v;// = float3(0, 0, 0);
+      float d;// = 0;
+       // Slop variables 
+      float factor;// = 0;
+      float omfactor;// = 0;;
+
+      paras_irradiance_weight /= PI;
+
+      if(paras_global_weight <= 0)paras_global_weight = 1.0;
+      if(paras_spec_exp <= 0)paras_spec_weight = 0.0;
+      if(paras_spec_sec_exp <= 0)paras_spec_sec_weight = 0.0;
+      if(paras_diffuse_bias < 0)paras_diffuse_bias = 0.0;
+
+      if(ray_type == "shadow" ||
+          ray_shader == "displace" ||
+          ray_shader == "light")
+          return black;
+
+      
+      p = transform_point("internal", "object", position);
+      v = transform_point("internal", "object", origin);
+
+      v -= p;
+      d = dot(v,v); // used for decay of flakes 
+
+      if(orthographic)paras_flake_decay = 0.0;
+
+      if(paras_edge_tone_bias > 0.0)
+      {
+          // modify base_color base on the view dependent shading 
+          factor = abs(dot(normal, direction));
+          factor = pow(factor, paras_edge_tone_bias);
+
+          omfactor = 1.0 - factor;
+
+          paras_base_color = paras_base_color *factor + paras_edge_tone * omfactor;
+      }
+
+     
+      // Basic ambient level is the base color 
+      output.ambient_level = paras_base_color;
+      output.ambient_raw = paras_ambient;
+      output.ambient_result = paras_base_color *paras_ambient;
+     
+
+      // Default these to black 
+      output.flake_refl_result = black;
+      output.flake_refl_raw    = black;
+      output.flake_refl_level  = black;
+
+     
+      if(paras_flake_weight > 0)
+      {
+          
+          float3 orig_normal = normal;
+
+          if(any(paras_flake_normal) == false)
+          {
+                paras_flake_normal = normal; 
+          }
+          output.flake_normal = paras_flake_normal;
+
+          // make sure the flakes are not visible if the distance to the
+          // object is large
+          float sub = 0.0;
+          if(paras_flake_decay > 0.0){
+              sub = (sqrt(d) / paras_flake_decay);
+          }
+           d = 1.0 - sub;
+         
+          
+          if(d < 0)d = 0.0;
+          paras_flake_weight *= (1.0 - exp(-d));
+          d = d * paras_flake_exp + (1.0 - d) * paras_spec_exp;
+          paras_flake_reflect *= paras_flake_weight;
+
+          
+
+          if(paras_flake_reflect > 0.0)
+          {
+              float3 dir;
+              normal = paras_flake_normal;
+              dir = reflect(direction, normal);
+              if(dot(dir, geometry_normal) > 0.0)
+              {
+                  Color color = black;
+                  Trace_options trace_options;
+                  Ray ray;
+                  Ray ray_dx;
+                  Ray ray_dy;
+
+                  ray = Ray(position, dir);
+                  trace_options.set_ray_type("reflect");
+                  trace(ray, ray_dx, ray_dy, trace_options, "result", color);
+                 
+                  output.flake_refl_raw = color;
+                  color *= (paras_flake_color * paras_flake_reflect);
+                  output.flake_refl_level = paras_flake_color * paras_flake_reflect;
+                  output.flake_refl_result = 
+                      output.flake_refl_level * output.flake_refl_raw;
+
+                  output.result += output.flake_refl_result;
+              }
+              normal = orig_normal;
+          }
+          
+      }
+  
+      
+   
+      output.spec1_level  = paras_spec * paras_spec_weight;
+
+    
+      output.spec2_level  = paras_spec_sec * paras_spec_sec_weight;
+
+     
+      output.flake_level     = paras_flake_color * paras_flake_weight;
+
+     
+     
+      // now do contributions for each light 
+      Light_iterator light;
+
+      
+      Color color = black;
+      float3 dir = float3(0, 0, 0);
+      float local_dot_nl = 0;
+      Color light_diff = black;;
+      Color diffuse_light = black;
+      Color specular_light = black;
+
+      foreach (light)
+      {
+        Color sum = Color(0, 0, 0, 0);
+        Color diffuse_raw_sum = black;
+        Color diffuse_result_sum = black;
+        Color spec1_sum = black;
+        Color spec2_sum = black;
+        Color flake_sum = black;
+        float affect_diffuse = 1.0;
+        float affect_specular = 1.0;
+
+        float s = 0.0;
+        local_dot_nl = light.dot_nl;
+        if(local_dot_nl < 0.0)
+            local_dot_nl = 0.0;
+        s = pow(local_dot_nl, paras_diffuse_bias);
+
+        //TODO double check these parameters names...
+        if(!light.get_light_parameter("emitDiffuse", affect_diffuse))
+        {
+            affect_diffuse = 1.0;
+        }
+      
+        if(!light.get_light_parameter("emitSpecular", affect_specular))
+        {
+            affect_specular = 1.0;
+        }
+
+        if(paras_light_tone_bias > 0.0){
+
+            factor = pow(local_dot_nl, paras_light_tone_bias);
+            factor *= abs(dot(normal, direction));
+            omfactor = 1.0 - factor;
+            light_diff = paras_base_color *omfactor + paras_light_tone*factor;
+        }else{
+            light_diff = paras_base_color;
+        }
+
+        color = light.contribution/PI;
+
+        // Pre-scale light contribution by s 
+        diffuse_light = color * s * affect_diffuse;
+
+         // We need to calculate the result *first* and then
+         //   try to re-construct the components from that later 
+        diffuse_result_sum += ((light_diff * diffuse_light) * paras_diffuse_weight);
+
+         // We also need to calculate the raw diffuse 
+        diffuse_raw_sum += diffuse_light;
+
+        //Let dot_nl affect specularity a hair, to avoid ugly edges 
+        factor = pow(local_dot_nl, 0.5f);
+
+        specular_light = color * affect_specular;
+        
+        if(paras_spec_weight > 0)
+        {
+            // phong specular contributions 
+            s = mi_phong_specular(light.direction, direction, normal, paras_spec_exp);
+            if(s > 0)
+            {
+
+                // Step the primary specular 
+                if(paras_spec_glazing)
+                {
+                    
+                    s = hermite_step(0.5, 0.8, s);
+                }
+                s *= factor;
+                spec1_sum += specular_light * s;
+
+            }
+        }
+
+        if(paras_spec_sec_weight > 0)
+        {
+
+            s = mi_phong_specular(light.direction, direction, normal, paras_spec_sec_exp) 
+                * factor;
+
+            if(s > 0)
+            {
+                spec2_sum += s*specular_light;
+            }
+        }
+
+        if(paras_flake_weight > 0)
+        {
+            // handle flakes. Use the precalculated values from
+            // above, but only generate flakes if the dot product of
+            // the perturbed flake normal with the half vector between
+            // viewing direction and light source is positive.
+            // 
+            float3 h = float3(0, 0, 0);
+            float fs = 0.0;
+
+            h = light.direction;
+
+            h -= direction;
+            h = normalize(h);
+            fs = dot(paras_flake_normal, h);
+            if(fs > 0.0)
+            {
+                if(d < 0.0)
+                    d =0.0;
+                fs = pow(fs, d)*factor;
+                flake_sum += fs *specular_light;
+            }
+
+        }
+
+        output.spec1_raw += spec1_sum;
+        output.spec2_raw += spec2_sum;
+        output.flake_raw += flake_sum;
+        output.diffuse_result += diffuse_result_sum;
+        output.diffuse_raw += diffuse_raw_sum;
+      }//end light iterator
+    
+      
+           
+      output.spec1_result = output.spec1_raw * output.spec1_level;
+      output.spec2_result = output.spec2_raw * output.spec2_level;
+      output.flake_result = output.flake_raw * output.flake_level;
+
+    
+       // ...Diffuse "level" calculated as the divide(!)
+       //   Kind of wierd, but the best we can do really.... 
+
+      if (output.diffuse_raw.r <= 0.0f) // Avoid div by zero case 
+        output.diffuse_level.r =  paras_base_color.r * paras_diffuse_weight;
+      else
+        output.diffuse_level.r = output.diffuse_result.r / output.diffuse_raw.r;
+
+      if (output.diffuse_raw.g <= 0.0f) // Avoid div by zero case 
+        output.diffuse_level.g = paras_base_color.g * paras_diffuse_weight;
+      else
+        output.diffuse_level.g = output.diffuse_result.g / output.diffuse_raw.g;
+
+      if (output.diffuse_raw.b <= 0.0f) //Avoid div by zero case 
+        output.diffuse_level.b = paras_base_color.b * paras_diffuse_weight;
+      else
+        output.diffuse_level.b = output.diffuse_result.b / output.diffuse_raw.b;
+
+   
+        
+     if(paras_irradiance_weight > 0.0)
+     {
+         Color tone2 = black;
+
+         //mi_compute_irradiance
+         Irradiance_options irr_op;
+         tone2 = irradiance(irr_op)/PI;
+         output.indirect_raw = tone2;
+
+         output.indirect_level = paras_base_color * paras_irradiance_weight;
+         output.indirect_result = tone2 * output.indirect_level;
+         
+     }
+     else
+     {
+         output.indirect_level  = black;
+         output.indirect_raw    = black;
+         output.indirect_result = black;
+     }
+
+     
+      
+     output.result = output.ambient_result + 
+         output.diffuse_result + output.indirect_result + 
+                       output.spec1_result + output.spec2_result + 
+                       output.flake_result + output.flake_refl_result;
+
+     
+     output.result.rgb *= paras_global_weight;
+     output.result.a = 1.0;
+    
+    
+     
+     
+     return output.result;
+
+
+  }//mi_metallic_paint_body
+
+
+
+  
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    float3 local_flake_normal = float3(0, 0, 0);
+    Color local_flake_color = Color(0, 0, 0, 0);
+   
+    //call the flake shader
+     {
+         flake_bump.call(
+             "input", "flake_color", flake_color,
+             "output", "normal_result", local_flake_normal,
+             "output", "result", local_flake_color);
+        
+     }
+
+   result = mi_metallic_paint_body(
+                           ambient,
+                           base_color,
+                           edge_color,
+                           edge_color_bias,
+                           lit_color,
+                           lit_color_bias,
+                           diffuse_weight,
+                           diffuse_bias,
+                           irradiance_weight,
+                           spec,
+                           spec_weight,
+                           spec_exp,
+                           spec_sec,
+                           spec_sec_weight,
+                           spec_sec_exp,
+                           spec_glazing,
+                           local_flake_color,
+                           flake_weight,
+                           flake_reflect,
+                           flake_exp,
+                           flake_decay,
+                           local_flake_normal,
+                           global_weight,
+                           mode);
+
+
+  } // main
+};

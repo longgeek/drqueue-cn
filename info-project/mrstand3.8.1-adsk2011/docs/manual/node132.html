@@ -1,0 +1,90 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Contour Contrast Function</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node131.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node133.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION130"></a>
+<h3>Contour Contrast Function</h3>
+<p>The <a href="node40.html#INDEX85">contour contrast shader</a>
+decides where the contours should be. For example, it might decide
+that there should be a contour when the difference in depth or
+orientation is large. The decision is based on the contour
+information for two points (the information saved by the contour
+store shader), the reflection or refraction level of the two
+points, the state, and the parameters of the contour contrast
+function. Note that the state does not contain intersection
+information because the contrast function is comparing <i>two</i>
+intersections, described solely by the information stored by the
+two contour store functions. This means that state variables such
+as <i>point</i> or <i>tex_list</i> are undefined in a contrast
+function.</p>
+<p>The output is a Boolean value indicating whether there should be
+a contour between the two points. If the returned value is
+<tt>miTRUE</tt>, one of two things can happen: If the distance
+between the two points corresponds to <tt>max samples</tt>, a
+contour will be placed between the two points (getting contour
+width, color, etc. by calling the material's contour shader). If
+not, mental ray will take some additional samples to get a more
+precise position of the contour. There is only one contour contrast
+shader for the scene.</p>
+<p>As an example of a user-defined contour contrast shader,
+consider the following function with parameters <tt>zdelta</tt> and
+<tt>ndelta</tt>:</p>
+<pre>
+    miBoolean my_contour_contrast_function(
+        MyInfo                          *info1,
+        MyInfo                          *info2,
+        int                              level,
+        miState                         *state,
+        My_Contour_Contrast_Parameters  *paras)
+    {
+        /*
+         * Contour if one ray intersected an object and one
+         * ray hit background
+         */
+        if (!info1 || !info2)
+               return(miTRUE);
+
+        /*
+         * Contour if sufficiently large difference in depth
+         */
+        if (fabs(info1-&gt;point.z - info2-&gt;point.z) &gt;
+                                              paras-&gt;zdelta)
+               return(miTRUE);
+
+        /*
+         * Contour if sufficiently large change in normal
+         */
+        if (mi_vector_dot(&amp;info1-&gt;normal, &amp;info2-&gt;normal) &lt;
+                            cos(paras-&gt;ndelta * M_PI/180.0))
+               return(miTRUE);
+
+        /*
+         * No contour otherwise
+         */
+        return(miFALSE);
+    }
+</pre>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node131.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node133.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

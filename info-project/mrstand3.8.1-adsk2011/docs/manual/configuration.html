@@ -1,0 +1,243 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Configuration Settings</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node254.html">&laquo;&nbsp;prev</a></li>
+<li><a href="limitations.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="configuration"></a>
+<h2>Configuration Settings</h2>
+
+mental ray internal defaults or advanced properties can be set with the help
+of variables, either set in the runtime <a href="#environment">environment</a>
+of the target operating system, or in the internal <a href="#registry">registry</a>
+of mental ray, which is not platform dependent and more suitable in cases where
+the software is integrated into parent applications.
+
+<h3 id="environment">Environment Variables</h3>
+
+<p>Environment variables<a id="INDEX1085"></a> can be set from a shell
+prompt with shell commands such as <tt>setenv</tt> (see the documentation
+of your shell) before mental ray, or the application
+that mental ray is built into, is started from the same shell.
+Environment variables set after mental ray is started, or set from
+a different shell, have no effect. mental ray will work without any
+environment variables, except that the <tt>.rayrc</tt> startup
+script may not be found if <tt>MI_ROOT</tt> is undefined.</p>
+<dl>
+<dt><tt>DISPLAY</tt>
+<dd>The <a href="node100.html#INDEX363">Unix</a> X11 display to be
+used for <a href="node56.html#INDEX106">OpenGL</a>
+acceleration.</dd>
+<dt><tt>HOME</tt>
+<dd>Unix home directory, for finding the user's local
+<tt>.rayrc</tt> file.</dd>
+<dt><tt>HOMEDRIVE</tt>
+<dd>Windows NT home drive, such as <tt>C:</tt>.</dd>
+
+<dt><tt>HOMEPATH</tt>
+<dd>Windows NT home directory. mental ray will try to load
+<tt>%HOMEDRIVE%/%HOMEPATH%/rayrc</tt>.</dd>
+
+<dt id="env:assembly">
+<tt>MI_ASSEMBLY_PATH</tt>
+<dd><dd>A colon-separated or semicolon-separated list of paths to
+search for assembly .mi files referenced in a
+<a href="assembly.html#fo:assembly">assembly</a></tt>.</dd>
+
+<dt><tt>MI_LIBRARY_PATH</tt>
+<dd>A colon-separated or semicolon-separated list of paths to
+search for files loded with the <tt>link</tt> command.</dd>
+
+<dt><tt>MI_LIGHTPROFILE_PATH</tt>
+<dd>A colon-separated or semicolon-separated list of paths to
+search for lightprofile files.</dd>
+
+<dt><tt>MI_MAP_PATH</tt> <span class="new">3.8</span>
+<dd>A colon-separated or semicolon-separated list of paths to
+search for map data files.</dd>
+
+<dt><tt>MI_RAY_HOSTSFILE</tt>
+<dd>Use this file name instead of the default <code>.rayhosts</code>
+to read host configuration for
+<a href="node6.html#fo:network">distributed rendering</a>.
+
+<dt><tt>MI_RAY_INCPATH</tt>
+<dd>A colon-separated or semicolon-separated list of paths to
+search for files included with the <tt>$include</tt> command.</dd>
+
+<dt><tt>MI_RAY_OPTIONS</tt>
+<dd>Extra options that are inserted by mental ray before the
+options on the command line. This is commonly used for options such
+as <tt>-xcolor</tt>.</dd>
+
+<dt><tt>MI_RAY3_SERVICE</tt>
+<dd>The IP service that mental ray uses to contact slaves on other
+machines. The default is <tt>mi-ray3</tt> for mental ray 3.x.
+On <a href="node100.html#INDEX363">Unix</a>, service names are defined in
+<tt>/etc/services</tt> or in the <tt>services</tt> NIS map.</dd>
+
+<dt><tt>MI_RAY_SERVICE</tt>
+<dd>If the previous variable is not defined, this one is used
+instead. This makes mental ray 2.x compatible with mental ray 1.9
+while allowing both to coexist on the same machine. The default is
+<tt>mi-ray</tt>.</dd>
+
+<dt><tt>MI_RAY_SUBSTITUTE</tt>
+<dd>An optional list of blank-separated substitution instructions,
+each in the form <tt>/search/replace/</tt>. Any other character
+besides <tt>/</tt> will also work.</dd>
+
+<dt><tt>MI_ROOT</tt>
+<dd>The directory that mental ray searches for configuration files
+such as <tt>rayrc</tt>.</dd>
+
+<dt><tt>MI_STACKSIZE</tt>
+<dd>New thread stacks will be created with this size in kilobytes
+if defined. The default is 16384 (16 MB) on
+<a href="node100.html#INDEX363">Unix</a> and 4096 on Windows. 4096 is
+nearly always sufficient except when very complex recursive shaders
+are used.</dd>
+
+<dt><tt>MI_TEX_LOOKUP_LOCAL</tt>
+<dd>This variable can be set in network parallel rendering in order
+to look up and remap texture file paths on the individual rendering
+hosts instead of on the master host only. This allows to locate
+textures on the slave machines at a different file system path than
+on the master host.
+<dd>Note that <tt>MI_TEX_LOOKUP_LOCAL</tt> should be set on all
+rendering hosts, not just the master.
+<dd>Note also that this also causes file names to be echoed in the
+.mi format without performing file path substitutions.
+</dd>
+
+<dt><tt>SI_LOCATION</tt>
+<dd>The directory of the <tt>linktab.ini</tt> file, which may be used
+by applications to customize file path mapping.</dd>
+
+<dt><tt>TMPDIR</tt>
+<dd>A directory for temporary code or object files to be compiled
+or linked. The default is <tt>/usr/tmp</tt> on
+<a href="node100.html#INDEX363">Unix</a> and the current directory on Windows.</dd>
+
+<dt><tt>USER</tt>
+<dd>The current user name. This is optional, and if it exists may be
+stored in image file headers, for example.
+</dl>
+
+<p>The mental ray <a href="node72.html#mi:registry">registry</a> supports
+lookups of environment variables. The form <tt>$var</tt> returns the value
+of the environment variable <i>var</i>, and <tt>$?var</tt> returns 1 if
+the environment variable <i>var</i> exists and 0 otherwise.</p>
+
+<h3 id="registry">Registry Variables</h3>
+
+<p>Registry variables can be set from any .mi file. The special file
+<code>.rayrc</code> is automatically read by a standalone mental ray
+upon startup for configuration purposes.</p>
+
+<p>mental ray recognizes and uses registry variables that begin with
+<tt>_MI_REG_</tt> which have special meanings:</p>
+
+<dl id="apx:_mi_reg">
+
+<dt><tt>_MI_REG_INCLUDE</tt><dd>
+an include path where files included by <tt>$include</tt>
+commands are found, in addition to paths set with the <tt>-I</tt>
+command-line option.
+
+<dt><tt>_MI_REG_LIBRARY</tt><dd>
+an include path where shader libraries linked by <tt>link</tt>
+commands are found, in addition to paths set with the <tt>-L</tt>
+command-line option.
+
+<dt><tt>_MI_REG_MAP</tt> <span class="new">3.8</span>
+<dd>a search path where map data files are found, in addition to paths set
+with the <tt>-M</tt> command-line option.
+
+<dt><tt>_MI_REG_MEMORY_LIMIT</tt>
+<dd>the number of megabytes to use as memory limit default.
+May be overridden on the mental ray <a href="node245.html#cli:memory">
+command line</a> for a specific rendering.
+
+<dt><tt>_MI_REG_METASL_BACKEND</tt> <span class="new">3.8</span>
+<dd>for <a href="node99.html#sh:metasl">MetaSL shaders</a>, selects
+the back-end to use for compilation and execution of the shader code.
+Supported values are <code>CPP</code> or <code>C++</code> for the C++
+back-end using an external compiler, or <code>LLVM</code> for the integrated
+<em>low-level virtual machine</em> translation and execution engine.
+
+<dt><tt>_MI_REG_TEXTURE</tt><dd>
+an include path where texture image files referenced by
+<tt>texture</tt> statements are found, in addition to paths set
+with the <tt>-T</tt> command-line option.
+
+<dt><tt>_MI_REG_LIGHTPROFILE</tt><dd>
+an include path where light profile files referenced by
+<tt>lightprofile</tt> statements are found, in addition to paths
+set with the <tt>-lightprofile_path</tt> command-line option.
+
+<dt><tt>_MI_REG_FBDIR</tt><dd>
+a directory where memory mapped frame buffers are stored, unless
+the <tt>-fb_dir</tt> command-line option has been specified.
+<a id="reg:assembly"></a>
+
+<dt><tt>_MI_REG_ASSEMBLY</tt>
+<dd>a directory where
+assembly files are stored, unless the <tt>-assembly</tt>
+command-line option has been specified.
+</dl>
+
+<a id="apx:_mi_ray"></a>
+<p>mental ray provides and sets registry variables that begin with
+<tt>_MI_RAY_</tt> as follows:
+
+<dl>
+<dt><tt>_MI_RAY_VERSION</tt>
+<dd>the full version number of mental ray, like "3.8.1.1".
+<dt><tt>_MI_RAY_MAJOR_VERSION</tt>
+<dd>the major version number of mental ray, like "3".
+<dt><tt>_MI_RAY_MINOR_VERSION</tt>
+<dd>the minor version number of mental ray, like "3.8".
+<dt><tt>_MI_RAY_BRANCH</tt>
+<dd>the branch version number of mental ray, like "3.8.1".
+<dt><tt>_MI_RAY_REVISION</tt>
+<dd>the revision version number of mental ray, like "85991".
+
+<dt><tt>_MI_RAY_SYSTEM</tt>
+<dd>a general computer system name that mental ray has been compiled for.
+This is one of the strings "windows", "linux", or "macosx", and "unix"
+for all other systems.
+
+<dt><tt>_MI_RAY_PLATFORM</tt>
+<dd>the compile platform string of mental ray. Common values are
+"nt-x86-vc9", "nt-x64-vc9", "linux-x86", "linux-x86-gcc4",
+linux-x86-64", "linux-x86-64-gcc4", "macosx-x86", and "macosx-x86-64".
+
+<dt><tt>_MI_RAY_DATE</tt>
+<dd>a readable form of the build date of mental ray, like "May 18 2009".
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node254.html">&laquo;&nbsp;prev</a></li>
+<li><a href="limitations.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

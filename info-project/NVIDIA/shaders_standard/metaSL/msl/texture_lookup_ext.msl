@@ -1,0 +1,124 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// A texture look-up shader with support for some transformations on the
+// (u,v) texture coordinates.
+//
+// Only use this shader for compatibility with iray.
+//
+// It's more robust to let the core handle transformations, cropping, etc.,
+// especially with respect to ray differentials and filtering.
+//
+// If possible, set texture properties the core understands and use
+// "standard" texture look-up calls without transforming the (u,v)
+// coordinates inside the shader.
+shader Texture_lookup2d_ext
+{
+  input:
+    Texture2d texture
+    {
+        display_name("Texture");
+        description("The input texture.");
+    };
+    float2x2 uv_transform = float2x2(1.0, 0.0, 0.0, 1.0)
+    {
+        display_name("UV transformation.");
+        description("Transformation matrix applied to UV after cropping.");
+    };
+    float2 uv_offset = float2(0.0, 0.0)
+    {
+        display_name("UV translation.");
+        description("Offset applied to every UV coord.");
+    };
+    float2 crop_u = float2(0.0, 1.0)
+    {
+        display_name("Crop U");
+        description("Cropping range in U direction.");
+    };
+    float2 crop_v = float2(0.0, 1.0)
+    {
+        display_name("Crop V");
+        description("Cropping range in V direction.");
+    };
+    Color color_offset = Color(0.0, 0.0, 0.0, 0.0)
+    {
+        display_name("Color offset");
+        description("Fixed offset value added to all texture values.");
+    };
+    Color color_scale = Color(1.0, 1.0, 1.0, 1.0)
+    {
+        display_name("Color scale");
+        description("Fixed scaling factor applied to all texture values.");
+    };
+    bool clamp_u = false
+    {
+        display("Clamp U");
+        description("Clamp in U direction.");
+    };
+    bool clamp_v = false
+    {
+        display("Clamp V");
+        description("Clamp in V direction.");
+    };
+    bool alt_u = false
+    {
+        display("Alt U");
+        description("Alternate lookup coordinates, for seamless boundaries in U direction.");
+    };
+    bool alt_v = false
+    {
+        display("Alt V");
+        description("Alternate lookup coordinates, for seamless boundaries in V direction.");
+    };
+    int texture_space = 0
+    {
+        display_name("Texture Space");
+        literal();
+        description( "Texture coordinates to use when sampling the input texture." );
+        hard_range(0, 3);
+    };
+  output:
+    Color result;
+
+    void main()
+    {
+        // only the first texture channel is supported
+        float2 uv = texture_coordinate[texture_space].xy;
+        float2 ddx_uv = ddx(texture_coordinate[texture_space]).xy;
+        float2 ddy_uv = ddy(texture_coordinate[texture_space]).xy;
+
+        // apply matrix and add offset
+        uv = uv_transform * uv + uv_offset;
+        ddx_uv = uv_transform * ddx_uv;
+        ddy_uv = uv_transform * ddy_uv;
+
+        // wrap or clamp u
+        if (clamp_u)
+            uv.x = clamp(uv.x, 0.0, 1.0);
+        else if (alt_u && int(uv.x) % 2 == 1)
+            uv.x = 1.0 - fmod(uv.x, 1.0);
+        else
+            uv.x = fmod(uv.x, 1.0);
+
+        // wrap or clamp v
+        if (clamp_v)
+            uv.y = clamp(uv.y, 0.0, 1.0);
+        else if (alt_v && int(uv.y) % 2 == 1)
+            uv.y = 1.0 - fmod(uv.y, 1.0);
+        else
+            uv.y = fmod(uv.y, 1.0);
+
+        // crop
+        uv.x = crop_u.x + (crop_u.y - crop_u.x) * uv.x;
+        uv.y = crop_v.x + (crop_v.y - crop_v.x) * uv.y;
+
+        // perform the look-up
+	result = tex2D(texture, uv, ddx_uv, ddy_uv);
+
+        // scale and add offset
+        result = result * color_scale + color_offset;
+    }
+};
+

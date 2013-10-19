@@ -1,0 +1,115 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision: 1281 $
+
+shader max_DefaultMaterial {
+ input:
+  struct Parameters {
+    Color ambient;
+    Color specular;
+    float shinyness;
+  };
+  Parameters params = Parameters(Color(1.0, 1.0, 1.0, 1.0),
+				 Color(1.0, 1.0, 1.0, 1.0),
+				 1.0);
+
+ output:
+  Color result;
+
+  // see max_support.cpp
+  void maxReflectionDir(inout float3 ref,
+			//state
+			in float my_dot_nd,
+			in float3 my_direction,
+			in float3 my_normal) {
+    float x = 2.0 * my_dot_nd;
+    ref.x = my_direction.x - x * my_normal.x;
+    ref.y = my_direction.y - x * my_normal.y;
+    ref.z = my_direction.z - x * my_normal.z;
+  } // maxReflectionDir
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // TODO: state->options->userdata
+    bool forceDoubleSided = false;
+    Color ambientLight = Color(0.7, 0.7, 0.7, 1.0); // grey
+    // TODO: should we introduce additional shader parameters for this?
+    forceDoubleSided = false;
+    ambientLight = Color(0.0, 0.0, 0.0, 1.0);
+    if (!forceDoubleSided && backside) {
+      // TODO
+      result = Color(1.0, 0.0, 0.0, 0.0);
+    }
+    else {
+      // TODO: max_DefaultMaterialPhoton
+      // max_DefaultMaterialShade
+      // ip_* see IllumData.ip or mrMaterialDefault_INST in max_wire.cpp
+      Color wireColor = Color(0.0, 0.0, 0.0, 0.0);
+      Color ip_amb = Color(0.0, 0.0, 0.0, 0.0);
+      Color ip_diff = Color(0.0, 0.0, 0.0, 0.0);
+      Color ip_spec = Color(0.0, 0.0, 0.0, 0.0);
+      // TODO: mi_compute_irradiance
+      Color ip_irradiance = Color(0.0, 0.0, 0.0, 0.0);
+      float3 ip_R = float3(0.0, 0.0, 0.0);
+      float ip_phongExp = pow(2.0, params.shinyness);
+      maxReflectionDir(ip_R,
+		       // state
+		       dot_nd, direction, normal);
+      ip_R = normalize(ip_R);
+      // --------------------------
+      // Begin IllumAccumulate(...)
+      // --------------------------
+      Color lightCol = Color(0.0, 0.0, 0.0, 0.0);
+      Color diffwk = Color(0.0, 0.0, 0.0, 0.0);
+      Color specwk = Color(0.0, 0.0, 0.0, 0.0);
+      // light loop
+      Light_iterator light;
+      foreach (light) {
+      	lightCol = light.contribution/PI;
+	// TODO: light_diffuseCoefSet (most likely set in a light shader)
+	bool light_diffuseCoefSet = true;
+	float light_diffuseCoef = 0.0;
+	if (!light_diffuseCoefSet) {
+	  light_diffuseCoef = light.dot_nl;
+	} // if (!light_diffuseCoefSet)
+	// TMP
+	else light_diffuseCoef = 0.7444;
+	// TMP
+	diffwk.r += light_diffuseCoef * lightCol.r;
+	diffwk.g += light_diffuseCoef * lightCol.g;
+	diffwk.b += light_diffuseCoef * lightCol.b;
+	float c = dot (light.direction, ip_R);
+	if (c > 0.0) {
+	  c = light.dot_nl * pow(c, ip_phongExp);   
+	  specwk.r += c * lightCol.r;
+	  specwk.g += c * lightCol.g;
+	  specwk.b += c * lightCol.b;
+	} // if (c > 0.0)
+	    ip_diff.r += diffwk.r;
+	    ip_diff.g += diffwk.g;
+	    ip_diff.b += diffwk.b;
+	    ip_spec.r += specwk.r;
+	    ip_spec.g += specwk.g;
+	    ip_spec.b += specwk.b;
+      } // foreach (light)
+      // ------------------------
+      // End IllumAccumulate(...)
+      // ------------------------
+      // TODO: get the node's wire color
+      wireColor = Color(0.109804, 0.349020, 0.694118, 1.0);
+      result.r = ((params.ambient.r * ambientLight.r + ip_amb.r + 
+		  ip_diff.r + ip_irradiance.r) * wireColor.r + 
+		  ip_spec.r * params.specular.r);
+      result.g = ((params.ambient.g * ambientLight.g + ip_amb.g + 
+		   ip_diff.g + ip_irradiance.g) * wireColor.g + 
+		  ip_spec.g * params.specular.g);
+      result.b = ((params.ambient.b * ambientLight.b + ip_amb.b + 
+		   ip_diff.b + ip_irradiance.b) * wireColor.b + 
+		  ip_spec.b * params.specular.b);
+      result.a = 1.0f;
+    }
+  } // main
+};

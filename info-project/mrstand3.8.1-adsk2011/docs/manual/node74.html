@@ -1,0 +1,189 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Conditionals</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node73.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node75.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION72"></a>
+<h3>Conditionals</h3>
+<p><a id="INDEX172"></a><a id="INDEX173"></a>
+Portions of the scene file can be excluded from
+consideration during parsing, depending on conditional statements
+that bracket the portions of the scene file to be excluded. The
+primary example for this is protecting included files from double
+inclusion. For example, a file <i>x.mi</i> included with
+<tt>$include</tt> might begin with the statements</p>
+<pre>
+    $ifndef "x_mi"
+    set "x_mi" "true"
+
+    # normal contents of x.mi
+
+    $endif
+</pre>
+<p>The following conditional statements are supported:</p>
+<pre>
+    $ifdef "<i>key</i>"  
+    $ifndef "<i>key</i>"  
+    $ifeq "<i>key</i>" "<i>constant</i>"  
+    $ifneq "<i>key</i>" "<i>constant</i>"  
+         
+    $else  
+    $elseifdef "<i>key</i>"  
+    $elseifeq "<i>key</i>" "<i>constant</i>"  
+         
+    $endif  
+</pre>
+<p>The <tt>$</tt> sign must be in the first column of the line. The
+usage always follows the pattern <i>if</i>...<i>endif</i>, or
+<i>if</i>...<i>else</i>...<i>endif</i>. Conditionals can be
+nested. As a convenience, an <i>else</i> can be concatenated with
+another <i>if</i>; in this case only one <i>endif</i> is needed
+because the concatenated forms do not require an <i>endif</i> of
+their own.</p>
+<p>There are two forms of <i>if</i> statements: those that check
+whether a key is present, and those that compare two strings. The
+<i>key</i> strings take one of two forms:</p>
+<ul>
+<li>A string without curly braces. This is interpreted as the name
+of a variable that can be set with the <tt>set</tt> command. If the
+variable was set, it is said to be defined, and its value is the
+value from the <tt>set</tt> command. If there was no such
+<tt>set</tt> command, or a <tt>set</tt> command without a value, it
+is said to be undefined.</li>
+<li>A string containing curly braces. This string goes through
+<a href="node72.html#INDEX165">registry</a> substitution, which
+will replace registry keys like <code>{</code><var>var</var><code>}</code>,
+and environment references of the form
+<code>${</code><var>var</var><code>}</code> (return value of <var>var</var>)
+or <code>${?</code><var>var</var><code>}</code> (return <code>"1"</code> if
+defined otherwise empty string) with the appropriate values.
+If this results in a non-empty string, the <var>key</var> is said
+to be defined, and undefined otherwise.</li>
+</ul>
+<p>The <i>constant</i> strings take only the second form; variable
+lookups are not possible here. A constant without curly braces will
+be treated as a literal string, not a variable name.</p>
+<p>Note that conditionals can also be useful in <tt>rayrc</tt>
+<a href="node72.html#INDEX166">startup file</a>s. For example,
+paths and all sorts of other platform-dependent setup keys can be
+made dependent on a single variable. For example:</p>
+<pre>
+    registry "{EXT}" value "so" end registry
+    $ifeq "{EXT}" "so"
+    echo "hello, penguin"
+    $endif
+</pre>
+<p>The following example demonstrates the power of conditionals together with
+registry substitution to detect the runtime environment of mental ray:
+<pre>
+    $ifdef "${?OS}"
+    $ifeq "${OS}" "Windows_NT"
+        registry "{PLATFORM}" value "windows" end registry
+    $endif
+    $elseifdef "${?OSTYPE}"
+    $ifeq "${OSTYPE}" "darwin"
+        registry "{PLATFORM}" value "macosx" end registry
+    $elseifeq "${OSTYPE}" "linux"
+        registry "{PLATFORM}" value "linux" end registry
+    $endif
+    $endif
+
+    # If system could not be detected set a default.
+    $ifndef "{PLATFORM}"
+        registry "{PLATFORM}" value "unix" end registry
+    $endif
+    
+    # Print registry substituted message at 'info' verbosity.
+    registry "{whatifound}"
+        echo "I think this is a {PLATFORM} system"
+    end registry
+
+    $lookup "{whatifound}"
+</pre>
+<p>Conditionals can be used even in the middle of a statement, as
+long as the conditional is on its own line. (mental ray ignores
+whitespace and line breaks in statements.) This introduces a
+conflict where a conditional follows a <tt>set</tt> statement with
+only a single argument, which normally clears the named variable,
+and that same variable is used in the conditional:</p>
+<pre>
+    set "var"
+    $ifdef "var"
+</pre>
+<p>Is the variable being unset so the conditional should be false,
+or is the second argument of the <tt>set</tt> command inside the
+conditional? mental ray cannot know this. It assumes the latter, so
+the <tt>set</tt> statement is considered unfinished and has no
+effect on the conditional.</p>
+<p>The conditional statements are:</p>
+<pre>
+    $ifdef "<i>key</i>"  
+</pre>
+<p>Proceed if <i>key</i> is defined, or skip to the matching
+<tt>$else</tt> or <tt>$endif</tt> otherwise.</p>
+<pre>
+    $ifndef "<i>key</i>"  
+</pre>
+<p>Proceed if <i>key</i> is <i>not</i> defined, or skip to the
+matching <tt>$else</tt> or <tt>$endif</tt> otherwise.</p>
+<pre>
+    $ifeq "<i>key</i>" "<i>constant</i>"  
+</pre>
+<p>Proceed if <i>key</i> evaluates to the same string as
+<i>value</i>, or skip to the matching <tt>$else</tt> or
+<tt>$endif</tt> otherwise.</p>
+<pre>
+    $ifneq "<i>key</i>" "<i>constant</i>"  
+</pre>
+<p>Proceed if <i>key</i> does <i>not</i> evaluate to the same
+string as <i>value</i>, or skip to the matching <tt>$else</tt> or
+<tt>$endif</tt> otherwise.</p>
+<pre>
+    $else  
+</pre>
+<p>Reverse the condition tested in the previous <tt>$if</tt>
+<i>x</i> or <tt>$elseif</tt> <i>x</i> test, and proceed if we were
+skipping or skip if we were proceeding, until the next
+<tt>$endif</tt>. Only one <tt>$else</tt> is allowed per
+<tt>$if</tt> <i>x</i>, and it must be last in any <tt>$elseif</tt>
+<i>x</i> chain.</p>
+<pre>
+    $elseifdef "<i>key</i>"  
+</pre>
+<p>A combination of <tt>$else</tt> and <tt>$ifdef</tt>. It does not
+need its own <tt>$endif</tt>. For example, <tt>$if</tt> <i>x</i>
+... <tt>$elseif</tt><i>x</i> ... <tt>$elseif</tt> <i>x</i> ...
+<tt>$else</tt> ... <tt>$endif</tt> is legal.</p>
+<pre>
+    $elseifeq "<i>key</i>" "<i>constant</i>"  
+</pre>
+<p>Similarly, a combination of <tt>$else</tt> and
+<tt>$ifeq</tt>.</p>
+<pre>
+    $endif  
+</pre>
+<p>Finishes a conditional sequence that has started with
+<tt>$if</tt> <i>x</i>.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node73.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node75.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Hair Geometry</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node86.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node88.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION85"></a>
+<h3 id="mi:hair">Hair Geometry</h3>
+
+<p id="INDEX325">
+Rendering hair is a difficult problem for triangle rendering because the
+number of hairs is typically very large (hundreds of thousands or millions),
+and each hair has a very large bounding box that it fills poorly. For this
+reason a special <dfn id="mi:hairprimitive">hair primitive</dfn> was
+introduced which is based on a curve description of hairs with a compact
+data layout to avoid the storage overhead in comparison to triangle strips.</p>
+<pre>
+    object "<i>name<sub>object</sub></i>"  
+        <dfn>[</dfn> visible <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>  
+        <dfn>[</dfn> shadow <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>  
+        <dfn>[</dfn> shadowmap <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>  
+        <dfn>[</dfn> trace <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>  
+        <dfn>[</dfn> reflection <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> refraction <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> transparency <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> select <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>  
+        <dfn>[</dfn> tagged <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>  
+        <dfn>[</dfn> caustic <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>  
+        <dfn>[</dfn> globillum <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>  
+        <dfn>[</dfn> caustic <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>  
+        <dfn>[</dfn> globillum <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>  
+        <dfn>[</dfn> finalgather <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> box <dfn>[</dfn><i>x<sub>min</sub> y<sub>min</sub> z<sub>min</sub> x<sub>max</sub> y<sub>max</sub> z<sub>max</sub></i><dfn>] ]</dfn>  
+        <dfn>[</dfn> motion box <dfn>[</dfn><i>x<sub>min</sub> y<sub>min</sub> z<sub>min</sub> x<sub>max</sub> y<sub>max</sub> z<sub>max</sub></i><dfn>] ]</dfn>  
+        <dfn>[</dfn> max displace <i>value</i> <dfn>]</dfn>  
+        <dfn>[</dfn> samples <i>min  max</i> <dfn>]</dfn>  
+        <dfn>[</dfn> data null<dfn>|</dfn>"<i>name<sub>data</sub></i>" <dfn>]</dfn>  
+        <dfn>[</dfn> tag <i>number<sub>label</sub></i><sub>int</sub> <dfn>]</dfn>  
+        hair  
+            <dfn>[</dfn> material "<i>name<sub>material</sub></i>" <dfn>]</dfn>  
+            <dfn>[</dfn> radius <i>radius</i> <dfn>]</dfn>  
+            <dfn>[</dfn> approximate <i>segments</i> <dfn>]</dfn>  
+            <dfn>[</dfn> degree <i>degree</i> <dfn>]</dfn>  
+            <dfn>[</dfn> max size <i>size</i> <dfn>]</dfn>  
+            <dfn>[</dfn> max depth <i>depth</i> <dfn>]</dfn>  
+            <dfn>[</dfn> hair n <dfn>]</dfn>  
+            <dfn>[</dfn> hair m <i>hm</i> <dfn>]</dfn>  
+            <dfn>[</dfn> hair t <i>ht</i> <dfn>]</dfn>  
+            <dfn>[</dfn> hair u <i>hu</i> <dfn>]</dfn>  
+            <dfn>[</dfn> hair radius <dfn>]</dfn>  
+            <dfn>[</dfn> vertex n <dfn>]</dfn>  
+            <dfn>[</dfn> vertex m <i>vm</i> <dfn>]</dfn>  
+            <dfn>[</dfn> vertex t <i>vt</i> <dfn>]</dfn>  
+            <dfn>[</dfn> vertex u <i>vu</i> <dfn>]</dfn>  
+            <dfn>[</dfn> vertex radius <dfn>]</dfn>  
+            scalar <dfn>[</dfn> <i>nscalars</i> <dfn>]</dfn>  
+                scalar list  
+            hair <dfn>[</dfn> <i>nhairs</i> <dfn>]</dfn>  
+                hair offset list  
+        end hair  
+    end object  
+</pre>
+<p>The object header is similar to the headers for all other
+geometry types, but the standard <code>group...end group</code>
+block is replaced with <code>hair...end hair</code>.
+This block begins with a common header, followed by a scalar list,
+followed by a hair list. The header has the following optional statements:
+</p>
+<ul>
+<li>The <b>material</b> specifies the material to use when shading
+a hair. It is shared by all hairs in this object. If missing, the
+<a href="node79.html#INDEX242">material</a> is inherited from the
+instance.</li>
+<li>The <b>radius</b> specified the global radius of all hairs.
+This number may be overridden by hair or vertex radii if defined.
+It is defined in <a href="node101.html#INDEX369">object space</a>
+and typically a very small number. The default is 1.</li>
+<li>The <b>approximate</b> specifies the number of segments used to
+approximate each B&eacute;zier hair segment, if the degree is 2 or
+3. The default is 1.</li>
+<li>The <b>degree</b> is the degree of the B&eacute;zier curves
+that approximate each hair. Valid values are 1 (linear), 2
+(quadric), or 3 (cubic). Each hair must have
+<span class="math">(1&nbsp;+&nbsp;degree&nbsp;&middot;&nbsp;segments)</span>
+vertices, where the number of segments is a positive number.</li>
+<li>The <b>max size</b> defines the leaf size of the hair BSP tree
+that is created by mental ray to facilitate finding hairs during
+rendering. The default is 32. For a discussion of BSP trees, see
+the options block, which defines parameters for the BSP tree used
+for triangle intersection.</li>
+<li>The <b>max depth</b> defines the depth of the hair BSP tree.
+The default is 20.</li>
+<li>The <b>hair n</b> statement, if present, specifies that each
+hair has an associated normal vector consisting of three
+scalars.</li>
+<li>The <b>hair m</b> statement, if present, specifies that each
+hair has <i>hm</i> associated motion vectors consisting of three
+scalars each.</li>
+<li>The <b>hair t</b> statement, if present, specifies that each
+hair has <i>ht</i> associated texture scalars.</li>
+<li>The <b>hair u</b> statement, if present, specifies that each
+hair has <i>hu</i> associated user scalars.</li>
+<li>The <b>hair radius</b> statement, if present, specifies that
+each hair has an associated radius. No global radius may be
+present.</li>
+<li>The <b>vertex n</b> statement, if present, specifies that each
+vertex has an associated normal vector consisting of three scalars.
+If present, <tt>hair n</tt> is ignored.</li>
+<li>The <b>vertex m</b> statement, if present, specifies that each
+vertex has <i>vm</i> associated motion vectors consisting of three
+scalars each. If present, <tt>hair m</tt> is ignored.</li>
+<li>The <b>vertex t</b> statement, if present, specifies that each
+vertex has <i>vt</i> associated texture scalars.</li>
+<li>The <b>vertex u</b> statement, if present, specifies that each
+vertex has <i>vu</i> associated user scalars.</li>
+<li>The <b>vertex radius</b> statement, if present, specifies that
+each vertex has an associated radius. No global radius may be
+present. If present, <b>hair radius</b> is ignored.</li>
+<li>The <b>scalar</b> list begins with the number of scalars that
+follow in angle brackets, followed by that many scalar values.</li>
+<li>The <b>hair</b> list begins with the number of hairs that
+follow plus 1 in angle brackets, followed by that many hair
+offsets.</li>
+</ul>
+<p>It does not make sense to specify <tt>hair n</tt> if there is
+also a <tt>vertex hair</tt> because all hair normals will be
+overridden. Similarly, if vertex radii are used, no hair radii (or
+the global radius) should be present. If any normals are specified,
+the hairs are not intersected like cylinders but like oriented flat
+ribbons.</p>
+<p>The scalar list defines a sequence of hairs. Each hair consists
+of a certain number of scalars that describe the entire hair,
+followed by another number of scalars that describe each vertex of
+the hair. The layout of these sequences of scalars is identical for
+all hairs, except that each hair may have a different number of
+vertices. It is not possible to have one hair with three texture
+scalars and another with two, for example. Here is the exact
+sequence of scalars for a single hair:</p>
+<p>Header:</p>
+<ul>
+<li>If there was a <tt>hair n</tt> statement, three scalars for the
+hair normal (X, Y, Z).</li>
+<li><i>hm</i> motion scalars (X, Y, Z, X, Y, Z, ...).</li>
+<li><i>ht</i> texture scalars.</li>
+<li><i>hu</i> user scalars.</li>
+<li>If there was a <tt>hair radius</tt> statement, one radius
+scalar.</li>
+</ul>
+<p>Vertices:</p>
+<ul>
+<li>Three mandatory scalars that define the location of the vertex
+in <a href="node101.html#INDEX369">object space</a> (X, Y, Z).</li>
+<li>If there was a <tt>vertex n</tt> statement, three scalars for
+the vertex normal (X, Y, Z).</li>
+<li><i>vm</i> motion scalars (X, Y, Z, X, Y, Z, ...).</li>
+<li><i>vt</i> texture scalars.</li>
+<li><i>vu</i> user scalars.</li>
+<li>If there was a <tt>vertex radius</tt> statement, one radius
+scalar.</li>
+</ul>
+<p>All vertices begin with three scalars for the location. The
+order of the other vertex scalars, and the order of the header
+scalars, is determined by the order of hair and vertex statements.
+The lists above correspond to the syntax listing at the beginning
+of this section: first n, then m, then t, then u, then radius.</p>
+<p>Each hair has only one header but multiple vertices. As
+described above, the number of vertices must be
+<span class="math">(1&nbsp;+&nbsp;degree&nbsp;&middot;&nbsp;segments)</span>,
+where <i>segments</i> may be different for each hair. This number
+is not encoded in the hair but in the separate hair list. Note that
+hairs do not use texture <i>vectors</i> like polygons and free-form
+surfaces but texture <i>scalars</i>. It's up to the shader to
+interpret <code>state&rarr;tex_list</code> as a list of scalars,
+and properly use them in groups of one, two, three, or whatever is
+needed. This makes it possible to avoid the third null component if
+only two-component UV textures are needed, for example, which can
+save a lot of memory because hair objects tend to have a very large
+number of vertices, probably millions.</p>
+<p>The hair list specifies where in the scalar list each hair
+begins, by offset in the scalar list such that 0 is the first
+scalar, 1 is the second scalar, and so on. At the end of this
+offset list, one extra offset specifies the last scalar plus one,
+where the next hair would begin if there were another one. If all
+scalars are used (which is normally the case), the first offset is
+0 and the extra one at the end equals the number of scalars. Here
+is a simple example for a hair object:</p>
+<pre>
+    object "hair1"
+        visible trace shadow
+        tag 1
+        hair
+            material "mtl"
+            radius 0.3
+            degree 1
+            hair t 2
+            vertex t 1
+            scalar [ 42 ]
+                11 22
+                0.0     0.0     0.0 1111
+                0.0     1.0     0.0 1112
+                1.0     1.0     0.0 1113
+                33 44
+                0.0     0.0     0.0 1114
+                0.0     -1.0    0.0 1115
+                -1.0    -1.0    0.0 1116
+                55 66
+                0.0     0.0     0.0 1117
+                0.0     -1.0    0.0 1118
+                -1.0    -1.0    0.0 1119
+            hair [ 4 ]
+                0 14 28 42
+        end hair
+    end object
+</pre>
+<p>This example consists of three hairs, each with three vertices.
+The header of each hair consists of two texture scalars (11 22, 33
+44, and 55 66, respectively). Each vertex consists of four scalars,
+three for the location in <a href="node101.html#INDEX369">object
+space</a> and one more for a vertex texture. The shader will
+receive three texture scalars, two from the hair and one more from
+the vertices. The former are copied from the hair that was hit, and
+the latter is interpolated from the nearest two vertices. They are
+stored in <code>state&rarr;tex_list</code> as if it were a scalar
+array, header texture scalars first, so the two hair texture
+scalars end up in <i>tex_list[0].x</i> and <i>tex_list[0].y</i>,
+and the vertex texture scalar ends up in <i>tex_list[0].z</i>. It
+is best to re-cast <i>tex_list</i> to a miScalar pointer in the
+hair shader.</p>
+<p>Hair objects may use the same
+<a href="node115.html#INDEX440">material shader</a>s as any other object,
+but often special hair material shaders are used because although
+hair may be a cylinder, it is too thin for properly resolving the
+upper and lower edge and the diffuse terminator and the highlight.
+There is a simplified hair illumination shader in the base shader
+library, <i>mib_illum_hair</i> that implements a much more
+effective hair shading model.</p>
+<p>When rendering hair with the raytracer, mental ray uses the ray
+origin to generate a temporary, flat surface which is as ray-facing
+as possible while lying on the hair axis. A corresponding normal is
+generated. When rendering with the rasterizer, the hair geometry is
+converted to camera-facing geometry, and intersected in the same
+manner as other geometric types. Note that a switch from the latter
+to the former is performed if both the rasterizer and the raytracer
+are active. Hair intersections cannot happen on the same hair
+strand twice in a row, thus avoiding surface acne from this switch.
+This does have the consequence that individual hair strands cannot
+cast shadows on themselves.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node86.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node88.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

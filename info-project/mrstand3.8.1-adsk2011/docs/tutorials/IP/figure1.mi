@@ -1,0 +1,2150 @@
+$include "base.mi"
+$include "architectural.mi"
+$include "tut_objects.mi"
+
+color texture "mentalrayTexture1" "./textures/girl brown.bmp"
+color texture "mentalrayTexture2" "./textures/chrome main.bmp"
+color texture "mentalrayTexture7" "./textures/cherry.jpg"
+color texture "mentalrayTexture3" "./textures/FNCANVAS.bmp"
+color texture "mentalrayTexture4" "./textures/lightswitch 2.bmp"
+color texture "mentalrayTexture6" "./textures/lightswitch 4.bmp"
+color texture "mentalrayTexture8" "./textures/bump_carpet.bmp"
+
+options "opt"
+
+	object space
+	acceleration bsp
+	
+	samples 2 2
+	contrast 0.1 0.1 0.1 0.1
+	filter box 1. 1.
+		
+	shadow on
+	scanline on
+	trace on
+	trace depth 5 5 10
+
+
+	caustic off
+	globillum off
+	
+#######################################################	
+
+	"irradiance particles" 					off
+	
+#######################################################
+
+	face both
+
+end options
+
+shader "mia_physicalsun1"
+	"mia_physicalsun" (
+		"on" on,
+		"multiplier" .5,
+		"rgb_unit_conversion" 0.3 0.3 0.3,
+		"haze" 0.,
+		"redblueshift" 0.,
+		"saturation" 1.,
+		"horizon_height" 0.,
+		"shadow_softness" 1.,
+		"samples" 8,
+		"photon_bbox_min" 0. 0. 0.,
+		"photon_bbox_max" 0. 0. 0.,
+		"automatic_photon_energy" off,
+		"y_is_up" on
+		)
+
+light "sunShape"
+	= "mia_physicalsun1"
+	emitter = "mia_physicalsun1"
+	direction 0. 0. -1.
+end light
+
+instance "sunDirection" "sunShape"
+	transform
+		-0.799718 0.560491 -0.215174 -0.
+		0.360804 0.735134 0.573932 -0.
+		0.479866 0.381349 -0.790128 -0.
+		-2.19901 -4.48046 -3.49798 1.
+end instance
+
+shader "exposure_photographic"
+	"mia_exposure_photographic" (
+		"cm2_factor" 			1.,
+		"whitepoint" 			1. 1. 1.,
+		"film_iso" 				120.,
+		"camera_shutter" 		40.,
+		"f_number" 				4.,
+		"vignetting" 			1.5, 
+		"burn_highlights" 		0.0,
+		"crush_blacks" 			0.0,
+		"saturation" 			1.,
+		"gamma" 				2.2,
+		"side_channel_mode" 	0,
+		"side_channel" 			"",
+		"use_preview" 			off
+		)
+		
+		
+shader "mia_physicalsky1"
+	"mia_physicalsky" (
+		"on" on,
+		"multiplier" .5,
+		"rgb_unit_conversion" 0.3 0.3 0.3,
+		"haze" 0.,
+		"redblueshift" 0.,
+		"saturation" 1.,
+		"horizon_height" 0.,
+		"horizon_blur" 0.1,
+		"ground_color" 0.2 0.2 0.2,
+		"night_color" 0. 0. 0.,
+		"sun_direction" 0. 0. 0.,
+		"sun" "sunDirection",
+		"sun_disk_intensity" 1.,
+		"sun_disk_scale" 4.,
+		"sun_glow_intensity" 1.,
+		"use_background" off,
+		"visibility_distance" 0.,
+		"y_is_up" on,
+		"flags" 0
+		)
+
+camera "cam"
+	output "+rgba" "png" "figure1.png"
+	resolution 320 240
+	aspect 1.333
+	aperture 1.25952
+	frame 15 15.
+	clip 0.01 1000.
+	focal 0.98425
+	lens 		= "exposure_photographic"
+	environment = "mia_physicalsky1"
+end camera
+
+instance "cam_inst" "cam"
+	transform
+		0.766044 0.107197 -0.633786 -0.
+		1.38778e-017 0.985996 0.166769 -0.
+		0.642788 -0.127752 0.755317 -0.
+		-5.63642 -1.49728 -37.0934 1.
+end instance
+
+shader "mia_rubber"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" 0. 0. 0.,
+		"diffuse_roughness" 0.,
+		"reflectivity" 0.8,
+		"refl_color" 1. 1. 1.,
+		"refl_gloss" 0.25,
+		"refl_gloss_samples" 8,
+		"refl_interpolate" off,
+		"refl_hl_only" off,
+		"refl_is_metal" off,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" 0.2,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 4,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 6,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" off,
+		"ao_samples" 16,
+		"ao_distance" 100.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"no_diffuse_bump" off,
+		"mode" 4,
+		"lights" [],
+		"bump_mode" 5,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 0.,
+		"multiple_outputs" on
+		)
+
+material "mia_rubber_mat"
+	= "mia_rubber"
+	photon = "mia_rubber"
+end material
+
+instance "rubber" "rubberShape"
+	light "exclusive" []
+	material ["mia_rubber_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1.07143 -0. 0. -0.
+		-0. 0.978232 -0. 0.
+		0. -0. 1. -0.
+		-0.186045 0.148169 -0. 1.
+end instance
+
+shader "mia_table"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" 0.791367 0.863309 0.848921,
+		"diffuse_roughness" 0.,
+		"reflectivity" 0.7,
+		"refl_color" 1. 1. 1.,
+		"refl_gloss" 0.5,
+		"refl_gloss_samples" 32,
+		"refl_interpolate" off,
+		"refl_hl_only" off,
+		"refl_is_metal" on,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 10.,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" on,
+		"brdf_0_degree_refl" 0.2,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 4,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 6,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" off,
+		"ao_samples" 16,
+		"ao_distance" 100.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"no_diffuse_bump" off,
+		"mode" 0,
+		"lights" [
+			"sunDirection"
+			],
+		"bump_mode" 5,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 0.,
+		"multiple_outputs" on
+		)
+
+material "mia_table_mat"
+	= "mia_table"
+	photon = "mia_table"
+end material
+
+instance "Loft01" "Loft01Shape"
+	light "exclusive" []
+	material ["mia_table_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "rubber_small" "rubber_smallShape"
+	light "exclusive" []
+	material ["mia_rubber_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+shader "mia_skirting"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" 0.490196 0.490196 0.329412,
+		"diffuse_roughness" 0.,
+		"reflectivity" 0.,
+		"refl_color" 1. 1. 1.,
+		"refl_gloss" 1.,
+		"refl_gloss_samples" 8,
+		"refl_interpolate" off,
+		"refl_hl_only" off,
+		"refl_is_metal" off,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" 0.2,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 4,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 6,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" off,
+		"ao_samples" 16,
+		"ao_distance" 100.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"no_diffuse_bump" off,
+		"mode" 4,
+		"lights" [],
+		"bump_mode" 5,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 0.,
+		"multiple_outputs" on
+		)
+
+material "mia_skirting_mat"
+	= "mia_skirting"
+	photon = "mia_skirting"
+end material
+
+instance "Box12" "Box12Shape"
+	light "exclusive" []
+	material ["mia_skirting_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "skirting" "skirtingShape"
+	light "exclusive" []
+	material ["mia_skirting_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+shader "mib_texture_vector2"
+	"mib_texture_vector" (
+		"select" 0,
+		"selspace" 0,
+		"vertex" 0,
+		"project" 0
+		)
+
+shader "mib_texture_lookup2"
+	"mib_texture_lookup" (
+		"tex" "mentalrayTexture2",
+		"coord" = "mib_texture_vector2"
+		)
+
+shader "mia_metalCapsule"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" = "mib_texture_lookup2",
+		"diffuse_roughness" 0.,
+		"reflectivity" 0.6,
+		"refl_color" 0.239216 0.239216 0.239216,
+		"refl_gloss" 0.85,
+		"refl_gloss_samples" 8,
+		"refl_interpolate" off,
+		"refl_hl_only" off,
+		"refl_is_metal" off,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" 0.2,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 4,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 6,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" off,
+		"ao_samples" 16,
+		"ao_distance" 100.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"no_diffuse_bump" off,
+		"mode" 0,
+		"lights" [
+			"sunDirection"
+			],
+		"bump_mode" 5,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 0.,
+		"multiple_outputs" on
+		)
+
+material "mia_metalCapsule_mat"
+	= "mia_metalCapsule"
+	photon = "mia_metalCapsule"
+end material
+
+instance "Loft05" "Loft05Shape"
+	light "exclusive" []
+	material ["mia_metalCapsule_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "metal_capsule" "metal_capsuleShape"
+	light "exclusive" []
+	material ["mia_metalCapsule_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "metal_capsule01" "metal_capsule01Shape"
+	light "exclusive" []
+	material ["mia_metalCapsule_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+shader "mib_texture_vector6"
+	"mib_texture_vector" (
+		"select" 0,
+		"selspace" 0,
+		"vertex" 0,
+		"project" 0
+		)
+
+shader "mib_texture_lookup6"
+	"mib_texture_lookup" (
+		"tex" "mentalrayTexture6",
+		"coord" = "mib_texture_vector6"
+		)
+
+shader "mia_lightswitch_2"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" = "mib_texture_lookup6",
+		"diffuse_roughness" 0.,
+		"reflectivity" 0.4,
+		"refl_color" 1. 1. 1.,
+		"refl_gloss" 0.4,
+		"refl_gloss_samples" 8,
+		"refl_interpolate" off,
+		"refl_hl_only" on,
+		"refl_is_metal" off,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" 0.2,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 4,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 6,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" off,
+		"ao_samples" 16,
+		"ao_distance" 100.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"no_diffuse_bump" off,
+		"mode" 0,
+		"lights" [
+			"sunDirection"
+			],
+		"bump_mode" 5,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 0.,
+		"multiple_outputs" on
+		)
+
+material "mia_lightswitch_2_mat"
+	= "mia_lightswitch_2"
+	photon = "mia_lightswitch_2"
+end material
+
+instance "lightswitch" "lightswitchShape"
+	light "exclusive" []
+	material ["mia_lightswitch_2_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1. -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1. -0.
+		-0.120161 0. -0. 1.
+end instance
+
+shader "mib_texture_vector4"
+	"mib_texture_vector" (
+		"select" 0,
+		"selspace" 0,
+		"vertex" 0,
+		"project" 0
+		)
+
+shader "mib_texture_lookup4"
+	"mib_texture_lookup" (
+		"tex" "mentalrayTexture4",
+		"coord" = "mib_texture_vector4"
+		)
+
+shader "mia_lightswitch"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" = "mib_texture_lookup4",
+		"diffuse_roughness" 0.,
+		"reflectivity" 0.1,
+		"refl_color" 1. 1. 1.,
+		"refl_gloss" 0.5,
+		"refl_gloss_samples" 8,
+		"refl_interpolate" off,
+		"refl_hl_only" on,
+		"refl_is_metal" off,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" 0.2,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 4,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 6,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" off,
+		"ao_samples" 16,
+		"ao_distance" 100.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"no_diffuse_bump" off,
+		"mode" 4,
+		"lights" [],
+		"bump_mode" 5,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 0.,
+		"multiple_outputs" on
+		)
+
+material "mia_lightswitch_mat"
+	= "mia_lightswitch"
+	photon = "mia_lightswitch"
+end material
+
+instance "lightswitch_2" "lightswitch_2Shape"
+	light "exclusive" []
+	material ["mia_lightswitch_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1. -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1. -0.
+		-0.120161 0. -0. 1.
+end instance
+
+instance "rubber1" "rubberShape1"
+	light "exclusive" []
+	material ["mia_rubber_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+shader "mia_chrome"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" 0.15 0.15 0.15,
+		"diffuse_roughness" 0.5,
+		"reflectivity" 1.,
+		"refl_color" 0.96 0.96 0.96,
+		"refl_gloss" 0.5,
+		"refl_gloss_samples" 0,
+		"refl_interpolate" off,
+		"refl_hl_only" off,
+		"refl_is_metal" off,
+		"transparency" 1.,
+		"refr_color" 0. 0. 0.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" 0.82,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 3,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 3,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" off,
+		"ao_samples" 16,
+		"ao_distance" 4.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"no_diffuse_bump" off,
+		"mode" 4,
+		"lights" [],
+		"bump_mode" 5,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 0.,
+		"multiple_outputs" on		)
+
+material "mia_chrome_mat"
+	= "mia_chrome"
+	photon = "mia_chrome"
+end material
+
+instance "Rectangle09" "Rectangle09Shape"
+	light "exclusive" []
+	material ["mia_chrome_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "Rectangle10" "Rectangle10Shape"
+	light "exclusive" []
+	material ["mia_chrome_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "Rectangle11" "Rectangle11Shape"
+	light "exclusive" []
+	material ["mia_chrome_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "Rectangle12" "Rectangle12Shape"
+	light "exclusive" []
+	material ["mia_chrome_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "Rectangle18" "Rectangle18Shape"
+	light "exclusive" []
+	material ["mia_chrome_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "Rectangle19" "Rectangle19Shape"
+	light "exclusive" []
+	material ["mia_chrome_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "Rectangle20" "Rectangle20Shape"
+	light "exclusive" []
+	material ["mia_chrome_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "Rectangle21" "Rectangle21Shape"
+	light "exclusive" []
+	material ["mia_chrome_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+shader "mia_cupboard"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" 0.755396 1. 0.165468,
+		"diffuse_roughness" 0.,
+		"reflectivity" 0.05,
+		"refl_color" 1. 1. 1.,
+		"refl_gloss" 0.6,
+		"refl_gloss_samples" 32,
+		"refl_interpolate" off,
+		"refl_hl_only" off,
+		"refl_is_metal" off,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.5,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" 0.2,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 4,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 6,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" on,
+		"ao_samples" 16,
+		"ao_distance" 100.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"no_diffuse_bump" off,
+		"mode" 0,
+		"lights" [
+			"sunDirection"
+			],
+		"bump_mode" 5,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 0.,
+		"multiple_outputs" on
+		)
+
+material "mia_cupboard_mat"
+	= "mia_cupboard"
+	photon = "mia_cupboard"
+end material
+
+instance "Box38" "Box38Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+shader "mib_texture_vector5"
+	"mib_texture_vector" (
+		"select" 0,
+		"selspace" 0,
+		"vertex" 0,
+		"project" 0
+		)
+
+shader "mib_texture_lookup5"
+	"mib_texture_lookup" (
+		"tex" "mentalrayTexture3",
+		"coord" = "mib_texture_vector5"
+		)
+
+shader "mia_wall"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" = "mib_texture_lookup5",
+		"diffuse_roughness" 0.,
+		"reflectivity" 0.,
+		"refl_color" 1. 1. 1.,
+		"refl_gloss" 1.,
+		"refl_gloss_samples" 8,
+		"refl_interpolate" off,
+		"refl_hl_only" on,
+		"refl_is_metal" off,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" 0.2,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 4,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 6,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" on,
+		"ao_samples" 16,
+		"ao_distance" 100.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"no_diffuse_bump" off,
+		"mode" 4,
+		"lights" [],
+		"bump_mode" 5,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 0.,
+		"multiple_outputs" on
+		)
+
+material "mia_wall_mat"
+	= "mia_wall"
+	photon = "mia_wall"
+end material
+
+instance "Donut02" "Donut02Shape"
+	light "exclusive" []
+	material ["mia_wall_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "ceiling" "ceilingShape"
+	light "exclusive" []
+	material ["mia_wall_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "wall" "wallShape"
+	light "exclusive" []
+	material ["mia_wall_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "wall02" "wall02Shape"
+	light "exclusive" []
+	material ["mia_wall_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "wall01" "wall01Shape"
+	light "exclusive" []
+	material ["mia_wall_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "wall03" "wall03Shape"
+	light "exclusive" []
+	material ["mia_wall_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "Box01" "Box01Shape"
+	light "exclusive" []
+	material ["mia_wall_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		0.926601 -0. 0. -0.
+		-0. 0.926601 -0. 0.
+		0. -0. 0.926601 -0.
+		-0.0618393 1.32362 0.968255 1.
+end instance
+
+instance "Box89" "Box89Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1. -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1. -0.
+		-0. -0.659813 -0. 1.
+end instance
+
+instance "Box90" "Box90Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1. -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1. -0.
+		-0. 0. 6.08296 1.
+end instance
+
+instance "Box91" "Box91Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1. -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1. -0.
+		-0. -0.659813 6.08296 1.
+end instance
+
+instance "Box92" "Box92Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1. -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1. -0.
+		-0. 0. 12.1667 1.
+end instance
+
+instance "Box93" "Box93Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1. -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1. -0.
+		-0. -0.659813 12.1667 1.
+end instance
+
+instance "Box94" "Box94Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1. -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1. -0.
+		-0. -1.32131 12.1667 1.
+end instance
+
+instance "Box98" "Box98Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1. -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1. -0.
+		-0. -1.32131 18.2526 1.
+end instance
+
+instance "Box101" "Box101Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "Box102" "Box102Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+instance "Box103" "Box103Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1. -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1. -0.
+		-0. 0. 18.2526 1.
+end instance
+
+instance "Box104" "Box104Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1. -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1. -0.
+		-0. -0.659813 18.2526 1.
+end instance
+
+instance "Box105" "Box105Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		49.9963 -0. 0. -0.
+		-0. 1.00887 -0. 0.
+		0. -0. 1.00169 -0.
+		-862.091 -0.00594854 -0.039974 1.
+end instance
+
+instance "Box106" "Box106Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		49.9963 -0. 0. -0.
+		-0. 1.00887 -0. 0.
+		0. -0. 1.00169 -0.
+		-862.091 -0.671617 -0.039974 1.
+end instance
+
+instance "Box107" "Box107Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		49.9963 -0. 0. -0.
+		-0. 1.00887 -0. 0.
+		0. -0. 1.00169 -0.
+		-862.091 -0.00594854 6.05328 1.
+end instance
+
+instance "Box108" "Box108Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		49.9963 -0. 0. -0.
+		-0. 1.00887 -0. 0.
+		0. -0. 1.00169 -0.
+		-862.091 -0.671617 6.05328 1.
+end instance
+
+instance "Box109" "Box109Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		49.9963 -0. 0. -0.
+		-0. 1.00887 -0. 0.
+		0. -0. 1.00169 -0.
+		-862.091 -0.00594854 12.1474 1.
+end instance
+
+instance "Box110" "Box110Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		49.9963 -0. 0. -0.
+		-0. 1.00887 -0. 0.
+		0. -0. 1.00169 -0.
+		-862.091 -0.671617 12.1474 1.
+end instance
+
+instance "Box111" "Box111Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		49.9963 -0. 0. -0.
+		-0. 1.00887 -0. 0.
+		0. -0. 1.00169 -0.
+		-862.091 -1.33898 12.1474 1.
+end instance
+
+instance "Box112" "Box112Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		49.9963 -0. 0. -0.
+		-0. 1.00887 -0. 0.
+		0. -0. 1.00169 -0.
+		-862.091 -1.33898 18.2436 1.
+end instance
+
+instance "Box113" "Box113Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		49.9963 -0. 0. -0.
+		-0. 1.00887 -0. 0.
+		0. -0. 1.00169 -0.
+		-862.091 -0.0118194 -0.00237399 1.
+end instance
+
+instance "Box114" "Box114Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		49.9963 -0. 0. -0.
+		-0. 1.00887 -0. 0.
+		0. -0. 1.00169 -0.
+		-862.091 -0.00594854 -0.00237399 1.
+end instance
+
+instance "Box115" "Box115Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		49.9963 -0. 0. -0.
+		-0. 1.00887 -0. 0.
+		0. -0. 1.00169 -0.
+		-862.091 -0.00594854 18.2436 1.
+end instance
+
+instance "Box116" "Box116Shape"
+	light "exclusive" []
+	material ["mia_cupboard_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		49.9963 -0. 0. -0.
+		-0. 1.00887 -0. 0.
+		0. -0. 1.00169 -0.
+		-862.091 -0.671617 18.2436 1.
+end instance
+
+shader "mib_texture_vector8"
+	"mib_texture_vector" (
+		"select" 0,
+		"selspace" 0,
+		"vertex" 0,
+		"project" 0
+		)
+
+shader "mib_texture_lookup7"
+	"mib_texture_lookup" (
+		"tex" "mentalrayTexture7",
+		"coord" = "mib_texture_vector8"
+		)
+
+shader "mib_bump_basis1"
+	"mib_bump_basis" (
+		"project" 1,
+		"ntex" 0
+		)
+
+shader "mib_texture_remap1"
+	"mib_texture_remap" (
+		"input" = "mib_texture_vector8",
+		"transform" 1. 0. 0. 0. 0. 1. 0. 0. 0. 0. 1. 0. 0. 0. 0. 1.,
+		"repeat" 1. 1. 1.,
+		"alt_x" off,
+		"alt_y" off,
+		"alt_z" off,
+		"torus_x" on,
+		"torus_y" on,
+		"torus_z" on,
+		"min" 0. 0. 0.,
+		"max" 1. 1. 1.,
+		"offset" 0. 0. 0.
+		)
+
+shader "mib_bump_map1"
+	"mib_bump_map" (
+		"u" = "mib_bump_basis1.u",
+		"v" = "mib_bump_basis1.v",
+		"coord" = "mib_texture_remap1",
+		"step" 0.001 0.001 0.001,
+		"factor" .2,
+		"torus_u" on,
+		"torus_v" on,
+		"alpha" off,
+		"tex" "mentalrayTexture7",
+		"clamp" on
+		)
+
+shader "mia_floor"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" = "mib_texture_lookup7",
+		"diffuse_roughness" 0.05,
+		"reflectivity" 0.535,
+		"refl_color" 1. 1. 1.,
+		"refl_gloss" 0.6,
+		"refl_gloss_samples" 32,
+		"refl_interpolate" off,
+		"refl_hl_only" off,
+		"refl_is_metal" off,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.5,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" on,
+		"brdf_0_degree_refl" 0.2,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 0,
+		"intr_refl_samples" 4,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0. 0. 0.,
+		"refl_depth" 4,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 6,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" on,
+		"ao_samples" 16,
+		"ao_distance" 7.,
+		"ao_dark" 0.15702 0.15702 0.15702,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"bump" "mib_bump_map1",
+		"no_diffuse_bump" off,
+		"mode" 0,
+		"lights" [
+			"sunDirection"
+			],
+		"bump_mode" 0,
+		"overall_bump" 0. 0. 1.,
+		"standard_bump" 0. 0. 1.,
+		"multiple_outputs" on
+		)
+
+material "mia_floor_mat"
+	= "mia_floor"
+	photon = "mia_floor"
+end material
+
+instance "floor" "floorShape"
+	light "exclusive" []
+	material ["mia_floor_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+
+
+shader "mib_bump_basis2"
+	"mib_bump_basis" (
+		"project" 1,
+		"ntex" 0
+		)
+
+shader "mib_texture_vector9"
+	"mib_texture_vector" (
+		"select" 0,
+		"selspace" 0,
+		"vertex" 0,
+		"project" 0
+		)
+
+shader "mib_texture_remap2"
+	"mib_texture_remap" (
+		"input" = "mib_texture_vector9",
+		"transform" 1. 0. 0. 0. 0. 1. 0. 0. 0. 0. 1. 0. 0. 0. 0. 1.,
+		"repeat" 1. 1. 1.,
+		"alt_x" off,
+		"alt_y" off,
+		"alt_z" off,
+		"torus_x" on,
+		"torus_y" on,
+		"torus_z" on,
+		"min" 0. 0. 0.,
+		"max" 1. 1. 1.,
+		"offset" 0. 0. 0.
+		)
+
+shader "mib_bump_map2"
+	"mib_bump_map" (
+		"u" = "mib_bump_basis2.u",
+		"v" = "mib_bump_basis2.v",
+		"coord" = "mib_texture_remap2",
+		"step" 0.001 0.001 0.001,
+		"factor" 2.,
+		"torus_u" on,
+		"torus_v" on,
+		"alpha" off,
+		"tex" "mentalrayTexture8",
+		"clamp" on
+		)
+
+shader "mia_carpet"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" 0.922 0.922 0.922,
+		"diffuse_roughness" 0.,
+		"reflectivity" 0.,
+		"refl_color" 1. 1. 1.,
+		"refl_gloss" 1.,
+		"refl_gloss_samples" 8,
+		"refl_interpolate" off,
+		"refl_hl_only" off,
+		"refl_is_metal" off,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" 0.2,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 4,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 6,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" on,
+		"ao_samples" 16,
+		"ao_distance" 100.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"bump" "mib_bump_map2",
+		"no_diffuse_bump" off,
+		"mode" 4,
+		"lights" [],
+		"bump_mode" 0,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 1.,
+		"multiple_outputs" on
+		)
+
+material "mia_carpet_mat"
+	= "mia_carpet"
+	photon = "mia_carpet"
+end material
+
+instance "pCube2" "pCubeShape2"
+	light "exclusive" []
+	material ["mia_carpet_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		0.0622061 -0. 0. -0.
+		-0. 6.97017 -0. 0.
+		0. -0. 0.073902 -0.
+		-0.21583 -0.0205803 -1.08527 1.
+end instance
+
+instance "pCube3" "pCubeShape3"
+	light "exclusive" []
+	material ["mia_table_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		0.190768 -0. 0. -0.
+		-0. 0.202202 -0. 0.
+		0. -0. 0.146071 -0.
+		0.164775 0. -2.13603 1.
+end instance
+
+instance "pCube4" "pCubeShape4"
+	light "exclusive" []
+	material ["mia_table_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		0.2747 -0. 0. -0.
+		-0. 0.274989 -0. 0.
+		0. -0. 0.198652 -0.
+		-1.06339 0. -3.39692 1.
+end instance
+
+instance "pCube5" "pCubeShape5"
+	light "exclusive" []
+	material ["mia_table_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		1. -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1. -0.
+		-3.13956 -8.09886 4.56145 1.
+end instance
+
+shader "mia_table_2"
+	"mia_material_x" (
+		"diffuse_weight" 0.3,
+		"diffuse" 1. 1. 1.,
+		"diffuse_roughness" 0.,
+		"reflectivity" 0.8,
+		"refl_color" 1. 1. 1.,
+		"refl_gloss" 0.4,
+		"refl_gloss_samples" 16,
+		"refl_interpolate" off,
+		"refl_hl_only" off,
+		"refl_is_metal" on,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.2,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 0.1,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" 0.9,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 0,
+		"intr_refl_samples" 8,
+		"intr_refl_ddist_on" on,
+		"intr_refl_ddist" 150.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 43.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 8,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 15.,
+		"refr_falloff_color_on" on,
+		"refr_falloff_color" 0.48 0.79 0.93,
+		"refr_depth" 8,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" off,
+		"ao_samples" 16,
+		"ao_distance" 4.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" on,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"no_diffuse_bump" off,
+		"mode" 4,
+		"lights" [],
+		"bump_mode" 5,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 0.,
+		"multiple_outputs" on
+		)
+
+material "mia_table_2_mat"
+	= "mia_table_2"
+	photon = "mia_table_2"
+end material
+
+instance "pCube6" "pCubeShape6"
+	light "exclusive" []
+	material ["mia_table_2_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		2.22045e-016 -1. 0. -0.
+		1. 2.22045e-016 -0. 0.
+		0. -0. 1. -0.
+		-8.169 18.6553 -0.441788 1.
+end instance
+
+shader "mib_texture_vector3"
+	"mib_texture_vector" (
+		"select" 0,
+		"selspace" 0,
+		"vertex" 0,
+		"project" 0
+		)
+
+shader "mib_texture_lookup3"
+	"mib_texture_lookup" (
+		"tex" "mentalrayTexture3",
+		"coord" = "mib_texture_vector3"
+		)
+
+shader "mia_sofa"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" = "mib_texture_lookup3",
+		"diffuse_roughness" 0.,
+		"reflectivity" 0.,
+		"refl_color" 1. 1. 1.,
+		"refl_gloss" 1.,
+		"refl_gloss_samples" 8,
+		"refl_interpolate" off,
+		"refl_hl_only" on,
+		"refl_is_metal" off,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" 0.2,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 4,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 6,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" off,
+		"ao_samples" 16,
+		"ao_distance" 100.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"no_diffuse_bump" off,
+		"mode" 4,
+		"lights" [],
+		"bump_mode" 5,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 0.,
+		"multiple_outputs" on
+		)
+
+material "mia_sofa_mat"
+	= "mia_sofa"
+	photon = "mia_sofa"
+end material
+
+instance "polySurface3" "polySurfaceShape8"
+	light "exclusive" []
+	material ["mia_sofa_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		0.985847 -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1.02313 -0.
+		-0.146543 0. -0.22887 1.
+end instance
+
+instance "polySurface4" "polySurfaceShape4"
+	light "exclusive" []
+	material ["mia_sofa_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		0.985847 -0. 0. -0.
+		-0. 1. -0. 0.
+		0. -0. 1.02313 -0.
+		-0.146543 0. 8.43248 1.
+end instance
+
+instance "pCube7" "pCubeShape7"
+	light "exclusive" []
+	material ["mia_sofa_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		0.429273 -0. 0. -0.
+		-0. 0.429273 -0. 0.
+		0. -0. 0.429273 -0.
+		5.29848 0. -6.15222 1.
+end instance
+
+instance "pCube8" "pCubeShape8"
+	light "exclusive" []
+	material ["mia_sofa_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+	transform
+		0.429273 -0. 0. -0.
+		-0. 0.429273 -0. 0.
+		0. -0. 0.429273 -0.
+		5.29848 0. -2.51594 1.
+end instance
+
+shader "mib_texture_vector1"
+	"mib_texture_vector" (
+		"select" 0,
+		"selspace" 0,
+		"vertex" 0,
+		"project" 0
+		)
+
+shader "mib_texture_lookup1"
+	"mib_texture_lookup" (
+		"tex" "mentalrayTexture1",
+		"coord" = "mib_texture_vector1"
+		)
+
+shader "mia_picture"
+	"mia_material_x" (
+		"diffuse_weight" 1.,
+		"diffuse" = "mib_texture_lookup1",
+		"diffuse_roughness" 0.,
+		"reflectivity" 0.,
+		"refl_color" 1. 1. 1.,
+		"refl_gloss" 1.,
+		"refl_gloss_samples" 8,
+		"refl_interpolate" off,
+		"refl_hl_only" off,
+		"refl_is_metal" off,
+		"transparency" 0.,
+		"refr_color" 1. 1. 1.,
+		"refr_gloss" 1.,
+		"refr_ior" 1.4,
+		"refr_gloss_samples" 8,
+		"refr_interpolate" off,
+		"refr_translucency" off,
+		"refr_trans_color" 0.7 0.5 0.2,
+		"refr_trans_weight" 0.5,
+		"anisotropy" 1.,
+		"anisotropy_rotation" 0.,
+		"anisotropy_channel" -1,
+		"brdf_fresnel" off,
+		"brdf_0_degree_refl" 0.2,
+		"brdf_90_degree_refl" 1.,
+		"brdf_curve" 5.,
+		"brdf_conserve_energy" on,
+		"intr_grid_density" 2,
+		"intr_refl_samples" 2,
+		"intr_refl_ddist_on" off,
+		"intr_refl_ddist" 0.,
+		"intr_refr_samples" 2,
+		"single_env_sample" off,
+		"refl_falloff_on" off,
+		"refl_falloff_dist" 0.,
+		"refl_falloff_color_on" off,
+		"refl_falloff_color" 0.2 0.2 0.2,
+		"refl_depth" 4,
+		"refl_cutoff" 0.01,
+		"refr_falloff_on" off,
+		"refr_falloff_dist" 0.,
+		"refr_falloff_color_on" off,
+		"refr_falloff_color" 0.2 0.2 0.2,
+		"refr_depth" 6,
+		"refr_cutoff" 0.01,
+		"indirect_multiplier" 1.,
+		"fg_quality" 1.,
+		"fg_quality_w" 1.,
+		"ao_on" off,
+		"ao_samples" 16,
+		"ao_distance" 100.,
+		"ao_dark" 0.2 0.2 0.2,
+		"ao_ambient" 0. 0. 0.,
+		"ao_do_details" 1,
+		"thin_walled" off,
+		"no_visible_area_hl" on,
+		"skip_inside_refl" on,
+		"do_refractive_caustics" off,
+		"backface_cull" off,
+		"propagate_alpha" off,
+		"hl_vs_refl_balance" 1.,
+		"cutout_opacity" 1.,
+		"additional_color" 0. 0. 0.,
+		"no_diffuse_bump" off,
+		"mode" 4,
+		"lights" [],
+		"bump_mode" 5,
+		"overall_bump" 0. 0. 0.,
+		"standard_bump" 0. 0. 0.,
+		"multiple_outputs" on
+		)
+
+material "mia_picture_mat"
+	= "mia_picture"
+	photon = "mia_picture"
+end material
+
+instance "polySurface5" "polySurfaceShape16"
+	light "exclusive" []
+	material ["mia_picture_mat"]
+	caustic on
+	caustic 3
+	globillum on
+	globillum 3
+end instance
+
+render "root_GRP" "cam_inst" "opt"
+

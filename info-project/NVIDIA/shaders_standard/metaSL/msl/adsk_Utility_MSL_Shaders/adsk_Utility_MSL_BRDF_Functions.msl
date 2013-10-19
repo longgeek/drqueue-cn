@@ -1,0 +1,538 @@
+/**********************************************************************************************
+***********************************************************************************************
+* Copyright 2008 by Autodesk Media & Entertainment
+* All rights reserved.
+***********************************************************************************************
+*
+* Module:  adsk_Utility_MSL_BRDF_Functions.msl
+* Version: 1
+* Created: November 30, 2009
+* Author:  Maximilian Tarpini
+*
+* Export :
+* - GetPaintBaseFactor
+*
+* - GetOrenNayarFactor
+* - GetONayarSimplexFactor
+*
+* - adsk_aux_hermite_step
+* - GetGlossyCoeff
+* - GetPhongSpecularFactor
+* - GetSpecularFactor
+* - GetAnisotropyFactor
+*
+* - FresnelFactor
+* - GetFresnelFactor
+*
+* - GetRefractionFactor
+* - GetReflectionFactor
+*
+* - SimpleFalloff
+* - GetOpacityFactor
+* - TransformBumpVector
+*
+* Description: Base BRDF functions for components and monolithic materials.
+**********************************************************************************************/
+
+
+//GetPaintBaseFactor  //////////////////////////////////////////////////////////////////////////
+Color GetPaintBaseFactor(	in Color 	base_color,
+						    in float 	diffuse_weight,
+						    in float 	diffuse_bias,
+							in Color 	edge_color,
+						    in float 	edge_color_bias,
+						    in Color 	lit_color,
+						    in float 	lit_color_bias,
+
+							in float  	iLightDotNL,
+							in float3 	iEyeDir,
+							in float3 	iNormal )
+							
+{
+
+	Color diffuse_base = base_color;
+	float factor = 0.0;
+	
+	
+	// modify color based on view dependent shading
+	if(edge_color_bias > 0.0)
+	{
+	  
+	  factor = abs(dot(iNormal, iEyeDir));
+	  factor = pow(factor, edge_color_bias);
+
+	  diffuse_base = base_color *factor + edge_color * (1.0 - factor);
+	}
+
+	// wrap-up diffuse
+	float s = 0.0;
+	float local_dot_nl = iLightDotNL;
+	if(local_dot_nl < 0.0)	local_dot_nl = 0.0;
+	s = pow(local_dot_nl, diffuse_bias);
+	
+	// diffuse falloff
+	Color diffuse_falloff = Color(0.0);
+	if(lit_color_bias > 0.0)
+	{
+
+		factor = pow(local_dot_nl, lit_color_bias);
+		factor *= abs(dot(iNormal, iEyeDir));
+
+		diffuse_falloff = diffuse_base * (1.0 - factor) + lit_color * factor;
+		
+	}else
+	{
+		diffuse_falloff = diffuse_base;	//diffuse plugged in
+	}
+	
+	return  diffuse_falloff * s;
+}
+
+
+//GetOrenNayarFactor  /////////////////////////////////////////////////////////////////////////
+Color GetOrenNayarFactor(	in float iLightDotNL, in float3 iLightDir, 
+							in Color iDiffuseColor,	in float iRoughness,
+							in float3 iDir, in float3 iNormal  )
+{
+
+	//get light and eye dots
+	float vDot = dot(iNormal, iDir);
+	float lDot = iLightDotNL;
+
+	//check dir
+	float3 dir = iDir;
+	if(vDot < 0.0)
+	{
+		vDot = -vDot;
+		dir = -dir;
+	}
+
+	//return
+	float onCoeff = 0.0;
+	float onCoeffX = 0.0;
+
+	
+	{	// mia_material ON implementation
+	
+		//alpha and beta on terms
+		float acLDot = 0.0;
+		float acVDot = 0.0;
+
+		if(lDot < 0.9999)			acLDot = acos(lDot);	//acLDot
+
+		if(acLDot < -PI * 0.49)		acLDot = -PI * 0.49;
+		if(acLDot > PI * 0.49)		acLDot = PI * 0.49;
+
+
+		if(vDot < 0.9999)			acVDot = acos(vDot);	//acVDot
+
+		//min/max(alpha, beta)
+		if(acLDot < acVDot)
+		{
+			float switchme = acVDot;
+			acVDot = acLDot;
+			acLDot = switchme;
+		}
+
+		//Gamma
+		float3 vTerm	=	dir - (iNormal * vDot);
+		float3 lTerm	=	iLightDir - (iNormal * lDot);
+		float gTerm		=	length(vTerm) * length(lTerm);
+
+		float gamma = 1.0;
+		if(abs(gTerm) < 0.0001) gamma = 1.0;
+		else					gamma = dot(vTerm, lTerm) / gTerm;	//deviation (mia)
+		//gamma = dot(vTerm , lTerm );										//original gamma
+
+		//C1, C2, C3
+		float rough_square = iRoughness * iRoughness;
+		float C2term = rough_square / (rough_square + 0.09);
+
+		float Cx = (2.0 * (gamma >= 0.0 ? -acVDot: acVDot) ) / PI;
+
+		float C1 = 1.0 - 0.5 * (rough_square / (rough_square + 0.33));
+		float C2 = (0.45 * C2term) * ( sin(acLDot) - pow(Cx, 3) );
+		float C3 = 0.125 * C2term * pow((4.0 * acLDot * acVDot) / (PI * PI), 2);
+
+		//A, B
+		float A = (C2 * gamma) * tan(acVDot);
+		float B = (C3 * (1.0 - abs(gamma))) * tan((acLDot + acVDot) / 2.0f);
+
+
+		//Oren-Nayar coefficent
+		onCoeff = C1 + A + B;
+
+		//Custom factor from mia
+		Cx = (2.0 * acVDot) / PI;
+		onCoeffX = (0.17 * (rough_square / (rough_square + 0.13))) * (1.0 - (gamma * Cx) * Cx);
+	}
+
+	//Apply coeffs
+	Color oColor = onCoeff * iDiffuseColor;
+	oColor += onCoeffX * iDiffuseColor * iDiffuseColor;		//plus mia custom factor
+
+	//Limit output
+	return min(Color(1,1,1,1), oColor);
+}
+
+//Simple ON
+void GetONayarSimplexFactor( 	in float3 n, in float3 l, float3 v,
+								in float iRoughness,
+								in float vDot, in float lDot,
+								
+								out float onCoeff, out float onCoeffX  )
+{
+
+	// Simplex version
+	float acVDot = acos( vDot );
+	float acLDot = acos( lDot );
+
+	float3 vTerm	=	v - (n * vDot);
+	float3 lTerm	=	l - (n * lDot);
+	float gTerm	=	length(vTerm) * length(lTerm);
+
+	float gamma = 1.0;
+	if(abs(gTerm) < 0.0001) gamma = 1.0;
+	else gamma = dot(vTerm, lTerm) / gTerm;
+
+	float rough_sq = iRoughness * iRoughness;
+	float Ct = (rough_sq / (rough_sq + 0.09));
+	float A = 1.0f - 0.5f * (rough_sq / (rough_sq + 0.57f));
+	float B = 0.45f * Ct;
+
+	float alpha = max( acVDot, acLDot );
+	float beta  = min( acVDot, acLDot );
+	float C = sin(alpha) * tan(beta);
+	
+	//coeffs
+	onCoeff = (A + B * max( 0.0f, gamma ) * C);
+
+	float Cx = (2.0 * acVDot) / PI;
+	onCoeffX = (0.17 * Ct) * (1.0 - (gamma * Cx) * Cx);
+
+	return;
+}
+
+
+//Phohg specular factor ///////////////////////////////////////////////////////////////////////
+float adsk_aux_hermite_step(in float x0, 
+							in float x1, 
+							in float v )
+{
+	float f;
+
+	if (v <= x0) return (0.0f);
+	if (v >= x1) return (1.0f);
+	
+	f = (v-x0)/(x1-x0);
+	return (f*f*(3.0f-2.0f*f));
+}
+
+
+//GetGlossyCoeff   /////////////////////////////////////////////////////////////////////////////
+Scalar GetGlossyCoeff(in Scalar glossiness)
+{
+	return pow(2.0, glossiness * 8.0);
+}
+
+
+//Phong factor   ///////////////////////////////////////////////////////////////////////////////
+float GetPhongSpecularFactor(	in float3	iLightDir,
+								in float3	iEyeDir,
+								in float3	iNormal,
+								in float 	iGlossy,	//common interface for specs
+								
+								in float 	iAuxFactor,
+								in bool 	iAuxGlazed,
+								in bool 	bypass_glossy_coeff)
+{
+
+	float res = 0.0f;
+	
+	float glossiness = iGlossy;
+	if(!bypass_glossy_coeff)
+		glossiness = GetGlossyCoeff(iGlossy);
+
+		
+	float3 half_ = iLightDir - iEyeDir;
+	float phi = dot(half_, iNormal);
+	phi *= phi / dot(half_, half_);
+	
+	if (phi > 0.0)
+		res = exp(log(phi) * 0.5f * glossiness);
+	
+	// step specularity
+	if(iAuxGlazed)
+		res = adsk_aux_hermite_step(0.5, 0.8, res);
+
+	// cosine factor .. 
+	// = pow(local_dot_nl, 0.5f);
+	if(iAuxFactor>0.0)
+		res *= iAuxFactor * iGlossy;
+	
+	return res;
+}
+
+//GetSpecularFactor  ///////////////////////////////////////////////////////////////////////////
+Scalar GetSpecularFactor(	in Vector3 dir,	in Vector3 light_dir,
+							in Vector3 norm,
+							in Vector3 aniso_u, in Vector3 aniso_v,
+							in Scalar glossy_factor, in Scalar aniso_factor	 )
+{
+
+	Scalar minin = 0.0001;
+	Scalar dotNL = dot(light_dir,norm);
+	Scalar dotEye = -dot(dir,norm);
+
+	if(dotEye * dotNL < minin) return 0.0;
+	else 
+	{
+		//phong speculars
+		Scalar glossy_pow = glossy_factor * glossy_factor;
+		Scalar aniso_pow = aniso_factor * aniso_factor;
+
+		Vector3 half_vector = light_dir - dir;
+		half_vector = normalize(half_vector);
+
+		Scalar dotHN = dot(half_vector,norm);
+		dotHN *= dotHN;
+
+		if(dotHN > 1.0)	dotHN = 1.0;
+
+		//anisotropy
+		Scalar dotAU = dot(half_vector, aniso_u);
+		dotAU *= dotAU;
+		Scalar dotAV = dot(half_vector, aniso_v);
+		dotAV *= dotAV;
+
+		if(dotHN < minin * (dotAU * glossy_pow + dotAV * aniso_pow)) return 0.0;
+		else
+		{
+			Scalar aniso_fx = -(dotAU * glossy_pow + dotAV * aniso_pow) / dotHN;
+			return ((exp(aniso_fx) * glossy_factor) * aniso_factor) / ((sqrt(dotEye * dotNL) * 4.0) * PI);
+		}
+	}
+}
+
+
+//GetAnisotropyFactor  /////////////////////////////////////////////////////////////////////////
+void GetIsotropyFactor(	out Vector3 oAnisoU, out Vector3 oAnisoV,
+						in Vector3 iNormal  )
+{
+
+	//z
+	Vector3 hVector = Vector3(0.0,0.0,1.0);
+	hVector = Matrix3x3(object_to_internal) * hVector;
+	hVector = normalize(hVector);
+	Scalar hDot = dot(iNormal, hVector);
+
+	//y
+	if(abs(hDot) > 0.999)
+	{
+		hVector = Vector3(0.0,1.0,0.0);
+		hVector = Matrix3x3(object_to_internal) * hVector;
+		hVector = normalize(hVector);
+		hDot	= dot(iNormal, hVector);
+
+		//x
+		if(abs(hDot) > 0.999)
+		{
+			hVector = Vector3(1.0,0.0,0.0);
+			hVector = Matrix3x3(object_to_internal) * hVector;
+			hVector = normalize(hVector);
+			hDot	= dot(iNormal, hVector);
+		}
+	}
+
+	hVector -= iNormal * hDot;
+	hVector = normalize(hVector);
+
+	oAnisoV = hVector;
+	oAnisoU = cross(oAnisoV, iNormal);
+}
+
+
+//GetAnisotropyFactor  /////////////////////////////////////////////////////////////////////////
+void GetAnisotropyFactor(	out Vector3 oAnisoU, out Vector3 oAnisoV,
+							in float iAnisotropy, in float iAnisoRot, in Int iAnisoChannel, 
+							in Vector3 iNormal  )
+{
+	
+	GetIsotropyFactor(oAnisoU, oAnisoV, iNormal);
+	
+	if(iAnisotropy != 1.0)
+	{
+		Scalar 
+		aniso_cross_vec_dot = dot(iNormal, oAnisoU);
+		oAnisoU				-= iNormal * aniso_cross_vec_dot;
+		oAnisoU				= normalize(oAnisoU);
+
+		aniso_cross_vec_dot	= dot(iNormal,oAnisoV);
+		oAnisoV				-= iNormal * aniso_cross_vec_dot;
+		oAnisoV				= normalize(oAnisoV);
+		
+		if(iAnisoRot != 0.0)
+		{
+			Scalar aniso_rot = (iAnisoRot * PI) * 2.0;
+			Scalar aniso_rot_cos = cos(aniso_rot);
+			Scalar aniso_rot_sin = sin(aniso_rot);
+
+			Vector3 aniso_interp = aniso_rot_cos * oAnisoU + aniso_rot_sin * oAnisoV;
+
+			oAnisoV = -aniso_rot_sin * oAnisoU + aniso_rot_cos * oAnisoV;
+			oAnisoU = aniso_interp;
+		}
+	}
+}
+
+
+//FresnelFactor ////////////////////////////////////////////////////////////////////////////////
+float FresnelFactor( in float ior_in,
+					 in float ior_out,
+					 in float t1,
+					 in float t2 ) 
+{
+	float d_p;
+	float d_o;
+	float r_p;
+	float r_o;
+
+	if (ior_in == ior_out)  return 0.0;
+	else 
+	{
+		d_p = ior_in * t2 + ior_out * t1;
+		if (d_p == 0.0)  r_p = 1.0;
+		else  r_p = (ior_in * t2 - ior_out * t1) / d_p;
+
+		d_o = ior_in * t1 + ior_out * t2;
+		if (d_o == 0.0)  r_o = 1.0;
+		else  r_o = (ior_in * t1 - ior_out * t2) / d_o;
+
+		return 0.5 * (r_p * r_p + r_o * r_o);
+	}
+}
+
+//GetFresnelFactor
+float GetFresnelFactor( in float dot_nd, 
+						in float ior_in, 
+						in float ior_out )
+{
+	float ior;
+	float theta;
+
+	ior = ior_in / ior_out;
+	theta = 1.0 - ior * ior * (1.0 - dot_nd * dot_nd);
+
+	if (theta > 0.0)
+		return FresnelFactor(ior_in, ior_out, dot_nd, -sqrt(theta));
+	else return 1.0;
+}
+	
+//Refraction component  ////////////////////////////////////////////////////////////////////////
+Color GetRefractionFactor( 	in float3 p, 
+							in float3 d, 
+							in float3 n,
+							in float iorx )
+{
+	Color rColor = Color(0);
+	
+	Vector3 refr_dir = d;
+	refr_dir = refract(d, n, 1.0/iorx);
+	if((refr_dir.x == 0.0 && refr_dir.y == 0.0) && refr_dir.z == 0.0)
+			refr_dir = reflect(d, n);
+
+	Ray rayx = Ray(p, refr_dir);
+
+	Ray ray_dx, ray_dy;
+	Trace_options trace_options;
+	trace_options.set_ray_type("environment");
+	trace(rayx, ray_dx, ray_dy, trace_options, "result", rColor);
+	
+	return rColor;
+}
+
+
+//Reflection component  ////////////////////////////////////////////////////////////////////////
+Color GetReflectionFactor( 	in float3 p, 
+							in float3 d, 
+							in float3 n  )
+{
+	Color rColor = Color(0);
+	Vector3 refl_dir = reflect(d, n);
+
+	Ray rayx = Ray(p, refl_dir);
+	Ray ray_dx, ray_dy;
+	
+	Trace_options trace_options;
+	trace_options.set_ray_type("environment");
+	trace(rayx, ray_dx, ray_dy, trace_options, "result", rColor);
+	
+	return rColor;
+}
+
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+//Various - Utilities   ///////////////////////////////////////////////////////////////////////////
+
+//Simple Falloff  //////////////////////////////////////////////////////////////////////////////
+float SimpleFalloff(  float3 direction, float3 normal, float  amount)
+{
+	float f = saturate(dot(-direction, normal));
+	f = 1.0 - pow(f, 1.0/amount);
+
+	return f;
+}
+
+//Opacity component  //////////////////////////////////////////////////////////////////////////
+Color GetOpacityFactor( in float3 p, 
+						in float3 d )
+{
+	Color rColor = Color(0);
+	
+	Ray rayx = Ray(p, d);
+	Ray ray_dx, ray_dy;
+
+	Trace_options trace_options;
+	trace_options.set_ray_type("environment");
+
+	trace(rayx, ray_dx, ray_dy, trace_options, "result", rColor);
+	
+	return rColor;
+}
+
+//TransformBumpVector   ///////////////////////////////////////////////////////////////////////
+void TransformBumpVector(in int b_mode, in float3 b_vector, inout float3 b_transform)
+{
+
+	if((b_vector.x == 0.0f && b_vector.y == 0.0f) && b_vector.z == 0.0f)
+		return;
+
+	switch(b_mode)	//bump mode
+	{
+		case 1: case 5:	{ break; }
+		case 2:	case 6:
+		{
+			b_vector = transform_vector("world","internal",b_vector);
+			break;
+		}
+		case 3:	case 7:
+		{
+			b_vector = transform_vector("object","internal",b_vector);
+			break;
+		}
+		case 4:	case 8:
+		{
+			b_vector = transform_vector("camera","internal",b_vector);
+			break;
+		}
+	}
+
+	//add/replace modes
+	if(b_mode <= 4)	b_transform += b_vector;
+	else			b_transform = b_vector;
+
+	b_transform = normalize(b_transform);
+}
+

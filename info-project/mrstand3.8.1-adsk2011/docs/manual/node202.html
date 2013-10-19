@@ -1,0 +1,90 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>User Data</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node201.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node203.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION200"></a>
+<h3>User Data</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_USERDATA</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miUserdata</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>int parameter_size</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls</td>
+</tr>
+</table>
+<pre>
+typedef struct miUserdata {
+        miTag           data_decl;              /* parameter declaration */
+        miTag           next_data;              /* next data block in list */
+        miUint          label;                  /* user-defined label integer*/
+        int             parameter_size;         /* size of parameter block */
+        short           one;                    /* ==1, for byte order check */
+        short           spare1;                 /* not used */
+        int             spare2;                 /* not used */
+        char            parameters[8];          /* parameter block */
+} miUserdata;
+</pre>
+<p>This element describes a user-definable opaque data block. The
+API supports setting up these blocks from literal data, from a
+file, or from shader-like declared parameters. The purpose is
+carrying user data to shaders that would be too large, contain
+nonstandard data types, or be repeated in too many places to make
+storing it as shader parameters feasible. Except in the shader-like
+parameter case, the data is not byte-swapped by mental ray when
+transported to another host; this becomes the responsibility of the
+data recipient.</p>
+<p><b>data_decl</b> is the tag of the declaration of the
+parameters, if the user data block is defined with parameters. If
+it was defined with literal data or read from a file, this field is
+a null tag.</p>
+<p><b>next_data</b> allows chaining of user data blocks, much like
+shaders can be chained.</p>
+<p><b>parameter_size</b> is the number of bytes stored in this data
+block, beginning at <i>parameters</i>. The rest of the header
+leading up to the data is not included. Zero is allowed but not
+useful. mental ray warns if a data block is defined larger than 16
+MB.</p>
+<p><b>one</b> is set to 1 when the data block is defined, and when
+it was defined with parameters and has been imported and
+byte-swapped. Since literal and file user data blocks are not
+swapped, the data recipient must assume that non-byte data read
+from the user data block must be byte-swapped if <i>one</i> has the
+value 0x0100 instead of 1.</p>
+<p><b>parameters</b> contains the user data. Although declared with
+only eight characters, it is allocated smaller or larger depending
+on the user data block size such that it holds
+<i>parameter_size</i> bytes.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node201.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node203.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

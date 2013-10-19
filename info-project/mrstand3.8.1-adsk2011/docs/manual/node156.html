@@ -1,0 +1,361 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Thread Parallelism and Locks</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node155.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node157.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION154"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_init_lock">mi_init_lock</a></li>
+<li><a href="#api:mi_delete_lock">mi_delete_lock</a></li>
+<li><a href="#api:mi_lock">mi_lock</a></li>
+<li><a href="#api:mi_unlock">mi_unlock</a></li>
+<li><a href="#api:mi_par_aborted">mi_par_aborted</a></li>
+<li><a href="#api:mi_mem_memory_limit">mi_mem_memory_limit</a></li>
+</ul>
+
+<h3>Thread Parallelism and Locks</h3>
+<p><a id="multithreading"></a> <a id="INDEX798"></a> <a id="INDEX799"></a>
+<a id="INDEX800"></a> In addition to network
+parallelism, mental ray also supports shared memory parallelism
+through <a href="node156.html#INDEX802">thread</a>s. Network
+parallelism is a form of distributed memory parallelism where
+processes cooperate by exchanging messages. Messages are used to
+exchange data as well as to synchronize. With <b id="INDEX801">shared
+memory</b> data can easily be exchanged, a process must only access
+the common memory to do so. A different mechanism has to be used for
+synchronization. This is usually done by <i>locking</i>. Basically
+what has to be done is one process has to tell the other that it is
+waiting to access data, and another process can signal that it has
+finished working with it, so that any other process may now access it.
+</p>
+<p>By default <b><a id="INDEX802"></a>thread</b>s
+are used on <a href="node156.html#INDEX801">shared memory</a>
+multiprocessor machines. Threads are sometimes also called
+lightweight processes. Threads behave like processes running on a
+common <a href="node156.html#INDEX801">shared memory</a>.</p>
+<p>Since memory is shared between two threads, both can write to
+memory at the same time. It can also happen that one thread writes
+while another reads the same memory. Both these cases can lead to
+surprising unwanted results. Therefore - to guard against these
+surprises - when using threads certain precautions have to be
+observed. Care has to be taken when using heap memory such as
+global or static data, as any thread may potentially modify it. To
+prevent corrupting any data (or reading corrupted data), locking
+must be used when it is not otherwise guaranteed that concurrent
+accesses<a id="INDEX803"></a> will not occur. The
+stack, however, is always safe because every thread has its own
+stack that is not shared with any other thread.</p>
+<p>In addition to making sure that write accesses to data are
+performed when no other thread accesses the data, it is important
+to use only so-called concurrency safe libraries and calls. If a
+call to a non<b><a id="INDEX804"></a>reentrant</b>
+function is done, locking should be used. A function is called
+<i>reentrant</i> if it can be executed by multiple threads at the
+same time without adverse effects. (Reentrancy and concurrency
+safety are related, but the terms stem from different historical
+contexts, and reentrancy also implies the ability to recurse
+safely.) Details and examples are explained below.</p>
+<p>For example, static data on a <a href="node156.html#INDEX801">shared
+memory</a> multiprocessor can be
+modified by more than one processor at a time. Consider this
+test:</p>
+<pre>
+    static miBoolean is_init = miFALSE;
+    ...
+    if (!is_init) {
+        is_init = miTRUE;
+        initialize();
+    }
+</pre>
+<p>This does not guarantee that <i>initialize</i> is called only
+once. The reason is that all threads share the <i>is_init</i> flag,
+so two threads may simultaneously examine the flag. It is possible
+that both will find that it has not been set, and enter the
+<i>if</i> body. Next, both will set the flag to <tt>miTRUE</tt>,
+and then both will call the <i>initialize</i> function. This
+situation is called a <i><b><a id="INDEX805"></a>race condition</b></i>.
+The example is contrived
+because initialization and termination should be done with init and
+exit shaders as described in the next section, but this problem can
+occur with any heap variable. Even incrementing global or static
+variables with "++" is not safe - the time window that leads to
+errors may be small, but that makes such mistakes all the more
+difficult to find. In general, all threads on a host share all data
+except local <tt>auto</tt> variables on the stack.</p>
+<p>The behavior described above could also occur if more than one
+thread is used on a single processor, but by default mental ray
+does not create more threads than there are processors.</p>
+<p><a id="INDEX806"></a> There are two methods for
+guarding against <a href="node163.html#INDEX840">race
+condition</a>s. One is to guarantee that only one thread executes
+certain code at a time. Such code surrounded by lock and unlock
+operations is called a <i><b><a id="INDEX807"></a>critical section</b></i>.
+Code inside of critical
+sections may access global or static data or call any function that
+does so (as long as all is protected by the same lock). The lock
+used in this example is assumed to have been created and
+initialized with a call to <i><a href="node156.html#INDEX809">mi_init_lock</a></i>
+before it used here.
+(See below how locks are initialized.) Here is an example of how a
+critical section may be used:</p>
+<pre>
+    miLock lock;
+
+    mi_lock(lock);
+    if (!is_init) {
+        is_init = miTRUE;
+        initialize();
+    }
+    mi_unlock(lock);
+</pre>
+<p>The other method is to use separate variables for each thread.
+There are two places available:</p>
+<ul>
+<li>data attached with the <tt>miQ_FUNC_USERPTR</tt> mode of
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> is separate for
+each shader instance. This is useful for preprocessing shader
+parameters.</li>
+<li>data attached with the <a href="node163.html#INDEX839">thread
+local shader storage</a> facility is shared by all instances of a
+shader, but is kept separate from simultaneous accesses by other
+threads so no locks are required.</li>
+</ul>
+<p>In versions prior to mental ray 3.x versions it was possible to
+use the <i><a href="node156.html#INDEX819">mi_par_nthreads</a></i>
+function to allocate an array that can be indexed with the thread
+number, but in mental ray 3.x this is no longer possible because
+the number of threads has become dynamic and may change at any
+time, regardless of what number of threads was set with the
+<tt>-threads</tt> command-line option. There is no limit on the
+number of threads in mental ray.</p>
+<p>See the section on Persistent Shader Data Storage on page
+<a href="node160.html#shdstorage">shdstorage</a> for more details
+on lock-free shader data storage.</p>
+<p>Allocation is done in the initialization function (which has the
+same name as the shader with <tt>_init</tt> appended) of the shader
+or shader instance. No locking is required because it is called
+only once. The termination function (which also has the same name
+but with <tt>_exit</tt> appended) must release the data.</p>
+<p><a id="efficiency"></a> Locks reduce
+<a href="node156.html#INDEX798">multithreading</a> <b><a name="INDEX808"
+id="INDEX808"></a>efficiency</b> and should be used only when
+absolutely necessary, or in shader initialization functions, which
+are called only rarely. The probability of one thread blocking
+because another has locked a section of code grows very quickly
+with the number of threads, and a thread that is blocked is not
+available to do useful work. Efficiency describes the degree of
+parallelism: if <i>n</i> threads increase the speed by a factor
+<i>m</i>, then the efficiency is <var>m&thinsp;&frasl;&thinsp;n</var>.
+If two threads have an efficiency of <span class="number">0.95</span>, then 32 threads have an
+efficiency of only
+<span class="number">0.95<sup>32</sup>&thinsp;&asymp;&thinsp;0.19</span>,
+so over 80% of all CPU cycles are wasted! Efficiency drops surprisingly
+quickly, so careful attention to locks is required. Note that memory
+allocation and releasing functions (
+<i><a href="node155.html#INDEX794">mi_mem_allocate</a></i> et. al.)
+contain a lock.</p>
+<p>mental ray provides two locks for general use:
+<i>state</i>&rarr;global_lock is a lock shared by all threads and
+all shaders. No two critical sections protected by this lock can
+execute simultaneously on this host. The second is the shader lock,
+a pointer to which can be obtained with the <tt>miQ_FUNC_LOCK</tt>
+mode of <i><a href="miquery.html#api:mi_query">mi_query</a></i>, which
+is local to all instances of the current shader:</p>
+<pre>
+    miLock *lock;
+    mi_query(miQ_FUNC_LOCK, state, miNULLTAG, &amp;lock);
+    mi_lock(*lock);
+    ...
+    mi_unlock(*lock);
+</pre>
+<p>The lock is tied to the shader, not the particular call with
+particular shader parameters. Every shader in mental ray, built-in
+or dynamically linked, has exactly one such lock. mental ray
+internally uses this lock and the global lock to guarantee that the
+init and exit shaders of a shader do not execute concurrently.
+Therefore, they must not be used in these functions.</p>
+<p>The relevant functions provided by the parallelism modules
+are:</p>
+<p><a id="INDEX809"></a></p>
+<h5 class="anchor" id="api:mi_init_lock">mi_init_lock</h5>
+<pre>
+    miBoolean mi_init_lock(
+        miLock * const  lock)
+</pre>
+<p>Before a lock can be used by one of the other locking functions,
+it must be initialized with this function. Note that the lock
+variable must be static or global. Shaders will normally use this
+function in their <i>_init</i> function. Shaders should not
+initialize (or delete) <code>state&rarr;global_lock</code> or the
+local shader lock; they are pre-initialized by mental ray. The
+function returns <tt>miFALSE</tt> if the operating system failed to
+create the lock.</p>
+<p><a id="INDEX810"></a></p>
+<h5 class="anchor" id="api:mi_delete_lock">mi_delete_lock</h5>
+<pre>
+    void mi_delete_lock(
+        miLock * const  lock)
+</pre>
+<p>Destroy a lock. This should be done when it is no longer needed.
+The code should use lock and immediately unlock the lock first to
+make sure that no other thread is in or waiting for a critical
+section protected by this lock. Shaders will normally use this
+function in their exit shader. Do not delete the predefined
+locks.</p>
+<p><a id="INDEX811"></a></p>
+<h5 class="anchor" id="api:mi_lock">mi_lock</h5>
+<pre>
+    void mi_lock(
+        const miLock    lock)
+</pre>
+<p>Check if any other code holds the lock. If so, block; otherwise
+set the lock and proceed. This is done in a parallel-safe way so
+only one <a href="node156.html#INDEX807">critical section</a>
+locked can execute at a time. Note that locking the same lock twice
+in a row without anyone unlocking it will block the thread forever,
+effectively freezing mental ray, because the second lock can never
+succeed.</p>
+<p><a id="INDEX812"></a></p>
+<h5 class="anchor" id="api:mi_unlock">mi_unlock</h5>
+<pre>
+    void mi_unlock(
+        const miLock    lock)
+</pre>
+<p>Release a lock. If another thread was blocked attempting to set
+the lock, it can proceed now. Locks and unlocks must always be
+paired, and the code between locking and unlocking must be as short
+and as fast as possible to avoid defeating parallelism. There is no
+fairness guarantee that ensures that the thread that has been
+blocked for the longest time is unblocked first.</p>
+<p><a id="INDEX813"></a></p>
+<h5 class="anchor" id="api:mi_par_localvpu">mi_par_localvpu</h5>
+<pre>
+    miVpu mi_par_localvpu(void)
+    int   miTHREAD(miVpu vpu)
+    int   miHOST(miVpu vpu)
+    miVpu miVPU(int host, int thread)
+</pre>
+<p><a id="INDEX814"></a><a id="INDEX815"></a>
+<span class="depr">Deprecated</span> The term <i>VPU</i> stands for
+Virtual Processing Unit. All threads on the network have a unique
+VPU number. <i><a href="node156.html#INDEX813">mi_par_localvpu</a></i>
+returns the VPU number of the VPU this thread is running on. VPUs
+are a concatenation of the host number and the thread number, both
+numbered from <i>0</i> to the number of hosts or threads,
+respectively, minus <i>1</i>. (Future versions of mental ray may
+use noncontiguous host numbers, but not noncontiguous thread
+numbers.)</p>
+<p>The <b><a id="INDEX816"></a>miTHREAD</b> macro extracts a thread
+number from a VPU, and the <b><a id="INDEX817"></a>miHOST</b> macro
+extracts the host number from a VPU. Thread 0 is called the master thread;
+host 0 is called the master host. Thread 0 on host 0 is normally running
+the translator that controls the entire operation. The
+<b><a id="INDEX818"></a>miVPU</b> macro puts a host and thread number
+together to form a VPU number. The
+<i><a href="node156.html#INDEX813">mi_par_localvpu</a></i> function
+returns the VPU of the current thread on the local host.</p>
+<p>In a shader the fastest way of finding the current thread number
+is <code>state&rarr;thread</code>. This is the only thread function
+still available in mental ray. Otherwise mental ray does not have
+mental ray 2.x's fixed notion of VPUs and threads.</p>
+<p><a id="INDEX819"></a></p>
+<h5 class="anchor" id="api:mi_par_nthreads">mi_par_nthreads</h5>
+<pre>
+    int mi_par_nthreads(void)
+</pre>
+<p><span class="depr">Deprecated</span> Returns the number of threads
+on the local host. This is normally <i>1</i> on a single-processor system.
+mental ray does not have the notion of a fixed number of threads and
+therefore does not support this function any more. For backwards
+compatibility the function exists, but it always returns 65. This
+is obviously not something a shader should rely on but it may keep
+some older shaders limping along until they are ported. <b>Do not
+use!</b></p>
+<p><a id="INDEX820"></a></p>
+<h5 class="anchor" id="api:mi_par_aborted">mi_par_aborted</h5>
+<pre>
+    int mi_par_aborted(void)
+</pre>
+<p>Return a nonzero value if mental ray has been aborted, and the
+shader should stop what it is doing, clean up, and return. This is
+only of interest in <a href="node126.html#INDEX492">output
+shader</a>s because they can run for a long time. This allows the
+user to press on an abort button, which causes calls to
+<i><a href="node156.html#INDEX820">mi_par_aborted</a></i> to return nonzero,
+and have the shader return as soon as possible. For example, the
+shader might call this function in its scanline loop (not for every
+pixel to avoid slowing it down), and skip the remaining lines. The
+shader must still clean up, for example releasing memory that it
+has allocated.</p>
+<p><a id="INDEX821"></a></p>
+<h5 class="anchor" id="api:mi_job_memory_limit">mi_job_memory_limit</h5>
+<pre>
+    long mi_job_memory_limit(
+        long            limit,
+        long            vlimit)
+</pre>
+<p><span class="depr">Deprecated</span> Set the size of mental ray's memory
+cache to <i>limit</i> bytes, and the virtual address space cache limit for
+memory-mapped textures to <i>vlimit</i> bytes. Both are separate and
+independent. mental ray's memory manager will attempt to keep these limits
+by evicting data that can be restored if necessary to maintain these
+limits. A good <i>vlimit</i> is a quarter of the address space of
+the machine (the default is 1 gigabyte). A good <i>limit</i> is one
+half of the machine's physical memory (the default is 512 megabytes in 32bit
+versions of mental ray 3.1 and later).
+Values of 0 mean "unlimited", and values of -1 mean "don't change".
+If caches are too small, mental ray will begin to thrash or fail to
+maintain the limits; this is evident from the garbage collection
+messages printed if the verbosity level ( <tt>-verbose</tt>
+command-line option) is at least 4.</p>
+<p>mental ray no longer supports this function. It was replaced
+with <i><a href="node156.html#INDEX822">mi_mem_memory_limit</a></i>.</p>
+<p><a id="INDEX822"></a></p>
+<h5 class="anchor" id="api:mi_mem_memory_limit">mi_mem_memory_limit</h5>
+<pre>
+    miUlong mi_mem_memory_limit(
+        miUlong         limit)
+</pre>
+<p>Limit the total heap size used by mental ray allocations to
+<i>limit</i> bytes. Unlike the older
+<i><a href="node156.html#INDEX821">mi_job_memory_limit</a></i>, this does not
+only limit the size of the geometry cache, but all memory
+allocations performed by mental ray. It can no longer happen that
+some large memory user can crowd out the geometry cache; everything
+is subject to flushing and re-using now.</p>
+<p>Operating system memory usage is not included, however. This
+means the program itself, any shared libraries (DSO or DLL), thread
+stacks, and reserved kernel memory. Also, if mental ray is linked
+into some other application, memory allocations performed by that
+application are not included either. In practice, this leaves about
+1.3 GB on 32-bit systems except Windows Professional Server (not
+regular Windows), which allows 3 GB, and Linux, which allows almost
+4 GB. The memory limit defined by this function should stay
+comfortably below this limit, by a hundred megabytes or more,
+depending on what else is going on in the system. It should also
+stay well below the amount of physical RAM minus OS usage, even on
+64-bit systems, to avoid kernel swapping.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node155.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node157.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

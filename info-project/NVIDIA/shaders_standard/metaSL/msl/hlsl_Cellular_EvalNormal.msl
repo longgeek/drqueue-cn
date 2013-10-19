@@ -1,0 +1,628 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// see tex_cellular.cpp
+#define SMOOTH 0.2
+#define MAX_ITERATIONS 20.0
+
+// see max_texutil.cpp
+#define RAND_TABLE_SIZE 10000
+#define MAX_CELL_LEVELS	20
+
+shader hlsl_Cellular_EvalNormal {
+ input:
+  Shader Coords;
+  // max_Cellular
+  Color CellColor = Color(1.0, 1.0, 1.0, 1.0) {
+  };
+  Color DivColor1 = Color(0.5, 0.5, 0.5, 1.0) {
+  };
+  Color DivColor2 = Color(0.0, 0.0, 0.0, 1.0) {
+  };
+  float Variation = 0.0 {
+    display_name("Variation");
+  };
+  float Size = 5.0 {
+    display_name("Size");
+  };
+  float Spread = 0.5 {
+    display_name("Spread");
+  };
+  float LowThresh = 0.0 {
+    display_name("Thresholds Low");
+  };
+  float MidThresh = 0.5 {
+    display_name("Thresholds Mid");
+  };
+  float HighThresh = 1.0 {
+    display_name("Thresholds High");
+  };
+  const int type = 0 {
+    display_name("Circular or Chips?");
+    hard_range(0, 1);
+  };
+  const bool Fractal = false {
+    display_name("Fractal");
+  };
+  const float Iteration = 3.0 {
+    display_name("Iterations");
+  };
+  float Roughness = 0.0 {
+    display_name("Roughness");
+  };
+  float Smooth = 0.1 {
+    display_name("Bump Smoothing");
+  };
+  bool Adaptive = true {
+    display_name("Adaptive");
+  };
+  // textures
+  Texture2d noise_tables = "noise_out.dds" {
+    disable_filtering();
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+  Texture2d rand_noise_table = "rand_table_out.dds" {
+    disable_filtering();
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+
+ output:
+  Color result;
+
+  // additional functions for texture lookup
+  int p(in int i1) {
+    // int x_pix = i1 % 114;
+    int y_pix = i1 / 114; // 0 <= y < 9
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    // return int((511.0 * tex2d(noise_tables, float2(x, y)).r + 0.5));
+    Color c = 
+      Texture2D_sampler_color(noise_tables, 
+			      0.0, "none").lookup(float2(x, y));
+    return int((c.r + 0.5));
+  } // p
+
+  float maxRand01(in int index) {
+    float value = 0.0;
+    int f = ((int) floor(index / 10000.0));
+    int r = (index - 10000 * f);
+    f = ((int) floor(r / 100.0));
+    r = (r - 100 * f);
+    float x = (2.0 * float(r) + 1.0) / (2.0 * 100.0);
+    float y = (2.0 * float(f) + 1.0) / (2.0 * 100.0);
+    value = tex2d(rand_noise_table, float2(x, y)).r;
+    return value;
+  } // maxRand01
+
+  float maxRand02(in int index) {
+    float value = 0.0;
+    int f = ((int) floor(index / 100.0));
+    int r = (index - 100 * f);
+    float x = (2.0 * float(r) + 1.0) / (2.0 * 100.0);
+    float y = (2.0 * float(f) + 1.0) / (2.0 * 100.0);
+    value = tex2d(rand_noise_table, float2(x, y)).r;
+    return value;
+  } // maxRand02
+
+  // see max_texutil.cpp
+  int maxCellPointCount(in float u) {
+    float pointProbs[9] = {
+      0.049787,
+      0.199148,
+      0.423190,
+      0.647232,
+      0.815263,
+      0.916082,
+      0.966492,
+      0.988096,
+      0.996197
+    };
+    int i = 0;
+    for (i = 0; i < 9; i++) {
+      if (u < pointProbs[i]) return i;
+    }
+    return 8;
+  } // maxCellPointCount
+
+  // see max_texutil.cpp
+  int maxSeedCell(in int ipx, in int ipy, in int ipz) {
+    int idx1 = (ipx - 512 * ((int) floor(ipx / 512.0)));
+    int idx2 = (ipy - 512 * ((int) floor(ipy / 512.0)));
+    int idx3 = (ipz - 512 * ((int) floor(ipz / 512.0)));
+    // p[ipx&BM] | (p[ipy&BM]<<9) | (p[ipz&BM]<<18)
+    int n = (p(idx1) +
+	     p(idx2) * 512 +
+	     p(idx3) * 262144);
+    return n;
+  } // maxSeedCell
+
+  // see max_texutil.cpp
+  void maxInsertDist(in float d,
+		     in float gx,
+		     in float gy,
+		     in float gz,
+		     in int id,
+		     in int i,
+		     in int n,
+		     inout float dist[MAX_CELL_LEVELS],
+		     inout bool found[MAX_CELL_LEVELS],
+		     inout int celIDs[MAX_CELL_LEVELS],
+		     in bool useGrads,
+		     inout float3 grads[MAX_CELL_LEVELS]) {
+    int j = 0;
+    for (j = n - 1; j > i && j < 20; j--) {
+      dist[j]  = dist[j-1];
+      found[j] = found[j-1];
+      if (useGrads) {
+	grads[j] = grads[j-1];
+      } // if (useGrads)
+      else {
+	celIDs[j] = celIDs[j-1];
+      } // else [ if (useGrads) ]
+    } // for (j = n - 1; j > i; j--)
+    dist[i] = d;
+    if (useGrads) {
+      float3 tmp = grads[j];
+      tmp.x = gx;
+      tmp.y = gy;
+      tmp.z = gz;
+      grads[j] = tmp;
+    } // if (useGrads)
+    else {
+      celIDs[i] = id;
+    } // else [ if (useGrads) ]
+  } // maxInsertDist
+
+  // see max_texutil.cpp
+  void maxCellDistance(in float vx,
+		       in float vy,
+		       in float vz,
+		       in int ipx,
+		       in int ipy,
+		       in int ipz,
+		       in int n,
+		       inout float dist[MAX_CELL_LEVELS],
+		       inout bool found[MAX_CELL_LEVELS],
+		       inout int celIDs[MAX_CELL_LEVELS],
+		       in bool useGrads,
+		       inout float3 grads[MAX_CELL_LEVELS]) {
+    int i = 0;
+    int j = 0;
+    int id = maxSeedCell(ipx, ipy, ipz);
+    // int y = abs(id) % RAND_TABLE_SIZE;
+    int y = (abs(id) - 10000 * ((int) floor(abs(id) / 10000.0)));
+    int ct = maxCellPointCount(maxRand01(id));
+    int cntr = 1;
+    float d = 0.0;
+    float3 fip = float3(0.0, 0.0, 0.0);
+    float3 pt = float3(0.0, 0.0, 0.0);
+
+    fip.x = (float) ipx - vx;
+    fip.y = (float) ipy - vy;
+    fip.z = (float) ipz - vz;
+    for (i = 0; i < ct && i < 9; i++) {
+      if ((y + cntr + 3) > RAND_TABLE_SIZE) y = 0;
+      pt.z = maxRand02(y + cntr++) + fip.z;
+      pt.y = maxRand02(y + cntr++) + fip.y;
+      pt.x = maxRand02(y + cntr++) + fip.x;
+      d = pt.x*pt.x + pt.y*pt.y + pt.z*pt.z;
+      for (j = 0; j < n && j < 20; j++) {
+	if (found[j] == true) {
+	  if (d < dist[j]) {
+	    maxInsertDist(d, -pt.x, -pt.y, -pt.z, id + i, j, n, dist, found,
+			  celIDs, useGrads, grads);
+	    break;
+	  } // if (d < dist[j])
+	} // if (found[j] == true)
+	else {
+	  found[j] = true;
+	  dist[j] = d;
+	  break;
+	} // else [ if (found[j] == true) ]
+      } // for (j = 0; j < n; j++)
+    } // for (i = 0; i < ct; i++) {
+  } // maxCellDistance
+
+  // see max_texutil.cpp
+  void maxCellFunction(in float vx,
+		       in float vy,
+		       in float vz,
+		       in int n,
+		       inout float dist[MAX_CELL_LEVELS],
+		       inout int celIDs[MAX_CELL_LEVELS],
+		       in bool useGrads,
+		       inout float3 grads[MAX_CELL_LEVELS],
+		       in float gradSmooth) {
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    int ix = n - 1;
+    bool found[MAX_CELL_LEVELS] = {
+      false, false, false, false, false,
+      false, false, false, false, false,
+      false, false, false, false, false,
+      false, false, false, false, false
+    };
+    int ipx = (int) floor(vx);
+    int ipy = (int) floor(vy);
+    int ipz = (int) floor(vz);
+    for (i = 0; i < n && i < 20; i++) {
+      found[i] = false;
+      dist[i]  = 1000000000000000000000000000000.0;
+      if (useGrads) {
+	float3 tmp = grads[i];
+	tmp.x = tmp.y = tmp.z = 0.0;
+	grads[i] = tmp;
+      } // if (useGrads)
+    } // for (i = 0; i < n; i++)
+    float3 vn = float3(0.0, 0.0, 0.0);
+    vn.x = vx - (float) ipx;
+    vn.y = vy - (float) ipy;
+    vn.z = vz - (float) ipz;
+    float idst[3] = { 0.0, 0.0, 0.0 };
+    float jdst[3] = { 0.0, 0.0, 0.0 };
+    float kdst[3] = { 0.0, 0.0, 0.0 };
+    idst[0] = vn.x;
+    idst[1] = 0.0;
+    idst[2] = 1.0 - vn.x;
+    jdst[0] = vn.y;
+    jdst[1] = 0.0;
+    jdst[2] = 1.0 - vn.y;
+    kdst[0] = vn.z;
+    kdst[1] = 0.0;
+    kdst[2] = 1.0 - vn.z;
+    idst[0] = idst[0] * idst[0];
+    idst[2] = idst[2] * idst[2];
+    jdst[0] = jdst[0] * jdst[0];
+    jdst[2] = jdst[2] * jdst[2];
+    kdst[0] = kdst[0] * kdst[0];
+    kdst[2] = kdst[2] * kdst[2];
+    maxCellDistance(vx, vy, vz, ipx, ipy, ipz, n, dist, found,
+		    celIDs, useGrads, grads);
+    ipx--;
+    ipy--;
+    ipz--;
+    for (i = 0; i < 3; i++) {
+      if (dist[ix] > idst[i]) {
+	for (j = 0; j < 3; j++) {
+	  if (dist[ix] > jdst[j]) {
+	    for (k = 0; k < 3; k++) {
+	      if ((i != 1 || j != 1 || k != 1)) {
+		if (dist[ix] > idst[i] + jdst[j] + kdst[k]) {
+		  maxCellDistance(vx, vy, vz, ipx, ipy, ipz, n, dist, found,
+				  celIDs, useGrads, grads);
+		} // if (dist[ix] > idst[i] + jdst[j] + kdst[k])
+	      } // if ((i != 1 || j != 1 || k != 1))
+	      ipz++;
+	    } // for (k = 0; k < 3; k++)
+	    ipz -= 3;
+	  } // if (dist[ix] > jdst[j])
+	  ipy++;
+	} // for (j = 0; j < 3; j++)
+	ipy -= 3;
+      } // if (dist[ix] > idst[i])
+      ipx++;
+    } // for (i = 0; i < 3; i++)
+    if (useGrads && (gradSmooth > 0.0)) {
+      float u;
+      for (i = 0; i < n - 1 && i < 20; i++) {
+	u = (dist[i + 1] - dist[i]) / gradSmooth;
+	if (u < 1.0 && u >= 0.0) {
+	  float3 tmp = grads[i];
+	  tmp.x *= u;
+	  tmp.y *= u;
+	  tmp.z *= u;
+	  grads[i] = tmp;
+	} // if (u < 1.0 && u >= 0.0)
+      } // for (i = 0; i < n - 1; i++)
+    } // if (grads && gradSmooth > 0.0)
+  } // maxCellFunction
+
+  // see max_texutil.cpp
+  void maxFractalCellFunction(in float vx,
+			      in float vy,
+			      in float vz,
+			      in float iterations,
+			      in float lacunarity,
+			      in int n,
+			      inout float dist[MAX_CELL_LEVELS],
+			      inout int celIDs[MAX_CELL_LEVELS],
+			      in bool useGrads,
+			      inout float3 grads[MAX_CELL_LEVELS],
+			      in float gradSmooth) {
+    // see max_texutil.cpp
+    float MAX_CELLULAR_INPUT = 2e+9;
+    float dst[MAX_CELL_LEVELS] = {
+      0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0
+    };
+    if (iterations > 25.0) iterations = 25.0;
+    int it = (int) iterations;
+    float u = lacunarity;
+    float rem = iterations - (float) it;
+    maxCellFunction(vx, vy, vz, n, dist, celIDs, useGrads, grads, gradSmooth);
+    int i = 0;
+    int j = 0;
+    for (i = 1; i < it && i < 25; i++) {
+      float vux = vx * u;
+      float vuy = vy * u;
+      float vuz = vz * u;
+      if (abs(vux) > MAX_CELLULAR_INPUT ||
+	  abs(vuy) > MAX_CELLULAR_INPUT ||
+	  abs(vuz) > MAX_CELLULAR_INPUT) {
+	break;
+      }
+      maxCellFunction(vux, vuy, vuz, n, dst, celIDs,
+		      useGrads, grads, gradSmooth);
+      for (j = 0; j < n && j < 20; j++) {
+	dist[j] += dst[j] / u;
+      } // for (j = 0; j < n; j++)
+      u *= lacunarity;
+    } // for (i = 1; i < it; i++)
+    if (rem > 0.0) {
+      maxCellFunction(vx * u, vy * u, vz * u, n, dst, celIDs,
+		      useGrads, grads, gradSmooth);
+      for (j = 0; j < n && j < 20; j++) {
+	dist[j] += rem * dst[j] / u;
+      } // for (j = 0; j < n; j++)
+    } // if (rem > 0.0)
+  } // maxFractalCellFunction
+
+  // see tex_cellular.cpp
+  float maxCellFunc(// paras
+		    in bool paras_fract,
+		    in bool paras_adapt,
+		    in float paras_iterations,
+		    in float paras_size,
+		    in int paras_type,
+		    in float paras_low,
+		    in float paras_high,
+		    // inst
+		    in float inst_rough,
+		    in float inst_smooth,
+		    in float inst_spread,
+		    // others
+		    inout float ptx,
+		    inout float pty,
+		    inout float ptz,
+		    in float dpsq,
+		    out float3 np) {
+    float dist[MAX_CELL_LEVELS] = {
+      0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0,
+      0.0, 0.0, 0.0, 0.0, 0.0
+    };
+    int ids[MAX_CELL_LEVELS] = {
+      0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0,
+      0, 0, 0, 0, 0
+    };
+    float3 grad[MAX_CELL_LEVELS] = {
+      float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0),
+      float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0),
+      float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0),
+      float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0),
+      float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0),
+      float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0),
+      float3(0.0, 0.0, 0.0), float3(0.0, 0.0, 0.0)
+    };
+    float u = 0.0;
+    float iter = 0.0;
+    if (paras_fract) {
+      if (paras_adapt) {
+        iter = paras_iterations / dpsq;
+        if (iter > MAX_ITERATIONS) iter = MAX_ITERATIONS;
+        if (iter < 1.0) iter = 1.0;
+      }
+      else {
+        iter = paras_iterations;
+      } // if (paras_adapt)
+    } // if (paras_fract)
+    ptx /= paras_size;
+    pty /= paras_size;
+    ptz /= paras_size;
+    if (paras_type > 0) {
+      //   if (paras_fract)
+      //     maxFractalCellFunction(
+      // 			    ptx, pty, ptz, iter, inst_rough,3,dist,NULL,
+      // 			    grad,inst_smooth);
+      //   else
+      //     maxCellFunction(ptx, pty, ptz,3,dist,NULL,grad,inst_smooth);
+      if (paras_fract) {
+	maxFractalCellFunction(ptx, pty, ptz, iter, inst_rough,
+			       3, dist, ids, true, grad, inst_smooth);
+      } // if (paras_fract)
+      else {
+	maxCellFunction(ptx, pty, ptz, 3, dist, ids,
+			true, grad, inst_smooth);
+      } // else [ if (paras_fract) ]
+      u = (dist[1] - dist[0]) / inst_spread;
+      float3 tmp0 = grad[0];
+      float3 tmp1 = grad[1];
+      np.x = (tmp1.x - tmp0.x) / inst_spread;
+      np.y = (tmp1.y - tmp0.y) / inst_spread;
+      np.z = (tmp1.z - tmp0.z) / inst_spread;
+    } // if (paras_type > 0)
+    else {
+      //   if (paras_fract)
+      //     maxFractalCellFunction(
+      // 			    ptx, pty, ptz,iter, inst_rough,2,dist,NULL,
+      // 			    grad,inst_smooth);
+      //   else
+      //     maxCellFunction(ptx, pty, ptz,2,dist,NULL,grad,inst_smooth);
+      if (paras_fract) {
+	maxFractalCellFunction(ptx, pty, ptz, iter, inst_rough,
+			       2, dist, ids, true, grad, inst_smooth);
+      } // if (paras_fract)
+      else {
+	maxCellFunction(ptx, pty, ptz, 2, dist, ids,
+			true, grad, inst_smooth);
+      } // else [ if (paras_fract) ]
+      u = dist[0] / inst_spread;
+      float3 tmp0 = grad[0];
+      np.x = tmp0.x / inst_spread;
+      np.y = tmp0.y / inst_spread;
+      np.z = tmp0.z / inst_spread;
+    } // else [ if (paras_type > 0) ]
+    if (u < (paras_low + SMOOTH)) {
+      if (u < paras_low) {
+        np.x = np.y = np.z = 0.0f;
+      } // if (u < paras_low)
+      else {
+        float s = (u - paras_low) / SMOOTH;
+        np.x *= s;
+        np.y *= s;
+        np.z *= s;
+      } // else [ if (u < paras_low) ]
+      return 0.0;
+    } // if (u < (paras_low + SMOOTH))
+    if (u > paras_high) {
+      if (u > (paras_high + SMOOTH)) {
+        np.x = np.y = np.z = 0.0;
+      } // if (u > (paras_high + SMOOTH))
+      else {
+        float s = 1.0 - (u - paras_high) / SMOOTH;
+        np.x *= s;
+        np.y *= s;
+        np.z *= s;
+      } // else [ if (u > (paras_high + SMOOTH)) ]
+      return 1.0;
+    } // if (u > paras_high)
+    return u;
+  } // maxCellFunc
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // xyz-coords
+    float3 xyz_coords = transform_point("internal", "object", position);
+    float3 xtra_dP = float3(0.0, 0.0, 0.0);
+    float3 xtra_bumpDP_0 = float3(0.0, 0.0, 0.0);
+    float3 xtra_bumpDP_1 = float3(0.0, 0.0, 0.0);
+    float3 xtra_bumpDP_2 = float3(0.0, 0.0, 0.0);
+    // try to call hlsl_base_UVGenerator
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Coords.call("output", "result", shader_return,
+		    "output", "xtra_dP", xtra_dP,
+		    "output", "xtra_bumpDP_0", xtra_bumpDP_0,
+		    "output", "xtra_bumpDP_1", xtra_bumpDP_1,
+		    "output", "xtra_bumpDP_2", xtra_bumpDP_2)) {
+      xyz_coords.xyz = shader_return.rgb;
+    }
+    else {
+      float tmp = xyz_coords.y;
+      xyz_coords.y = xyz_coords.z;
+      xyz_coords.z = -tmp;
+      xyz_coords /= 0.485;
+      xyz_coords *= 100.0;
+    }
+    // inst_ variables initialized in init function
+    float inst_rough = 2.0 - Roughness;
+    float inst_smooth = Smooth * 0.7;
+    float inst_midMinusLow = MidThresh - LowThresh;
+    float inst_highMinusLow = HighThresh - LowThresh;
+    float inst_highMinusMid = HighThresh - MidThresh;
+    float inst_spread = 0.0;
+    float inst_var = Variation / 50.0;
+    float inst_varOff = 1.0 - inst_var * 0.5;
+    if (type > 0) inst_spread = Spread / 2.0;
+    else inst_spread = Spread;
+    // use xyz-coords
+    float3 np = float3(0.0, 0.0, 0.0);
+    float p[3] = { 0.0, 0.0, 0.0 };
+    float3 ptOffset = float3(1000.0, 1000.0, 1000.0);
+    float d = 0.0;
+    float dpsq = 0.0;
+    p[0] = xyz_coords.x;
+    p[1] = xyz_coords.y;
+    p[2] = xyz_coords.z;
+    p[0] += ptOffset.x;
+    p[1] += ptOffset.y;
+    p[2] += ptOffset.z;
+    dpsq = 1.0;
+    if (Fractal) {
+      if (Adaptive) {
+	// that calculation is expensive, so let's avoid it if we can
+	dpsq = (xtra_dP.x * xtra_dP.x +
+		xtra_dP.y * xtra_dP.y +
+		xtra_dP.z * xtra_dP.z);
+      } // if (Adaptive)
+    } // if (Fractal)
+    d = maxCellFunc(// paras
+		    Fractal,
+		    Adaptive,
+		    Iteration,
+		    Size,
+		    type,
+		    LowThresh,
+		    Roughness,
+		    // inst
+		    inst_rough,
+		    inst_smooth,
+		    inst_spread,
+		    // inout
+		    p[0], p[1], p[2],
+		    // in
+		    dpsq,
+		    // out
+		    np);
+    if (d < LowThresh) {
+    } // if (d < LowThresh)
+    else if (d > Roughness) {
+    } // else if (d > Roughness)
+    else {
+      float3 npTemp = np;
+      np.x = dot(npTemp, xtra_bumpDP_0);
+      np.y = dot(npTemp, xtra_bumpDP_1);
+      np.z = dot(npTemp, xtra_bumpDP_2);
+      if (d < MidThresh) {
+      } // if (d < MidThresh)
+      else {
+      } // else [ if (d < MidThresh) ]
+    } // else
+    if (type > 0) {
+      np.x *= -0.5;
+      np.y *= -0.5;
+      np.z *= -0.5;
+    } // if (type)
+    float4x4 m = get_transform("object", "internal");
+    float3 v = float3(0.0, 0.0, 0.0);
+    float3 vn = float3(0.0, 0.0, 0.0);
+    v = float3(m[0][0], m[1][0], m[2][0]);
+    vn = normalize(v);
+    m[0][0] = vn.x;
+    m[1][0] = vn.y;
+    m[2][0] = vn.z;
+    v = float3(m[0][1], m[1][1], m[2][1]);
+    vn = normalize(v);
+    m[0][1] = vn.x;
+    m[1][1] = vn.y;
+    m[2][1] = vn.z;
+    v = float3(m[0][2], m[1][2], m[2][2]);
+    vn = normalize(v);
+    m[0][2] = vn.x;
+    m[1][2] = vn.y;
+    m[2][2] = vn.z;
+    float3x3 mm;
+    float4 m0 = m[0];
+    float4 m1 = m[1];
+    float4 m2 = m[2];
+    float3 m20 = m0.xyz;
+    float3 m21 = m1.xyz;
+    float3 m22 = m2.xyz;
+    mm[0] = m20;
+    mm[1] = m21;
+    mm[2] = m22;
+    np = mm * np;
+    result.rgb = np.xyz;
+    result.a = 1.0;
+  } // main
+};

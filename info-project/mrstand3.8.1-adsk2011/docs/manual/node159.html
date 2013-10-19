@@ -1,0 +1,179 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Initialization and Cleanup</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="shader_if_cpp.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node160.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION157"></a>
+<h2>Initialization and Cleanup</h2>
+<p><a id="shaderinit"></a><a id="INDEX832"></a> <a id="INDEX833"></a>
+mental ray provides a way to define initialization and cleanup functions for
+each user defined function. Many shaders need to perform operations
+such as initializing color tables or allocating arrays before they
+are called for the first time. They may also need to do cleanup
+operations after rendering has finished, for operations like
+releasing storage to prevent <b><a id="INDEX834"></a>memory leaks</b>.</p>
+<p>Before a shader is called for the first time, ray checks if a
+function of the same name with <tt>_init</tt> appended exists. If
+so, it assumes that this is an initialization function (also called
+<i>init shader</i><a id="INDEX835"></a>) and calls
+it once right before the first call of this type of shader, no
+matter how many actual <a href="node65.html#SECTION63">definitions
+of the shader</a> exist in the scene. The state passed to the
+initialization function is the same as passed to the first call of
+the actual shader to be initialized. Note that the order of shader
+calls is unpredictable because the order of pixel samples is
+unpredictable, so the initialization function should not rely on
+sample-specific state variables such as
+<code>state&rarr;point</code>. It may also not perform any
+operations that cause other shaders to be called, such as tracing a
+ray.</p>
+<p>The initialization function has the option of requesting
+<i>shader instance</i> initializations by setting the boolean
+variable that its third argument points to to <tt>miTRUE</tt>. A
+shader instance, established in a scene using a
+<a href="node65.html#SECTION63">shader definition</a>, is a unique pair of
+shader name and parameter values. For example, if the shader
+<i>mib_illum_phong</i> is called in two different materials it is
+said to have two different instances, even if the parameter values
+happen to be equal (see also <a href="node65.html#INDEX144">anonymous shader</a>).
+When an init shader
+is called as part of the shader instance initialization, it
+receives the same parameters that the main shader will receive. As
+always, shaders may not write back into their shader parameters
+because that confuses other threads or hosts that access the shader
+simultaneously, because it changes the scene for the next frame,
+and because a shader or interface assignment may get mangled.</p>
+<p>When a rendering phase has finished, mental ray checks for each
+user provided shader that was called whether a function of the same
+name with <tt>_exit</tt> appended exists. If yes, it assumes that
+this is a cleanup function and calls it once. For example, if a
+shader <i>myshader</i> exists, the functions <i>myshader_init</i>
+and <i>myshader_exit</i> are called for initialization and cleanup
+if they exist. The exact time the exit function is called depends
+on the rendering phase: geometry shaders are exited when
+preprocessing has finished; most other shaders are exited when the
+frame has finished on the master host or after each rectangle has
+finished on slave host (slaves do not manage entire frames, they
+contribute individual rectangles only). Exit functions cannot be
+used to detect end of rendering, use an output shader or a call
+statement for that.</p>
+<p>The functions are assumed to have the following type:</p>
+<pre>
+     void myshader_init(miState   *state,
+                        void      *paras,
+                        miBoolean *inst_init_req);
+
+     void myshader_exit(miState   *state,
+                        void      *paras);
+</pre>
+<p>The <tt>-i</tt> option of the <a href="node164.html#INDEX841">mkmishader</a>
+utility automatically
+creates init and <b><a id="INDEX836"></a>exit
+shader</b> prototypes. Here is an example for init and exit shaders
+for a shader named <i>myshader</i>. When <i>myshader</i> is about
+to be used for the first time in a frame, the calling order is:</p>
+<ol>
+<li><i>myshader_init</i> with a null <i>paras</i> argument</li>
+<li><i>myshader_init</i> with non-null <i>paras</i> argument</li>
+<li><i>myshader</i> itself with the same non-null <i>paras</i>
+argument</li>
+<li>more calls to <i>myshader</i> with the same <i>paras</i>
+argument, and calls to other instances of <i>myshader_init</i> and
+<i>myshader</i> with different <i>paras</i> arguments,</li>
+<li>one <i>mi_shader_exit</i> with a non-null <i>paras</i> argument
+for each corresponding <i>myshader_init</i></li>
+<li>finally one <i>myshader_exit</i> with a null <i>paras</i>
+argument.</li>
+</ol>
+<p>Steps 2 and 5 would have been omitted if <i>myshader_init</i> in
+step 1 had not set its third argument <i>inst_req</i> to
+<tt>miTRUE</tt>. Two different instances of the same shader always
+have different <i>paras</i> argument pointers. However, a shadow or
+photon shader and a material shader in the same material may share
+parameters as described above; in this case both shaders are called
+with the same <i>paras</i> argument. If scenes are built this way,
+it is recommended to write material shaders so they can also be
+used as shadow and photon shaders to simplify scene
+construction.</p>
+<pre>
+     DLLEXPORT void myshader_init(   /* must end with "_init" */
+         miState         *state,
+         struct myshader *paras,     /* valid for inst inits */
+         miBoolean       *inst_req)  /* for inst init request */
+     {
+         if (!paras) {               /* main shader init */
+             *inst_req = miTRUE;     /* want inst inits too */
+             ...
+         } else {                    /* shader instance init */
+                                     /* just an example: */
+             void **user;
+             mi_query(miQ_FUNC_USERPTR, state, 0, &amp;user);
+             *user = mi_mem_allocate(...);
+             ...
+         }
+     }
+
+     DLLEXPORT void myshader_exit(   /* must end with "_exit" */
+         miState         *state,
+         struct myshader *paras)     /* valid for inst inits */
+     {
+         if (!paras) {               /* main shader exit */
+             ...                     /* no further inst exits
+                                      * will occur */
+         } else {                    /* shader instance exit */
+                                     /* just an example: */
+             void **user;                           
+             mi_query(miQ_FUNC_USERPTR, state, 0, &amp;user);
+             mi_mem_release(*user);
+             ...
+         }
+     }
+</pre>
+<p>Note that there will generally be many instance init/exits (if
+enabled), but only one shader init/exit. If an init/exit shader is
+not available, it is not called; this is not an error.
+Initialization and cleanup are done on every host where the
+function was used, but only once on
+<a href="node156.html#INDEX801">shared memory</a> parallel machines. They
+are done for each frame separately. Init and
+<a href="node159.html#INDEX836">exit shader</a>s will never run
+concurrently with each other or the actual shader on shared-memory
+multiprocessor machines; mental ray takes care of the appropriate
+locking using the shader lock. For this reason, init and exit
+shaders should never lock the shader lock (obtainable with the
+<tt>miQ_FUNC_LOCK</tt> mode of the
+<i><a href="miquery.html#api:mi_query">mi_query</a></i> function) because that
+would deadlock mental ray.</p>
+<p class="note"><b>Note:</b> mental ray 2.x versions had a state
+variable <var>state&rarr;shader&rarr;user.p</var> that contained
+the <b><a id="INDEX837"></a>user pointer</b>
+<i>user</i> above, with no need for calling <i>mi_query</i>. This
+variable no longer exists in mental ray because the dataflow
+architecture can not permit shaders to write back into the scene.
+Such a write might be lost at any time if mental ray decides to
+temporarily drop elements from its geometry cache. The <i>mi_query</i>
+method is recommended because it is supported in any version of mental
+ray.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="shader_if_cpp.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node160.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

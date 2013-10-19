@@ -1,0 +1,306 @@
+<root>
+  <version major="2" minor="0"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\AdskShaders.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Bitmap.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_ColorCorrection.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_Math.msl"/>
+  <metasl_code file_name="adsk_Utility_MSL_Shaders\adsk_Utility_MSL_UVGenerators.msl"/>
+
+  <phenomenon name="adsk_Map_UnifiedBitmap_MSL">
+    <input name="Bitmap" type="texture2D" value="brickwall.dds">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Image File"/>
+      </annotation>
+    </input>
+    <input name="RGBAmount" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Brightness"/>
+      </annotation>
+    </input>
+    <input name="Invert" type="bool" display_name="Invert" value="false">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Invert"/>
+      </annotation>
+    </input>
+    <input name="UScale" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Scale Width"/>
+      </annotation>
+    </input>
+    <input name="VScale" type="float" value="1">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Scale Height"/>
+      </annotation>
+    </input>
+    <input name="ShowMapOnBack" type="bool" value="true">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Scale Aspect Lock"/>
+      </annotation>
+    </input>
+    <input name="WAngle" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Rotation"/>
+      </annotation>
+    </input>
+    <input name="ShowMapOnBack_2" type="bool" value="true">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Scale to Fit"/>
+      </annotation>
+    </input>
+    <input name="UOffset" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Offset Width"/>
+      </annotation>
+    </input>
+    <input name="VOffset" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Offset Height"/>
+      </annotation>
+    </input>
+    <input name="UWrap" type="bool" value="true">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Repeat Horizontal"/>
+      </annotation>
+    </input>
+    <input name="VWrap" type="bool" value="true">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Repeat Vertical"/>
+      </annotation>
+    </input>
+    <input name="map_channel" type="int" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Map Channel"/>
+      </annotation>
+      <annotation name="literal"/>
+    </input>
+    <input name="realworldmapsize" type="bool" value="true">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Real World Map Scale"/>
+      </annotation>
+    </input>
+    <input name="bump_amount" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="Bump Amount"/>
+      </annotation>
+    </input>
+    <input name="tometerscale" type="float" value="0">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="iSceneToMeterScale"/>
+      </annotation>
+    </input>
+    <output name="result" type="Color" display_name="result">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="result"/>
+      </annotation>
+    </output>
+    <output name="result_bump" type="float3" display_name="result_bump">
+      <annotation name="display_name">
+        <annotation_member name="name" type="String" value="result_bump"/>
+      </annotation>
+    </output>
+
+    <node name="DegToRad" class="adsk_Utility_MSL_DegToRad">
+      <input name="iDeg">
+        <attachment target_name="WAngle"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="3.32952" height="0.91" open_width="3.32952" open_height="0.91" position="-1.9124 3.38289" view_translation="0 30.14" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\iDeg" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name="\iDeg" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="UVGenerator" class="adsk_Utility_MSL_UVGenerator">
+      <input name="u_scale" value="1">
+        <attachment target_name="UScale"/>
+      </input>
+      <input name="v_scale" value="1">
+        <attachment target_name="VScale"/>
+      </input>
+      <input name="u_offset" value="0">
+        <attachment target_name="UOffset"/>
+      </input>
+      <input name="v_offset" value="0">
+        <attachment target_name="VOffset"/>
+      </input>
+      <input name="u_wrap" value="true">
+        <attachment target_name="UWrap"/>
+      </input>
+      <input name="v_wrap" value="true">
+        <attachment target_name="VWrap"/>
+      </input>
+      <input name="angle" value="0">
+        <attachment target_name="result" target_node="DegToRad"/>
+      </input>
+      <input name="blur" value="1"/>
+      <input name="blur_offset" value="0"/>
+      <input name="map_channel" value="0">
+        <attachment target_name="map_channel"/>
+      </input>
+      <input name="realworldmapsize" value="true">
+        <attachment target_name="realworldmapsize"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="2.2" height="3.2" open_width="2.2" open_height="3.2" position="-2.46281 1.05514" view_translation="2.8911 5.48544" view_scale="2.09862" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\u_offset" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\realworldmapsize" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\map_channel" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\blur_offset" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\v_scale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\u_scale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\result" type_name="Color" show_preview="true" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\u_wrap" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\angle" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\blur" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\v_wrap" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\v_offset" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="Bitmap" class="adsk_Utility_MSL_Bitmap">
+      <input name="bitmap" value="brickwall.dds">
+        <attachment target_name="Bitmap"/>
+      </input>
+      <input name="uv_coords" value="0 0 0 0">
+        <attachment target_name="result" target_node="UVGenerator"/>
+      </input>
+      <input name="bump_amount" value="0">
+        <attachment target_name="bump_amount"/>
+      </input>
+      <output name="result"/>
+      <output name="result_bump">
+        <attachment target_name="result_bump"/>
+      </output>
+      <gui_data width="1.109" height="3.16922" open_width="1.109" open_height="3.16922" position="-0.353542 1.0445" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\result_bump" type_name="float3" show_preview="true" orbit="-0.0546019" tilt="0.145398" zoom="1.9" pan="0 0" preview_object="0" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\uv_coords" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\result" type_name="Color" show_preview="true" orbit="0.00539825" tilt="0.0653982" zoom="1.85" pan="0 0" preview_object="0" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\bitmap" type_name="texture2D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="ColorCorrection" class="adsk_Utility_MSL_BaseOutput">
+      <input name="ColorInput" value="1 1 0 1">
+        <attachment target_name="result" target_node="Bitmap"/>
+      </input>
+      <input name="RGBAmount" value="1">
+        <attachment target_name="RGBAmount"/>
+      </input>
+      <input name="RGBOffset" value="0"/>
+      <input name="OutputAmount" value="1"/>
+      <input name="Invert" value="false">
+        <attachment target_name="Invert"/>
+      </input>
+      <input name="Clamp" value="false"/>
+      <input name="AlphaFromRGB" value="false"/>
+      <output name="result">
+        <attachment target_name="result"/>
+      </output>
+      <gui_data width="1.8" height="2.8" open_width="1.8" open_height="2.8" position="1.4791 0.860488" view_translation="0 0" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\RGBAmount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\Clamp" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\AlphaFromRGB" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\ColorInput" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\result" type_name="Color" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\RGBOffset" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\Invert" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\OutputAmount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="adsk_scale_meters_to_internal_inverse_2" class="adsk_scale_meters_to_internal_inverse">
+      <input name="iSceneToMeterScale" value="0">
+        <attachment target_name="tometerscale"/>
+      </input>
+      <input name="meterValue" value="0">
+        <attachment target_name="VScale"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="4.3692" height="1.06" open_width="4.3692" open_height="1.06" position="-7.24868 0.0216996" view_translation="0 23.54" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\meterValue" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\iSceneToMeterScale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+    <node name="adsk_scale_meters_to_internal_inverse_1" class="adsk_scale_meters_to_internal_inverse">
+      <input name="iSceneToMeterScale" value="0">
+        <attachment target_name="tometerscale"/>
+      </input>
+      <input name="meterValue" value="0">
+        <attachment target_name="UScale"/>
+      </input>
+      <output name="result"/>
+      <gui_data width="4.3692" height="1.06" open_width="4.3692" open_height="1.06" position="-7.22181 1.26779" view_translation="0 23.54" view_scale="1" open_state="closed" selected_state="false">
+        <preview_data>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\meterValue" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\iSceneToMeterScale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+          <preview_data_element name=".adsk_Map_UnifiedBitmap_MSL\result" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        </preview_data>
+      </gui_data>
+    </node>
+
+  </phenomenon>
+
+  <node name="adsk_Map_UnifiedBitmap_MSL" class="adsk_Map_UnifiedBitmap_MSL">
+    <input name="Bitmap" value="brickwall.dds"/>
+    <input name="RGBAmount" value="1"/>
+    <input name="Invert" value="false"/>
+    <input name="UScale" value="1"/>
+    <input name="VScale" value="1"/>
+    <input name="ShowMapOnBack" value="true"/>
+    <input name="WAngle" value="0"/>
+    <input name="ShowMapOnBack_2" value="true"/>
+    <input name="UOffset" value="0"/>
+    <input name="VOffset" value="0"/>
+    <input name="UWrap" value="true"/>
+    <input name="VWrap" value="true"/>
+    <input name="map_channel" value="0"/>
+    <input name="realworldmapsize" value="true"/>
+    <input name="bump_amount" value="0"/>
+    <input name="tometerscale" value="0.01"/>
+    <output name="result"/>
+    <output name="result_bump"/>
+    <gui_data width="3.29641" height="6.85301" open_width="3.29641" open_height="6.85301" position="-0.641356 -0.0727959" view_translation="3.0908 -1.99918" view_scale="0.0716576" open_state="maximized" selected_state="false">
+      <preview_data>
+        <preview_data_element name="\VOffset" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\UOffset" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\UWrap" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\result" type_name="Color" show_preview="true" orbit="-0.494602" tilt="0.7454" zoom="1.4" pan="-0.015 0.02" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\Bitmap" type_name="texture2D" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\tometerscale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\bump_amount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\WAngle" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\UScale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\VWrap" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\Invert" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\VScale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\realworldmapsize" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\ShowMapOnBack_2" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\result_bump" type_name="float3" show_preview="true" orbit="0.0153982" tilt="0.00539812" zoom="0.75" pan="0 0" preview_object="0" show_children="false" preview_image="0" draw_axis="0" source_space="1" axis_length="0.5" vector_type="1" color_range_min="-1" color_range_max="1" color_clamp="false"/>
+        <preview_data_element name="\ShowMapOnBack" type_name="bool" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\iSceneToMeterScale" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\map_channel" type_name="int" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\RGBAmount" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+        <preview_data_element name="\UAngle" type_name="float" show_preview="false" orbit="0.785398" tilt="0.785398" zoom="2" pan="0 0" preview_object="2" show_children="false" preview_image="0" draw_axis="0" source_space="2" axis_length="0.5" vector_type="1" color_range_min="0" color_range_max="1" color_clamp="true"/>
+      </preview_data>
+    </gui_data>
+  </node>
+
+  <render_data>
+    <light_list/>
+    <scene_ambient color="0 0 0 0"/>
+  </render_data>
+</root>

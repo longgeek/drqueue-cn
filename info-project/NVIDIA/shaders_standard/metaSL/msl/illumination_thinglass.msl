@@ -1,0 +1,108 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+ 
+shader Illumination_thinglass
+{
+  input:
+    Color color = Color(1,1,1,1)
+        {
+            display_name("Glass Color");
+            soft_range(Color(0,0,0,0),Color(1,1,1,1));
+            hard_range(Color(0,0,0,0),Color(1,1,1,1));
+            description( "The glass color." );
+        };
+    Color  reflectivity0 = Color(0.1,0.1,0.1,1)
+        {
+            display_name("Reflectivity 0");
+            soft_range(Color(0,0,0,0),Color(1,1,1,1));
+            hard_range(Color(0,0,0,0),Color(1,1,1,1));
+            description( "The specular reflectivity at 0 degree incidence." );
+        };
+    Color  reflectivity90 = Color(0.3,0.3,0.3,1)
+        {
+            display_name("Reflectivity 90");
+            soft_range(Color(0,0,0,0),Color(1,1,1,1));
+            hard_range(Color(0,0,0,0),Color(1,1,1,1));
+            description( "The specular reflectivity at 90 degree incidence." );
+        };
+    float fresnel_falloff = 5.0
+        {
+            display_name("Fresnel Falloff");
+            soft_range(0.1,10);
+            hard_range(0.1,10);
+            description( "Exponent of the fresnel falloff function." );
+        };
+        
+  output:
+    Color result;
+    Color transparency;
+
+    // Schlick's fresnel approximation.
+    Color schlick_fresnel(
+        Color   col_nrm,
+        Color   col_grz,
+        float  cos_half_dir,
+        float  exponent )
+    {
+        float g = 1.0-cos_half_dir;
+        g = pow( g, exponent );
+        return col_nrm + (col_grz-col_nrm) * g;
+    }
+
+    // Compute the halfvector of two directions.
+    float3 halfvector(
+        float3 v0,
+        float3 v1 )
+    {
+        float3 ret = v0;
+        ret += v1;
+        ret = normalize( ret );
+        return ret;
+    }
+ 
+    void main() 
+    {
+        // Compute direction pointing away from shading point.
+        float3 d = -direction;
+
+        // Compute the halfvector of the mirror direction.
+        float3 refldir = reflect(direction,normal);
+        float3 halfvec = normalize( d + refldir );
+
+        // Compute Fresnel term.
+        Color F = schlick_fresnel(
+            reflectivity0,
+            reflectivity90,
+            abs(dot(refldir,halfvec)),
+            fresnel_falloff );
+
+        // Set the transparency
+        transparency = color * (1.0 - F);
+
+        // Skip result output for shadow rays
+        if (ray_type == "shadow")
+        {
+            result = Color(0.);
+            return;
+        }
+
+        // Compute the specular reflection.
+        Ray ray( position, refldir );
+        Trace_options trace_opt;
+        trace_opt.set_ray_type("environment");
+        Color trace_result;
+        Ray ray_dx(float3(0), float3(0));
+        Ray ray_dy(float3(0), float3(0));
+        trace(ray, ray_dx, ray_dy, trace_opt, "result", trace_result);
+        Color reflection = F * trace_result;
+
+        // Set the result
+        result = color * reflection;
+    }
+}
+{
+        description( "Simple glass illumination model for single-faced geometry." );
+}
+;

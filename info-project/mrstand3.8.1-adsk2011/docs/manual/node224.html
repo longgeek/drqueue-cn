@@ -1,0 +1,94 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Color Profiles</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node223.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node225.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION222"></a>
+<h3>Color Profiles</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_COLORPROFILE</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miColor_profile[ ]</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>-</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls</td>
+</tr>
+</table>
+<pre>
+typedef struct miColor_profile {
+        miUint1         space;          /* color space */
+        miCBoolean      white_adapt;    /* perform white space adaption */
+        miScalar        gamma;          /* gamma correction (XYZ-&gt;space)   */
+        miColor         white;          /* CIE XYZ white point */
+        miScalar        trafo[9];       /* CIE XYZ to color space trafo */      
+        miScalar        inv_trafo[9];   /* color space to CIE XYZ trafo */
+} miColor_profile;
+</pre>
+A translator must provide: space<br />
+A translator may provide: all fields<br />
+Provided by <i>mi_scene_create</i>:
+<p>Color profiles allow distinguishing between the color space used
+for rendering and the color space used for output. If no color
+spaces are provided, then mental ray will perform all rendering and
+output in a device dependent color space. The ability to select a
+rendering color space different from the output color space allows
+mental ray to adapt to more stringent user requirements.</p>
+<p><b>space</b> identifies the color space to be associated with
+this color profile. There is a list of predefined color spaces, but
+it is also possible to specify a custom color space, provided the
+transform to this space from the CIE XYZ color space may be
+described by a three by three matrix.</p>
+<p><b>white_adapt</b> flags if transformations from or to this
+color space should include a white point adaption.</p>
+<p><b>gamma</b> gives the gamma correction exponent needed to
+transform a CIE XYZ color triple to the color space described in
+the color profile. mental rays color profiles consider gamma
+corrections independent of the color space, even though the
+standards for sRGB or HDTV include gamma correction values.
+However, gamma correction is aimed at the viewing device, while
+mental rays results should be considered device independent.
+However, sometimes it is of advantage to perform the gamma
+correction before the result is written out. Therefore optional
+gamma correction has been included with color profiles.</p>
+<p><b>white</b> contains the CIE XYZ values of the white point for
+this color profile.</p>
+<p><b>trafo[9]</b> If the color space is selected as custom, then
+the three by three transformation matrix for mapping color values
+in CIE XYZ space to the custom color space may be stored in this
+array.</p>
+<p><b>inv_trafo[9]</b> If the color space is selected as custom,
+then the three by three transformation matrix for mapping color
+values from the custom color space to CIE XYZ may be stored in this
+array.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node223.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node225.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

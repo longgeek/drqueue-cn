@@ -1,0 +1,696 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Cameras</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node76.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node78.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION75"></a>
+<h3 id="mi:camera">Cameras</h3>
+<pre>
+camera "<i>name</i>"
+    <dfn>[</dfn><i>frame_buffers</i><dfn>]</dfn>
+    <dfn>[</dfn><i>output_statements</i><dfn>]</dfn>
+    <dfn>[</dfn><i>pass_statements</i><dfn>]</dfn>
+    <dfn>[</dfn><i>camera_parameters</i><dfn>]</dfn>
+end camera  
+</pre>
+<p>
+A camera provides <a href="#mi:camera_parameters">parameters</a> to describe
+how to project and map a view of the scene to the final 2D image (or film).
+It can be used to specify optional <a href="#mi:framebuffer">frame buffers</a>
+and <a href="#mi:output">output statements</a> or
+<a href="#mi:pass">pass statements</a> for further manipulations
+of samples or pixels with the help of custom shaders.
+<p>
+A <a href="node77.html#INDEX226">camera</a> is always fixed at the origin,
+looking down the negative Z axis, with up being the positive Y axis, in its
+own coordinate space called <dfn id="INDEX55">camera space</dfn>.
+A camera can be placed anywhere in <a href="node101.html#INDEX368">world
+space</a> using an <a href="node90.html#INDEX339">instance</a> transformation,
+in the same way that objects are placed anywhere in world space. (For backwards
+compatibility with previous mental ray versions, there is also a mode where
+camera space and world space are always identical.) Note, that the camera
+instance must be attached to the <a href="node91.html#INDEX351">root
+instance group</a> of the scene.
+
+<h4 id="mi:framebuffer">Frame Buffers</h4>
+
+<p>Cameras can contain <var>frame_buffers</var> which list named frame
+buffers and various properties associated to them, like an image file name.
+Such statements is basically a request for creation of a frame buffer with a
+specific data type in mental ray. Further optional attributes control advanced
+properties of the buffer, like mark it for output to an image file with certain
+options, which is performed by mental ray after rendering and output shading
+has finished.</p>
+<p>The <var>frame_buffers</var> section may provide any number of the following
+statements:</p>
+<pre>
+framebuffer "<var>name</var>"
+    <dfn>[</dfn> datatype "<var>datatype</var>" <dfn>]</dfn>
+    <dfn>[</dfn> filtering <var>&lt;bool&gt;</var> <dfn>]</dfn>
+    <dfn>[</dfn> filename "<var>filename</var>" <dfn>]</dfn>
+    <dfn>[</dfn> filetype "<var>filetype</var>" <dfn>]</dfn>
+    <dfn>[</dfn> compression "<var>compression</var>" <dfn>]</dfn>
+    <dfn>[</dfn> quality "<var>quality</var>" <dfn>]</dfn>
+    <dfn>[</dfn> colorprofile "<var>color profile</var>" <dfn>]</dfn>
+    <dfn>[</dfn> dod <var>&lt;bool&gt;</var> <dfn>]</dfn>
+    <dfn>[</dfn> dpi <var>&lt;int&gt;</var> <dfn>]</dfn>
+    <dfn>[</dfn> field "<var>fieldname</var>" <dfn>]</dfn>
+    <dfn>[</dfn> primary <var>&lt;bool&gt;</var> <dfn>]</dfn>
+    <dfn>[</dfn> user <var>&lt;bool&gt;</var> <dfn>]</dfn>
+    <dfn>[</dfn> useopacity <var>&lt;bool&gt;</var> <dfn>]</dfn>
+</pre>
+
+<p id="mi:fb_name">
+The <i>name</i> of a frame buffer can be arbitrary. It is used for any
+further references in the scene description. Any following
+<code>framebuffer</code> statement that is using the same name will refer
+to the same frame buffer, and may be used to incrementally change its
+properties.</p>
+
+<dl class="dict">
+
+<dt id="mi:fb_datatype"><code>datatype</code>
+<dd>specifies the
+<var><a href="node38.html#fo:outdatatype">data type</a></var> of the buffer
+and, if enabled for file output, the data type in the image file. If the data
+type is not directly supported by the file format then a conversion will be
+attempted for compatible types, like between different color types.
+
+<dt id="mi:fb_filtering"><code>filtering</code>
+<dd>This property controls if image
+<a href="node38.html#fo:outfiltering">filtering</a> (or
+<a href="node38.html#fo:outinterpolation">interpolation</a>)
+would be applied to the specified buffer. This corresponds to the <code>"+"</code>
+or <code>"-"</code> prefix of the data type string in old-style
+<a href="#mi:fileoutput">file output statement</a>s.
+
+<dt id="mi:fb_filename"><code>filename</code>
+<dd>is associated with a frame buffer, it would be
+written to that output file after all <a href="node126.html#INDEX492">output
+shader</a> are applied. The <code>filetype</code> enforces a certain image
+format to be used. If specified, <code>colorprofile</code> would be applied
+to the image before writing it out. If multiple buffers of different data
+type specify the same output file in a multi-channel format then a single
+file will be written with multiple channels.
+
+<dt id="mi:fb_compression"><code>compression</code>
+<dd>This property can be used by the image format to
+choose a supported compression type. For the OpenEXR file format the
+available compression modes are <code>"none"</code>, <code>"rle"</code>,
+<code>"piz"</code>, <code>"zip"</code>, and <code>"pxr24"</code>, see
+<a href="node38.html#exrcompression">OpenEXR Compression</a> for details.
+
+<dt id="mi:fb_quality"><code>quality</code>
+<dd>This property can be used by an image format to choose
+a compression quality, in the range <code>1</code>&hellip;<code>100</code>.
+A value of <code>0</code> selects the built-in default. This is currently
+only supported for writing in the JFIF/JPEG file format.
+
+<dt id="mi:fb_dod"><code>dod</code>
+<br/><code>dpi</code>
+<br/><code>field</code>
+<dd>These attributes are custom properties which will be stored only in
+image files of formats which support them. The values for these attributes
+are not computed by mental ray but just passed through to file output as
+specified in these statements.
+
+<dt id="mi:fb_primary"><code>primary</code>
+<dd>This flag marks the default color frame buffer for mental
+ray which is used to drive oversampling based on color contrast, for example.
+The output file name and format overrides from the
+<a href="node245.html">command line</a> of a standalone mental ray will be
+applied to this buffer. The flag should be set on a single frame buffer only.
+If no frame buffer has been marked as primary mental ray will select the first
+non-user color frame buffer by default.
+
+<dt id="mi:fb_user"><code>user</code>
+<dd>This attribute marks frame buffers for custom use when set to
+<code>on</code>. They will not be filled by mental ray. However, they can be
+enabled for image file output like the standard buffers. Such buffers are
+typically required for custom shader solutions, like intermediate buffers for
+compositing operations in <a href="node126.html#INDEX492">output shader</a>.
+A <var>user</var> buffer with a unique name will always be created and not be
+considered for <em>sharing</em> optimizations like
+<a href="#mi:standardbuffer">standard</a> buffers.
+
+<dt id="mi:fb_useopacity"><code>useopacity</code>
+<dd>The attribute is used by the
+<a href="node34.html#SECTION32">rasterizer</a> only. It allows to select any
+<var>user</var> color frame buffer for the application of the compositing stage
+of shading samples based on opacity of the primary buffer. This assumes that
+the <var>user</var> buffer has been filled with shading samples by custom
+shaders, for example. A global <a href="node76.html#framebuffers">option</a>
+may be used to enable this for all <var>user</var> color frame buffers.
+</dl>
+<p>
+By default, if the related attributes have not been given, a frame buffer
+is of datatype <code>"rgba"</code> with filtering <code>on</code>, is not
+primary nor user, and has neither <var>filetype</var> nor <var>filename</var>
+set (is not written to file).</p>
+<p>
+The frame buffers maintained in mental ray are separated into
+<dfn id="mi:standardbuffer">standard</dfn> and <dfn id="mi:userbuffer">user</dfn>
+buffers, controlled by the optional <var><a href="#mi:fb_user">user</a></var>
+attribute. Note, that standard frame buffers of the same or easily convertible
+data type but with different name may actually point to the same internal
+buffer, to optimize memory usage at the cost of a small runtime conversion
+overhead. Like, requesting both a floating-point and 8bit color frame buffer
+which are not marked as <var>user</var> will create a single floating-point
+color buffer only, and convert the pixel data to 8 bits on demand, for example
+if requested for file output.</p>
+<p>Here are some examples for common cases of frame buffer usage:</p>
+<pre>
+framebuffer "main"
+    datatype "rgba"
+    filetype "tif"
+    filename "output.tif"
+
+framebuffer "depth"
+    datatype "z"
+</pre>
+<p>Request a standard color buffer with alpha channel of 8 bits per component
+and the standard z-depth buffer. Both buffers will be filled by mental ray,
+and the color buffer will be written to an image file of format TIFF.
+</p>
+<pre>
+framebuffer "main"
+    datatype "rgba"
+    filetype "exr"
+    filename "output.exr"
+
+framebuffer "depth"
+    datatype "z"
+    filetype "exr"
+    filename "output.exr"
+</pre>
+<p>Request a standard color buffer with alpha channel of 8 bits per component
+and the standard z-depth buffer. Both buffers will be filled by mental ray,
+and written as multiple channels into the same output file of format OpenEXR.
+</p>
+<pre>
+framebuffer "main"
+    datatype "rgba_16"
+    filetype "tif"
+    filename "output.tif"
+
+framebuffer "second"
+    datatype "rgba_fp"
+
+framebuffer "third"
+    datatype "rgb"
+    filetype "jpg"
+    filename "output.jpg"
+    quality 20
+</pre>
+<p>Request a standard color buffer with alpha channel in 16 bits per component,
+a second one with colors stored in floating-point precision, and a third 8 bit
+buffer without alpha channel. Write the final image as a TIFF file with 16 bit
+precision, and a JFIF/JPEG image file with poor quality in 8 bit precision and
+its native data type without alpha. mental ray may actually keep only one
+floating-point color frame buffer to fulfill this request.
+</p>
+<pre>
+framebuffer "main"
+    datatype "rgba"
+    filetype "tif"
+    filename "output.tif"
+
+framebuffer "comp"
+    datatype "rgba"
+    filetype "tif"
+    filename "composit.tif"
+    user on
+
+output "composit_buffers" ("main", "comp")
+</pre>
+<p>Request a standard color buffer and a user color buffer of matching data
+type. The <var>main</var> buffer will be rendered by mental ray. A custom
+output shader <var>composit_buffers</var> will be called after rendering,
+to read from the <var>main</var> and write to the <var>comp</var> color buffer.
+At the end, both the <var>main</var> and the <var>comp</var> buffers will be
+written to separate image files in TIFF format by mental ray.
+</p>
+
+<h4 id="mi:output">Output Statements</h4>
+
+<p id="mi:shaderoutput"><a id="INDEX227"></a>
+Cameras contain <var>output_statements</var> which specify
+<a href="node126.html#INDEX492">output shader</a> calls, or, in backwards
+compatible mode of mental ray, define <a href="#mi:fileoutput">file output</a>
+to write images to disk.</p>
+<p>
+The following <var>output_statements</var> are supported:</p>
+<pre>
+output "<i>shader_name</i>" ( <i>parameters</i> )
+</pre>
+<p>This <a href="node77.html#INDEX227">output statement</a> calls an
+<a href="node126.html#INDEX492">output shader</a>, such as a filter, that may
+operate on all available <a href="node144.html#INDEX617">frame buffer</a>s.
+The actual buffers to work on may be supplied as <var>parameters</var>,
+or the shader may automatically detect available frame buffers by name or
+type. The output shaders are called after rendering has finished but before
+the marked frame buffers get written to image files by mental ray. All output
+shaders are called in a sequence, in the exact same order as listed in the
+camera.</p>
+
+<p id="mi:fileoutput">
+The following output statements are supported for compatibility with
+earlier versions of mental ray. New applications should use the named
+<a href="#mi:framebuffer">frame buffers</a> instead.</p>
+
+<pre>
+output <dfn>[</dfn>"<i>datatype</i>"<dfn>]</dfn> "<i>shader_name</i>" ( <i>parameters</i> )
+output <dfn>[</dfn>colorprofile "<i>profile_name</i>"<dfn>] [</dfn>"<i>datatype</i>"<dfn>]</dfn> "<i>filetype</i>" <dfn>[</dfn><i>options</i><dfn>]</dfn> "<i>filename</i>"
+</pre>
+
+<p><span class="depr">Deprecated</span>
+The first <a href="node77.html#INDEX227">output statement</a> calls an
+<a href="node126.html#INDEX492">output shader</a>, such as a filter, that may
+operate on all available <a href="node144.html#INDEX617">frame buffer</a>s.
+Here, the <i>datatype</i> may be a comma-separated list of types if the shader
+requires multiple frame buffers. Each type can be prefixed with a "+" or "-"
+to turn <a href="node38.html#fo:outinterpolation">interpolation</a> on or off,
+which is on by default for the standard color frame buffer and off by default
+for all others. For example, a shader that filters the standard RGBA image
+with a filter whose size depends on the distance of objects needs both the
+interpolated RGBA buffer and the interpolated depth buffer, and would have
+a data type <tt>"rgba,+z"</tt>. In previous versions of mental ray, the order
+of all frame buffer declarations was significant. In mental ray
+, all output shaders are applied before any of the
+images is written out to disk.</p>
+
+<p><span class="depr">Deprecated</span>
+The second kind of output statement writes an image to a file named
+<i>filename</i>, using the <a href="node38.html#INDEX78">file format</a>
+<i>filetype</i>. Normally, file formats imply a data type, but the defaults
+can be overridden by naming an explicit
+<i><a href="node38.html#fo:outdatatype">datatype</a></i>.
+For example, the file type <tt>"tif"</tt>, which stands for a TIFF color image
+file format, implies the data type <tt>"rgba"</tt>. The data type controls
+which type of <a href="node144.html#INDEX617">frame buffer</a>s mental ray
+actually creates and maintains during rendering. The optional
+<a href="node36.html#fo:colorprofile">colorprofile</a> may be used to
+transform results stored in the color frame buffer to a desired color space
+before they are written to the output file. This option may only be used if
+a render color profile had been specified in the options block.
+Any number of output files can be created, but just the first one can be
+overridden from the <a href="node245.html">command line</a> of a standalone
+mental ray.</p>
+
+<p><span class="depr">Deprecated</span>
+The <i>options</i> specify additional format related parameters.
+Currently, the <tt>"jpg"</tt> file format supports one option
+<tt>quality</tt> <i>q</i>, where <i>q</i> is an integer value
+between 0 and 100. Lower values force higher lossy compression
+resulting in lower image quality. A quality value of 0 will cause
+the use of the default quality 75. For Softimage <tt>"pic"</tt>
+file formats, the <i>options</i> keywords <tt>even</tt> and
+<tt>odd</tt> are available to set the corresponding fields in the
+file header.</p>
+
+<p>The data type <tt>"rgbe"</tt> which stores
+<a href="node36.html#INDEX74">high dynamic range</a> data is normally used
+for formats that support <a href="node36.html#INDEX73">RGBE</a> data
+natively (<tt>"hdr"</tt> or <tt>"cth"</tt>), but it can also be stored in any
+format that accepts 8-bit RGBA. This will result in image files that cannot
+be displayed with standard viewers, but tools exist that can process such
+data. For example, the following <a href="node77.html#INDEX227">output
+statement</a> will store RGBE data in an RLA file:</p>
+<pre>
+output "+rgbe" "rla" "file1.rla"
+</pre>
+<p>Unless there is also a true floating-point buffer (<tt>"rgba_fp"</tt>),
+specification of the <tt>"rgbe"</tt> type will switch mental ray's color
+<a href="node144.html#INDEX617">frame buffer</a> to RGBE mode because its
+high dynamic range is considered a superset of regular RGB. This can
+significantly reduce memory usage for large frame buffers, compared to
+floating-point frame buffers which are four times as large. Note that
+RGBE stores no alpha. By default, frame buffers are stored in
+<a href="node37.html#INDEX77">frame buffer file</a>s on disk to allow
+arbitrary frame buffer sizes and arbitrary numbers of frame buffers.</p>
+
+<p><span class="depr">Deprecated</span>
+The data types <tt>"fb0"</tt> through <tt>"fbN"</tt> refer to
+<a href="node76.html#INDEX216">user frame buffer</a>s 0...<var>N</var>.
+These user frame buffers are defined in the options statement using
+<tt>frame buffer</tt> statements. The actual data type of <tt>fb</tt>
+<i>n</i> is the type of frame buffer <i>n</i>. For example, the
+<a href="node77.html#INDEX227">output statement</a>s</p>
+<pre>
+output "+rgba" "rgb"  "file1.rgb"
+output "fb0"   "ctfp" "file2.ct"
+</pre>
+<p>write the standard <a href="node144.html#INDEX617">frame
+buffer</a> to the image file <tt>file1.rgb</tt>, and then write the
+contents of user frame buffer 0 to the image file
+<tt>file2.ct</tt>. This assumes that the options block contains a
+statement that defines user frame buffer 0, such as:</p>
+<pre>
+frame buffer 0 "+rgba_fp"
+</pre>
+<p>User <a href="node144.html#INDEX617">frame buffer</a>s are empty
+unless some shader writes to them during rendering. Their purpose
+is to collect nonstandard image data during rendering, and to make
+the data available for output shading and image file writing.</p>
+<p>A special data type <tt>"contour"</tt> can be specified that
+enables <a href="node92.html#INDEX0">contour</a> rendering. Special
+<a href="node134.html#INDEX500">contour output shader</a>s must be
+specified that pick up the contour information from the contour
+cell <a href="node144.html#INDEX617">frame buffer</a> and compute a
+color image, which it can either put into the regular color frame
+buffer, or composite on top of the color frame buffer. In the
+latter case, one rendering phase creates a color image with
+contours. The color frame buffer can then be written to an image
+file using a regular image <a href="node77.html#INDEX227">output
+statement</a>. There is also a built-in contour output shader that
+creates a PostScript file instead of a color image; see section
+<a href="node129.html#contoursh">contours</a> for details and
+examples.</p>
+
+<h4 id="mi:samplepass">Pass Rendering Statements</h4>
+
+<p id="mpassopt">
+Pass rendering is a feature set that allows saving the results of
+rendering not in the form of image files, but in the form of sample lists.
+A sample is the result of a single primary eye ray, including all collected
+<a href="node144.html#INDEX617">frame buffer</a> information.
+Oversampling creates more than one sample per pixel, which are
+filtered to compute the pixel. Since pass rendering operates
+on samples, it has access to the complete set of subpixel
+information, and does not suffer from pixel aliasing problems as
+image compositing does. mental ray also supports merging of
+multiple pass file, sample by sample, to generate the final
+filtered output images. Finally, mental ray supports pass
+preprocessing, which is a function with random access to a single
+pass file to perform operations such as subpixel motion blur
+postprocessing.<br /></p>
+<p>The pass rendering functionality is controlled by the following
+<var>pass_statements</var>:</p>
+
+<pre>
+pass null
+
+pass <dfn>[</dfn> "<i>types</i>" <dfn>]</dfn> write "<i>filename</i>"
+
+pass merge <dfn>[</dfn> "<i>types</i>" <dfn>]</dfn>
+     read [ "<i>filename</i> ", "<i>filename</i>", ... ]
+     <dfn>[</dfn> write "<i>filename</i>" <dfn>]</dfn>
+     <dfn>[</dfn> <i>function</i> ( <i>parameters</i> ) <dfn>]</dfn>
+
+pass prep <dfn>[</dfn> "<i>types</i>" <dfn>]</dfn>
+     read "<i>filename</i>"
+     write "<i>filename</i>"
+     <i>function</i> ( <i>parameters</i> )
+
+pass delete "<i>filename</i>"
+</pre>
+
+<p>Pass statement lists are similar to <a href="node77.html#INDEX227">output
+statement</a> lists, which also allow storing and processing data in order.</p>
+
+<dl class="dict">
+
+<dt><tt>pass null</tt>
+<dd>Deletes all pass statements defined in the camera. This is
+useful for incremental changes. It is executed at parsing time,
+when the scene is defined.
+
+<dt><tt>pass</tt>
+<dd>Saves the current sample rectangle to the named file. The
+current rectangle is initially the rendered rectangle, but it is
+updated every time a merge shader has run. It is executed every
+time a rectangle has finished rendering.
+
+<dt><tt>pass merge</tt>
+<dd>Merges two or more sample files into the current sample
+rectangle buffer, and optionally writes the result to another file.
+If other sample files should be merged with the current rendering
+result, it is not necessary to first write the rendered samples to
+a file and then to name that file in the pass merge statement;
+instead, an empty <i>filename</i> string <tt>""</tt> can be used
+to reference the rendered samples. If the merging <i>function</i>
+is omitted, mental ray uses a built-in default that supports depth
+and alpha blending of the main color <a href="node144.html#INDEX617">frame
+buffer</a>. The pass merge statement is executed every time a rectangle
+has finished rendering.
+
+<dt><tt>pass prep</tt>
+<dd>Preprocesses a single pass file, and writes the result to
+another pass file. The function has random access to all samples in
+the input and output file. It is called only once before rendering
+begins.
+</dl>
+
+<p>The execution order of statements is important. Before
+rendering, all pass prep statements are executed in order; during
+rendering all pass and pass merge statements are executed in order
+for every finished rectangle; and after rendering all pass delete
+statements are executed. It is important to note that pass and pass
+merge statements are executed for every finished rectangle; this
+allows mental ray to minimize memory usage because only small sets
+of samples reside in memory at any one time. It also means that a
+pass prep statement cannot operate on the currently rendered pass
+because the pass prep function runs before rendering begins. In
+general, no two pass or pass merge statements should write to the
+same <i>filename</i>; this would result in sample data loss because
+of the per-rectangle interleaving.</p>
+<p>All files are created before reading begins; hence, a pass prep
+statement should not read from a file written to during rendering,
+and the write filename should not be identical to any read
+filenames in any statement. In general, all filenames written to
+should be unique. The pass delete statement was provided to clean
+up temporary pass files after rendering. Pass files can become
+quite large, often in the hundreds of megabytes if the resolution,
+oversampling parameters, and the number and size of <a href=
+"node144.html#INDEX617">frame buffer</a>s is large. Note that only
+mental ray 3.2 and later compress pass files.</p>
+<p>The <i>types</i> string controls which <a href=
+"node144.html#INDEX617">frame buffer</a> are written to the pass
+file. Types apply to the <tt>write</tt> statement only. The syntax
+is the same as for output and frame buffer statements, such as
+<tt>+rgba_fp,z"</tt>. The default is the set of frame buffers
+defined by the <a href="node77.html#INDEX227">output statement</a>.
+Note that the main RGBA frame buffer is always written as
+floating-point RGBA, and that a depth (Z) frame buffer is always
+present, regardless of the type specification.</p>
+<p>See also page <a href="node97.html#renderpass">pass rendering</a>
+for more information.</p>
+
+<h4 id="mi:camera_parameters">Camera Parameters</h4>
+
+<p>There is a variety of <i>camera_parameters</i> that can be
+listed in the <a href="node77.html#INDEX226">camera</a>. Some of
+them can be overridden for a standalone mental ray by specifying an
+appropriate <a href="node245.html">command line</a> option.</p>
+<p>There are four camera statements that accept shader lists:
+<tt>output</tt>, <tt>lens</tt>, <tt>volume</tt>, and
+<tt>environment</tt>. As with all types of shaders, more than one
+shader can be listed, or more than one such statement can be given,
+to attach multiple shaders (or output files in the case of the
+<tt>output</tt> statement) to each type. In an incremental change
+(the <tt>incremental</tt> keyword is used before the
+<tt>camera</tt> keyword), each of the four first resets the list
+from the previous incremental change and does not add to the
+existing list, as multiple statements inside the same
+<tt>camera</tt> ... <tt>end camera</tt> block would.</p>
+<p>The following <i>camera_statements</i> are supported:</p>
+
+<dl class="dict">
+
+<dt id="mi:focal"><tt>focal</tt> <i>distance</i><dfn>|</dfn><tt>infinity</tt>
+<dd>The <dfn id="INDEX228">focal distance</dfn>
+is set to <i>distance</i>. The focal distance is the distance from
+the camera to the <dfn id="INDEX229">viewing plane</dfn>. The
+viewing plane is the plane that the rendered scene
+is projected onto; its edges correspond to the edges of the
+rendered image. A common approach is to set the focal distance to
+the middle distance of the interesting objects in the scene and
+then set the <a href="node77.html#INDEX230">aperture</a> such that
+it is a bit larger than the horizontal extent of the objects in
+<a href="node101.html#INDEX370">camera space</a>. If
+<tt>infinity</tt> is used in place of the <i>distance</i>, an
+orthographic view is rendered. An orthographic view turns off
+perspective, all camera rays are parallel. View-dependent surface
+tessellation is not possible in orthogonal mode.
+
+<dt id="mi:aperture"><tt>aperture</tt> <i>aperture</i>
+<dd>The <dfn id="INDEX230">aperture</dfn> is the
+width of the <a href="node77.html#INDEX229">viewing plane</a>. The
+height of the viewing plane is <i>aperture</i> divided by
+<i>aspect</i>. Together with the <tt>focal</tt> and <tt>aspect</tt>
+<i>viewdefs</i>, <tt>aperture</tt> defines the lens of the standard
+<a href="node124.html#INDEX488">pinhole camera</a>.
+
+<dt id="mi:aspect"><tt>aspect</tt> <i>aspect</i>
+<dd>This is the <dfn id="INDEX231">aspect ratio</dfn> of the camera.
+The default is 1.33. In <a href="node101.html#INDEX370">camera space</a>,
+<i>aperture</i> is the width of the <a href="node77.html#INDEX229">viewing
+plane</a> and <i>aperture</i> divided by <i>aspect</i> is the height.
+The viewing plane is divided into pixels as specified by the
+<tt>resolution</tt> <i>viewdef</i>, so the aspect will result in
+nonsquare pixels if it is not equal to the X <a href=
+"node77.html#INDEX232">resolution</a> divided by the Y resolution.
+For example, to render a PAL image at a resolution of
+720&thinsp;&times;&thinsp;576 pixels, at an image ratio of 3:4 as
+defined by the PAL standard, pixels are slightly wider than tall,
+by a factor of <span class="math">576&frasl;720 &middot; 4&frasl;3 =
+1.0667</span>. If the aspect ratio is corrected by this number,
+objects will appear undistorted on a PAL video display (but not on
+a computer display with square pixels).
+
+<dt id="mi:resolution"><tt>resolution</tt> <i>x</i><sub>int</sub>
+<i>y</i><sub>int</sub>
+<dd><a id="INDEX232"></a>Specifies the width and
+height of the output image in pixels.</p>
+
+<dt id="mi:offset"><tt>offset</tt> <i>x y</i>
+<dd>Specifies an offset for the rendered image. The default is
+<i>0.0</i> for both values, which means that the image will be
+centered on the camera's Z axis. Positive values translate the
+image up and to the right. The <i>offset</i> is measured in pixel
+units.
+
+<dt id="mi:window"><tt>window</tt> <i>x_low</i><sub>int</sub>
+<i>y_low</i><sub>int</sub> <i>x_high</i><sub>int</sub>
+<i>y_high</i><sub>int</sub>
+<dd>Only the sub-rectangle of the image specified by the four bounds
+will be rendered. All pixels that fall outside the rectangle will
+be left black.
+
+<dt id="mi:clip"><tt>clip</tt> <i>hither yon</i>
+<dd>The <i>hither</i> (near) and <i>yon</i> (far) planes are planes
+parallel to the <a href="node77.html#INDEX229">viewing plane</a> that
+delimit the rendered scene. This is primarily used to keep the scanline
+projection transformation stable; it does <em>not affect ray tracing</em>.
+Points outside the space between the hither and <b id="INDEX233">yon
+plane</b>s will not be rendered by scanline algorithms (this does not
+apply to the infinite-radius <a href="node21.html#INDEX44">environment
+map</a>s because they are not geometric objects).
+The <tt>clip</tt> statement specifies the distance of the hither and
+yon planes from the camera. The defaults are 0.0001 for the hither
+distance and 1000000.0 for the yon plane.
+
+<dt id="mi:stereo"><tt>stereo</tt> <i>method eyedistance</i>
+<dd>
+If enabled, mental ray renders two sets of frame buffers, one set for the
+left eye (prefixed "lft_") and another one for the right eye (prefixed "rgt_").
+Stereoscopic rendering will affect the "first hit" renderers only: scanline,
+rasterizer and tracing eye rays. Other view dependent algorithms like final
+gathering, importons, or tessellation operate as if a single camera was used,
+also referred to as the "center eye".
+<dd>
+The <var>method</var> should be one of:
+<dl>
+<dt>off<dd>Disable stereo rendering.
+<dt>toein<dd>
+Rotate the camera frustum such that the two camera direction vectors meet at
+the focal length. This method introduces vertical parallax (incorrect) which
+increases out from the center of the projection plane and might cause discomfort
+when looking at stereo images for a longer time.
+<dt>offaxis<dd>
+Most appropriate way to create stereo pairs. It introduces no vertical parallax
+and is therefore less stressful to the eyes. But it requires an asymmetric camera
+frustum, which most real cameras do not support as of today.
+<dt>offset<dd>
+Most straightforward method for rendering stereo pairs. It shifts the eyes along
+the x axis in camera space. Consequently, there could be objects that are seen by
+only one eye, which creates discomfort.
+</dl>
+<dd>
+The <var>eyedistance</var> is the distance between the two eyes in camera space.
+A good initial value for this parameter is usually 1/30 of the focal length.
+<dd>
+Orthographic cameras are not supported.
+
+<dt><tt>volume</tt> [ <i>shader_list</i>]
+<dd>This statement specifies volume (atmosphere) shaders. The
+<a href="node117.html#INDEX462">atmosphere</a> affects all rays
+passing through the space outside objects by attenuating the color
+of the ray. It is possible to specify a volume shader for the
+inside of objects too, by naming a volume shader in the
+<tt>material</tt> statement (see above). If no <i>shader_list</i>
+is specified, the existing volume shader list is deleted; this is
+useful in incremental changes. If a list is given, it replaces the
+current list if this is the first <tt>volume</tt> statement in the
+camera block, or it is appended to the current list otherwise.
+
+<dt><tt>environment</tt> [ <i>shader_list</i>]
+<dd>This statement specifies <a href="node119.html#INDEX468">environment
+shader</a>s. Environment shaders control the color returned by
+<a href="node124.html#INDEX489">primary ray</a>s that, after leaving the
+<a href="node77.html#INDEX226">camera</a>, never strike any object
+in the scene. They are similar to environment shaders named in
+materials, which control <a href="node142.html#INDEX581">reflection</a>
+rays cast by the material shader that leave the scene without striking
+another object (or exceeding the <a href="node76.html#INDEX196">trace
+depth</a>). If no <i>shader_list</i> is specified, the existing volume
+shader list is deleted; this is useful for
+<a href="node60.html#INDEX110">incremental change</a>s. If a list is given,
+it replaces the current list if this is the first <tt>volume</tt> statement
+in the camera block, or it is appended to the current list otherwise.
+
+<dt><tt>lens</tt> [ <i>shader_list</i>]
+<dd>Lens shaders simulate lenses by changing the
+<a href="node77.html#INDEX226">camera</a>. If no lens shader is present,
+the camera is a <a href="node124.html#INDEX488">pinhole camera</a>
+that casts rays from the origin in all directions that strike the
+<a href="node77.html#INDEX229">viewing plane</a>, or an
+<b id="INDEX234">orthographic camera</b> that casts parallel rays if
+<tt>focal infinity</tt> is specified. A lens shader accepts the origin
+and direction of the camera ray, modifies them, and casts a new primary
+ray. Examples for lens shaders includes fish-eye lenses that exaggerate
+the direction vector in a nonlinear way (there is a code example in the
+Shader section).
+Multiple lenses can be specified in the camera; the <i>n</i>-th
+lens shader receives the origin and direction computed by the
+<i>n-1</i>st lens shader. If no <i>shader_list</i> is specified,
+the existing volume shader list is deleted; this is useful in
+incremental changes. If a list is given, it replaces the current
+list if this is the first <tt>volume</tt> statement in the camera
+block, or it is appended to the current list otherwise.
+
+<dt><tt>frame</tt> <i>frame</i><sub>int</sub> [
+<i>time</i> ] [ <tt>field</tt> <i>field</i><sub>int</sub> ]
+<dd>Every camera should contain the current <b id="INDEX235">frame
+number</b> <i>frame</i>. The time in seconds can optionally be specified
+as <i>time</i>. Optionally, a
+field number <i>field</i> can be specified; by convention,
+<i>field</i> should be 0 when rendering frames, 1 when rendering
+the first (odd) field, and 2 when rendering the second (even)
+field. If the <tt>field</tt> modifier is missing, the <i>field</i>
+number defaults to 0. mental ray currently does not use any of
+these values but makes them available to shaders.
+
+<dt><tt>data "</tt><i>data_name</i><tt>"</tt><dfn>|</dfn><tt>null</tt>
+<dd>This statement attaches <a href="node83.html#INDEX285">user
+data</a> to the camera. The argument must be the name of a
+previously defined data element in the scene file. If <tt>null</tt>
+is specified instead of a data element name, a previously existing
+data reference is removed.
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node76.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node78.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

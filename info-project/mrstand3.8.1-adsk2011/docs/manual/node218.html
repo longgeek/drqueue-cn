@@ -1,0 +1,218 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Books and Pages</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node217.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node219.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION216"></a>
+<h3>Books and Pages</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_BOOK</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miBook</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>miGeoIndex line_size, no_lines</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls except where otherwise noted</td>
+</tr>
+</table>
+<pre>
+#define miSCENE_BOOK_MAXSWAP    16
+
+typedef struct miBook {
+        miUint          label;          /* type of book */
+        miGeoIndex      no_pages;       /* number of used pages */
+        miGeoIndex      first_page_size;/* number of lines on first page */
+        miGeoIndex      line_size;      /* size of elments in bytes */
+        miGeoIndex      next_free_line; /* index of next free line */
+        miGeoIndex      last_used_line; /* index of last used line */
+        char            swap[miSCENE_BOOK_MAXSWAP];
+                                        /* string for change of byte order */
+        miTag           next_book;      /* tag for next book */
+        miTag           pages[1];       /* array of page tags */
+} miBook;
+</pre>
+<p>When a box is created the line size and the swap string must be
+supplied. The number of lines influences the size of the page. If
+it is smaller than some threshold a default page size is used.</p>
+<p><b>label</b> is a variable at the disposal of the application
+using <tt>miBook</tt>s. It is not used by any of the book
+management functions described below.</p>
+<p><b>no_pages</b> is the number of used memory pages.</p>
+<p><b>first_page_size</b> is the number of lines on the first page.
+Consecutive pages grow in geometric progression. The details are
+implementation dependent and may change in the future.</p>
+<p><b>line_size</b> is the size of the lines in bytes in the
+current book.</p>
+<p><b>next_free_line</b> is the index of the element of the linked
+list of free lines.</p>
+<p><b>last_used_line</b> helps mental ray to manage books more
+efficiently.</p>
+<p><b>swap</b> is string of at most <tt>miSCENE_BOOK_MAXSWAP -
+1</tt> characters which indicates how the bytes in a line of a book
+should be swapped when being transferred between machines of
+different byte order.</p>
+<p><b>next_book</b> is a tag that allows to build chains of books.
+These may be accessed and enumerated more efficiently than single
+books.</p>
+<p><b>pages</b> is an array of page tags. It is guaranteed to be
+big enough to hold all pages that might be allocated to keep the
+maximum total number of <tt>miMAX_GEOINDEX</tt> lines.</p>
+<p>None of the structure elements above except the <tt>label</tt>
+should be accessed directly. The same applies to the pages the
+books consist of.</p>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_PAGE</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miPage</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>miGeoIndex page_size, line_size</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls except where otherwise noted</td>
+</tr>
+</table>
+<pre>
+typedef struct miPage {
+        char            swap[miSCENE_BOOK_MAXSWAP];
+                                        /* string for change of byte order  */
+        miGeoIndex      page_size;      /* number of lines on current page  */
+        miGeoIndex      line_size;      /* size of elments in bytes         */
+} miPage;
+</pre>
+<p>When a page is created the page and line sizes and the swap
+string must be supplied. However, pages should not be created
+directly but only through the calls to manage books described
+below.</p>
+<p><tt>swap</tt> is a string to indicate how lines should be
+swapped when pages are transferred between machines of different
+byte order. It has to stored in the pages too, because they are
+swapped independently of the books.</p>
+<p><tt>page_size</tt> is the number of lines on the current
+page.</p>
+<p><tt>line_size</tt> is the size of the lines on this page in
+bytes.</p>
+<p>Apart from the SCENE call interface function to create books
+etc., there are a number of extra functions to manage books:</p>
+<pre>
+     void *mi_scene_book_get_line(
+             miBook             *book,
+             miGeoIndex         line_num)
+</pre>
+<p>Access a line with index <tt>line_num</tt> of a given book and
+returns a void pointer to it.</p>
+<pre>
+     void *mi_scene_book_allocate_line(
+             miBook             *book,
+             miGeoIndex         *line_num)
+</pre>
+<p>Return a void pointer to a free element in a given book and set
+the <tt>line_num</tt> passed by reference. This may be a yet unused
+line or one that has been previously deleted with a call to
+<tt>mi_scene_book_release_line</tt>. If the lines on existing pages
+are exceeded a new page is allocated.</p>
+<pre>
+     void mi_scene_book_release_line(
+             miBook             *book,
+             miGeoIndex         line_num)
+</pre>
+<p>Delete a line from a given book.</p>
+<pre>
+     void mi_scene_book_enumerate(
+             miBook             *book,
+             void               (*cb_func)(void *,
+                                           miGeoIndex,
+                                           void *),
+             void               *cb_data)
+</pre>
+<p>Look at each element in a book in turn and if it is in use
+executes a call-back function. <tt>mi_scene_book_enumerate</tt>
+takes three arguments. The first is a pointer to an
+<tt>miBook</tt>, the second a pointer to the call-back function,
+and the third a pointer to optional data that are passed to the
+call-back when it is called. If either the book or the call-back
+pointer is <tt>NULL</tt> nothing is done. Otherwise the book is
+traversed and for each valid element the function pointed to by the
+second argument is called. The argument of this call-back function
+are a pointer to the element in the book, its index and the
+optional data pointer. An element in a book is valid if it has been
+allocated by a call to <tt>mi_scene_book_allocate_line</tt> and not
+been freed subsequently by a call to
+<tt>mi_scene_book_release_line</tt>. Neither the call-back function
+nor <tt>mi_scene_book_enumerate</tt> return a value.</p>
+<pre>
+     miGeoIndex mi_scene_book_free_blk_start(
+             miBook             *book)
+</pre>
+<p>Return the index of the first line in the completely unused part
+of a book.</p>
+<pre>
+     miGeoIndex mi_scene_book_no_used_lines(
+             miBook             *book)
+</pre>
+<p>Return the number of used lines in a book.</p>
+<pre>
+     miGeoIndex mi_scene_book_max_lines(
+             miBook             *book)
+</pre>
+<p>Return the maximum allocated number of lines in a book.</p>
+<pre>
+     miBoolean mi_scene_book_line_valid(
+             miBook             *book,
+             miGeoIndex         line)
+</pre>
+<p>Return <tt>miTRUE</tt> if a given line index refers to a used
+line and <tt>miFALSE</tt> otherwise.</p>
+<pre>
+     miTag mi_scene_book_attach(
+             miTag              old_book,
+             miTag              new_book,
+             miGeoIndex         position)
+</pre>
+<p>Concatenate chains of books. Insert the new book at the
+specified position in the chain and returns the tag of the first
+book in the chain after insertion.</p>
+<pre>
+     miTag mi_scene_book_detach(
+             miTag              book,
+             miGeoIndex         position)
+</pre>
+<p>Split off a component from a chain of books. Return the tag of
+the first book in the remaining chain.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node217.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node219.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

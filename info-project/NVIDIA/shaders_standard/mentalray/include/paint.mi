@@ -1,0 +1,512 @@
+#*****************************************************************************
+# Copyright 1986, 2013 NVIDIA Corporation. All rights reserved.
+#*****************************************************************************
+# Created:	21.10.1997
+# Module:	paint shader
+# Purpose:	.mi declarations and phenomena for paint shaders
+#
+#  07.11.29: fixed edge_factor in phenomena
+#  08.04.14: New mi_metallic_paint_x w. multiple outputs
+#  08.07.11: New mi_metallic_paint_phen_x w. multiple outputs
+#            New mi_metallic_paint_output_mixer. to support the above
+#
+#****************************************************************************/
+
+# guard against multiple inclusions
+$ifndef "paint_mi_included"
+set "paint_mi_included" "true"
+
+min version "3.7.53"
+max version "3.11.99"
+
+# phenomenon requires base shaders
+
+$ifndef "base_mi_included"
+$include "base.mi"
+$endif
+
+#
+# car paint shader (no reflections/clearcoat layer!)
+#
+
+declare shader color "mi_metallic_paint" (
+        color       "ambient"           default 0 0 0 1,
+        color       "base_color"        default 0.8 0.1 0.0 1,
+        color       "edge_color"        default 0.0 0.0 0.0,
+        scalar      "edge_color_bias"   default 1.0,
+        color       "lit_color"         default 0.6 0.0 0.2,
+        scalar      "lit_color_bias"    default 8.0,
+
+        scalar      "diffuse_weight"    default 1.0,
+        scalar      "diffuse_bias"      default 1.5,
+        scalar      "irradiance_weight" default 1.0,
+
+        color       "spec"              default 1 1 1 1,
+        scalar      "spec_weight"       default 0.2,
+        scalar      "spec_exp"          default 60.0,
+        color       "spec_sec"          default 1 1 1 1,
+        scalar      "spec_sec_weight"   default 0.3,
+        scalar      "spec_sec_exp"      default 25.0,
+        boolean     "spec_glazing"      default on,
+
+        color       "flake_color"       default 1.0 1.0 1.0 1,
+        scalar      "flake_weight"      default 1.0,
+        scalar      "flake_reflect"     default 0.0,
+        scalar      "flake_exp"         default 45.0,
+        scalar      "flake_decay"       default 0.0,
+        shader      "flake_bump",
+
+        scalar      "global_weight"     default 1.0,
+
+        integer     "mode"              default 3,
+        array light "lights"        
+    )
+    version 2
+    apply material
+end declare 
+
+#
+# car paint shader (no reflections/clearcoat layer!)
+# "extended" version w. multiple outputs
+#
+
+declare shader struct {
+        color   "result",         # main output
+        
+        color   "ambient_result",
+        color   "ambient_raw",
+        color   "ambient_level",
+        
+        color   "diffuse_result",
+        color   "diffuse_raw",
+        color   "diffuse_level",
+
+        color   "indirect_result",
+        color   "indirect_raw",
+        color   "indirect_level",
+
+        color   "spec1_result",
+        color   "spec1_raw",
+        color   "spec1_level",
+
+        color   "spec2_result",
+        color   "spec2_raw",
+        color   "spec2_level",
+
+        color   "flake_result",
+        color   "flake_raw",
+        color   "flake_level",
+
+        color   "flake_refl_result",
+        color   "flake_refl_raw",
+        color   "flake_refl_level",
+        
+        vector  "flake_normal"
+    }
+    "mi_metallic_paint_x" (
+        color       "ambient"           default 0 0 0 1,
+        color       "base_color"        default 0.8 0.1 0.0 1,
+        color       "edge_color"        default 0.0 0.0 0.0,
+        scalar      "edge_color_bias"   default 1.0,
+        color       "lit_color"         default 0.6 0.0 0.2,
+        scalar      "lit_color_bias"    default 8.0,
+
+        scalar      "diffuse_weight"    default 1.0,
+        scalar      "diffuse_bias"      default 1.5,
+        scalar      "irradiance_weight" default 1.0,
+
+        color       "spec"              default 1 1 1 1,
+        scalar      "spec_weight"       default 0.2,
+        scalar      "spec_exp"          default 60.0,
+        color       "spec_sec"          default 1 1 1 1,
+        scalar      "spec_sec_weight"   default 0.3,
+        scalar      "spec_sec_exp"      default 25.0,
+        boolean     "spec_glazing"      default on,
+
+        color       "flake_color"       default 1.0 1.0 1.0 1,
+        scalar      "flake_weight"      default 1.0,
+        scalar      "flake_reflect"     default 0.0,
+        scalar      "flake_exp"         default 45.0,
+        scalar      "flake_decay"       default 0.0,
+        shader      "flake_bump",
+
+        scalar      "global_weight"     default 1.0,
+
+        integer     "mode"              default 3,
+        array light "lights"        
+    )
+    version 2
+    apply material
+end declare 
+
+
+
+#
+# A simple "flake" bumpmap shader
+#
+
+declare shader "mi_bump_flakes" (
+        scalar      "flake_density"     default 0.5,
+        scalar      "flake_strength"    default 0.8,
+        scalar      "flake_scale"       default 0.2,
+    )
+    version 1
+    apply texture
+end declare
+
+
+#
+# Car paint Phenomenon using
+# - mi_metallic_paint
+# - mi_bump_flakes
+# - mib_glossy_reflections
+# - mib_color_interpolate
+# - mib_illum_lambert
+#
+
+declare phenomenon "mi_car_paint_phen" 
+    (
+        color   "ambient"         default 0 0 0,
+        color   "base_color"      default 0.8 0.1 0,
+        color   "edge_color"      default 0 0 0,
+        scalar  "edge_color_bias" default 1.0,
+        color   "lit_color"       default 0.6 0 0.2,
+        scalar  "lit_color_bias"  default 8.0,
+        scalar  "diffuse_weight"  default 1.0,
+        scalar  "diffuse_bias"    default 1.5,
+
+        color       "flake_color"    default 1 1 1,
+        scalar      "flake_weight"   default 1.0,
+        scalar      "flake_reflect"  default 0.0,
+        scalar      "flake_exp"      default 45.0,
+        scalar      "flake_density"  default  0.5,
+        scalar      "flake_decay"    default  0.0,
+        scalar      "flake_strength" default  0.8,
+        scalar      "flake_scale"    default 0.12,
+
+        color       "spec"            default 1 1 1,         
+        scalar      "spec_weight"     default 0.2,      
+        scalar      "spec_exp"        default 60.0,         
+        color       "spec_sec"        default 1 1 1,
+        scalar      "spec_sec_weight" default 0.3,  
+        scalar      "spec_sec_exp"    default 25.0,     
+        boolean     "spec_glazing"    default on,
+
+        color       "reflection_color"       default 1 1 1,
+        scalar      "edge_factor"            default 7.0,    
+        scalar      "reflection_edge_weight" default 1.0,
+        scalar      "reflection_base_weight" default 0.2,
+        integer     "samples"                default 0,
+        scalar      "glossy_spread"          default 0.0,
+        scalar      "max_distance"           default 0.0,
+        boolean     "single_env_sample"      default off,
+
+        color  "dirt_color"        default .3 .3 .3,
+        scalar "dirt_weight"       default 0.0,
+
+        scalar "irradiance_weight" default 1.0,
+        scalar "global_weight"     default 1.0,
+
+        integer "mode",
+        array light "lights"
+    )
+
+    shader "flakes"  "mi_bump_flakes" (
+        "flake_scale"    = interface "flake_scale",
+        "flake_strength" = interface "flake_strength",
+        "flake_density"  = interface "flake_density"        
+    )
+
+    shader "carpaint" "mi_metallic_paint" (
+        "ambient"        = interface "ambient",
+        "base_color"     = interface "base_color",
+        "edge_color"     = interface "edge_color",
+        "edge_color_bias"= interface "edge_color_bias",
+        "lit_color"      = interface "lit_color",
+        "lit_color_bias" = interface "lit_color_bias",
+        "diffuse_weight" = interface "diffuse_weight",
+        "diffuse_bias"   = interface "diffuse_bias",
+        
+        "flake_color"    = interface "flake_color",
+        "flake_weight"   = interface "flake_weight",
+        "flake_exp"      = interface "flake_exp",
+        "flake_reflect"  = interface "flake_reflect",
+        "flake_decay"    = interface "flake_decay",
+        "flake_bump"     "flakes",
+
+        "spec"           = interface "spec",
+        "spec_weight"    = interface "spec_weight",
+        "spec_exp"       = interface "spec_exp",
+        "spec_sec"       = interface "spec_sec",
+        "spec_sec_weight"= interface "spec_sec_weight",
+        "spec_sec_exp"   = interface "spec_sec_exp",
+        "spec_glazing"   = interface "spec_glazing",                     
+
+        "irradiance_weight" = interface "irradiance_weight",
+        "global_weight"     = interface "global_weight",
+
+        "mode"           = interface "mode",
+        "lights"         = interface "lights"
+    )
+
+    shader "reflection" "mib_glossy_reflection" (
+        "base_material"     "carpaint",
+        "reflection_color"  = interface "reflection_color",
+        "environment_color" = interface "reflection_color",
+        "reflection_base_weight" = interface "reflection_base_weight",
+        "reflection_edge_weight" = interface "reflection_edge_weight",
+        "edge_factor"            = interface "edge_factor",
+        "samples"           = interface "samples",
+        "u_spread"          = interface "glossy_spread",
+        "v_spread"          = interface "glossy_spread",
+        "max_distance"      = interface "max_distance",
+        "single_env_sample" = interface "single_env_sample"
+    )
+
+    shader "dirtlayer" "mib_illum_lambert" (
+        "diffuse" = interface "dirt_color",
+        "mode"    = interface "mode",
+        "lights"  = interface "lights"
+    )
+    
+    shader "dirtmixer" "mib_color_interpolate" (
+        "input"    = interface "dirt_weight",
+        "weight_1" 1.0,
+        "color_0"  = "reflection",
+        "color_1"  = "dirtlayer",
+        "num" 2
+    )
+
+    root = "dirtmixer"
+    apply material
+end declare
+
+
+
+declare shader struct
+    {
+        color   "result",         # main output
+        
+        color   "ambient_result",
+        color   "ambient_raw",
+        color   "ambient_level",
+        
+        color   "diffuse_result",
+        color   "diffuse_raw",
+        color   "diffuse_level",
+
+        color   "indirect_result",
+        color   "indirect_raw",
+        color   "indirect_level",
+
+        color   "spec1_result",
+        color   "spec1_raw",
+        color   "spec1_level",
+
+        color   "spec2_result",
+        color   "spec2_raw",
+        color   "spec2_level",
+
+        color   "flake_result",
+        color   "flake_raw",
+        color   "flake_level",
+
+        color   "flake_refl_result",
+        color   "flake_refl_raw",
+        color   "flake_refl_level",
+        
+        vector  "flake_normal",
+
+        color   "reflection_result",
+        color   "reflection_raw",
+        color   "reflection_level",
+
+        color   "dirt_result",
+        color   "dirt_raw",
+        color   "dirt_level"
+    }
+    "mi_metallic_paint_output_mixer" 
+    (
+        shader "paint",
+
+        color  "reflection_raw",
+        color  "reflection_color",
+        
+        color  "dirt_raw",
+        color  "dirt_color",
+        scalar "dirt_mix"
+    )
+    
+    apply texture
+    version 1
+end declare
+
+#
+# Clone of mi_car_paint_phen w. multiple outputs
+#
+
+declare phenomenon struct
+    {
+        color   "result",         # main output
+        
+        color   "ambient_result",
+        color   "ambient_raw",
+        color   "ambient_level",
+        
+        color   "diffuse_result",
+        color   "diffuse_raw",
+        color   "diffuse_level",
+
+        color   "indirect_result",
+        color   "indirect_raw",
+        color   "indirect_level",
+
+        color   "spec1_result",
+        color   "spec1_raw",
+        color   "spec1_level",
+
+        color   "spec2_result",
+        color   "spec2_raw",
+        color   "spec2_level",
+
+        color   "flake_result",
+        color   "flake_raw",
+        color   "flake_level",
+
+        color   "flake_refl_result",
+        color   "flake_refl_raw",
+        color   "flake_refl_level",
+        
+        vector  "flake_normal",
+
+        color   "reflection_result",
+        color   "reflection_raw",
+        color   "reflection_level",
+
+        color   "dirt_result",
+        color   "dirt_raw",
+        color   "dirt_level"
+    }
+    "mi_car_paint_phen_x" 
+    (
+        color   "ambient"         default 0 0 0,
+        color   "base_color"      default 0.8 0.1 0,
+        color   "edge_color"      default 0 0 0,
+        scalar  "edge_color_bias" default 1.0,
+        color   "lit_color"       default 0.6 0 0.2,
+        scalar  "lit_color_bias"  default 8.0,
+        scalar  "diffuse_weight"  default 1.0,
+        scalar  "diffuse_bias"    default 1.5,
+
+        color       "flake_color"    default 1 1 1,
+        scalar      "flake_weight"   default 1.0,
+        scalar      "flake_reflect"  default 0.0,
+        scalar      "flake_exp"      default 45.0,
+        scalar      "flake_density"  default  0.5,
+        scalar      "flake_decay"    default  0.0,
+        scalar      "flake_strength" default  0.8,
+        scalar      "flake_scale"    default 0.12,
+
+        color       "spec"            default 1 1 1,         
+        scalar      "spec_weight"     default 0.2,      
+        scalar      "spec_exp"        default 60.0,         
+        color       "spec_sec"        default 1 1 1,
+        scalar      "spec_sec_weight" default 0.3,  
+        scalar      "spec_sec_exp"    default 25.0,     
+        boolean     "spec_glazing"    default on,
+
+        color       "reflection_color"       default 1 1 1,
+        scalar      "edge_factor"            default 7.0,    
+        scalar      "reflection_edge_weight" default 1.0,
+        scalar      "reflection_base_weight" default 0.2,
+        integer     "samples"                default 0,
+        scalar      "glossy_spread"          default 0.0,
+        scalar      "max_distance"           default 0.0,
+        boolean     "single_env_sample"      default off,
+
+        color  "dirt_color"        default .3 .3 .3,
+        scalar "dirt_weight"       default 0.0,
+
+        scalar "irradiance_weight" default 1.0,
+        scalar "global_weight"     default 1.0,
+
+        integer "mode",
+        array light "lights"
+    )
+
+    shader "flakes"  "mi_bump_flakes" (
+        "flake_scale"    = interface "flake_scale",
+        "flake_strength" = interface "flake_strength",
+        "flake_density"  = interface "flake_density"        
+    )
+
+    shader "carpaint" "mi_metallic_paint_x" (
+        "ambient"        = interface "ambient",
+        "base_color"     = interface "base_color",
+        "edge_color"     = interface "edge_color",
+        "edge_color_bias"= interface "edge_color_bias",
+        "lit_color"      = interface "lit_color",
+        "lit_color_bias" = interface "lit_color_bias",
+        "diffuse_weight" = interface "diffuse_weight",
+        "diffuse_bias"   = interface "diffuse_bias",
+        
+        "flake_color"    = interface "flake_color",
+        "flake_weight"   = interface "flake_weight",
+        "flake_exp"      = interface "flake_exp",
+        "flake_reflect"  = interface "flake_reflect",
+        "flake_decay"    = interface "flake_decay",
+        "flake_bump"     "flakes",
+
+        "spec"           = interface "spec",
+        "spec_weight"    = interface "spec_weight",
+        "spec_exp"       = interface "spec_exp",
+        "spec_sec"       = interface "spec_sec",
+        "spec_sec_weight"= interface "spec_sec_weight",
+        "spec_sec_exp"   = interface "spec_sec_exp",
+        "spec_glazing"   = interface "spec_glazing",                     
+
+        "irradiance_weight" = interface "irradiance_weight",
+        "global_weight"     = interface "global_weight",
+
+        "mode"           = interface "mode",
+        "lights"         = interface "lights"
+    )
+
+    shader "reflection" "mib_glossy_reflection" (
+        "reflection_color"  1 1 1,
+        "environment_color" 1 1 1,
+        "reflection_base_weight" = interface "reflection_base_weight",
+        "reflection_edge_weight" = interface "reflection_edge_weight",
+        "edge_factor"            = interface "edge_factor",
+        "samples"           = interface "samples",
+        "u_spread"          = interface "glossy_spread",
+        "v_spread"          = interface "glossy_spread",
+        "max_distance"      = interface "max_distance",
+        "single_env_sample" = interface "single_env_sample"
+    )
+
+    shader "dirtlayer" "mib_illum_lambert" (
+        "diffuse" 1 1 1,
+        "mode"    = interface "mode",
+        "lights"  = interface "lights"
+    )
+
+    shader "resultmixer" "mi_metallic_paint_output_mixer" (
+        "paint"            "carpaint",  # Get the entire struct from the paint (!)
+
+        "reflection_raw"   = "reflection",
+        "reflection_color" = interface "reflection_color",
+        
+        "dirt_raw"         = "dirtlayer",
+        "dirt_color"       = interface "dirt_color",
+        "dirt_mix"         = interface "dirt_weight",
+    )
+
+    root = "resultmixer"
+    apply material
+end declare
+
+
+
+
+$endif # if not "paint_mi_included"

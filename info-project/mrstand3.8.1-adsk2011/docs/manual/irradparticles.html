@@ -1,0 +1,79 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Irradiance Particles</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="importons.html">&laquo;&nbsp;prev</a></li>
+<li><a href="iray.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h2 id="fo:ip">Irradiance Particles <span class="recent">3.7</span></h2>
+<p>
+This algorithm is a novel approach to compute global illumination based on
+<dfn>importance</dfn> sampling, which tends to converge much faster to a
+desirable quality than the existing solutions like
+<a href="node48.html">global illumination</a> photon tracing combined with
+<a href="node52.html#INDEX98">final gathering</a>.</p>
+<p>
+Before rendering starts, <a href="importons.html#fo:importons">importons</a>
+are shot from the camera into the scene and collected as a new kind of particle,
+called an <dfn id="fo:irradiance_particle">irradiance particle</dfn>. They
+carry information about the amount of direct illumination coming in at their
+position (hence the name "irradiance") and, optionally, the amount of indirect
+irradiance incident at their position (if indirect passes are enabled). During
+rendering, the stored particles are used to estimate the irradiance at a
+shading point: if just direct illumination was collected for irradiance
+particles, this is equivalent to one bounce of indirect lighting.</p>
+<p>
+The irradiance can also be interpolated from precomputed values at the
+particle positions.
+
+<p>
+The irradiance particle algorithm simulates some but not all of the indirect
+lighting interactions of the traditional global illumination algorithms in
+mental ray. For this reason, if irradiance particles are enabled then mental
+ray will turn off the global illumination photon tracing automatically if it
+was activated. This is a common situation when external applications are asked
+to generate mental ray scenes with photon shaders attached, which are needed
+for importons. Caustics can be used together with irradiance particles because
+they are used to capture indirect lighting effects that irradiance particles
+cannot simulate. If both final gathering and irradiance particles are enabled
+then final gathering is preferred and irradiance particles will be switched
+off automatically.
+<p>
+Irradiance particles support a special IBL-style functionality which can be
+enabled by setting the number of indirect passes to -1. In this case only the
+environment map lighting but not diffuse bounces are taken into account.
+If interpolation is disabled then only environment presampling map is build
+and no further precomputation steps are required. If interpolation is enabled
+then particles are emitted in the precomputation pass in a usual way, but used
+as interpolation points only.
+<p>
+The irradiance particles feature is controlled by
+<a href="node76.html#opt:ip">scene options</a> and
+<a href="node245.html#cli:ip">command line</a> arguments of a standalone
+mental ray.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="importons.html">&laquo;&nbsp;prev</a></li>
+<li><a href="iray.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

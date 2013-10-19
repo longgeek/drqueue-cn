@@ -1,0 +1,295 @@
+#*****************************************************************************
+# Copyright 2007 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	Luc Vo Van
+# Purpose:	Simplified hemispherical Map based on the 3ds max hemispherical Map
+#
+# History:
+#
+# 2007 June 27th - vanl, initial implementation
+# 
+#****************************************************************************/
+
+
+#is that the version I use???
+min version "3.4" 
+
+#------------------------------------------------------------------------
+# Phenomenon
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Map_Hemispherical_Bitmap_V2" 
+(
+  #-------------------------------------
+  # Main parameters
+  #-------------------------------------
+  struct "m" 
+  {
+   color texture "Bitmap",
+   scalar "RGBAmount"
+  }
+
+)#end phenomenon
+
+
+#-------------------------------------
+# UV Generator 
+#-------------------------------------
+shader "UVGen|Shader" "adsk_base_UVGenerator" 
+	(
+		"MapSlotType" 1, 																				#Texture|Environment
+		"EnvType" 1, 																						#Screen|Spherical|Cylindrical|ShrinkWrap|Screen
+		"UVWSource" 0, 																					#ExplicitMapChannel|VertexCOlorChannel|PlanarFromObjectXYZ|PlanarFromWorldXYZ
+		"MapChannel" 1, 
+		#------------------------
+		"ShowMapOnBack" on, 
+		"RealWorldMapSize" off,  																	#The Real World Map Size Option has no use inside a phenom, since a lot of logic is burried in the max UI.
+		#-------------------------
+		"UOffset" 0, 
+		"UScale" 1, 
+		"UWrap" on, #= interface "u.UWrap",      										#Tile Flag in 3ds max UI
+		"UMirror" off, #= interface "u.UMirror", 
+		#-------------------------
+		"VOffset" 0, #= interface "u.VOffset",
+		"VScale" 1, #= interface "u.VScale", 
+		"VWrap" on, #= interface "u.VWrap",													#Tile Flag in 3ds max UI	
+		"VMirror" off, #= interface "u.VMirror", 
+		#---------------------
+		"UAngle" 0, 																						#Rotation Expressed in Rads	
+		"VAngle" 0, 																						#Rotation Expressed in Rads
+		"WAngle" 0, #= interface "u.WAngle", 												#Rotation Expressed in Rads
+		"UVAxis" 0, 
+		#---------------------
+		"Blur" 1, #= interface "a.Blur", 																						#IMPORTANT:  to maintain crispy images, this must be reduced!!!
+		"BlurOffset" 0, 
+		#-----------------------
+		"Clip" off, 
+		"Noise" off, 
+		"Animate" off, 
+		"Amount" 1, 
+		"Size" 1, 
+		"Level" 1, 
+		"Phase" 0, 
+		#-----------------------
+		"XCanvasSize" 0, 
+		"YCanvasSize" 0
+	)#end shader
+
+
+#------------------------------------------------------------------------
+# TextureOutput Shader
+#------------------------------------------------------------------------
+
+
+shader "Curve|Shader[01]" "adsk_Utility_Curve" (
+	"Flags" 0, 
+	"LookupTableSize" 512, 
+	"Points" [
+		 {
+			"x" 0, 
+			"y" 0, 
+			"xIn" 0, 
+			"yIn" 0, 
+			"xOut" 0, 
+			"yOut" 0, 
+			"Flags" 258		}, 
+		 {
+			"x" 1, 
+			"y" 0.485714, 
+			"xIn" 0, 
+			"yIn" 0, 
+			"xOut" 0, 
+			"yOut" 0, 
+			"Flags" 272		}	])
+			
+shader "Curve|Shader[02]" "adsk_Utility_Curve" (
+	"Flags" 0, 
+	"LookupTableSize" 512, 
+	"Points" [
+		 {
+			"x" 0, 
+			"y" 0, 
+			"xIn" 0, 
+			"yIn" 0, 
+			"xOut" 0, 
+			"yOut" 0, 
+			"Flags" 258		}, 
+		 {
+			"x" 1, 
+			"y" 1, 
+			"xIn" 0, 
+			"yIn" 0, 
+			"xOut" 0, 
+			"yOut" 0, 
+			"Flags" 256		}	])
+
+shader "Curve|Shader[03]" "adsk_Utility_Curve" (
+	"Flags" 0, 
+	"LookupTableSize" 512, 
+	"Points" [
+		 {
+			"x" 0, 
+			"y" 0, 
+			"xIn" 0, 
+			"yIn" 0, 
+			"xOut" 0, 
+			"yOut" 0, 
+			"Flags" 258		}, 
+		 {
+			"x" 1, 
+			"y" 0, 
+			"xIn" 0, 
+			"yIn" 0, 
+			"xOut" 0, 
+			"yOut" 0, 
+			"Flags" 256		}	])
+			
+
+
+#
+# Shader Curve and the shader
+#
+shader "CurveCtl|Shader[0]" "adsk_Utility_CurveControl" (
+	"Flags" 63,
+	"XMin" 0,
+	"XMax" 1,
+	"YMin" 0,
+	"YMax" 1,
+	"Curves" [
+		 "Curve|Shader[01]", 
+		 "Curve|Shader[02]", 
+		 "Curve|Shader[03]"	])
+		 
+		 
+
+
+shader "Curve|Shader" "adsk_Utility_Curve" (
+	"Flags" 0, 
+	"LookupTableSize" 100, 
+	"Points" [
+		 {
+			"x" 0, 
+			"y" 0, 
+			"xIn" 0, 
+			"yIn" 0, 
+			"xOut" 0, 
+			"yOut" 0, 
+			"Flags" 258		}, 
+		 {
+			"x" 1, 
+			"y" 1, 
+			"xIn" 0, 
+			"yIn" 0, 
+			"xOut" 0, 
+			"yOut" 0, 
+			"Flags" 256		}	])
+			
+
+#
+# CurveCtl|Shader
+#
+
+shader "CurveCtl|Shader" "adsk_Utility_CurveControl" (
+	"Flags" 63, 
+	"XMin" 0, 
+	"XMax" 1, 
+	"YMin" 0, 
+	"YMax" 1, 
+	"Curves" [
+		 "Curve|Shader"	])
+		 
+		 
+
+
+
+shader "TextureOutput|Shader" "adsk_Utility_Output" 
+(
+	"RGBAmount" = interface "m.RGBAmount", 
+	"RGBOffset" 0, 
+	"OutputAmount" 1, 
+	"BumpAmount" 1, 
+	"Invert" off,#= interface "a.Invert", 
+	"Clamp" off, 
+	"AlphaFromRGB" off, 
+	"UseColorMap" on, 
+	"UseRGBCurve" on,
+	"RGBCurve" "CurveCtl|Shader[0]", 
+	"IntensityCurve" "CurveCtl|Shader"
+)#end shader
+
+
+
+#------------------------------------------------------------------------
+# Bitmap Shader
+#------------------------------------------------------------------------
+
+
+shader "Map_Bitmap|Texmap|Shader" "adsk_Bitmap" 	
+(	
+	"Parameters"
+	{
+		"ClipU" 0, 
+		"ClipV" 0, 
+		"ClipW" 1, 
+		"ClipH" 0.5, 
+		"Jitter" 1, 
+		"UseJitter" off, 
+		"Apply" on, 
+		"CropPlace" 1, 
+		"Filtering" 0, #= interface "a.Filtering", #Pyramidal:0 | Summed Area:1 | None:2
+		"MonoOutput" 0, 
+		"RGBOutput" 0, 
+		"AlphaSource" 2, 
+		"PreMultAlpha" on, 
+		"Bitmap" = interface "m.Bitmap", 
+		"Coords" "UVGen|Shader", 
+		"Output" "TextureOutput|Shader"	
+	}, #end Parameters
+
+	#------------------------------- 
+	"time parameters" 
+	{
+		"startTime" 0, 
+		"playBackRate" 1, 
+		"endCondition" 0, 
+		"tieTimeToMatIDs" off	
+	},#end time parameters
+
+	#-------------------------------	 
+	"ExtraParameters" 
+	{
+		"GBufferID" 0, 
+		"currentTime" 0, 
+		"firstFrame" 0, 
+		"lastFrame" 0, 
+		"ticksPerFrame" 0, 
+		"bitmapFrames_Padding" 0, 
+		"useBitmapEvalCallback" off, 
+		"bitmapEvalCallback" 0, 
+		"bitmapEvalArg" 0, 
+		"bitmapType" 2, 
+		"bitmapEvalArgFrames_Padding" 0, 
+		"bitmapWidth" 0, 
+		"bitmapHeight" 0, 
+		"filterEvalCallback" 0, 
+		"bitmapEvalCallbackHi64" 0, 
+		"bitmapEvalArgHi64" 0, 
+		"filterEvalCallbackHi64" 0, 
+		"bitmapEvalArgsFramesHi64_Padding" 0	
+	}#end ExtraParameters
+)#end shader
+	
+
+#------------------------------------------------------------------------
+#  Connections
+#------------------------------------------------------------------------
+root = "Map_Bitmap|Texmap|Shader"
+apply texture
+
+	gui "gui_adsk_Map_Hemispherical_Bitmap_V2"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "Simple Hemispherical Map (adsk)", "category" "Texture", "hidden" )
+	}
+
+end declare #end declare phenomenon

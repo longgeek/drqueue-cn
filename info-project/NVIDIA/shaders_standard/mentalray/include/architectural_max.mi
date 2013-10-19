@@ -1,0 +1,772 @@
+#*****************************************************************************
+# Copyright 1986, 2013 NVIDIA Corporation. All rights reserved.
+#*****************************************************************************
+# Author:   Zap 
+# Created:  25.01.2006
+# Module:   architectural
+# Purpose:  .mi declarations for architectural shaders
+#
+# Exports:
+#   mia_physicalskylight
+#   max gui attributes for architectural.dll
+#
+# History:
+#   10.05.06 zap:  Created
+#   16.02.07 zap:  Added mia_portal_light and mia_light_surface
+#   27.03.07 zap:  Updated UI stuff, added mia_bokeh
+#   18.10.07 zap:  Added mia_ciesky
+#   29.10.07 mz:   Added mia_cieskylight phenomenon
+#   28.04.09 zap:  Added mia_photometric_light
+#   11.08.09 pfbreton:  Initial implementation of adsk_Environment_Blur
+#   11.08.09 pfbreton:  Initial implementation of adsk_Map_Lens_Bokeh
+#   03.03.11 zap:  Bugfix of adsk_Environment_Blur
+#****************************************************************************/
+
+
+#------------------------------------------------------------------------------------------------
+# 3ds Max specific phenomena
+#------------------------------------------------------------------------------------------------
+
+#
+# 3ds max specific: Wrapper for mi_physicalsky
+# to act as a max "Skylight"
+#
+
+declare phenomenon "mia_physicalskylight" (
+        boolean "on",
+        scalar  "multiplier",
+        color   "rgb_unit_conversion",
+        scalar  "haze",
+        scalar  "redblueshift",
+        scalar  "saturation",
+
+        scalar  "horizon_height",
+        scalar  "horizon_blur",
+        color   "ground_color",
+        color   "night_color",
+
+        vector  "sun_direction",
+        light   "sun",   
+
+        # The following parameters are only useful
+        # when the shader is used as environment
+        scalar  "sun_disk_intensity",
+        scalar  "sun_disk_scale",
+        scalar  "sun_glow_intensity",
+
+        boolean "use_background",
+        shader  "background",
+
+        # For the lens/volume shader mode
+        scalar  "visibility_distance",
+        integer "flags",
+        
+        # New parameters (for analysis use)
+        integer "sky_luminance_mode" default 0,
+
+        scalar  "zenith_luminance"               default 0.0,
+        scalar  "diffuse_horizontal_illuminance" default 0.0,
+
+        scalar  "a",
+        scalar  "b",
+        scalar  "c",
+        scalar  "d",
+        scalar  "e"
+    )
+
+    shader "skyshader" "mia_physicalsky" (
+        "on"         = interface "on",
+        "multiplier" = interface "multiplier",
+        "rgb_unit_conversion" = interface "rgb_unit_conversion",
+        "haze" = interface "haze",
+        "redblueshift" = interface "redblueshift",
+        "saturation" = interface "saturation",
+
+        "horizon_height" = interface "horizon_height",
+        "horizon_blur"   = interface "horizon_blur",
+        "ground_color"   = interface "ground_color",
+        "night_color"    = interface "night_color",
+
+        "sun_direction"         = interface "sun_direction",
+        "sun"                   = interface "sun",
+        "sun_disk_intensity"    = interface "sun_disk_intensity",
+        "sun_disk_scale"        =  interface "sun_disk_scale",
+        "sun_glow_intensity"    = interface "sun_glow_intensity",
+        
+        "use_background"        = interface "use_background",
+        "background"            = interface "background",
+
+        "visibility_distance"   = interface "visibility_distance",
+        "flags"                 = interface "flags",
+        "y_is_up"               false,
+        
+        "sky_luminance_mode"    = interface "sky_luminance_mode",
+        "zenith_luminance"      = interface "zenith_luminance",
+        "diffuse_horizontal_illuminance" = interface "diffuse_horizontal_illuminance",
+		"a"						= interface "a",
+        "b"						= interface "b",
+        "c"						= interface "c",
+        "d"						= interface "d",
+        "e"						= interface "e"
+        
+    )
+
+    shader "light" "max_TexturedSkylight" (
+       "TexSkyParams" {
+          "on" true,
+          "multiplier" 1.0,
+          "sky_color_map" "skyshader",
+          "sky_color_map_on" true,
+          "sky_color_map_amt" 100.0,
+          "sky_mode" 1
+       }
+    )
+
+    root   = "light"
+    # "volume" also works but this is faster...
+    lens = "skyshader"
+
+    version 3
+    apply light	
+    
+    gui "gui_mia_physicalskylight" {
+       control "Global"  "Global" (
+           "hidden"
+       )
+       control "flags" "integer" (
+           "value" 0
+       )
+    }	    	
+end declare
+
+
+declare phenomenon "mia_cieskylight" (
+        boolean "on"                  default on,
+        color   "rgb_unit_conversion" default 0.0001 0.0001 0.0001,
+
+        # Luminance parameters
+        boolean "auto_luminance"                 default on,
+        scalar  "zenith_luminance"               default 0.0,
+        scalar  "diffuse_horizontal_illuminance" default 0.0,
+
+        # CIE specific parameters. 0 = clear sky, 1 = overcast
+        scalar  "overcast"            default 0.0,
+
+        # Sun direction
+        vector  "sun_direction",
+        light   "sun",   
+        # Y vector
+        boolean "y_is_up"   default false
+    )
+    
+    shader "skyshader" "mia_ciesky" (
+        "on"         = interface "on",
+        "rgb_unit_conversion" = interface "rgb_unit_conversion",
+        "auto_luminance"      = interface "auto_luminance",
+        "zenith_luminance"    = interface "zenith_luminance",
+        "diffuse_horizontal_illuminance" = interface "diffuse_horizontal_illuminance",
+
+        "sun_direction"         = interface "sun_direction",
+        "sun"                   = interface "sun",
+        "y_is_up"               false
+    )
+
+    shader "light" "max_TexturedSkylight" (
+       "TexSkyParams" {
+          "on" true,
+          "multiplier" 1.0,
+          "sky_color_map" "skyshader",
+          "sky_color_map_on" true,
+          "sky_color_map_amt" 100.0,
+          "sky_mode" 1
+       }
+    )
+
+    root   = "light"
+
+    version 1
+    apply light	
+    
+    gui "gui_mia_cieskylight" {
+       control "Global"  "Global" (
+           "hidden"
+       )
+    }	    	
+end declare
+
+
+
+#------------------------------------------------------------------------
+# Environment Blur based on mia_envblur shader. 
+# Usage:    Use this shader in the environment slot and nest your real environment map into it.
+#           This will blur the environment for reflection rays resulting in soft blurred reflections on the materials with less samples and rays
+#           More details from mental images here: http://www.mentalimages.com/fileadmin/user_upload/PDF/arch_and_design.pdf
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Environment_Blur" 
+  (
+      #-------------------------------------
+      # Main parameters
+      #-------------------------------------
+      struct "m" 
+      {
+				shader "environment",
+				boolean "mia_material_blur",
+				scalar "blur",
+				integer "resolution"
+      },
+
+      integer "mode",
+      array light "lights"
+      	
+   )#end phenomenon
+
+
+#------------------------------------------------------------------------
+# mip_rayswitch
+#------------------------------------------------------------------------
+
+shader "Map_mia_envblur|Texmap|Shader" "mia_envblur" 
+	(      
+        "environment" = interface "m.environment",
+        "blur" = interface "m.blur",
+        "mia_material_blur" = interface "m.mia_material_blur",
+        "resolution" = interface "m.resolution"
+	)#end shader
+
+#------------------------------------------------------------------------
+#  Connections
+#------------------------------------------------------------------------
+root = "Map_mia_envblur|Texmap|Shader"
+apply texture
+
+#------------------------------------------------------------------------
+# UI
+#------------------------------------------------------------------------
+ gui "gui_adsk_Environment_Blur" {
+       #-------------------------------------
+       # Main Parameters
+       #-------------------------------------
+       control "Global"  "Global" ("uiName" "Environment Blur", "category" "Texture")
+     
+       control "m" "struct" ("uiName" "Environment Blur Parameters")
+		{
+       
+       		control "environment" "shader" ("uiName" "Environment","helpText" "Place your typical Environment Map here. It will become blurred for environment look-up rays")
+        	
+       		control "mia_material_blur" "boolean" ("nonConnectable", "uiName" "Derive Blur Amount from Arch&Design Mtl", "value" 1, "helpText" "Any reflective environment lookup performed by the A&D Material will cause the appropriate blur. Leave blur at 0.0 in this case.")
+       		control "blur" "scalar" ("nonConnectable","uiName" "Blur Amount","value"   0.0, "range"   0.0 10.0,"helpText" "Determines the amount of Blur. Leave at zero when using the Derive Blur Amount from Arch+Design Mtl option.")
+       		control "resolution" "integer" ("nonConnectable", "uiName" "Blur Map Resolution", "value" 200, 
+				"range" 2 2048, "helpText" "Determines the resolution of the internal map processed for the blur effect. The default value of 200 means that a map of 200 x 200 samples are taken and stored, for subsequent filtering. This should be set high enough to resolve the smallest feature in the environment map. 200 is generally enough for any still image - animations need higher resolutions (1000).")
+       
+       
+       } #end control
+       
+       	
+       #----------------------------------
+       control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+       control "lights" "array light" ("hidden","nonConnectable")
+       control "mode" "integer" ("hidden","nonConnectable")
+       	
+}#end gui
+
+
+end declare #end declare phenomenon
+
+#------------------------------------------------------------------------
+# Lens Shader based on mia_bokeh shader. 
+# Usage:    Use this shader in lens shaders slot to perform photorealistic DOF effects.
+#           More information at http://www.mentalimages.com/fileadmin/user_upload/PDF/arch_and_design.pdf
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Map_Lens_Bokeh" 
+  (
+      #-------------------------------------
+      # Main parameters
+      #-------------------------------------
+      struct "m" 
+      {
+				boolean "on",
+				scalar "plane",
+				scalar "radius",
+				integer "samples"
+      },
+      
+       struct "n" 
+      {
+				scalar "bias", 
+				integer "blade_count",
+				scalar "blade_angle",
+				boolean "use_bokeh",
+				color texture "bokeh"
+      },
+
+      integer "mode",
+      array light "lights"
+      	
+   )#end phenomenon
+
+
+#------------------------------------------------------------------------
+# mia_lens_bokeh
+#------------------------------------------------------------------------
+
+shader "Map_mia_lens_bokeh|Texmap|Shader" "mia_lens_bokeh" 	
+(
+		 "on" = interface "m.on",
+		 "plane" = interface "m.plane",
+		 "radius" = interface "m.radius",
+		 "samples" = interface "m.samples",
+		 "bias" = interface "n.bias",
+		 "blade_count" = interface "n.blade_count",
+		 "blade_angle" = interface "n.blade_angle",
+		 "use_bokeh" = interface "n.use_bokeh",
+		 "bokeh" = interface "n.bokeh"
+)#end shader
+
+	
+
+#------------------------------------------------------------------------
+#  Connections
+#------------------------------------------------------------------------
+root = "Map_mia_lens_bokeh|Texmap|Shader"
+apply lens
+
+#------------------------------------------------------------------------
+# UI
+#------------------------------------------------------------------------
+ gui "gui_adsk_Map_Lens_Bokeh" {
+       #-------------------------------------
+       # Main Parameters
+       #-------------------------------------
+       control "Global"  "Global" ("uiName" "Depth of Field / Bokeh", "category" "Lens")
+     
+       control "m" "struct" ("uiName" "Depth of Field Parameters")
+			{
+       
+	       control "on" "Boolean" ("nonConnectable", "uiName" "Enabled","value"   1)
+	       control "plane" "scalar" ("nonConnectable","uiName" "Focus Plane","value"   100.0, "units"  "world", "helpText" "A point at a distance from the camera which is completely in focus (in world units).")
+	       
+	       control "radius" "scalar" 
+	       ( 
+	       			"nonConnectable",
+	       			"uiName" "Radius of Confusion", "value"   1.0, "units"  "world",
+	       			"helpText" "This is an actual measurement in scene units, and for a real-world camera this is approximately the radius of the iris, i.e. it depends on the cameras f-stop. But it is a good rule of thumb to keep it on the order of a couple of centimeters in size (expressed in the current scene units)."
+				)
+	       control "samples" "integer" ("nonConnectable","uiName" "Samples","value"  4,"range"   1 1024,"helpText" "Samples defines how many rays are shot. Fewer is faster but grainier, more is slower but smoother.")
+	       }#end control
+	       
+       control "n" "struct" ("uiName" "Bokeh (Blur Shape) Parameters")
+			{
+	       
+	       
+	       control "bias" "scalar" 
+	       (
+	       			"nonConnectable",
+	       			"uiName" "Bias (1.0 = uniform)","value"   1.0,"range"   0.1 10.0,
+	       			"helpText" "When bias is 1.0, the circle of confusion is sampled as a uniform disk. Lower values push the sample probability towards the center, creating a softer looking DOF effect with a more misty look. Higher values push the sample probability towards the edge, creating a harder looking DOF where bright spots actually resolve as small circles."
+	       			)
+	       control "blade_count" "integer" 
+	       ( 
+	       				"nonConnectable",
+	       				"uiName" "Blade Count", "value"   0, "range"   0 12,
+	       				"helpText" "The blade count defines how many edges the circle of confusion has. A zero value makes it a perfect circle. Note that the effect of this parameter will be mainly visible in strong highlights."				
+	       )
+	       control "blade_angle" "scalar" ("nonConnectable", "uiName" "Blade Rotation", "value"   0.0, "range"   0.0 1.0,"helpText" "Set the rotation angle of the blade angle parameter, where 0.0 is zero degrees and 1.0 is 360 degrees." )
+	       control "use_bokeh" "boolean" 
+	       (
+	       			"nonConnectable","enables" "bokeh","uiName" "Use Custom Bokeh Map",
+	       			"value" 0,
+	       			"helpText" "Enables the user of a specic Bokeh Map. When this parameter is used, the parameters bias, blade count and blade angle have no effect."       			
+	       	)
+	       control "bokeh" "color texture" 
+	       (
+	       			"nonConnectable",
+	       			"uiName" "Bokeh Map",
+	       			"value" "bokeh.tif",
+	       		  "helpText" "The map defines the shape of the DOF effect. A filled white circle on a black background is equivalent to the standard blur. Generally, one need more samples to accurately render with a custom bokeh map than the built-in bokeh shape, which has an optimal sampling distribution."
+	       	)
+    
+       } #end control
+       
+       	
+       #----------------------------------
+       control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+       control "lights" "array light" ("hidden","nonConnectable")
+       control "mode" "integer" ("hidden","nonConnectable")
+       	
+}#end gui
+
+
+end declare #end declare phenomenon
+
+#------------------------------------------------------------------------------------------------
+# GUI attributes
+#------------------------------------------------------------------------------------------------
+    
+gui "gui_mia_physicalsun" {
+    control "Global"  "Global" (
+        "hidden"
+    )
+    control "automatic_photon_energy" "boolean" (
+        "value" off
+    )
+    control "shadow_softness" "scalar" (
+        "value" 1.0
+    )
+}
+
+gui "gui_mia_physicalsky" {
+    control "Global"  "Global" (
+        "hidden"
+    )
+    control "flags" "integer" (
+        "value" 0
+    )
+}	    
+
+gui "gui_mia_ciesky" {
+    control "Global"  "Global" (
+        "hidden"
+    )
+    control "flags" "integer" (
+        "value" 0
+    )
+}	    
+
+gui "gui_mia_material" {
+    control "Global"  "Global" (
+        "uiName"      "mrArchMaterial",
+        "hidden"
+    )
+    control "hl_vs_refl_balance" "scalar" (
+        "value" 1.0
+    )
+}
+
+gui "gui_mia_material_x" {
+    control "Global"  "Global" (
+        "uiName"      "mrArchMaterial",
+        "hidden"
+    )
+    control "hl_vs_refl_balance" "scalar" (
+        "value" 1.0
+    )
+}
+
+gui "gui_mia_roundcorners" {
+    control "Global"  "Global" (
+        "uiName"      "Architectural: Round Corners Bump",
+        "category"    "Bump",
+        "addApply"    "bump",
+        "hidden"
+    )
+    control "radius" "scalar" (
+        "uiName" "Radius:",
+        "units"  "world",
+        "value" "5mm"
+    )
+    control "allow_different_materials" "boolean" (
+        "uiName" "Allow different materials",
+        "value" off
+    )
+    control "bump" "shader" (
+        "uiName" "Bump passthrough",
+    )
+    control "bump_mode" "integer" (
+        "uiName" "Bump mode",
+        "value" 0,
+        "hidden"
+    )
+    control "bump_vector" "vector" (
+        "uiName" "Bump vector",
+         "hidden"
+    )
+}
+
+gui "gui_mia_exposure_simple" {
+    control "Global"  "Global" (
+        "uiName"      "Arch: Exposure - Simple",
+        "hidden"
+    )
+    control "pedestal" "scalar" (
+        "uiName" "Pedestal",
+        "value"   0
+    )
+    control "gain" "scalar" (
+        "uiName" "Gain",
+        "value"   1.0
+    )
+    control "knee" "scalar" (
+        "uiName" "Knee",
+        "value"   0.75
+    )
+    control "compression" "scalar" (
+        "uiName" "Compression",
+        "value"   2.0
+    )
+    control "gamma" "scalar" (
+        "uiName" "Gamma",
+        "value"   1.8
+    )
+    control "preview" "color texture" (
+        "uiName" "Preview",
+    )
+    control "use_preview" "boolean" (
+        "uiName" "Use Preview",
+        "value"   0
+    )
+}
+
+gui "gui_mia_portal_light" {
+    control "Global"  "Global" (
+        "uiName"      "Architectural: Environment Portal",
+        "category"    "Light",
+        "hidden"
+     )
+}
+
+gui "gui_mia_photometric_light" {
+    control "Global"  "Global" (
+        "uiName"      "Architectural: Photometric Light",
+        "category"    "Light",
+        "hidden"
+    )
+}
+    
+gui "gui_mia_light_surface" {
+    control "Global"  "Global" (
+        "uiName"      "Architectural: Self Illuminator",
+        "hidden" # Hidden by default
+    )
+    control "color" "color" (
+        "uiName" "Self-illum Color",
+        "value" 1.0 1.0 1.0
+    )
+    control "intensity" "scalar" (
+        "uiName" "Self-illum Intensity",
+        "value" 1.0
+    )
+    control "fg_contrib" "scalar" (
+        "uiName" "Contribution to FG",
+        "value" 0.0
+    )
+    control "ref_contrib" "scalar" (
+        "uiName" "Contribution to Reflections",
+        "value" 0.0
+    )
+    control "use_lights" "boolean" (
+        "uiName" "Use lights",
+        "value" off
+    )
+    control "lights_multiplier" "scalar" (
+        "uiName" "Lights multiplier",
+        "value" 1.0
+    )
+    control "lights_point" "vector" (
+        "uiName" "Point",
+        "value" 0.0 0.0 0.0
+    )
+    control "lights_eval_point" "vector" (
+        "uiName" "Light evaluation point",
+        "value" 0.0 0.0 0.0
+    )
+    control "lights" "array light" (
+        "uiName" "Lights"
+    )
+}
+
+gui "gui_mia_exposure_photographic" {
+    control "Global"  "Global" (
+        "uiName"      "Arch: Exposure - Photographic",
+        "hidden"
+    )
+    control "cm2_factor" "scalar" (
+        "uiName" "Physical Scale / PI",
+        "value"   477.46
+    )
+    control "whitepoint" "color" (
+        "uiName" "White Point",
+        "value"   1 1 1
+    )
+    control "film_iso" "scalar" (
+        "uiName" "Film ISO number",
+        "value"   100.0
+    )
+    control "camera_shutter" "scalar" (
+        "uiName" "Camera shutter (in fractions of a second)",
+        "value"   1000.0
+    )
+    control "f_number" "scalar" (
+        "uiName" "F-number (f/16 is 16, f/11 is 11 etc.)",
+        "value"   16.0
+    )
+    control "vignetting" "scalar" (
+        "uiName" "Vignetting",
+        "value"   8.0,
+        "range"   0.0 100.0
+    )
+    control "crunch_blacks" "scalar" (
+        "uiName" "Crunch Blacks (enhances shadows)",
+        "value"   0.25,
+        "range"   0.0 1.0
+    )
+    control "burn_highlights" "scalar" (
+        "uiName" "Burn (tendency to overexposure)",
+        "value"   0.5,
+        "range"   0.0 1.0
+    )
+    control "saturation" "scalar" (
+        "uiName" "Saturation (overall)",
+        "value"   1.0,
+        "range"   0.0 2.0
+    )
+    control "gamma" "scalar" (
+        "uiName" "Gamma",
+        "value"   2.2
+    )       
+    control "side_channel" "string" (
+        "uiName" "Side Channel",
+        "value" "",
+        "hidden"
+    )
+    control "side_channel_mode" "integer" (
+        "uiName" "Side Channel Mode",
+        "value" 0,
+        "hidden"
+    )
+    control "preview" "color texture" (
+        "uiName" "Preview",
+    )
+    control "use_preview" "boolean" (
+        "uiName" "Use Preview",
+        "value"   0
+    )
+}
+
+gui "gui_mia_exposure_photographic_rev" {
+    control "Global"  "Global" (
+        "uiName"      "Inverse of Photographic Exposure",
+        "hidden"
+    )
+    control "input" "color" (
+        "uiName" "Input value",
+        "value"   0 0 0
+    )
+    control "cm2_factor" "scalar" (
+        "uiName" "Physical Scale / PI",
+        "value"   477.46
+    )
+    control "whitepoint" "color" (
+        "uiName" "White Point",
+        "value"   1 1 1
+    )
+    control "film_iso" "scalar" (
+        "uiName" "Film ISO number",
+        "value"   100.0
+    )
+    control "camera_shutter" "scalar" (
+        "uiName" "Camera shutter (in fractions of a second)",
+        "value"   1000.0
+    )
+    control "f_number" "scalar" (
+        "uiName" "F-number (f/16 is 16, f/11 is 11 etc.)",
+        "value"   16.0
+    )
+    control "vignetting" "scalar" (
+        "uiName" "Vignetting",
+        "value"   8.0,
+        "range"   0.0 100.0
+    )
+    control "crunch_blacks" "scalar" (
+        "uiName" "Crunch Blacks (enhances shadows)",
+        "value"   0.25,
+        "range"   0.0 1.0
+    )
+    control "burn_highlights" "scalar" (
+        "uiName" "Burn (tendency to overexposure)",
+        "value"   0.5,
+        "range"   0.0 1.0
+    )
+    control "saturation" "scalar" (
+        "uiName" "Saturation (overall)",
+        "value"   1.0,
+        "range"   0.0 2.0
+    )
+    control "gamma" "scalar" (
+        "uiName" "Gamma",
+        "value"   2.2
+    )       
+}
+
+
+gui "gui_mia_lens_bokeh" {
+    control "Global"  "Global" (
+        "uiName"      "Arch: DOF / Bokeh",
+        "hidden"
+    )
+    control "on" "Boolean" (
+        "uiName" "Enabled",
+        "value"   1
+    )
+    control "plane" "scalar" (
+        "uiName" "Focus plane",
+        "value"   100.0,
+        "units"  "world"
+    )
+    control "radius" "scalar" (
+        "uiName" "Radius of Confusion",
+        "value"   1.0,
+        "units"  "world"
+    )
+    control "samples" "integer" (
+        "uiName" "Samples",
+        "value"   4,
+        "range"   1 128,
+    )
+    control "bias" "scalar" (
+        "uiName" "Bias (1.0 = uniform)",
+        "value"   1.0,
+        "range"   0.1 10.0
+    )
+    control "blade_count" "integer" (
+        "uiName" "Blade Count",
+        "value"   0,
+         "range"   0 12,
+    )
+    control "blade_angle" "scalar" (
+        "uiName" "Blade Angle",
+        "value"   0.0,
+        "range"   0.0 1.0
+    )
+    control "use_bokeh" "boolean" (
+        "uiName" "Use custom Bokeh map",
+    )
+    control "bokeh" "color texture" (
+        "uiName" "Bokeh map",
+    )
+}
+
+
+gui "gui_mia_envblur" {
+    control "Global"  "Global" (
+        "uiName"      "Arch: Environment Blur",
+        "hidden"
+    )
+    control "environment" "shader" (
+        "uiName" "Environment",
+    )
+    control "blur" "scalar" (
+        "uiName" "Blur",
+        "value"   0.0,
+        "range"   0.0 10.0,
+    )
+    control "mia_material_blur" "boolean" (
+         "uiName" "Derive Blur amount from Arch+Design mtl.",
+         "value"   on,
+    )
+    control "resolution" "integer" (
+        "uiName" "Resolution",
+        "value"   256,
+        "range"   0 2048,
+    )
+}
+

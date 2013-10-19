@@ -1,0 +1,1035 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+
+float3 mi_noise_fade(
+        float3 t                        /* 0-1 interpolation parameter */
+        )
+{
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+float4 mi_noise_fade(
+        float4 t                        /* 0-1 interpolation parameter */
+        )
+{
+    return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+}
+
+float mi_perm(
+         texture1D perm,   /* The permutation table */
+        float x                         /* The texture coordinate / permutation */
+        )
+{
+    //        x = (x + 0.5/256.0)*(255.0/256.0);
+    return Texture1D_sampler_color(perm,0,"none").lookup(x).x;
+}
+
+float mi_grad(
+         texture1D grad,   /* The gradient table */
+        float x,                        /* The texture coordinate / gradient */
+        float3 p                        /* A vector to dot with the gradient */
+        )
+{
+    //        x = (x + 0.5/16.0)*(15.0/16.0);
+    float3 v = Texture1D_sampler_color(grad,0,"none").lookup(x).xyz;
+    v = v*2.0 - 1.0;
+    /* get rid of epsilon offset - values should be -1, 0, or 1 */
+    v *= floor(abs(v));
+    return dot(v, p);
+}
+
+float mi_grad(
+         texture1D grad,   /* The gradient table */
+        float x,                        /* The texture coordinate / gradient */
+        float4 p                        /* A vector to combine with the gradient */
+        )
+{
+    //        x = (x + 0.5/32.0)*(31.0/32.0);
+    float4 v = Texture1D_sampler_color(grad,0,"none").lookup(x);
+    v = v*2.0 - 1.0;
+    /* get rid of epsilon offset - values should be -1, 0, or 1 */
+    v *= floor(abs(v));
+    return dot(v, p);
+}
+
+float mi_inoise(
+        float3 p,                       /* Noise Position */
+         texture1D perm,   /* The permutation table */
+         texture1D grad    /* The gradient table */
+        )
+{
+    float3 P;
+    P = fmod(floor(p), 256.0);
+
+    p -= floor(p);
+    float3 f = mi_noise_fade(p);
+
+    P = P / 255.0;
+    float one = 1.0 / 255.0;
+
+    float A = mi_perm(perm, P.x) + P.y;
+    float4 AA;
+    AA.x = mi_perm(perm, A) + P.z;
+    AA.y = mi_perm(perm, A + one) + P.z;
+    float B = mi_perm(perm, P.x + one) + P.y;
+    AA.z = mi_perm(perm, B) + P.z;
+    AA.w = mi_perm(perm, B + one) + P.z;
+
+    return lerp(
+                lerp(
+                    lerp(
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.x),
+                                    p),
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.z),
+                                    p + float3(-1.0,0.0,0.0)),
+                            f.x),
+                    lerp(
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.y),
+                                    p + float3(0.0,-1.0,0.0)),
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.w),
+                                    p + float3(-1.0,-1.0,0.0)),
+                            f.x),
+                    f.y),
+                lerp(
+                    lerp(
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.x+one),
+                                    p + float3(0.0,0.0,-1.0)),
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.z+one),
+                                    p + float3(-1.0,0.0,-1.0)),
+                            f.x),
+                    lerp(
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.y+one),
+                                    p + float3(0.0,-1.0,-1.0)),
+                            mi_grad(grad,
+                                    mi_perm(perm,AA.w+one),
+                                    p + float3(-1.0,-1.0,-1.0)),
+                            f.x),
+                    f.y),
+                f.z);
+
+}
+
+
+float mi_inoise(
+        float4 p,                       /* Noise Position */
+         texture1D perm,   /* The permutation table */
+         texture1D grad    /* The gradient table */
+)
+{
+    float4 P = fmod(floor(p), 256.0);
+    p -= floor(p);
+    float4 f = mi_noise_fade(p);
+
+    P = P / 255.0;
+    float one = 1.0 / 255.0;
+
+    //texture1D npt = perm;
+    //texture1D ngt = grad;
+
+    float A  = mi_perm(perm, P.x) + P.y;
+    float AA = mi_perm(perm, A) + P.z;
+    float AB = mi_perm(perm, A + one) + P.z;
+    float B  = mi_perm(perm, P.x + one) + P.y;
+    float BA = mi_perm(perm, B) + P.z;
+    float BB = mi_perm(perm, B + one) + P.z;
+
+    float AAA = mi_perm(perm, AA)+P.w;
+    float AAB = mi_perm(perm, AA+one)+P.w;
+    float ABA = mi_perm(perm, AB)+P.w;
+    float ABB = mi_perm(perm, AB+one)+P.w;
+    float BAA = mi_perm(perm, BA)+P.w;
+    float BAB = mi_perm(perm, BA+one)+P.w;
+    float BBA = mi_perm(perm, BB)+P.w;
+    float BBB = mi_perm(perm, BB+one)+P.w;
+
+    return lerp(
+                lerp(
+                    lerp(
+                            lerp(
+                                    mi_grad(grad,
+                                            mi_perm(perm,AAA),
+                                            p ),
+                                    mi_grad(grad,
+                                            mi_perm(perm,BAA),
+                                            p + float4(-1.0,0.0,0.0,0.0)),
+                                    f.x),
+                            lerp(
+                                    mi_grad(grad,
+                                            mi_perm(perm,ABA),
+                                            p + float4(0.0,-1.0,0.0,0.0)),
+                                    mi_grad(grad,
+                                            mi_perm(perm,BBA),
+                                            p + float4(-1.0,-1.0,0.0,0.0)),
+                                    f.x),
+                            f.y),
+                    lerp(
+                            lerp(
+                                    mi_grad(grad,
+                                            mi_perm(perm,AAB),
+                                            p + float4(0.0,0.0,-1.0,0.0)),
+                                    mi_grad(grad,
+                                            mi_perm(perm,BAB),
+                                            p + float4(-1.0,0.0,-1.0,0.0)),
+                                    f.x),
+                            lerp(
+                                    mi_grad(grad,
+                                            mi_perm(perm,ABB),
+                                            p + float4(0.0,-1.0,-1.0,0.0)),
+                                    mi_grad(grad,
+                                            mi_perm(perm,BBB),
+                                            p + float4(-1.0,-1.0,-1.0,0.0)),
+                                    f.x),
+                            f.y),
+                    f.z),
+                lerp(
+                        lerp(
+                                lerp(
+                                        mi_grad(grad,
+                                                mi_perm(perm,AAA+one),
+                                                p + float4(0.0,0.0,0.0,-1.0)),
+                                        mi_grad(grad,
+                                                mi_perm(perm,BAA+one),
+                                                p + float4(-1.0,0.0,0.0,-1.0)),
+                                        f.x),
+                                lerp(
+                                        mi_grad(grad,
+                                                mi_perm(perm,ABA+one),
+                                                p + float4(0.0,-1.0,0.0,-1.0)),
+                                        mi_grad(grad,
+                                                mi_perm(perm, BBA+one),
+                                                p + float4(-1.0,-1.0,0.0,-1.0)),
+                                        f.x),
+                                f.y),
+                        lerp(
+                                lerp(
+                                        mi_grad(grad,
+                                                mi_perm(perm,AAB+one),
+                                                p + float4(0.0,0.0,-1.0,-1.0)),
+                                        mi_grad(grad,
+                                                mi_perm(perm,BAB+one),
+                                                p + float4(-1.0,0.0,-1.0,-1.0)),
+                                        f.x),
+                                lerp(
+                                        mi_grad(grad,
+                                                mi_perm(perm,ABB+one),
+                                                p + float4(0.0,-1.0,-1.0,-1.0)),
+                                        mi_grad(grad,
+                                                mi_perm(perm,BBB+one),
+                                                p + float4(-1.0,-1.0,-1.0,-1.0)),
+                                        f.x),
+                                f.y),
+                        f.z),
+                f.w);
+}
+
+
+float octaves(
+        float3 p,                       /* Noise Position */
+         texture1D perm,   /* The permutation table */
+         texture1D grad,   /* The gradient table */
+        int octs,                       /* Number of octaves to sum */
+        float lacunarity,               /* Separation of frequencies */
+        float gain,                     /* Successive frequency weighting */
+        float freq,                     /* Base frequency */
+        float amp                       /* Base frequency weighting */
+        )
+{
+    float sum = 0;
+    for(int i=0; i<octs; i++) {
+        sum += mi_inoise(p*freq, perm, grad)*amp;
+        freq *= lacunarity;
+        amp *= gain;
+    }
+    return sum;
+}
+
+
+float octaves_abs(
+        float3 p,                       /* Noise Position */
+         texture1D perm,   /* The permutation table */
+         texture1D grad,   /* The gradient table */
+        int octs,                       /* Number of octaves to sum */
+        float lacunarity,               /* Separation of frequencies */
+        float gain,                     /* Successive frequency weighting */
+        float freq,                     /* Base frequency */
+        float amp                       /* Base frequency weighting */
+        )
+{
+    float sum = 0;
+    for(int i=0; i<octs; i++) {
+        sum += abs(mi_inoise(p*freq,
+                perm,
+                grad))*amp;
+        freq *= lacunarity;
+        amp *= gain;
+    }
+    return sum;
+}
+
+
+shader Generator_noise
+{
+input:
+    texture1D noise_perm_texture      = "noise_perm.dds"
+    {
+        display_name("Noise Permutation Texture");
+        description("The texture containing a table of 256 permutated numbers which "
+			"are used when generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    texture1D noise_grad_texture      = "noise_grad.dds"
+    {
+        display_name("Noise Gradient Texture");
+        description("The texture containing a table of 16 gradient values used when "
+                    "generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    float3   noise_position           = float3(
+                texture_coordinate[0].x,
+                texture_coordinate[0].y,
+                texture_coordinate[0].z)
+    {
+        display_name("Noise Position");
+        description("The location at which the noise function will be "
+                    "evaluated." );
+    };
+    float    noise_scale              = 5.0
+    {
+        display_name("Noise Scale");
+        soft_range(0.0001,100);
+        description("A scale factor applied to the position at which the "
+                    "noise function will be evaluated." );
+    };
+
+output:
+    Color result;
+
+    void main()
+    {
+        float3 posw = noise_position * noise_scale;
+
+        float n;
+
+        n = mi_inoise(
+                posw,
+                noise_perm_texture,
+                noise_grad_texture);
+        n = n*0.5 + 0.5;
+
+        result = Color(n, n, n, 1.0);
+    }
+}
+{
+    description( "An operation that will generate a noise pattern." );
+}
+;
+
+shader Generator_noise_4d
+{
+input:
+    texture1D noise_perm_texture      = "noise_perm.dds"
+    {
+        display_name("Noise Permutation Texture");
+         description("The texture containing a table of 256 permutated numbers which "
+			"are used when generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    texture1D noise_grad_texture      = "noise_grad_4d.dds"
+    {
+        display_name("Noise Gradient Texture");
+        description("The texture containing a table of 16 gradient values used when "
+                    "generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    float3   noise_position           = float3(
+                texture_coordinate[0].x,
+                texture_coordinate[0].y,
+                texture_coordinate[0].z)
+    {
+        display_name("Noise Position");
+        description("The location at which the noise function will be "
+                    "evaluated." );
+    };
+    float    noise_scale              = 5.0
+    {
+        display_name("Noise Scale");
+        soft_range(0.0001,100);
+        description("A scale factor applied to the position at which the "
+                    "noise function will be evaluated." );
+    };
+    float    noise_time               = 0.0
+    {
+        display_name("Noise Time");
+        description("The time at which the noise function will be "
+                    "evaluated." );
+    };
+    float    noise_time_scale         = 1.0
+    {
+        display_name("Noise Time Scale");
+        soft_range(0.0001,100);
+        description("A scale factor applied to the time at which the "
+                    "noise function will be evaluated." );
+    };
+
+output:
+    Color result;
+
+    void main()
+    {
+        float4 posw = float4(
+                noise_position.x,
+                noise_position.y,
+                noise_position.z,
+                noise_time * noise_time_scale)
+                * noise_scale;
+
+        float n;
+
+        n = mi_inoise(
+                posw,
+                noise_perm_texture,
+                noise_grad_texture);
+        n = n*0.5 + 0.5;
+
+        result = Color(n, n, n, 1.0);
+    }
+}
+{
+    description( "An operation that will generate a noise pattern." );
+}
+;
+
+shader Generator_fractal
+{
+input:
+    texture1D noise_perm_texture      = "noise_perm.dds"
+    {
+        display_name("Noise Permutation Texture");
+        description("The texture containing a table of 256 permutated numbers which "
+			"are used when generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    texture1D noise_grad_texture      = "noise_grad.dds"
+    {
+        display_name("Noise Gradient Texture");
+        description("The texture containing a table of 16 gradient values used when "
+                    "generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    float3   noise_position           = float3(
+                texture_coordinate[0].x,
+                texture_coordinate[0].y,
+                texture_coordinate[0].z)
+    {
+        display_name("Noise Position");
+        description("The location at which the noise function will be "
+                    "evaluated." );
+    };
+    float    noise_scale              = 5.0
+    {
+        display_name("Noise Scale");
+        soft_range(0.0001,100);
+        description("A scale factor applied to the position at which the "
+                    "noise function will be evaluated." );
+    };
+    float    noise_lacunarity         = 2.0
+    {
+        display_name("Noise Lacunarity");
+        soft_range(float(0),float(4));
+        description("Factor separating noise frequencies "
+                    "summed to generate the noise pattern." );
+    };
+    float    noise_gain               = 0.5
+    {
+        display_name("Noise Gain");
+        soft_range(float(0),float(1));
+        description("Factor which weights the noise frequencies summed "
+                    "to generate the noise pattern." );
+    };
+
+output:
+    Color result;
+
+    void main()
+    {
+        float3 posw = noise_position * noise_scale;
+
+        float n;
+
+        n = octaves(
+                posw,
+                noise_perm_texture,
+                noise_grad_texture,
+                4,
+                noise_lacunarity,
+                noise_gain,
+                1.0,
+                0.5);
+        n = n*0.5 + 0.5;
+
+        result = Color(n, n, n, 1.0);
+    }
+}
+{
+    description( "An operation that will generate a fractal noise pattern." );
+}
+;
+
+shader Generator_turbulence
+{
+input:
+    texture1D noise_perm_texture      = "noise_perm.dds"
+    {
+        display_name("Noise Permutation Texture");
+         description("The texture containing a table of 256 permutated numbers which "
+			"are used when generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    texture1D noise_grad_texture      = "noise_grad.dds"
+    {
+        display_name("Noise Gradient Texture");
+        description("The texture containing a table of 16 gradient values used when "
+                    "generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    float3   noise_position           = float3(
+                texture_coordinate[0].x,
+                texture_coordinate[0].y,
+                texture_coordinate[0].z)
+    {
+        display_name("Noise Position");
+        description("The location at which the noise function will be "
+                    "evaluated." );
+    };
+    float    noise_scale              = 5.0
+    {
+        display_name("Noise Scale");
+        soft_range(float(0),100);
+        description("A scale factor applied to the position at which "
+                    "the noise function will be evaluated." );
+    };
+    float    noise_lacunarity         = 2.0
+    {
+        display_name("Noise Lacunarity");
+        soft_range(float(0),float(4));
+        description("Factor separating the noise frequencies "
+                    "summed to generate the noise pattern." );
+    };
+    float    noise_gain               = 0.5
+    {
+        display_name("Noise Gain");
+        soft_range(float(0),float(1));
+        description("Factor which weights the noise frequencies summed "
+                    "to generate the noise pattern." );
+    };
+
+output:
+    Color result;
+
+    void main()
+    {
+        float3 posw = noise_position * noise_scale;
+
+        float n;
+
+        n = octaves_abs(
+                posw,
+                noise_perm_texture,
+                noise_grad_texture,
+                4,
+                noise_lacunarity,
+                noise_gain,
+                1.0,
+                1.0);
+
+        result = Color(n, n, n, 1.0);
+    }
+}
+{
+    description("An operation that will generate a turbulent noise "
+                "pattern." );
+}
+;
+
+shader Generator_cloud
+{
+input:
+    texture1D noise_perm_texture      = "noise_perm.dds"
+    {
+        display_name("Noise Permutation Texture");
+         description("The texture containing a table of 256 permutated numbers which "
+			"are used when generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    texture1D noise_grad_texture      = "noise_grad.dds"
+    {
+        display_name("Noise Gradient Texture");
+        description("The texture containing a table of 16 gradient values used when "
+                    "generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    float3   noise_position           = float3(
+                texture_coordinate[0].x,
+                texture_coordinate[0].y,
+                texture_coordinate[0].z)
+    {
+        display_name("Noise Position");
+        description("The location at which the noise function will be "
+                    "evaluated." );
+    };
+    float    noise_scale              = 5.0
+    {
+        display_name("Noise Scale");
+        soft_range(0.0001,100);
+        description("A scale factor applied to the position at which the "
+                    "noise function will be evaluated." );
+    };
+    float    noise_lacunarity         = 2.0
+    {
+        display_name("Noise Lacunarity");
+        soft_range(float(0),float(4));
+        description("Factor separating noise frequencies "
+                    "summed to generate the noise pattern." );
+    };
+    float    noise_gain               = 0.5
+    {
+        display_name("Noise Gain");
+        soft_range(float(0),float(1));
+        description("Factor which weights the noise frequencies "
+                    "summed to generate the noise pattern." );
+    };
+    Color    noise_color1             = Color(1.0, 1.0, 1.0, 1.0)
+    {
+        display_name("Noise Color 1");
+        soft_range(Color(0,0,0,0),Color(1,1,1,1));
+        description("The color of the clouds." );
+    };
+    Color    noise_color2             = Color(0.184,0.506,0.984,1.0)
+    {
+        display_name("Noise Color 2");
+        soft_range(Color(0,0,0,0),Color(1,1,1,1));
+        description("The color of the base." );
+    };
+    float    noise_threshold          = 0.5
+    {
+        display_name("Noise Threshold");
+        soft_range(float(0),float(1));
+        description("Cutoff for noise texture that defines how "
+                    "full or sparse the cloud pattern will be." );
+    };
+    float          noise_transition_width  = 0.1
+    {
+        display_name("Noise Transition Width");
+        soft_range(float(0),float(1));
+        description("Distance at which the cloud pattern will fade from "
+                    "cloud color to base color.");
+    };
+
+output:
+    Color result;
+
+    void main()
+    {
+        float3 posw = noise_position * noise_scale;
+
+        float n,t;
+
+        n = octaves(
+                posw,
+                noise_perm_texture,
+                noise_grad_texture,
+                4,
+                noise_lacunarity,
+                noise_gain,
+                1.0,
+                0.5);
+
+        n = n*0.5 + 0.5;
+        t = smoothstep(
+                noise_threshold - noise_transition_width,
+                noise_threshold,
+                n);
+        n *= t;
+
+        result = lerp(noise_color2, noise_color1, Color(n));
+    }
+}
+{
+    description( "An operation that will generate a cloud pattern." );
+}
+;
+
+shader Generator_marble
+{
+input:
+    texture1D noise_perm_texture      = "noise_perm.dds"
+    {
+        display_name("Noise Permutation Texture");
+         description("The texture containing a table of 256 permutated numbers which "
+			"are used when generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    texture1D noise_grad_texture      = "noise_grad.dds"
+    {
+        display_name("Noise Gradient Texture");
+        description("The texture containing a table of 16 gradient values used when "
+                    "generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    float3   noise_position           = float3(
+                texture_coordinate[0].x,
+                texture_coordinate[0].y,
+                texture_coordinate[0].z)
+    {
+        display_name("Noise Position");
+        description("The location at which the noise function will be "
+                    "evaluated." );
+    };
+    float    noise_scale              = 5.0
+    {
+        display_name("Noise Scale");
+        soft_range(0.0001,100);
+        description("A scale factor applied to the position at which the "
+                    "noise function will be evaluated." );
+    };
+    float    noise_lacunarity         = 2.0
+    {
+        display_name("Noise Lacunarity");
+        soft_range(float(0),float(4));
+        description("Factor separating noise frequencies "
+                    "summed to generate the noise pattern." );
+    };
+    float    noise_gain               = 0.5
+    {
+        display_name("Noise Gain");
+        soft_range(float(0),float(1));
+        description("Factor which weights the noise frequencies summed"
+                    "to generate the noise pattern." );
+    };
+    Color    noise_color1             = Color(1.00, 0.93, 0.80, 1.0)
+    {
+        display_name("Noise Color 1");
+        soft_range(Color(0,0,0,0),Color(1,1,1,1));
+        description("The color of the veins." );
+    };
+    Color    noise_color2             = Color(0.99, 0.99, 0.93, 1.0)
+    {
+        display_name("Noise Color 2");
+        soft_range(Color(0,0,0,0),Color(1,1,1,1));
+        description("The color of the marble." );
+    };
+
+output:
+    Color result;
+
+    void main()
+    {
+        float3 posw = noise_position * noise_scale;
+
+        float n;
+
+        n = octaves(
+                posw,
+                noise_perm_texture,
+                noise_grad_texture,
+                4,
+                noise_lacunarity,
+                noise_gain,
+                1.0,
+                0.5);
+
+        n = sin(posw.y*6.0 + n*12.0) + 0.5;
+
+        result = lerp(noise_color1, noise_color2, Color(n));
+    }
+}
+{
+    description( "An operation that will generate a marble pattern." );
+}
+;
+
+shader Generator_wood
+{
+input:
+    texture1D noise_perm_texture      = "noise_perm.dds"
+    {
+        display_name("Noise Permutation Texture");
+        description("The texture containing a table of 256 permutated numbers which "
+			"are used when generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    texture1D noise_grad_texture      = "noise_grad.dds"
+    {
+        display_name("Noise Gradient Texture");
+        description("The texture containing a table of 16 gradient values used when "
+                    "generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    float3   noise_position           = float3(
+                texture_coordinate[0].x,
+                texture_coordinate[0].y,
+                texture_coordinate[0].z)
+    {
+        display_name("Noise Position");
+        description("The location at which the noise function will be "
+                    "evaluated." );
+    };
+    float    noise_scale              = 5.0
+    {
+        display_name("Noise Scale");
+        soft_range(0.0001,100);
+        description( "A scale factor applied to the position at which the "
+                "noise function will be evaluated." );
+    };
+    Color    noise_light_color        = Color(0.62, 0.44, 0.11, 1.0)
+    {
+        display_name("Noise Light Color");
+        soft_range(Color(0,0,0,0),Color(1,1,1,1));
+        description( "The color of the one set of rings." );
+    };
+    Color    noise_dark_color         = Color(0.40, 0.30, 0.22, 1.0)
+    {
+        display_name("Noise Dark Color");
+        soft_range(Color(0,0,0,0),Color(1,1,1,1));
+        description("The color of every other ring." );
+    };
+    float    noise_ring_frequency    = 2.0
+    {
+        display_name("Noise Ring Frequency");
+        soft_range(0.0001,100);
+        description("The frequency of the spacing of the wood rings." );
+    };
+    float    noise_grain_scale        = 27.0
+    {
+        display_name("Noise Grain Scale");
+        soft_range(0.0001,100);
+        description("A scale factor applied to the wood grain." );
+    };
+    float3   noise_vector_scale       = float3(0.5, 0.1, 0.1)
+    {
+        display_name("Noise Vector Scale");
+        soft_range(float3(0.0001,0.0001,0.0001),float3(10,10,10));
+        description("Scaling factors for each noise frequency. "
+                    "Used in perturbing the wood rings." );
+    };
+    float    noise_noisiness          = 3.0
+    {
+        display_name("Noise Noisiness");
+        soft_range(0.0001,float(10));
+        description("An overall scale on the amount of noise used in"
+                    "perturbing the wood rings." );
+    };
+
+output:
+    Color result;
+
+    void main()
+    {
+        float3 posw = noise_position * noise_scale;
+
+        float3 p = posw;
+
+        float n1 = mi_inoise(
+                p * noise_vector_scale.x,
+                noise_perm_texture,noise_grad_texture)
+                *0.5 + 0.5;
+        float n2 = mi_inoise(
+                p * noise_vector_scale.y * 2.0,
+                noise_perm_texture,noise_grad_texture)
+                *0.5 + 0.5;
+        float n3 = mi_inoise(
+                p * noise_vector_scale.z * 4.0,
+                noise_perm_texture,noise_grad_texture)
+                *0.5 + 0.5;
+        float3 nv = float3(n1, n1, n2);
+        nv *= noise_noisiness;
+
+        p = posw + nv;
+
+        float d  = sqrt(posw.x*posw.x + posw.y*posw.y);
+              d *= noise_ring_frequency;
+        float r = frac(d + n1 + n2 + n3)*2.0;
+
+        if( r > 1.0 )
+            r = 2.0 - r;
+
+        Color c = lerp(noise_light_color, noise_dark_color, Color(r));
+
+        r = frac((posw.x + posw.y) * noise_grain_scale + 0.5);
+
+        result = Color(c.rgb, 1.0);
+    }
+}
+{
+    description( "An operation that will generate a wood pattern." );
+}
+;
+
+float cellnoise(
+        float3 p,                       /* Noise Position */
+        texture1D noise_perm_texture,   /* The permutation table */
+        texture1D noise_grad_texture    /* The gradient table */
+)
+{
+    float3 center;
+    center = floor(p) + float3(0.5);
+    return mi_inoise(center, noise_perm_texture, noise_grad_texture);
+}
+
+
+shader Generator_cellular
+{
+input:
+    texture1D noise_perm_texture      = "noise_perm.dds"
+    {
+        display_name("Noise Permutation Texture");
+        description("The texture containing a table of 256 permutated numbers which "
+			"are used when generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    texture1D noise_grad_texture      = "noise_grad.dds"
+    {
+        display_name("Noise Gradient Texture");
+        description("The texture containing a table of 16 gradient values used when "
+                    "generating the noise.");
+        disable_filtering();
+        texture_coord_u("wrap");
+		in_group("Advanced");
+    };
+    float3   noise_position           = float3(
+                texture_coordinate[0].x,
+                texture_coordinate[0].y,
+                texture_coordinate[0].z)
+    {
+        display_name("Noise Position");
+        description("The location at which the noise function will be "
+                    "evaluated." );
+    };
+    float    noise_scale              = 5.0
+    {
+        display_name("Noise Scale");
+        soft_range(0.0001,100);
+        description("A scale factor applied to the position at which the "
+                    "noise function will be evaluated." );
+    };
+    texture1D noise_neighbor_texture  = "noise_neighbor.dds"
+    {
+            display_name("Noise Neighbor Texture");
+            description( "Neighbor offset locations. Used "
+                    "to determine nearest feature points." );
+            disable_filtering();
+            texture_coord_u("wrap");
+			in_group("Advanced");
+    };
+    float    noise_jitter             = 1
+    {
+        display_name("Noise Jitter");
+        soft_range(float(0),float(1));
+        description("Amount of jittering to apply to the position "
+                    "of the neighboring cells feature positions." );
+    };
+
+output:
+    Color result1;
+    Color result2;
+    Color result3;
+
+    void main()
+    {
+        float3 posw = noise_position * noise_scale;
+
+        float3 center = floor(posw) + float3(0.5);
+
+        float  d1, d2;
+
+        d1 = d2 = 1000;
+        for(int n=0;n<27;n++)
+        {
+            float3 neighbor_offset =
+			    (Texture1D_sampler_color(noise_neighbor_texture,0,"none").lookup(n/32.0)
+						*2.0 - 1.0).xyz;
+
+            // get rid of epsilon offsets from 0
+            neighbor_offset *= floor(abs(neighbor_offset));
+
+            float3 neighbor_center = center + neighbor_offset.xyz;
+
+            float cellnoise_value = cellnoise(neighbor_center,
+                    noise_perm_texture,
+                    noise_grad_texture);
+            float3 neighbor_noise = float3(cellnoise_value);
+
+            neighbor_noise *= noise_jitter;
+
+            float3 neighbor_feature = neighbor_center +
+                    neighbor_noise;
+
+            float neighbor_dist =
+                    distance(posw, neighbor_feature);
+
+            if( neighbor_dist < d1 )
+            {
+                d2 = d1;
+                //n2 = n1;
+
+                d1 = neighbor_dist;
+                //n1 = neighbor_feature;
+            }
+            else if( neighbor_dist < d2 )
+            {
+                d2 = neighbor_dist;
+                //n2 = neighbor_feature;
+            }
+        }
+
+        result1 = Color(d1, d1, d1, 1.0);
+        result2 = Color(d2, d2, d2, 1.0);
+        float d21 = d2 - d1;
+        result3 = Color(d21, d21, d21, 1.0);
+    }
+}
+{
+    description( "An operation that will generate a cellular noise pattern." );
+}
+;
+

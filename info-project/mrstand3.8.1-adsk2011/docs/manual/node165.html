@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shaders and Trace Functions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node164.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node166.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<h2 id="SECTION163">Shaders and Trace Functions</h2>
+
+<p>Trace functions are functions provided by mental ray that allow
+a shader to cast a ray into the scene, most of them using standard
+ray tracing. Not all types of tracing functions can be used in all
+types of shaders. Conversely, many <b id="INDEX842">trace function</b>s
+cause shaders to be called. This section lists these interdependencies.
+
+<p>The following table shows which shaders are called from which trace
+functions. Displacement, contour, and photon shaders are never called by
+any of the functions, and may not call any of them. Note that
+<a href="node140.html#api:mi_trace_probe">probe rays</a> never call shaders.</p>
+
+<div align="center">
+<table class="table" style="text-align:center">
+<col style="text-align:left">
+<tr>
+<th>function calls shader<th>lens<th>mtl<th>env<th>light<th>shad<th>vol</th>
+<tr>
+<td><i>mi_trace_eye</i>
+<td>&diams;<td>&diams;<td>&diams;<td>&loz;<td>&loz;<td>&diams;</td>
+<tr>
+<td><i>mi_trace_reflection</i>
+<td>&loz;<td>&diams;<td>&diams;<td>&loz;<td>&loz;<td>&diams;</td>
+<tr>
+<td><i>mi_trace_refraction</i>
+<td>&loz;<td>&diams;<td>&diams;<td>&loz;<td>&loz;<td>&diams;</td>
+<tr>
+<td><i>mi_trace_transparent</i>
+<td>&loz;<td>&diams;<td>&diams;<td>&loz;<td>&loz;<td>&diams;</td>
+<tr>
+<td><i>mi_trace_environment</i>
+<td>&loz;<td>&loz;<td>&diams;<td>&loz;<td>&loz;<td>&diams;</td>
+<tr>
+<td><i>mi_trace_light</i>
+<td>&loz;<td>&loz;<td>&loz;<td>&diams;<td>&loz;<td>&diams;</td>
+<tr>
+<td><i>mi_sample_light</i>
+<td>&loz;<td>&loz;<td>&loz;<td>&diams;<td>&loz;<td>&diams;</td>
+<tr>
+<td><i>mi_trace_shadow</i>
+<td>&loz;<td>&loz;<td>&loz;<td>&loz;<td>&diams;<td>&loz;</td>
+<tr>
+<td><i>mi_trace_shadow_seg</i>
+<td>&loz;<td>&loz;<td>&loz;<td>&loz;<td>&diams;<td>&diams;</td>
+</table>
+</div>
+
+<dl style="margin-left:4em">
+<dt>&diams;<dd>yes, the function calls shaders of this type
+<dt>&loz;<dd>no, the function does not call shaders of this type
+</dl>
+
+<!--
+<p>
+mental ray holds internal data corresponding to the ray tree.
+Shaders may not call arbitrary trace functions since internal data
+structures entries are only provided for the following children at a
+node: eye, reflection, refraction, and transparency rays may cause
+primary ray reflection and refraction rays up to trace depth, and
+light rays to each light instance. Light rays may cause shadow rays.
+Shadow rays never cause further rays.
+<p>
+Environment rays do not have entries in this tree. The data in the tree
+is used for acceleration and can be overridden if a shader wants to cast
+rays not normally allowed, by setting the state variable
+<code>state&rarr;cache</code> to zero. This should only be done when
+necessary because it reduces efficiency.
+-->
+<p>The following table shows which trace functions may be called from
+certain types of shaders:</p>
+
+<table class="table" style="text-align:center">
+<col style="text-align:left">
+<tr>
+<th>function called from shader<th>lens<th>mtl<th>env<th>light<th>shad
+<th>ray<br />vol<th>light<br />vol</th>
+<tr>
+<td><i>mi_trace_eye</i>
+<td>&diams;<td>&loz;<td>&loz;<td>&loz;<td>&loz;<td>&loz;<td>&loz;</td>
+<tr>
+<td><i>mi_trace_reflection</i>
+<td>&loz;<sup>*</sup><td>&diams;<td>&diams;<sup>*</sup><td>&loz;<sup>*</sup><td>&loz;<sup>*</sup><td>&diams;<td>&loz;<sup>*</sup></td>
+<tr>
+<td><i>mi_trace_refraction</i>
+<td>&loz;<sup>*</sup><td>&diams;<td>&diams;<sup>*</sup><td>&loz;<sup>*</sup><td>&loz;<sup>*</sup><td>&diams;<td>&loz;<sup>*</sup></td>
+<tr>
+<td><i>mi_trace_transparent</i>
+<td>&loz;<sup>*</sup><td>&diams;<td>&diams;<sup>*</sup><td>&loz;<sup>*</sup><td>&loz;<sup>*</sup><td>&diams;<td>&loz;<sup>*</sup></td>
+<tr>
+<td><i>mi_trace_environment</i>
+<td>&diams;<sup>*</sup><td>&diams;<td>&diams;<td>&diams;<sup>*</sup><td>&diams;<td>&diams;<td>&diams;</td>
+<tr>
+<td><i>mi_trace_light</i>
+<td>&diams;<sup>*</sup><td>&diams;<td>&diams;<sup>*</sup><td>&loz;<sup>*</sup><td>&loz;<sup>*</sup><td>&diams;<td>&loz;<sup>*</sup></td>
+<tr>
+<td><i>mi_sample_light</i>
+<td>&diams;<sup>*</sup><td>&diams;<td>&diams;<sup>*</sup><td>&loz;<sup>*</sup><td>&loz;<sup>*</sup><td>&diams;<td>&loz;<sup>*</sup></td>
+<tr>
+<td><i>mi_trace_shadow</i>
+<td>&loz;<td>&loz;<td>&loz;<td>&diams;<td>&loz;<td>&loz;<td>&diams;</td>
+<tr>
+<td><i>mi_trace_shadow_seg</i>
+<td>&loz;<td>&loz;<td>&loz;<td>&loz;<td>&diams;<td>&loz;<td>&loz;</td>
+</table>
+
+<dl style="margin-left:4em">
+<dt>&diams;<dd>yes
+<dt>&loz;<dd>no
+<dt>&diams;<sup>*</sup><dd>yes, if the shader generates an artificial
+intersection point by setting <i>point</i>, <i>normal</i>, and <i>normal_geom</i>
+in the state.
+<dt>&loz;<sup>*</sup><dd>
+no, <em>except</em> if the shader removes internal data by setting
+<code>state->cache</code> to <tt>NULL</tt> and generates an artificial
+intersection point if none is present.
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node164.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node166.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

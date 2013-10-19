@@ -1,0 +1,98 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Elliptical Projection Filter Lookup</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node23.html">&laquo;&nbsp;prev</a></li>
+<li><a href="raydiff.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION22"></a>
+
+<h3>Elliptical Projection Filter Lookup</h3>
+<p><a id="INDEX48"></a> This method was implemented
+in mental ray in order to provide a very high quality texture
+filtering, far superior to the pyramid filtering explained above.
+It eliminates most if not all of the aliasing in high texture
+frequencies. When using checkerboard textures mapped onto a
+rectangle, for example, there is much less blurring at the horizon
+where the texture compression is severe. With
+<a href="node22.html#INDEX46">mip-map texture</a>s as explained above, the
+blurring at such extreme compressions is sometimes still
+visible.</p>
+<p>The main cause for the excessively blurry-looking images using
+mip-maps is the approximation of the pixel projection area by a
+square. With elliptical filtering a circle around the current
+sampling location is projected to texture space and will give
+either a circle or an ellipse as a projection shape. Instead of
+approximating this curve by simple shapes like squares, a direct
+convolution (averaging) of all texels which are inside the ellipse
+area is done. Averaging all texels in this area can take quite
+long, so mental ray uses pyramids of prefiltered textures to
+accelerate this. There are various parameters explained below which
+control modification of ellipse shape and level selection in the
+pyramid.</p>
+<p>The most difficult part when elliptical projections are used is
+that a screen to texture space transformation matrix has to be
+provided. This matrix is used in the filtering code to transform
+the circle around the current sampling location to texture space.
+mental ray provides two helper functions for constructing this
+matrix when UV texture coordinates are available; see
+<i><a href="node150.html#INDEX745">mi_texture_filter_project</a></i> in the
+Writing Shaders chapter. If those are not available and (for
+example) direct cylinder projective mappings are used, it is much
+easier to calculate this matrix.</p>
+<p>The following filtering algorithm is applied: first, a circle in
+the current sampling location is transformed to the ellipse using
+the provided transformation matrix. Then the eccentricity of the
+ellipse is calculated (major radius divided by minor radius). If
+the eccentricity is larger than a specified maximum, the minor
+radius is adjusted (made larger) to make sure that this
+eccentricity maximum always holds. The reason for this enlargement
+is that the direct convolution is done in the pyramid level based
+on the minor axis length of the ellipse. There is another parameter
+which specifies the maximum allowed number of texels the minor
+radius may cover. If that number is exceeded in the finest level
+(zero), a higher level is used. In the second level, for example,
+the minor radius has half the size etc. Enlarging the minor radius
+when the eccentricity is exceeded, basically means that we are
+going up in the pyramid. So, for very large ellipses, mental ray is
+making them "fatter" and uses a higher level in the pyramid.
+Referring to the checkerboard-mapped plane example above, the
+circle is projected to very large thin ellipses near the horizon,
+covering thousands of texels, and using the technique above, mental
+ray just makes a few texture lookups in the higher pyramid
+levels.</p>
+<p>There is another parameter which modifies the size of the circle
+to be projected, usually the radius is 0.5, making it larger
+introduces more blurring, making it less gives more aliasing.</p>
+<p>The projection helper functions expect another parameter which
+is the maximum offset of the central sampling location to the two
+other points which have to be selected. The other two points should
+be inside the pixel, but since mental ray is using the current
+intersection primitive (the triangle) also for these points to
+determine the UV texture coordinates, a smaller value than 0.5
+(pixel corners) is appropriate since mental ray might hit the
+triangle plane outside the triangle area. Usually 0.3 gives good
+results. When the UV coordinates are calculated using cylinder
+projections, it is possible to obtain the UV coordinates much
+faster and also much more accurately.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node23.html">&laquo;&nbsp;prev</a></li>
+<li><a href="raydiff.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

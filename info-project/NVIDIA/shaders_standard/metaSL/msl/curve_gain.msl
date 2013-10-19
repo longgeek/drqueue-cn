@@ -1,0 +1,40 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#include <mi_msl_shared.msl>
+
+shader Curve_gain {
+
+  input:
+	float t = texture_coordinate[0].x  {
+		display_name("Input");
+	};
+	float a = 0.1 {
+		display_name("Transition Shape");
+		hard_range(0.0, 1.0);
+		description("Adjusts the shape of the curve");
+	};
+	float start = 0.0 {
+		display_name("Start");
+		description("Start position for the gain");
+	};
+	float end   = 1.0	{
+		display_name("End");
+		description("End position for the gain");
+	};
+		 
+	output: 
+		float result;
+		Color graph_out;
+		
+	void main()
+	{
+		result = mi_gain_func(min(1, max(0,(t-start)/(end - start))), a);
+		graph_out = texture_coordinate[0].y < result ? MI_LOWER_COL : MI_UPPER_COL;
+	}
+};
+
+// declaration for curve shader pack backwards compatibility
+shader curve_gain : Curve_gain { };

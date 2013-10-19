@@ -1,0 +1,1124 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	mtarpini
+# Purpose:	Controller shaders which take the UI specs and outputs values to drive
+#			the exposed parameters in the appearance phenomena.
+#
+# ---------------------------------------------
+# Exports (all hidden):
+#
+# - adsk_Shd_WallPaint_spider
+# - adsk_Shd_Concrete_spider
+# - adsk_Shd_Hardwood_spider
+# - adsk_Shd_Water_spider
+# - adsk_Shd_Metal_spider
+# - adsk_Shd_SolidGlass_spider
+# - adsk_Shd_Ceramic_spider
+# - adsk_Shd_Glazing_spider
+# - adsk_Shd_Fabric_spider
+# - adsk_Shd_MetallicPaint_spider
+# - adsk_Shd_MetallicPaint_V2_spider
+# - adsk_Shd_Stone_spider
+# - adsk_Shd_MasonryCMU_spider
+# - adsk_Shd_PlasticVinyl_spider
+#
+#
+#
+# ---------------------------------------------
+# Description:
+#
+# Basically the workflow for the phen class implementation looks like this:
+#
+#   - a first low level phen, the appearance shader.
+#
+#   - a controller shader that takes the UI specs and outputs values to drive
+#     the exposed parameters in the appearance shader.
+#
+#   - the actual material class phen which encapsulates the above shaders.
+#
+#
+# ---------------------------------------------
+# History:
+#
+# Jan 22, 2007 - mtarpini, adsk_Shd_WallPaint_spider
+# Feb 10, 2007 - mtarpini, adsk_Shd_Concrete_spider
+# Mar 03, 2007 - mtarpini, adsk_Shd_Hardwood_spider
+# Mar 06, 2007 - mtarpini, added 'refl_hl_only' param to ctrl flat finish of wallpaint class
+# March 08, 2007 - mtarpini, changed brightvar_enable...
+# March 09, 2007 - mtarpini, ... tint_enable and application_type to scalar. they ctrl now a mix factor (0.0, disable)
+# March 13, 2007 - mtarpini, removed 'imperfection' param for hardwood; it's now directly exposed in the UI (perf gain)
+# March 15, 2007 - mtarpini, added adsk_Shd_Water_spider
+# May	28, 2007 - mtarpini, implementing unit scale handles
+# June	05, 2007 - mtarpini, adding adsk_Shd_SolidGlass_spider
+# June	10, 2007 - mtarpini, adding adsk_Shd_Ceramic_spider
+# June	20, 2007 - mtarpini, adding adsk_Shd_Glazing_spider
+# Oct	30, 2007 - mtarpini, removed adsk_Shd_SSS_spider (as it is now integrated Ceramic class)
+# Nov	10, 2007 - mtarpini, changes to Ceramic (Ao and RC check boxes, removed UnitScaling from AO and RC distances)
+# Nov	14, 2007 - mtarpini, changes to Concrete (same as above)
+# Nov	20, 2007 - mtarpini, changes to Hardwood, SolidGlass, WallPaint (same as above)
+# May	12, 2009 - mtarpini, added '_i' to identical I/O parameters (metasl compatibility)
+# Nov	19, 2009 - greniej, added adsk_Shd_Brick_spider
+#
+#****************************************************************************/
+
+min version "3.6"
+
+
+
+#------------------------------------------------------------------------
+# adsk_Shd_Brick_spider (for Tile procedural class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct 
+	{
+		#----------------------------------
+		scalar			"line_shift",
+		scalar			"random_shift",
+		boolean			"use_row_edit",			
+		boolean			"use_column_edit",			
+		scalar			"change_column",
+		scalar			"change_row",
+		integer			"per_column",
+		integer			"per_row"
+	}
+	"adsk_Shd_Brick_spider"
+	(
+		integer			"btype",
+		scalar			"line_shift",
+		scalar			"random_shift",
+		boolean			"use_row_edit",			
+		boolean			"use_column_edit",			
+		scalar			"change_column",
+		scalar			"change_row",
+		integer			"per_column",
+		integer			"per_row"
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Brick_spider"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Brick_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Shd_WallPaint_spider (for WALLPAINT material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct 
+	{
+		#----------------------------------
+		scalar			"diffuse_roughness",
+		
+		#----------------------------------
+		scalar			"reflectivity",
+		scalar			"refl_gloss",
+		scalar			"brdf_curve",
+		boolean			"refl_hl_only",			
+		
+		#----------------------------------
+		scalar			"bump_amount",
+		scalar			"bump_map",
+		scalar			"bump_map2",
+
+		#----------------------------------
+	    scalar			"roundcorners_radius",		
+		integer			"ao_do_details",
+
+		#----------------------------------
+	    vector			"noise_tiling",
+	    vector			"brush_tiling",
+	    vector			"cellular_tiling",
+	    vector			"roller_tiling"
+	}
+	"adsk_Shd_WallPaint_spider"
+	(
+		#-------------------------------------
+		# Parameters
+		#-------------------------------------
+		integer			"finish",
+		integer			"application",
+		
+		#----------------------------------		
+		boolean			"roundcorners_on",
+		scalar			"roundcorners_radius_i",
+		
+		#----------------------------------			
+		boolean			"ao_do_details_i"
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_WallPaint_spider"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_WallPaint_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Shd_Mirror_spider (for MIRROR material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct 
+	{
+		#----------------------------------
+	    scalar		"roundcorners_radius"
+	}
+	"adsk_Shd_Mirror_spider"
+	(
+		#----------------------------------		
+		boolean		"roundcorners_on",
+		scalar		"roundcorners_radius_i"		  
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Mirror_spider"
+	{
+	
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Mirror_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Shd_Concrete_spider (for CONCRETE material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct
+	{
+		#----------------------------------
+		scalar		"brightvar_enable",
+		integer		"brightmode_switcher",
+
+		#----------------------------------
+		scalar		"diffuse_roughness",
+
+		#----------------------------------
+		color		"reflectivity_noiseCol1",
+		color		"reflectivity_noiseCol2",
+		scalar		"reflectivity_noiseSize",
+		boolean		"refl_hl_only",
+
+		#----------------------------------
+		color		"refl_gloss_noiseCol1",
+		color		"refl_gloss_noiseCol2",
+		scalar		"refl_gloss_noiseSize",
+
+		#----------------------------------
+		scalar		"brdf_0_degree_refl",
+		scalar		"brdf_90_degree_refl",
+		scalar		"brdf_curve",
+
+		#----------------------------------
+		scalar		"bump_amount",
+		integer		"bump_switcher",
+
+		#----------------------------------
+	    scalar		"roundcorners_radius",		
+		integer		"ao_do_details",
+
+		#----------------------------------
+	    vector		"brightauto_tiling",
+		vector		"noisereflect_tiling",
+		vector		"noiseglossy_tiling",
+		vector		"concretesmooth_tiling",
+		vector		"polished_tex_tiling",
+
+		#----------------------------------
+	    scalar		"oceanbump_largest",
+	    scalar		"oceanbump_smallest",
+	    scalar		"oceanbump_size",
+
+		#----------------------------------
+	    scalar		"uv_tile"
+	     
+	}
+	"adsk_Shd_Concrete_spider"
+	(
+		#-------------------------------------
+		# Parameters
+		#-------------------------------------
+		integer			"surfacefinish",
+		integer			"sealant",
+		integer			"brightness_variation",
+		
+		#----------------------------------		
+		boolean			"roundcorners_on",
+		scalar			"roundcorners_radius_i",
+		
+		#----------------------------------			
+		boolean			"ao_do_details_i",
+		scalar			"bump_amount_i",
+		
+		scalar			"uv_x_tile"	
+	)
+	apply texture
+	version 1
+
+
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Concrete_spider"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Concrete_spider", 
+		"hidden")
+	}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Shd_Hardwood_spider (for HARDWOOD material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct 
+	{
+		#----------------------------------
+		scalar		"tint_enable",
+
+		#----------------------------------
+		scalar		"application_type",
+
+		#----------------------------------		
+		scalar		"roughness",		
+
+		#----------------------------------
+		scalar		"reflectivity",
+		boolean		"refl_hl_only",
+		scalar		"glossiness",
+
+		#----------------------------------
+		scalar		"brdf_0_degree_refl",		
+		scalar		"brdf_90_degree_refl",		
+		scalar		"brdf_curve",
+
+		#----------------------------------
+		boolean		"no_diffuse_bump",
+
+		#----------------------------------
+	    scalar		"oceanbump_largest",
+	    scalar		"oceanbump_smallest",
+	    scalar		"oceanbump_size",
+
+		#----------------------------------
+	    scalar		"roundcorners_radius",		
+		integer		"ao_do_details"
+	}
+	"adsk_Shd_Hardwood_spider"
+	(
+		#-------------------------------------
+		# Parameters
+		#-------------------------------------
+		integer			"tint",
+		integer			"finish",
+		integer			"application",
+		
+		#----------------------------------		
+		boolean			"roundcorners_on",
+		scalar			"roundcorners_radius_i",
+		
+		#----------------------------------			
+		boolean			"ao_do_details_i"
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Hardwood_spider"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Hardwood_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Shd_Water_spider (for WATER material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs
+	#-------------------------------------
+	struct
+	{
+		#----------------------------------
+		color		"refr_color",
+		scalar		"refr_gloss",
+
+		#----------------------------------
+		boolean		"refr_falloff_on",
+		scalar		"refr_falloff_dist",
+		boolean		"refr_falloff_color_on",
+		color		"refr_falloff_color",
+
+		#----------------------------------
+		color		"submerge_color",
+		scalar		"submerge_rgblevel",
+		scalar		"submerge_density",
+		scalar		"submerge_distance",
+
+		#----------------------------------
+		scalar		"ocean_largest",
+		scalar		"ocean_smallest",
+		integer		"ocean_quantity",
+		scalar		"ocean_size",
+		
+		#----------------------------------
+	    scalar		"roundcorners_radius",
+	    
+	    boolean		"color_by_object"
+
+	}
+	"adsk_Shd_Water_spider"
+	(
+		#-------------------------------------
+		# Parameters
+		#-------------------------------------
+		boolean		"color_by_object",
+		integer		"type",
+		integer		"color_tint",
+		color		"custom_color",
+
+		#----------------------------------
+	    scalar		"roundcorners_radius_i"
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Water_spider"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Water_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Shd_Metal_spider (for METAL material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct 
+	{
+		#----------------------------------
+		scalar			"diffuse_weight",
+		scalar			"diffuse_roughness",
+        scalar          "brightness_var",
+
+		#----------------------------------
+		scalar			"reflectivity",
+		scalar			"refl_gloss",
+		boolean			"refl_is_metal",
+
+		#----------------------------------
+		scalar			"brdf_0_degree_refl",
+		scalar			"brdf_curve",
+
+		#----------------------------------			
+		scalar			"bump_global_amount",
+		scalar			"bump_local_amount",
+
+		#----------------------------------
+		#----------------------------------
+		integer			"diffuse_switcher",
+		integer			"reflect_switcher",
+		integer			"bump_switcher",
+		integer			"aniso_switcher",
+		integer			"anisorot_switcher",
+
+		#----------------------------------
+		scalar			"map_scale",
+
+		#----------------------------------
+		color			"diffuse_color",
+		color			"patina_color",
+
+		#----------------------------------
+		color			"reflect_color",
+		scalar			"reflect_map_amount",
+		
+		#----------------------------------
+		color			"aniso_color",
+		scalar			"aniso_map_amount",
+		color			"anisorot_color",
+		scalar			"anisorot_map_amount",
+		
+		#----------------------------------
+	    scalar			"roundcorners_radius",
+	    integer			"ao_do_details",
+		
+		#----------------------------------
+		vector			"noise_tiling",
+		vector			"noiseanodized_tiling",
+	    vector			"bumpnoise_tiling",
+	    
+		#----------------------------------
+	    scalar			"shapebasednoise_scale",
+	    scalar			"shapebasednoisevertical_scale",
+	    
+		#----------------------------------
+	    integer			"patina_switcher",
+		scalar			"patina_refl",
+		scalar			"patina_gloss",
+		scalar			"patina_is_metal",
+		scalar			"patina_brdf_0_degree",
+		scalar			"patina_rough",
+		
+		#----------------------------------		
+		scalar			"rw_uv_scale",
+		scalar			"rw_ot_scale",
+		
+		#----------------------------------		
+		vector			"cutouts_size",
+		vector			"cutouts_center",
+		vector			"cutouts_space"
+				
+	}
+	"adsk_Shd_Metal_spider"
+	(
+		#-------------------------------------
+		# Parameters 
+		#-------------------------------------
+		integer			"type",
+			
+		color			"diffuse_color_i",
+		scalar			"brightness_var_i",
+			
+		integer			"application",
+
+		integer			"patterns",
+
+		#----------------------------------		
+		integer			"cutouts",
+		scalar			"cutouts_size_i",
+		scalar			"cutouts_center_i",
+		scalar			"cutouts_space_i",
+
+		#----------------------------------		
+		boolean			"roundcorners_on",
+		scalar			"roundcorners_radius_i",
+		
+		boolean			"ao_do_details_i",
+		
+		#----------------------------------			
+		scalar			"rw_uv_scale_i"
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Metal_spider"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Metal_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Shd_SolidGlass_spider (for SOLIDGLASS material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs
+	#-------------------------------------
+	struct
+	{
+		#----------------------------------
+		color		"refl_color",
+
+		#----------------------------------
+		scalar		"brdf_0_degree_refl",
+
+		#----------------------------------
+		color		"refr_color",
+
+		#----------------------------------
+		scalar		"refr_falloff_dist",
+		color		"refr_falloff_color",
+
+		#----------------------------------
+		scalar		"glossiness",
+		
+		#----------------------------------
+	    scalar		"roundcorners_radius",
+	    
+	    vector		"bumpwavy_tiling",
+	    vector		"bumprippled_tiling",
+	    
+		#----------------------------------
+		integer		"dummy",
+		boolean		"color_by_object"	    
+
+	}
+	"adsk_Shd_SolidGlass_spider"
+	(
+	
+		#-------------------------------------
+		boolean		"color_by_object",
+		integer		"transmittance_color",	
+		color		"transmittance_map",
+		
+		scalar		"reflectance",
+		
+		scalar		"refr_falloff_dist_i",
+		scalar		"glossiness_i",
+		
+		#----------------------------------		
+		boolean		"roundcorners_on",
+		scalar		"roundcorners_radius_i",
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_SolidGlass_spider"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_SolidGlass_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+
+
+#------------------------------------------------------------------------
+# adsk_Shd_Ceramic_spider (for CERAMIC material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct 
+	{
+		#----------------------------------
+		scalar		"diffuse_roughness",		
+
+		#----------------------------------
+		scalar		"reflectivity",
+		scalar		"refl_gloss",
+		scalar		"brdf_curve",
+
+		#----------------------------------
+	    vector		"noise_tiling",
+		scalar		"roundcorners_radius",
+		integer		"ao_do_details",
+		
+		#----------------------------------
+		scalar		"front_sss_radius",
+		scalar		"mid_sss_radius",
+		scalar		"back_sss_radius",
+		scalar		"back_sss_depth",
+		
+		#----------------------------------		
+		boolean		"screen_composit",
+		integer		"mia_sss_switcher",
+		
+		#----------------------------------
+		color		"mid_sss_color",
+		color		"back_sss_color"
+	}
+	"adsk_Shd_Ceramic_spider"
+	(
+		#-------------------------------------
+		# Parameters
+		#-------------------------------------
+		integer			"type",
+		integer			"application",
+		
+		#----------------------------------		
+		boolean			"roundcorners_on",
+		scalar			"roundcorners_radius_i",
+		
+	    #-------------------------------------		
+		boolean			"ao_do_details_i",
+		 
+	    #-------------------------------------
+		scalar			"front_sss_radius_i",	
+		color			"sss_overall_color"
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Ceramic_spider"
+	{
+	
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Ceramic_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+
+
+#------------------------------------------------------------------------
+# adsk_Shd_Glazing_spider (for GLAZING material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs
+	#-------------------------------------
+	struct
+	{
+		#----------------------------------
+		color		"refr_color",
+		color		"refl_color",		
+		color		"refl_color_shadows",
+		scalar		"brdf_0_degree_refl",
+	    
+		#----------------------------------
+		integer		"trans_switch",
+		boolean		"color_by_object"  
+
+	}
+	"adsk_Shd_Glazing_spider"
+	(
+		#-------------------------------------
+		integer		"no_levels",		
+		boolean		"color_by_object",
+		integer		"transmittance_color",	
+		color		"transmittance_map",		
+		scalar		"reflectance"
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Glazing_spider"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Glazing_spider", "category" "Material"
+		, "hidden")
+	}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Shd_MetallicPaint_spider (for Metallic Paint phen)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct 
+	{
+		#----------------------------------
+		scalar		"refl_gloss",
+		scalar		"spec_exp",		
+		boolean		"glazing_enable",
+		
+		#----------------------------------
+		scalar		"flake_switcher",		
+		scalar		"flake_scale",
+		scalar		"flake_reflect",		
+
+		#----------------------------------
+		scalar		"roundcorners_radius",
+		integer		"ao_do_details"
+	}
+	"adsk_Shd_MetallicPaint_spider"
+	(		
+		#----------------------------------
+		integer		"type",
+		integer		"flake_enable",
+
+		#----------------------------------		
+		boolean		"roundcorners_on",
+		scalar		"roundcorners_radius_i",
+		
+	    #-------------------------------------		
+		boolean		"ao_do_details_i"
+	)
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_MetallicPaint_spider"
+	{
+	
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_MetallicPaint_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Shd_MetallicPaint_V2_spider (for Metallic Paint phen)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct 
+	{
+		scalar	"base_weight",
+		scalar	"base_bias",
+
+		scalar	"reflectivity",
+		scalar	"refl_gloss",
+		scalar	"hl_vs_refl_balance",
+
+		scalar	"brdf_0_degree_refl",
+		scalar	"brdf_90_degree_refl",
+		scalar	"brdf_curve",
+
+		color	"spec",
+		color	"spec_sec",
+		scalar	"spec_exp",
+		scalar	"spec_weight",
+		scalar	"spec_sec_exp",
+		scalar	"spec_sec_weight",
+		boolean	"glazing_enable",
+
+		scalar	"flake_switcher",
+		scalar	"flake_scale",
+		scalar	"flake_reflect",
+		scalar	"flake_exp",
+
+		color	"pearl_color",
+		scalar	"pearl_ior",
+
+		scalar	"roundcorners_radius",
+		integer	"ao_do_details"
+	}
+	"adsk_Shd_MetallicPaint_V2_spider"
+	(		
+		integer	"type",
+
+		color	"base_color",
+		scalar	"base_luma",
+
+		scalar	"refl_gloss_i",
+		scalar	"refl_falloff",
+
+		integer	"flake_enable",
+
+		integer	"pearl_enable",
+		color	"pearl_color_i",
+		scalar	"pearl_ior_i",
+
+		boolean	"roundcorners_on",
+		scalar	"roundcorners_radius_i",
+		boolean	"ao_do_details_i"
+	)
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_MetallicPaint_V2_spider"
+	{
+		control "Global" "Global" ("uiName" "adsk_Shd_MetallicPaint_V2_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+
+
+#------------------------------------------------------------------------
+# adsk_Shd_Stone_spider (for STONE material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct 
+	{
+		#----------------------------------
+		scalar		"diffuse_roughness",		
+
+		#----------------------------------
+		scalar		"reflectivity",
+		scalar		"refl_gloss",
+		
+		#----------------------------------		
+		scalar		"brdf_0_degree_refl",
+		scalar		"brdf_curve",
+		boolean		"refl_hl_only",
+
+		#----------------------------------
+	    vector		"noise_tiling",
+	    scalar		"rw_uv_scale",
+	    scalar		"rw_uv_scale_stwall",	    
+
+		#----------------------------------
+		scalar		"roundcorners_radius",
+		integer		"ao_do_details"
+	}
+	"adsk_Shd_Stone_spider"
+	(
+		#-------------------------------------
+		# Parameters
+		#-------------------------------------
+		integer			"application",
+		
+		#----------------------------------		
+		boolean			"roundcorners_on",
+		scalar			"roundcorners_radius_i",
+		
+	    #-------------------------------------		
+		boolean			"ao_do_details_i",
+
+	    #-------------------------------------		
+	    scalar			"rw_uv_scale_i"	 		  
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Stone_spider"
+	{
+	
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Stone_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Shd_MasonryCMU_spider (for MasonryCMU material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct 
+	{
+		#----------------------------------
+		scalar		"diffuse_roughness",
+
+		#----------------------------------
+		scalar		"reflectivity",
+		scalar		"refl_gloss",
+		
+		#----------------------------------			
+		scalar		"brdf_0_degree_refl",
+		scalar		"brdf_curve",	
+		boolean		"refl_hl_only",
+
+		#----------------------------------
+	    vector		"noise_tiling",
+
+		#----------------------------------
+		scalar		"roundcorners_radius",
+		integer		"ao_do_details"
+	}
+	"adsk_Shd_MasonryCMU_spider"
+	(
+		#-------------------------------------
+		# Parameters
+		#-------------------------------------
+		integer			"type",
+		integer			"application",
+		
+		#----------------------------------		
+		boolean			"roundcorners_on",
+		scalar			"roundcorners_radius_i",
+		
+	    #-------------------------------------		
+		boolean			"ao_do_details_i"	  
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_MasonryCMU_spider"
+	{
+	
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_MasonryCMU_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Shd_Fabric_spider (for FABRIC material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct 
+	{
+		#----------------------------------
+		scalar		"diffuse_roughness",
+
+		#----------------------------------
+		scalar		"refl_gloss",
+
+		#----------------------------------
+		scalar		"brdf_0_degree_refl",
+		scalar		"brdf_90_degree_refl",
+
+		#----------------------------------
+		scalar		"transparency",
+		scalar		"refr_trans_weight",
+			    
+		#----------------------------------
+	    scalar		"roundcorners_radius",
+	    integer		"ao_do_details"
+
+	}
+	"adsk_Shd_Fabric_spider"
+	(
+		#-------------------------------------
+		# Parameters
+		#-------------------------------------
+		integer		"type",
+		integer		"application",
+		
+		#----------------------------------
+	    boolean		"roundcorners_on",
+	    scalar		"roundcorners_radius_i",
+
+	    boolean		"ao_do_details_i"
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_Fabric_spider"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_Fabric_spider", "category" "Material", 
+		"hidden")
+	}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Shd_PlasticVinyl_spider (for Plastic-Vinyl material class)
+#------------------------------------------------------------------------
+declare shader
+	#-------------------------------------
+	# Outputs 
+	#-------------------------------------
+	struct 
+	{
+		#----------------------------------
+		scalar	"diffuse_roughness",
+
+		#----------------------------------
+		scalar	"reflectivity",
+		scalar	"refl_gloss",
+		scalar	"brdf_0_degree_refl",
+		scalar	"brdf_curve",
+
+		#----------------------------------
+		scalar	"transparency",
+		scalar	"refr_gloss",
+		boolean	"refr_translucency",
+		scalar	"refr_trans_weight",
+
+		#----------------------------------
+		scalar		"roundcorners_radius",
+		integer		"ao_do_details"
+
+	}
+	"adsk_Shd_PlasticVinyl_spider"
+	(
+		#-------------------------------------
+		# Parameters
+		#-------------------------------------
+		integer			"type",
+		integer			"application",
+		
+		#----------------------------------		
+		boolean			"roundcorners_on",
+		scalar			"roundcorners_radius_i",
+		
+	    #-------------------------------------		
+		boolean			"ao_do_details_i"
+	)	
+	apply texture
+	version 1
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Shd_PlasticVinyl_spider"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "adsk_Shd_PlasticVinyl_spider", "category" "Material", 
+		"hidden")
+	}
+end declare

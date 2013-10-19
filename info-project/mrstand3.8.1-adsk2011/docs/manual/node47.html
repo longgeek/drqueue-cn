@@ -1,0 +1,77 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Fine-Tuning Caustics</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node46.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node53.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION45"></a>
+
+<h3>Fine-Tuning Caustics</h3>
+<p>The number of photons used to estimate the caustic brightness
+can be changed with the global option <tt>caustic accuracy</tt>.
+The accuracy controls how many photons are considered during
+rendering. The default is 100; larger numbers make the caustic
+smoother. There is also an optional radius parameter. The radius
+controls the maximum distance at which mental ray considers
+photons. For example, to specify that at most 200 photons should be
+used to compute the caustic brightness, and that only photons
+within 1 scene unit away should be used, specify:</p>
+<pre>
+    caustic accuracy 200 1.0
+</pre>
+<p>in the <tt>options</tt>. (Similar accuracy parameters are
+available for <a href="node48.html#INDEX95">global
+illumination</a>, volume caustics and global illumination, and
+<a href="node52.html#INDEX98">final gathering</a>.)</p>
+<p>Accuracy parameters can be used to select two fundamentally
+different <b><a id="INDEX94"></a>sampling
+policies</b>. If <i>R</i> is relatively large (as is the default),
+the overall limiting factor becomes <i>N</i> and <i>R</i> only
+catches runaway situations with very few photons. Since darker
+areas have fewer photons than brighter areas, the effective radius
+within which the <i>N</i> photons are found is larger in dark
+areas. The effect is that low intensity areas will have less detail
+than high intensity areas. Also, increasing the number of photons
+in the scene will result in the effective radius becoming smaller,
+so if <i>N</i> is not adjusted to compensate, the same amount of
+noise will be seen, only on a smaller scale.</p>
+<p>The other policy is to select <i>R</i> small, on the scale of
+the detail the user wishes to see. <i>N</i> is then kept high, or
+even set to 0 (unlimited). In this case, a constant radius is
+examined which results in the scale of the detail remaining
+constant between light and dark areas. Increasing the number of
+photons in the map will have the effect of reducing the error
+noise. In practice, one will often use a combination of the two,
+with a small radius to get detail in dark areas, and <i>N</i> set
+at a moderate value to speed up rendering. Irrespective of the
+chosen policy, a large effective radius gives less noise, but a
+more blurred result. To decrease the noise without blurring detail,
+it is necessary to increase the number of photons in the
+<a href="node48.html#INDEX96">photon map</a>. It is very instructive to
+explore the effect of setting these options with the aid of the
+<tt>diagnostic photon</tt> option since the false color image it
+generates shows the difference in estimated density more clearly.
+For fast previewing of caustics it can be useful to use
+<i>N</i>=20.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node46.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node53.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

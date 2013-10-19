@@ -1,0 +1,451 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>RC Photon Functions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node141.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node143.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION140"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_photon_light">mi_photon_light</a></li>
+<li><a href="#api:mi_photon_reflection_specular">mi_photon_reflection_specular</a></li>
+<li><a href="#api:mi_photon_reflection_glossy">mi_photon_reflection_glossy</a></li>
+<li><a href="#api:mi_photon_reflection_diffuse">mi_photon_reflection_diffuse</a></li>
+<li><a href="#api:mi_photon_transmission_specular">mi_photon_transmission_specular</a></li>
+<li><a href="#api:mi_photon_transmission_glossy">mi_photon_transmission_glossy</a></li>
+<li><a href="#api:mi_photon_transmission_diffuse">mi_photon_transmission_diffuse</a></li>
+<li><a href="#api:mi_photon_transparent">mi_photon_transparent</a></li>
+<li><a href="#api:mi_photon_volume_scattering">mi_photon_volume_scattering</a></li>
+<li><a href="#api:mi_store_photon">mi_store_photon</a></li>
+<li><a href="#api:mi_store_volume_photon">mi_store_volume_photon</a></li>
+</ul>
+
+<h3>RC Photon Functions</h3>
+<p>The functions in this section implement <i>photon tracing</i>.
+They are to be used in <a href="node142.html#INDEX580">photon
+shader</a>s. If <a href="node41.html#INDEX86">caustics</a> or
+<a href="node48.html#INDEX95">global illumination</a> are enabled,
+rendering distinguishes two phases: <b><a id="INDEX578"></a>photon tracing</b>
+and <a href="node76.html#INDEX202">scanline rendering</a>/<a
+href="node102.html#INDEX390">ray tracing</a>. Photon tracing is done
+first. It sends <b><a id="INDEX579"></a>photon</b>s
+from certain <a href="node80.html#INDEX250">light source</a>s into
+the scene. When a photon hits an object, the object's
+<b><a id="INDEX580"></a>photon shader</b> is called, which
+then gets the opportunity to absorb the photon or use one of the
+<i>mi_photon_*</i> functions to let the photon continue. The photon
+functions can be used only in photon shaders. Photon shaders may
+not use regular <a href="node102.html#INDEX390">ray tracing</a>
+functions such as <i><a href="node140.html#INDEX549">mi_trace_reflection</a></i>.</p>
+<p>
+<a id="INDEX581"></a><a id="INDEX582"></a><a id="INDEX583"></a>
+<a id="INDEX584"></a><a id="INDEX585"></a><a id="INDEX586"></a>
+<a id="INDEX587"></a> <a id="INDEX588"></a><a id="INDEX589"></a>
+There are three main categories of
+photon tracing: specular, glossy, and diffuse. These terms define
+the distribution of the secondary photons in terms of the amount of
+scattering. Polished surfaces like chrome or clear glass are
+specular; unpolished surfaces such as aluminum or lightly frosted
+glass are glossy, and surfaces with no directional reflection or
+refraction such as paper are diffuse.</p>
+<p>Photon tracing and <a href="node102.html#INDEX390">ray
+tracing</a> are similar in many respects and use similar function
+calls. Although the operation underneath is quite different
+(tracing photons vs. tracing rays), a table of the operations in
+each phase shows the similarity as far as the shaders are
+concerned:</p>
+<div align="center">
+<table class="table">
+<tr>
+<th>photons</th>
+<th>rays</th>
+</tr>
+<tr>
+<td>emanate from light sources</td>
+<td>emanate from the camera</td>
+</tr>
+<tr>
+<td>call photon material shaders</td>
+<td>call material shaders</td>
+</tr>
+<tr>
+<td>call photon volume shaders</td>
+<td>call volume shaders</td>
+</tr>
+<tr>
+<td>call photon emission shaders</td>
+<td>call light shaders</td>
+</tr>
+<tr>
+<td>-</td>
+<td>call lens shaders</td>
+</tr>
+<tr>
+<td>-</td>
+<td>call environment shaders</td>
+</tr>
+<tr>
+<td><i><a href="node142.html#INDEX591">mi_photon_light</a></i></td>
+<td><i><a href="node140.html#INDEX547">mi_trace_eye</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX603">mi_reflection_dir_specular</a></i></td>
+<td><i><a href="node143.html#INDEX602">mi_reflection_dir</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX604">mi_reflection_dir_glossy</a></i></td>
+<td><i><a href="node143.html#INDEX604">mi_reflection_dir_glossy</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX604">mi_reflection_dir_glossy_x<sup>3.4</sup></a></i></td>
+<td><i><a href="node143.html#INDEX604">mi_reflection_dir_glossy_x<sup>3.4</sup></a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX605">mi_reflection_dir_anisglossy</a></i></td>
+<td><i><a href="node143.html#INDEX605">mi_reflection_dir_anisglossy</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX605">mi_reflection_dir_anisglossy_x<sup>3.4</sup></a></i></td>
+<td><i><a href="node143.html#INDEX605">mi_reflection_dir_anisglossy_x<sup>3.4</sup></a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX606">mi_reflection_dir_diffuse</a></i></td>
+<td><i><a href="node143.html#INDEX606">mi_reflection_dir_diffuse</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX606">mi_reflection_dir_diffuse_x<sup>3.4</sup></a></i></td>
+<td><i><a href="node143.html#INDEX606">mi_reflection_dir_diffuse_x<sup>3.4</sup></a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX608">mi_transmission_dir_specular</a></i></td>
+<td><i><a href="node143.html#INDEX607">mi_refraction_dir</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX609">mi_transmission_dir_glossy</a></i></td>
+<td><i><a href="node143.html#INDEX609">mi_transmission_dir_glossy</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX609">mi_transmission_dir_glossy_x<sup>3.4</sup></a></i></td>
+<td><i><a href="node143.html#INDEX609">mi_transmission_dir_glossy_x<sup>3.4</sup></a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX610">mi_transmission_dir_anisglossy</a></i></td>
+<td><i><a href="node143.html#INDEX610">mi_transmission_dir_anisglossy</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX610">mi_transmission_dir_anisglossy_x<sup>3.4</sup></a></i></td>
+<td><i><a href="node143.html#INDEX610">mi_transmission_dir_anisglossy_x<sup>3.4</sup></a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX611">mi_transmission_dir_diffuse</a></i></td>
+<td><i><a href="node143.html#INDEX611">mi_transmission_dir_diffuse</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX611">mi_transmission_dir_diffuse_x<sup>3.4</sup></a></i></td>
+<td><i><a href="node143.html#INDEX611">mi_transmission_dir_diffuse_x<sup>3.4</sup></a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX613">mi_scattering_dir_diffuse</a></i></td>
+<td><i><a href="node143.html#INDEX613">mi_scattering_dir_diffuse</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX614">mi_scattering_dir_directional</a></i></td>
+<td><i><a href="node143.html#INDEX614">mi_scattering_dir_directional</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node143.html#INDEX615">mi_scattering_pathlength</a></i></td>
+<td><i><a href="node143.html#INDEX615">mi_scattering_pathlength</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node142.html#INDEX592">mi_photon_reflection_specular</a></i></td>
+<td><i><a href="node140.html#INDEX549">mi_trace_reflection</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node142.html#INDEX593">mi_photon_reflection_glossy</a></i></td>
+<td>-</td>
+</tr>
+<tr>
+<td><i><a href="node142.html#INDEX594">mi_photon_reflection_diffuse</a></i></td>
+<td>-</td>
+</tr>
+<tr>
+<td><i><a href="node142.html#INDEX595">mi_photon_transmission_specular</a></i></td>
+<td><i><a href="node140.html#INDEX550">mi_trace_refraction</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node142.html#INDEX596">mi_photon_transmission_glossy</a></i></td>
+<td>-</td>
+</tr>
+<tr>
+<td><i><a href="node142.html#INDEX597">mi_photon_transmission_diffuse</a></i></td>
+<td>-</td>
+</tr>
+<tr>
+<td><i><a href="node142.html#INDEX598">mi_photon_transparent</a></i></td>
+<td><i><a href="node140.html#INDEX551">mi_trace_transparent</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node142.html#INDEX599">mi_photon_volume_scattering</a></i></td>
+<td>-</td>
+</tr>
+<tr>
+<td><i><a href="node142.html#INDEX600">mi_store_photon</a></i></td>
+<td><i><a href="node140.html#INDEX571">mi_compute_irradiance</a></i>,</td>
+</tr>
+<tr>
+<td></td>
+<td><i><a href="node140.html#INDEX572">mi_compute_irradiance_backside</a></i></td>
+</tr>
+<tr>
+<td></td>
+<td><i><a href="node140.html#INDEX573">mi_compute_avg_radiance</a></i></td>
+</tr>
+<tr>
+<td><i><a href="node142.html#INDEX601">mi_store_volume_photon</a></i></td>
+<td><i><a href="node140.html#INDEX574">mi_compute_volume_irradiance</a></i>,</td>
+</tr>
+<tr>
+<td></td>
+<td><i><a href="node140.html#INDEX575">mi_compute_directional_irradiance</a></i></td>
+</tr>
+</table>
+</div>
+<p>There are three <i>mi_photon_reflection_</i>* functions and
+three <i>mi_photon_refraction_</i>* functions (as well as a
+function for transparency and one for volume scattering). Why not
+just one reflection function and one transmission function, similar
+to <i><a href="node140.html#INDEX549">mi_trace_reflection</a></i>
+and <i><a href="node140.html#INDEX550">mi_trace_refraction</a></i>?</p>
+<p>The reason is that mental ray needs to know what type of
+reflections and transmissions the photon has undergone (its "path
+history") to determine which <a href="node48.html#INDEX96">photon
+map</a> to store it in, when not to store the photon, and when to
+terminate the photon path.</p>
+<p>The photon reflection and transmission functions all follow the
+same pattern: first they check whether the intersected object is a
+caustic generator, if tracing caustic photons. If the object is not
+a caustic generator, the photon is not traced further and
+<tt>miFALSE</tt> is returned. A similar check is made for
+<a href="node48.html#INDEX95">global illumination</a> generating objects if
+tracing global illumination photons. Then a new state is set up
+with the appropriate ray type, reflection and refraction level,
+origin and direction (and the volume in the transmission case).</p>
+<p>Photon shaders, <a href="node102.html#INDEX379">photon volume
+shader</a>s, and <b><a id="INDEX590"></a>photon
+emission shader</b>s are optional; if one is missing, mental ray
+uses built-in defaults. The default photon shader absorbs all
+photons, the default photon volume shader behaves like empty space,
+and the default photon emission shader behaves like a point
+<a href="node80.html#INDEX250">light source</a> emitting photons
+uniformly in all directions (that have a chance of contributing
+illumination - but this is only an optimization).</p>
+<p><a id="scatterfunc"></a> Photon shaders can
+use the function <i><a href="node148.html#INDEX729">mi_choose_scatter_type</a></i> to select
+which type of reflection or transmission the photon should undergo
+next. <i><a href="node148.html#INDEX729">mi_choose_scatter_type</a></i> chooses a
+scatter type (reflection or transmission, diffuse, glossy, or
+specular) or absorption. The choice is made with probabilities
+depending on the scattering coefficients and the transparency. The
+scattering type with the highest scattering coefficients has the
+highest probability.</p>
+<p>In the following, <i>d</i> denotes diffuse, <i>g</i> denotes
+glossy, and <i>s</i> denotes specular, and the indices <i>r</i>,
+<i>g</i>, and <i>b</i> mean red, green, and blue, respectively.
+Each of the nine scattering coefficients (specular R, G, B, glossy
+R, G, B, diffuse R, G, B) and the transparency must be in the range
+[0&hellip;1]. Furthermore, the RGB scattering coefficients must
+each add up to a total RGB value of (1, 1, 1).</p>
+<p>If these conditions are not met, the coefficients are adjusted
+so that they are met, and a warning is given (once). To find the
+probability for scattering (that is, choosing one of the six types
+of reflection or transmission), mental ray adds the red, green, and
+blue coefficients for diffuse, glossy, and specular. The largest
+component of the resulting compound RGB value is the probability
+for scattering. (Remember that the RGB sums cannot exceed 1.0.)</p>
+<p>If a photon is not scattered, it is absorbed, so the absorption
+probability is 1.0 minus the the scattering probability.</p>
+<p>If the photon is not absorbed, the probability for diffuse
+transmission is the sum of the diffuse RGB components, divided by
+the sum of all nine components (diffuse, glossy, and specular R, G,
+and B), and multiplied by the transparency.</p>
+<p>The probability for diffuse reflection is the same, except that
+the component quotient is multiplied by 1.0 minus transparency
+instead of transparency.</p>
+<p>Similar for glossy and specular reflection and transmission. If
+a certain scattering type is chosen, the three scattering
+coefficients (r, g, b) for that type of scattering are adjusted
+following the "Russian roulette" method. Note that glossy and
+diffuse scattering will not be chosen if <a href="node41.html#INDEX86">caustics</a>
+are being simulated - only
+specular scattering (or absorption) is possible then.</p>
+<p>The connection between the <a href="node142.html#INDEX578">photon tracing</a>
+and <a href="node102.html#INDEX390">ray tracing</a> phases is the
+<i><a href="node140.html#INDEX571">mi_compute_irradiance</a></i> function. It
+allows <a href="node115.html#INDEX440">material shader</a>s (during
+image rendering) to get the <a href="node41.html#INDEX86">caustics</a> or
+<a href="node48.html#INDEX95">global illumination</a> color using the
+photons that were stored in the photon tracing phase. The function
+<i><a href="node140.html#INDEX574">mi_compute_volume_irradiance</a></i> is
+similar, but computes <a href="node48.html#INDEX97">irradiance</a>
+in a volume using the photons stored in the volume.</p>
+<p>This distinction is still valid if
+<a href="node102.html#INDEX390">ray tracing</a> is disabled and mental ray
+is reduced to <a href="node76.html#INDEX202">scanline rendering</a>
+in the second phase. For the purposes of
+<a href="node142.html#INDEX578">photon tracing</a>, scanline rendering can
+be considered a "ray tracing emulation" mode that achieves similar
+effects but never actually traces a ray, at the cost of not being
+able to control the ray direction. For example, if the <tt>trace
+off</tt> statement or <tt>-trace off</tt> command-line option is
+specified, it is still possible to generate <a href="node41.html#INDEX86">caustics</a>,
+but the second phase will be
+unable to compute raytraced reflections and refractions.</p>
+<p><a id="INDEX591"></a></p>
+<h5 class="anchor" id="api:mi_photon_light">mi_photon_light</h5>
+<pre>
+    miBoolean mi_photon_light(
+        miColor         *energy,
+        miState         *state)
+</pre>
+<p>traces a <a href="node142.html#INDEX579">photon</a> from a
+<a href="node80.html#INDEX250">light source</a> into the scene. The
+photon origin is <code>state&rarr;org</code> and the direction is
+<code>state&rarr;dir</code>. This function should be used only in
+photon emitting shaders.</p>
+<p><a id="INDEX592"></a></p>
+<h5 class="anchor" id="api:mi_photon_reflection_specular">mi_photon_reflection_specular</h5>
+<pre>
+    miBoolean mi_photon_reflection_specular(
+        miColor         *energy,
+        miState         *state,
+        miVector        *direction)
+</pre>
+<p>traces a specularly reflected photon with <i>energy</i> in
+direction <i>direction</i>. This function may be used only in
+<a href="node142.html#INDEX580">photon shader</a>s.</p>
+<p><a id="INDEX593"></a></p>
+<h5 class="anchor" id="api:mi_photon_reflection_glossy">mi_photon_reflection_glossy</h5>
+<pre>
+    miBoolean mi_photon_reflection_glossy(
+        miColor         *energy,
+        miState         *state,
+        miVector        *direction)
+</pre>
+<p>traces a glossily reflected photon with <i>energy</i> in
+direction <i>direction</i>. This function may be used only in
+<a href="node142.html#INDEX580">photon shader</a>s.</p>
+<p><a id="INDEX594"></a></p>
+<h5 class="anchor" id="api:mi_photon_reflection_diffuse">mi_photon_reflection_diffuse</h5>
+<pre>
+    miBoolean mi_photon_reflection_diffuse(
+        miColor         *energy,
+        miState         *state,
+        miVector        *direction)
+</pre>
+<p>traces a diffusely reflected photon with <i>energy</i> in
+direction <i>direction</i>. This function may be used only in
+<a href="node142.html#INDEX580">photon shader</a>s.</p>
+<p><a id="INDEX595"></a></p>
+<h5 class="anchor" id="api:mi_photon_transmission_specular">mi_photon_transmission_specular</h5>
+<pre>
+    miBoolean mi_photon_transmission_specular(
+        miColor         *energy,
+        miState         *state,
+        miVector        *direction)
+</pre>
+<p>traces a specularly transmitted photon with <i>energy</i> in
+direction <i>direction</i>. This function may be used only in
+<a href="node142.html#INDEX580">photon shader</a>s.</p>
+<p><a id="INDEX596"></a></p>
+<h5 class="anchor" id="api:mi_photon_transmission_glossy">mi_photon_transmission_glossy</h5>
+<pre>
+    miBoolean mi_photon_transmission_glossy(
+        miColor         *energy,
+        miState         *state,
+        miVector        *direction)
+</pre>
+<p>traces a glossily transmitted photon with <i>energy</i> in
+direction <i>direction</i>. This function may be used only in
+<a href="node142.html#INDEX580">photon shader</a>s.</p>
+<p><a id="INDEX597"></a></p>
+<h5 class="anchor" id="api:mi_photon_transmission_diffuse">mi_photon_transmission_diffuse</h5>
+<pre>
+    miBoolean mi_photon_transmission_diffuse(
+        miColor         *energy,
+        miState         *state,
+        miVector        *direction)
+</pre>
+<p>traces a diffusely transmitted photon with <i>energy</i> in
+direction <i>direction</i>. This function may be used only in
+<a href="node142.html#INDEX580">photon shader</a>s.</p>
+<p><a id="INDEX598"></a></p>
+<h5 class="anchor" id="api:mi_photon_transparent">mi_photon_transparent</h5>
+<pre>
+    miBoolean mi_photon_transparent(
+        miColor         *energy,
+        miState         *state)
+</pre>
+<p>traces a specularly transmitted photon with <i>energy</i> in the
+direction indicated by the state (the same direction as the
+previous direction). This function may be used only in
+<a href="node142.html#INDEX580">photon shader</a>s.</p>
+<p><a id="INDEX599"></a></p>
+<h5 class="anchor" id="api:mi_photon_volume_scattering">mi_photon_volume_scattering</h5>
+<pre>
+    miBoolean mi_photon_volume_scattering(
+        miColor         *energy,
+        miState         *state,
+        miVector        *dir);
+</pre>
+<p>traces a photon, scattered by a volume, with <i>energy</i> in
+direction <i>direction</i>. This function may be used only in
+<a href="node142.html#INDEX580">photon shader</a>s.</p>
+<p><a id="INDEX600"></a></p>
+<h5 class="anchor" id="api:mi_store_photon">mi_store_photon</h5>
+<pre>
+    void mi_store_photon(
+        miColor         *energy,
+        miState         *state)
+</pre>
+<p><i><a href="node142.html#INDEX600">mi_store_photon</a></i>
+stores a <a href="node142.html#INDEX579">photon</a> with the given
+<i>energy</i> in the <a href="node48.html#INDEX96">photon map</a>
+at the intersection point given in <code>state&rarr;point</code>.
+Only photons with non-zero energy are stored. Photons should only
+be stored at surfaces which have a diffuse component in order to
+limit the storage costs and reduce the rendering time. This
+function may be used only in <a href="node142.html#INDEX580">photon
+shader</a>s.</p>
+<p><a id="INDEX601"></a></p>
+<h5 class="anchor" id="api:mi_store_volume_photon">mi_store_volume_photon</h5>
+<pre>
+    void mi_store_volume_photon(
+        miColor         *energy,
+        miState         *state)
+</pre>
+<p>This function is equivalent to the previous, except that it is
+used to store a photon in a volume instead of on a surface. It is
+used for volume caustics and volume scattering (such as volumic
+light beams and clouds).</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node141.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node143.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

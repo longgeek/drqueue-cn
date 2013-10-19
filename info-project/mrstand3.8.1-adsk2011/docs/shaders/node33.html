@@ -1,0 +1,551 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Component Shaders</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node32.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node34.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION31"></a>
+
+  <h2>Component Shaders</h2>
+
+  <a id="INDEX97"></a>
+  <h3>Fast Scatter</h3>
+  <p>
+  This is the main shader that does the actual scattering. It is highly
+  modular and works with several plug-in shaders, and it can even be
+  cascaded into itself for multi-layer scattering (as is done in
+  <i><a href="node32.html#INDEX95">misss_fast_skin_phen</a></i>).
+  It layers the results from the plug-in shaders with the scattered light
+  from the lightmap (optionally nonlinearly, in what is known as "screen"
+  transfer mode in various compositing applications) and presents the
+  result as a final composited color.</p>
+
+<h5 id="mi_shader__misss_fast_shader">misss_fast_shader</h5>
+
+  <pre>
+    color "misss_fast_shader" (
+        color texture   "lightmap",
+        color texture   "depthmap",
+        shader          "bump",
+        shader          "diffuse_illum",
+        color           "diffuse_color",
+        shader          "specular_illum",
+        scalar          "diffuse_weight",
+        color           "front_sss_color",
+        scalar          "front_sss_weight",
+        scalar          "front_sss_radius",
+        color           "back_sss_color",
+        scalar          "back_sss_weight",
+        scalar          "back_sss_radius",
+        scalar          "back_sss_depth",
+        scalar          "scale_conversion",
+        boolean         "screen_composit",
+        boolean         "output_sss_only",
+        scalar          "falloff",
+        integer         "samples",
+    )
+    apply material
+    version 4
+</pre>
+
+<dl>
+  <dt>lightmap<br>depthmap<dd>are the light and depthmap pair from which
+  to extract the data. For more details, read about
+  <i><a href="node33.html#INDEX98">misss_lightmap_write</a></i> and the section
+  on <a href="node34.html#misss:autolightmap">Automatic lightmap generation</a>.
+
+  <dt>bump<dd>is a shader that perturbs the normal. While one could use a
+  shader list and something like <i>mib_bump_passthrough</i> before this
+  shader, for large scattering radii it is preferred that the shader is
+  aware of the normal vector before bump mapping. When a bump mapping shader
+  is assigned to this parameter instead,
+  <i><a href="node33.html#INDEX97">misss_fast_shader</a></i> will know the
+  normal both before and after bump mapping.
+
+  <dt>diffuse_illum<dd> passes any normal illumination shader (returning a color)
+  for the diffuse illumination, generally a named shader based on
+  <i><a href="node8.html#INDEX28">mib_illum_lambert</a></i>. If nothing is
+  passed, it automatically defaults to Lambert.
+
+  <dt>diffuse_color<dd> is an overall color that is applied to
+  all diffuse light, including the scattered contributions.
+
+  <dt>specular_illum<dd> passes any normal illumination shader
+  (returning a color) for the specular and reflective components.
+  If nothing is passed, no specular shading happens. This is
+  layered on top of any diffuse contributions.
+
+  <dt>diffuse_weight<dd> is a simple scalar multiplier for the
+  color returned by the <i>diffuse_illum</i> shader, for easier
+  tweaking.
+
+  <dt>front_sss_color<br>front_sss_weight<dd> are the
+  color and weight for the front surface scattering.
+
+  <dt>front_sss_radius<dd> is the scatter radius in the front
+  surface. Light will scatter this distance (in whatever units the
+  model is made) along the surface.
+
+  <dt>back_sss_color<br>back_sss_weight<dd> are the color
+  and weight of the back surface (or through) scattering.
+
+  <dt>back_sss_radius<dd> is the scatter radius and
+  <var>back_sss_depth</var> the depth in the back surface. Generally,
+  the radius and depth are set to the same value (and if the depth
+  is not specified, it defaults to the radius) but can be set
+  separately for increased control.
+
+  <dt>scale_conversion<dd> is a simple utility function allowing
+  linear division of all distances. Since scattering is distance
+  dependent, loading a material designed for a model made in inches
+  will not work on a model where the unit is meters, and vice
+  versa. Here one can pass the conversion factor.
+
+  <dt>screen_composit<dd> when turned on, chooses Screen
+  compositing. When simply adding together the contribution of many
+  layers of light, it is very easy to quickly blow out and
+  overexpose into white, but the human eye is inherently nonlinear
+  and perceives intensities in a different way. This option allows
+  use of what is known in many compositing applications as a screen
+  transfer mode between the layers, which yields a softer, more
+  pleasing result. If it is turned off, normal addition is used. If
+  rendering in a high dynamic range, and a proper tone-operator is
+  applied in the final output stage already compressing the final
+  luminance, use off. If not, turning this option on yields a more
+  pleasing result.
+
+  <dt>output_sss_only<dd> is for debugging and testing or for
+  preparing for external compositing; If it is on, only the
+  scattered contribution is shown.
+
+  <dt>falloff<dd> sets the shape of the distance falloff along
+  the scatter radius. Higher values yield a sharper falloff, and
+  lower values a smoother falloff, but also make the perceived
+  scatter distance shorter, so one must compensate by increasing
+  the actual scatter distance for a slightly softer look. For high
+  values (1.0 to 10.0), almost all samples within the scatter
+  radius are weighted equally. For low values (0.1 to 1.0), the
+  samples near the edge of the scatter radius are weighted a
+  less.
+
+  <dt>samples<dd> sets how many samples from the lightmap are
+  considered (maximum) per rendered ray, ideally, a power of two.
+  32 is probably the lowest useful value, 128 is plenty.
+</dl>
+
+<h5 id="mi_shader__misss_fast_shader_x">misss_fast_shader_x</h5>
+  <pre>
+    struct {
+        color "result",         # composited color
+
+        color "diffuse_result",   # diffuse layer
+        color "diffuse_raw",
+        color "diffuse_level",
+
+        color "specular_result",  # specular is not altered by the shader, but
+                                  # passed through from "specular_illum" sub-shader
+
+        color "front_result",     # the "front" SSS layer
+        color "front_raw",
+        color "front_level",
+
+        color "back_result",      # the "back" SSS layer
+        color "back_raw",
+        color "back_level"
+    }
+    "misss_fast_shader_x" (
+        color texture   "lightmap",
+        color texture   "depthmap",
+        shader          "bump",
+        shader          "diffuse_illum",
+        color           "diffuse_color",
+        shader          "specular_illum",
+        scalar          "diffuse_weight",
+        color           "front_sss_color",
+        scalar          "front_sss_weight",
+        scalar          "front_sss_radius",
+        color           "back_sss_color",
+        scalar          "back_sss_weight",
+        scalar          "back_sss_radius",
+        scalar          "back_sss_depth",
+        scalar          "scale_conversion",
+        boolean         "screen_composit",
+        boolean         "output_sss_only",
+        scalar          "falloff",
+        integer         "samples"
+    )
+    apply material
+    version 4
+</pre>
+
+  <p>
+  This shader has identical behavior to <a href="">misss_fast_shader</a>
+  but provides individual components of the shading results as output
+  values before compositing them into the final color value. This supports
+  multi-channel rendering approaches where compositing is performed in
+  external packages.
+
+<p>
+  The <i><a href="node33.html#INDEX97">misss_fast_shader</a></i>
+  works conceptually with the layering of several light
+  contributions, all stacked on top of each other. The actual
+  compositing can be done with simple addition or with the softer
+  looking screen compositing.
+
+<div class="pic">
+<img src="images/subsurf_concept.jpg" />
+<br>Conceptual layering of misss_fast_shader</div>
+
+  <p>Plug-in shaders provide the actual contribution for the
+  various layers. <var>bump</var>, <var>diffuse_illum</var> and
+  <var>specular_illum</var> are the main plugin shaders that provide
+  the shading model.
+
+  <p>The <var>bump</var> shader affects the surface normal and is
+  called before the "... <var>_illum</var>" shaders and hence affects
+  their shading. However, no bump mapping is performed on the
+  scattered light, since this happens <i>under</i> the surface. It
+  is possible to include the effect of bump mapping in the light
+  <i>before</i> it is scattered by including a bump map shader in
+  the lightmapping phase.
+
+  <p>To create the subsurface scattering itself, light from
+  specially prepared lightmaps is gathered, weighted by distance,
+  and tinted. The whole stack is finally layered together as
+  follows, from top to bottom.</p>
+
+  <ul>
+    <li>Layer 1: What the <var>specular_illum</var> shader returns.
+    <li>Layer 2: What the <var>diffuse_illum</var> shader returns.
+    <li>Layer 3: The front layer, which is the scattering within
+    the facing side of the object.
+    <li>Layer 4: The back layer, which is light shining through the  object.
+  </ul>
+
+  <p>The following two observations are noteworthy: First, keep in
+  mind that the contributions from layers 2, 3 and 4 are all
+  multiplied with the " <var>diffuse_color</var>" parameter as an
+  overall tinting and attenuation color for the diffuse
+  contributions. Second, since the plugin shaders are simply called
+  and layered in, it is possible to cascade several shaders
+  together to create multiple layers as follows:</p>
+
+<div class="pic">
+<img src="images/subsurf_cascading.jpg" />
+<br />Cascading of misss_fast_shader</div>
+
+  <p>This graph shows how a 2nd iteration of
+  <i><a href="node33.html#INDEX97">misss_fast_shader</a></i> is used as the
+  <i>diffuse_illum</i> parameter of the 1st. This works because the
+  scattering function receives its diffuse illumination from the
+  lightmaps, and does not care about what <var>diffuse_illum</var>
+  actually returns. It simply layers it into the mix.</p>
+
+  <p>This is precisely how the skin Phenomenon is implemented. A
+  second shader is cascaded into the first, giving an extra layer.
+  In principle, there is nothing preventing the stacking of an
+  arbitrary number of shaders.</p>
+
+  <a id="INDEX98"></a>
+  <h3>Lightmap Creation</h3>
+<p>
+  This is the lightmapping shader. It is required for the fast subsurface
+  scattering to work <a href="#FOOTNOTE1">[1]</a>. It creates a lightmap
+  and stores the front and back surfaces, their depth, and irradiant
+  light intensities in one or more specially formatted lightmaps.
+  Two modes of behavior are supported:</p>
+  <ul style="list-style-type: disc">
+    <li>Passing a single writable texture that must be floating
+    point (32 bits) to the <i>lightmap</i> parameter.
+
+    <li>Passing a <i>lightmap_group</i> and a <i>lightmap_size</i>,
+    causing the internal creation of an in-memory light and depthmap
+    pair. To use this option, the shader must be enclosed in a
+    Phenomenon where the lightmap and depthmap are the first two
+    parameters. See <a href="node34.html#misss:autolightmap">
+    Automatic lightmap generation</a>.
+  </ul>
+
+<h5 id="mi_shader__misss_lightmap_write">misss_lightmap_write</h5>
+  <pre>
+    struct {
+        vector "point",
+        vector "normal"
+    }
+    "misss_lightmap_write" (
+        color texture   "lightmap",
+        color texture   "depthmap",
+        string          "lightmap_group",
+        scalar          "lightmap_size",
+        integer         "write_lightmap",
+        scalar          "scatter_bias",
+        shader          "input"
+    )
+    version 4
+    apply lightmap
+</pre>
+<dl>
+  <dt>lightmap<dd> should point to a writable color texture and
+  <var>depthmap</var> be unassigned or both should be assigned to a
+  pair of Phenomenon interface parameters as detailed in
+  <a href="node34.html#misss:autolightmap">Automatic lightmap generation</a>.
+
+  <dt>lightmap_group<dd> is a string with a scatter group name
+  with automatic lightmap generation. All objects and materials
+  that use the same scatter group will scatter light into each
+  other.
+
+  <dt>lightmap_size<dd> is the size, in percent of render size,
+  for the automatically generated lightmap.
+
+  <dt>write_lightmap<dd> is currently reserved for future use.
+
+  <dt>scatter_bias<dd> adjusts the light in the lightmap to favor
+  back scattering (light from behind the camera scatters back
+  towards the camera) when using negative values and forward
+  scattering when using positive values. The technical range is -1
+  to 1, but generally only small values (-0.2 to 0.2) make visual
+  sense.
+
+  <dt>input<dd> is the shader that actually samples the lighting
+  in the model for the lightmap. Generally
+  <i><a href="node33.html#INDEX99">misss_lambert_gamma</a></i> is used, but
+  any illumination shader can be used, for example
+  <i><a href="node8.html#INDEX28">mib_illum_lambert</a></i> or even experiment
+  with <i><a href="node8.html#INDEX29">mib_illum_phong</a></i> and scattering
+  of specular reflections.
+</dl>
+
+  <a id="INDEX99"></a>
+  <h3>Lambert Illumination</h3>
+
+  <p>This is the supplied lightmap sampling shader. Any illumination shader
+  can be used like <i><a href="node8.html#INDEX28">mib_illum_lambert</a></i>
+  but this one is specially tuned for the job and has additional options for
+  lightmap gamma correction, normal flipping and indirect light inclusion.</p>
+
+<h5 id="mi_shader__misss_lambert_gamma">misss_lambert_gamma</h5>
+  <pre>
+    color "misss_lambert_gamma" (
+        color           "ambient",
+        color           "ambience",
+        color           "diffuse",
+        boolean         "indirect",
+        scalar          "diffuse_curve",
+        integer         "flip",
+        integer         "mode",
+        array light     "lights"
+    )
+    version 4
+    apply texture
+</pre>
+<dl>
+  <dt>diffuse<dd> is the diffuse color.
+  
+  <dt>ambient<br>ambience<dd> are
+  multiplied with each other to yield a final contribution of
+  ambient light.
+
+  <dt>indirect<dd>if on, will cause indirect illumination (such
+  as final gathering and photons) to be included in the lightmap,
+  at the expense of increased rendering time.
+
+  <dt>diffuse_curve<dd> is the gamma curve for diffuse light. The
+  Lambertian cosine is raised to the power of this value (i.e.
+  <b>pow(dot_nl, diffuse_curve)</b>) to flatten (for values less
+  than 1.0) or narrow (for values above 1.0) the curve for greater
+  control.
+
+  <dt>flip<dd> can be one of the following: 0, normals are not
+  flipped; 1, normals are flipped; or 2, both the unflipped and
+  flipped-normal sides are lightmapped. This can be useful for
+  translucency in thin objects such as leaves.
+
+  <dt>mode<dd> is the mode selector for the
+  <a href="node8.html#lightlists">light lists</a>.
+
+  <dt>lights<dd> list of lights directly linked to the shader.
+</dl>
+
+  <a id="INDEX100"></a>
+  <h3>Specular Skin</h3>
+
+  <p>This is a function geared towards recreating the peculiar specular
+  characteristics of skin. It contains two specular highlights and glossy
+  reflections with edge enhancement.</p>
+
+  <p>The shader can be used anywhere where specular highlights are
+  needed. It has no diffuse component and hence needs to be layered
+  together with another shader that provides the diffuse shading.</p>
+
+<h5 id="mi_shader__misss_skin_specular">misss_skin_specular</h5>
+  <pre>
+    color "misss_skin_specular" (
+        scalar          "overall_weight",
+        scalar          "edge_factor",
+
+        color           "primary_spec_color",
+        scalar          "primary_weight",
+        scalar          "primary_edge_weight",
+        scalar          "primary_shinyness",
+
+        color           "secondary_spec_color",
+        scalar          "secondary_weight",
+        scalar          "secondary_edge_weight",
+        scalar          "secondary_shinyness",
+
+        scalar          "reflect_weight",
+        scalar          "reflect_edge_weight",
+        scalar          "reflect_shinyness",
+        boolean         "reflect_environment_only",
+
+        integer         "mode",     
+        array light     "lights"
+    )
+    version 4
+    apply material
+</pre>
+
+<dl>
+  <dt>overall_weight
+  <dd> is the overall level of specularity and
+  reflections. Generally, any specularity map is included here and
+  will affect the level of all specularity options that follow
+  below.
+
+  <dt>edge_factor
+  <dd> sets the edge width of the edge reflection
+  effects. Skin reflects more when watched in angles nearly
+  perpendicular to it (known as a "Fresnel effect") and this
+  parameter sets the narrowness of this edge. Higher values yield a
+  thinner edge. This edge width applies to all the edge weights
+  listed below.
+
+  <dt>primary_spec_color
+  <br>primary_spec_weight
+  <dd> are the color and base weight for the first layer of specularity.
+  The skin specularity functions are two-layered, allowing simulation
+  of both the broad soft specularity of skin and any
+  near-reflective specularities of top layer oiliness and
+  wetness.
+
+  <dt>primary_edge_weight
+  <dd> sets the additional multiplier for
+  the edge, where final specularity at the edge is the sum of
+  <var>weight</var> and <var>edge weight</var>.
+
+  <dt>primary_shinyness
+  <dd> is the specular exponent (higher
+  values yield a smaller and sharper specular highlight, which is a
+  modified Phong with edge softening).
+
+  <dt>secondary_spec_color
+  <br>secondary_spec_weight
+  <br>secondary_edge_weight
+  <br>secondary_shinyness
+  <dd> work exactly like the parameters that begin with <i>primary_</i>
+  and are for the second layer of specularity.
+
+  <dt>reflect_weight
+  <br>reflect_edge_weight
+  <dd> the weight and edge weight for reflections. If it is nonzero, then
+  actual (glossy) reflections are added.
+
+  <dt>reflect_shinyness
+  <dd> is the shinyness value for glossy reflections. When it is 0.0,
+  standard raytraced mirror reflections are used, but for nonzero values
+  glossy reflections are generated, which increases render time.
+
+  <dt>reflect_environment_only
+  <dd> if true only the current environment map is sampled for reflections,
+  and no actual rays are traced.
+
+  <dt>mode
+  <dd> is the mode selector for the
+  <a href="node8.html#lightlists">light lists</a>.
+
+  <dt>lights
+  <dd> array of lights directly linked to the shader.
+</dl>
+
+  <a id="INDEX101"></a>
+  <h3>Call Shader</h3>
+
+  <p>
+  This is a utility "pass through" shader for Phenomenon building. It allows
+  passing shaders as parameters to material Phenomena for items
+  such as environment, photons, and displacement.</p>
+
+<h5 id="mi_shader__misss_call_shader">misss_call_shader</h5>
+  <pre>
+    color "misss_call_shader" (
+        shader  "shader",
+        shader  "default_shader",
+        integer "mode"
+    )
+    version 2
+    apply material, texture, environment, photon, shadow, displace
+</pre>
+
+<dl>
+  <dt>shader<dd> is the shader to be called.
+
+  <dt>default_shader<dd> is the shader that is called if <i>shader</i>
+  is not specified.
+
+  <dt>mode<dd> is the shader calling mode, where 0 is "automatic".
+  Any other number maps to a shader calling mode <i>miShader_type</i>.
+  See the <i>shader.h</i> include file.
+</dl>
+
+  <p>
+  Here is an example in pseudo code of using this shader in a Phenomenon:</p>
+  <pre>
+    declare phenomenon 
+        material "my_phenomenon" (
+            color       "my_special_color",
+            scalar      "my_size",
+            shader      "optional_environment",
+            ...
+        )
+        shader "default_environment" "...." (
+            .... some environment shader ...
+        )
+        shader "env" "misss_call_shader" (
+            # call the passed shader
+            "shader"    = interface "optional_environment",
+            # if none was passed, call our default
+            "default_shader" "default_environment"
+        )
+        environment = "env" 
+    end declare
+</pre>
+
+  <p><a id="FOOTNOTE1">[1]</a> The sample shader,
+  <i>misss_lambert_gamma</i> is optional. Any illumination shader
+  can be used.<br /></p>
+
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node32.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node34.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

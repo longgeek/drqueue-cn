@@ -1,0 +1,381 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Illumination</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node6.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node7.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION6"></a>
+
+<h2>Illumination</h2>
+
+<h3>Lambert</h3>
+
+<p>Perform Lambertian illumination, given ambient and diffuse RGB
+colors (alpha is ignored), and a light list.</p>
+
+<a id="INDEX28"></a>
+<h5 class="anchor" id="mi_shader__mib_illum_lambert">mib_illum_lambert</h5>
+<pre>
+    color "mib_illum_lambert" (
+        color           "ambience",
+        color           "ambient",
+        color           "diffuse",
+        integer         "mode",
+        array light     "lights")
+</pre>
+
+<dl>
+<dt>ambience<dd>is a multiplier for the ambient color. The
+  idea is that ambient and diffuse color can be derived from the
+  same subshader result (a texture mapper, for example) and the
+  ambient brightness can be reduced to avoid losing the effect of
+  illumination.
+<dt>ambient<dd>is a constant color offset.
+<dt>diffuse<dd>is added to the result for each light, after
+  multiplication with the color returned by the light and a weight
+  based on the dot product of the incident ray direction and the
+  light direction.
+<dt>mode<dd>controls which lights to use, see
+  <a href="#lightlists">light lists</a>.
+<dt>lights<dd>is a list of light instances used for
+  <a href="#lightlists">light lists</a>.
+</dl>
+
+<h3>Phong</h3>
+
+<p>Perform Phong illumination, given ambient, diffuse, and
+  specular RGB colors, a specular exponent, and a light list.</p>
+
+<a id="INDEX29"></a>
+<h5 class="anchor" id="mi_shader__mib_illum_phong">mib_illum_phong</h5>
+<pre>
+    color "mib_illum_phong" (
+        color           "ambience",
+        color           "ambient",
+        color           "diffuse",
+        color           "specular",
+        scalar          "exponent",
+        integer         "mode",
+        array light     "lights")
+</pre>
+
+<dl>
+<dt>ambience<dd>is a multiplier for the ambient color. The
+  idea is that ambient and diffuse color can be derived from the
+  same subshader result (a texture mapper, for example) and the
+  ambient brightness can be reduced to avoid losing the effect of
+  illumination.
+<dt>ambient<dd>is a constant color offset.
+<dt>diffuse<dd>is added to the result for each light, after
+  multiplication with the color returned by the light and a weight
+  based on the dot product of the incident ray direction and the
+  light direction.
+<dt>specular<dd>provides the color of specular highlights.
+<dt>exponent<dd>controls the width of the specular highlight.
+  Smaller values increase the size.
+<dt>mode<dd>controls which lights to use, see
+  <a href="#lightlists">light lists</a>.
+<dt>lights<dd>is a list of light instances used for
+  <a href="#lightlists">light lists</a>.
+</dl>
+
+<h3>Ward</h3>
+
+<p>Perform Ward illumination, given ambient, diffuse, and glossy
+  RGB colors, two shinyness parameters, two direction vectors, and
+  a light list.</p>
+
+<a id="INDEX30"></a>
+<h5 class="anchor" id="mi_shader__mib_illum_ward">mib_illum_ward</h5>
+<pre>
+    color "mib_illum_ward" (
+        color           "ambience",
+        color           "ambient",
+        color           "diffuse",
+        color           "glossy",
+        scalar          "shiny_u",
+        scalar          "shiny_v",
+        vector          "u",
+        vector          "v",
+        integer         "mode",
+        array light     "lights")
+</pre>
+
+<dl>
+  <dt>ambience<dd> is a multiplier for the ambient color. The
+  idea is that ambient and diffuse color can be derived from the
+  same subshader result (a texture mapper, for example) and the
+  ambient brightness can be reduced to avoid losing the effect of
+  illumination.
+
+  <dt>ambient<dd> is a constant color offset.
+
+  <dt>diffuse<dd> is added to the result for each light, after
+  multiplication with the color returned by the light and a weight
+  based on the dot product of the incident ray direction and the
+  light direction.
+
+  <dt>glossy<dd> is also added per light. It is the glossy color
+  computed according to Ward's anisotropic glossy reflection
+  model.
+
+  <dt>shiny_u<br>shiny_v<dd> controls the width of the
+  glossy highlight in the u and v directions, respectively. Smaller
+  values increase the size of the highlight.
+
+  <dt>u<br />v<dd> the brushing directions in the anisotropic material.
+  They must be perpendicular to each other and to the surface normal,
+  and of unit length. Such vectors are generated by the
+  <a href="node4.html#mi_shader__mib_texture_rotate">mib_texture_rotate</a>
+  shader intended to drive these input parameters.
+
+  <dt>mode<dd>controls which lights to use, see
+  <a href="#lightlists">light lists</a>.
+
+  <dt>lights<dd>is a list of light instances used for
+  <a href="#lightlists">light lists</a>.
+</dl>
+
+  <h3>Ward with surface derivatives</h3>
+
+  <p>Perform Ward illumination, given ambient, diffuse, and glossy
+  RGB colors, two shinyness parameters, and a light list. The only
+  difference from <tt>mib_illum_ward</tt> is that the brushing
+  directions are taken from the surface derivatives.</p>
+
+  <a id="INDEX31"></a>
+<h5 class="anchor" id="mi_shader__mib_illum_ward_deriv">mib_illum_ward_deriv</h5>
+  <pre>
+    color "mib_illum_ward_deriv" (
+        color           "ambience",
+        color           "ambient",
+        color           "diffuse",
+        color           "glossy",
+        scalar          "shiny_u",
+        scalar          "shiny_v",
+        integer         "mode",
+        array light     "lights")
+</pre>
+
+<dl>
+  <dt>ambience<dd> is a multiplier for the ambient color. The
+  idea is that ambient and diffuse color can be derived from the
+  same subshader result (a texture mapper, for example) and the
+  ambient brightness can be reduced to avoid losing the effect of
+  illumination.
+
+  <dt>ambient<dd> is a constant color offset.
+
+  <dt>diffuse<dd> is added to the result for each light, after
+  multiplication with the color returned by the light and a weight
+  based on the dot product of the incident ray direction and the
+  light direction.
+
+  <dt>glossy<dd> is also added per light. It is the glossy color
+  computed according to Ward's anisotropic glossy reflection
+  model.
+
+  <dt>shiny_u<br>shiny_v<dd> controls the width of the
+  glossy highlight in the u and v directions, respectively. The u
+  direction is the first derivative of the surface (read from the
+  state), and v is perpendicular. Both u and v are in the plane
+  that is perpendicular to the surface normal.
+
+  <dt>mode<dd>controls which lights to use, see
+  <a href="#lightlists">light lists</a>.
+
+  <dt>lights<dd>is a list of light instances used for
+  <a href="#lightlists">light lists</a>.
+</dl>
+
+  <h3>Cook-Torrance</h3>
+
+  <p>Perform Cook-Torrance illumination, given ambient, diffuse,
+  and specular RGB colors, a roughness, index of refraction for
+  three wavelengths, and a light list. Cook-Torrance illumination
+  has an off-specular peak and a color shift with angles.</p>
+
+  <a id="INDEX32"></a>
+<h5 class="anchor" id="mi_shader__mib_illum_cooktorr">mib_illum_cooktorr</h5>
+  <pre>
+    color "mib_illum_cooktorr" (
+        color           "ambience",
+        color           "ambient",
+        color           "diffuse",
+        color           "specular",
+        scalar          "roughness",
+        color           "ior",
+        integer         "mode",
+        array light     "lights")
+</pre>
+
+<dl>
+  <dt>ambience<dd> is a multiplier for the ambient color. The
+  idea is that ambient and diffuse color can be derived from the
+  same subshader result (a texture mapper, for example) and the
+  ambient brightness can be reduced to avoid losing the effect of
+  illumination.
+
+  <dt>ambient<dd> is a constant color offset.
+
+  <dt>diffuse<dd> is added to the result for each light, after
+  multiplication with the color returned by the light and a weight
+  based on the dot product of the incident ray direction and the
+  light direction.
+
+  <dt>specular<dd> is a factor that the reflected color is
+  multiplied with.
+
+  <dt>roughness<dd> is the average microfacet slope of the
+  surface. It controls the width of the specular highlight.
+
+  <dt>ior<dd> is the index of refraction of the material at three
+  different wavelengths (red, green, blue). Metals typically have a
+  higher index of refraction than glass. Values must be 1.0 or
+  greater; smaller values are clamped to 1.0.
+
+  <dt>mode<dd>controls which lights to use, see
+  <a href="#lightlists">light lists</a>.
+
+  <dt>lights<dd>is a list of light instances used for
+  <a href="#lightlists">light lists</a>.
+</dl>
+
+  <h3>Blinn</h3>
+
+  <p>Perform Blinn illumination, which is a like Cook-Torrance
+  illumination but without the color shift with angles. It only
+  requires one index of refraction.</p>
+
+  <a id="INDEX33"></a>
+<h5 class="anchor" id="mi_shader__mib_illum_blinn">mib_illum_blinn</h5>
+  <pre>
+    color "mib_illum_blinn" (
+        color           "ambience",
+        color           "ambient",
+        color           "diffuse",
+        color           "specular",
+        scalar          "roughness",
+        scalar          "ior",
+        integer         "mode",
+        array light     "lights")
+</pre>
+
+<dl>
+  <dt>ambience<dd> is a multiplier for the ambient color. The
+  idea is that ambient and diffuse color can be derived from the
+  same subshader result (a texture mapper, for example) and the
+  ambient brightness can be reduced to avoid losing the effect of
+  illumination.
+
+  <dt>ambient<dd> is a constant color offset.
+
+  <dt>diffuse<dd> is added to the result for each light, after
+  multiplication with the color returned by the light and a weight
+  based on the dot product of the incident ray direction and the
+  light direction.
+
+  <dt>specular<dd> provides the color of specular highlights.
+
+  <dt>roughness<dd> is the average microfacet slope of the
+  surface. It controls the width of the specular highlight.
+
+  <dt>ior<dd> is the index of refraction of the material. Metals
+  typically have higher index of refraction than glass.
+
+  <dt>mode<dd>controls which lights to use, see
+  <a href="#lightlists">light lists</a>.
+
+  <dt>lights<dd>is a list of light instances used for
+  <a href="#lightlists">light lists</a>.
+</dl>
+
+  <h3>Hair</h3>
+
+  <p>Perform illumination on hair geometry similar to Phong. Hair requires
+  specialized shaders because they are not shading regular triangles but
+  procedural flat-ribbon geometry. Note, that special shaders should be
+  used in parameter connections which can deal with the differences in
+  shading or texture mapping on hair geometry.</p>
+
+<h5 class="anchor" id="mi_shader__mib_illum_hair">mib_illum_hair</h5>
+  <pre>
+    color "mib_illum_hair" (
+        color           "ambience",
+        color           "ambient",
+        color           "diffuse",
+        color           "specular",
+        scalar          "exponent",
+        integer         "mode",
+        array light     "lights")
+</pre>
+
+<dl>
+  <dt>ambience<dd> is a multiplier for the ambient color.
+  <dt>ambient<dd> is a constant color offset.
+  <dt>diffuse<dd> is added to the result for each light, after
+  multiplication with the color returned by the light and a weight
+  based on the dot product of the incident ray direction and the
+  light direction.
+  <dt>specular<dd> provides the color of specular highlights.
+<dt>exponent<dd>controls the width of the specular highlight.
+<dt>mode<dd>controls which lights to use, see
+  <a href="#lightlists">light lists</a>.
+<dt>lights<dd>is a list of light instances used for
+  <a href="#lightlists">light lists</a>.
+</dl>
+
+<a></a>
+  <h3 id="lightlists">Light Lists</h3>
+
+<p>All illumination shaders above have a <em>mode</em> parameter and a
+<em>lights</em> parameter to control the set of lights which is used for
+illumination. Illumination is performed either using the light instances
+given in the <em>lights</em> parameter, or the light list of the geometry
+instance to be shaded. Using the light lists assigned to scene objects allows
+to share a common shader even on objects with different light relations.
+The lights are used according to the following possible values for the
+<em>mode</em> parameter:</p>
+  <dl>
+    <dt>0</dt>
+    <dd>illumination using the <em>lights</em> parameter; if no lights are specified,
+    then using the instance light list; if no instance light list is specified,
+    then using all lights in the scene. This is the default.</dd>
+    <dt>1</dt>
+    <dd>illumination using the specified <em>lights</em> in inclusive mode, i.e., instances of groups
+    of light instances are evaluated to all light instances in the group</dd>
+    <dt>2</dt>
+    <dd>illumination using the specified <em>lights</em> in exclusive modes, i.e., using
+    all lights except the specified ones</dd>
+    <dt>4</dt>
+    <dd>illumination ignoring any specified <em>lights</em>, and using the instance light list.
+    If no instance light list is specified then all light instances in the scene are used.
+    </dd>
+  </dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node6.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node7.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

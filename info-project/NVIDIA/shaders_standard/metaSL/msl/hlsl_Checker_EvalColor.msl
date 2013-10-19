@@ -1,0 +1,154 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// see max_texutil.h
+#define fmax(x,y)	(((x)>(y))?(x):(y))
+
+shader hlsl_Checker_EvalColor {
+ input:
+  float Soften = 0.0 {
+    display_name("Soften");
+    hard_range(0.0, 1.0);
+  };
+  Color Color1 = Color(0.0, 0.803278, 1.0, 1.0) {
+    display_name("Color1");
+  };
+  Color Color2 = Color(0.163155, 0.475410, 0.070142, 1.0) {
+    display_name("Color2");
+  };
+  Shader Map1;
+  Shader Map2;
+  const bool Map1Enabled = false {
+    display_name("Map1 Enabled");
+  };
+  const bool Map2Enabled = false {
+    display_name("Map2 Enabled");
+  };
+  Shader Coords;
+  // TODO: int GBufferID
+
+ output:
+  Color result;
+
+  // see max_support.cpp
+  int mi_max_floor(float x) {
+    return ((int) x - (((x) < 0.0) ? 1 : 0));
+  }
+
+  float maxSintegral(in float x) {
+    float f = (float) mi_max_floor(x);
+    float xf_5 = (x - f) - 0.5;
+    return (float)(f * 0.5 + fmax(0.0, xf_5));
+  } // maxSintegral
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // uv-coords
+    float u = texture_coordinate[0].x;
+    float v = texture_coordinate[0].y;
+    float du = 0.02; // overwritten by hlsl_base_UVGenerator
+    float dv = 0.02; // overwritten by hlsl_base_UVGenerator
+    // try to call hlsl_base_UVGenerator
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    float2 duv = float2(0.0, 0.0);
+    float3 dPdu = float3(0.0, 0.0, 0.0);
+    float3 dPdv = float3(0.0, 0.0, 0.0);
+    if (Coords.call("output", "result", shader_return,
+		    "output", "duv", duv,
+		    "output", "dPdu", dPdu,
+		    "output", "dPdv", dPdv)) {
+      u = shader_return.r;
+      v = shader_return.g;
+      du = duv.x;
+      dv = duv.y;
+    }
+    // call other shader parameters
+    Color Map1Color = Color(0.0, 0.0, 0.0, 0.0);
+    bool useMap1 = false;
+    if (Map1Enabled && 
+	Map1.call("output", "result", Map1Color)) {
+      useMap1 = true;
+    }
+    Color Map2Color = Color(0.0, 0.0, 0.0, 0.0);
+    bool useMap2 = false;
+    if (Map2Enabled && 
+	Map2.call("output", "result", Map2Color)) {
+      useMap2 = true;
+    }
+    // use uv-coords
+
+    // begin of maxChecker_evalfunction
+    du = Soften + du;
+    dv = Soften + dv;
+    float hdu = du * 0.5;
+    float hdv = dv * 0.5;
+    if ((du != 0.0) && (dv != 0.0)) {
+      float s = (maxSintegral(u + hdu) - maxSintegral(u - hdu)) / du;
+      float t = (maxSintegral(v + hdv) - maxSintegral(v - hdv)) / dv;
+      float a = s * t + (1.0 - s) * (1.0 - t);
+      if (a <= 0.0005) {
+	if (useMap1) {
+	  result = Map1Color;
+	}
+	else {
+	  result = Color1;
+	}
+      } // if (a <= 0.0005)
+      else {
+	if (a >= 0.9995) {
+	  if (useMap2) {
+	    result = Map2Color;
+	  }
+	  else {
+	    result = Color2;
+	  }
+	} // if (a >= 0.9995)
+	else  {
+	  Color c0,c1;
+	  float o_m_a;
+	  if (useMap1) {
+	    c0 = Map1Color;
+	  }
+	  else {
+	    c0 = Color1;
+	  }
+	  if (useMap2) {
+	    c1 = Map2Color;
+	  }
+	  else {
+	    c1 = Color2;
+	  }
+	  o_m_a = 1.0 - a;
+	  result.r = a * c1.r + o_m_a * c0.r;
+	  result.g = a * c1.g + o_m_a * c0.g;
+	  result.b = a * c1.b + o_m_a * c0.b;
+	  result.a = a * c1.a + o_m_a * c0.a;
+	} // else [ if (a >= 0.9995) ]
+      } // else [ if (a <= 0.0005) ]
+    } // if ((du != 0.0) && (dv != 0.0))
+    else {
+      u = u - (float) mi_max_floor(u);
+      v = v - (float) mi_max_floor(v);
+      // was if ((u > 0.5) ^ (v > 0.5)) but there is no XOR operator in MetaSL
+      if (((u > 0.5) || (v > 0.5)) && !((u > 0.5) && (v > 0.5))) {
+	if (useMap1) {
+	  result = Map1Color;
+	}
+	else {
+	  result = Color1;
+	}
+      } // if (((u > 0.5) || (v > 0.5)) && !((u > 0.5) && (v > 0.5)))
+      else {
+	if (useMap2) {
+	  result = Map2Color;
+	}
+	else {
+	  result = Color2;
+	}
+      } // else [ if (((u > 0.5) || (v > 0.5)) && !((u > 0.5) && (v > 0.5))) ]
+    } // else [ if ((du != 0.0) && (dv != 0.0)) ]
+    // end of maxChecker_evalfunction
+  } // main
+};

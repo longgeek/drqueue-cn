@@ -1,0 +1,717 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Objects</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node82.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node84.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION81"></a>
+<a id="mi:object"></a>
+<h3>Objects</h3>
+
+<p><a id="INDEX268"></a>
+All <b><a id="INDEX269"></a>geometry</b> is typically specified in
+<b><a id="INDEX270"></a>object space</b>.
+In <a href="node101.html#INDEX369">object space</a> mode, enabled with a setting
+in the <a href="node76.html#INDEX0">options</a> block, the camera location is
+determined by its <a href="node90.html#INDEX339">instance</a>, all objects are
+defined in local <b><a id="INDEX271"></a>object coordinate</b>s and positioned
+in the scene with their object <a href="node90.html#INDEX339">instance</a>s.
+Every object, camera, or light requires an instance to be established in the
+scene for rendering.</p>
+<p><span class="depr">Deprecated</span>
+In camera space mode, the <a href="node77.html#INDEX226">camera</a> is fixed and
+assumed to sit at the coordinate origin and point down the negative Z axis, all
+objects are defined using camera space coordinates. Camera space mode is supported
+only for backwards compatibility, and is not recommended.</p>
+
+<p>The appearance of the object, such as color and transparency, is
+determined by naming materials in the object definition. Before a
+<a href="node79.html#INDEX242">material</a> can be used in an
+object, it must be defined. Naming the material determines all
+aspects of the object's appearance. No further parameters,
+textures, or lights need to be specified; they are all part of the
+material definition.</p>
+<p>The two most common approaches to materials and objects are to
+name all materials first and then all objects, which may simplify
+the implementation of material editors because all materials may be
+put in a separate file and then included in the <tt>.mi</tt> file
+using a <tt>$include</tt> command; or materials and objects may be
+interspersed. Either way, each material definition precedes its
+first use.</p>
+<p>All polygonal and free-form surface objects have the same common
+format in the <tt>.mi</tt> file:</p>
+<pre>
+    object "<i>object_name</i>"
+        <dfn>[</dfn> visible <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>
+        <dfn>[</dfn> shadow <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>
+        <dfn>[</dfn> shadow <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> shadowmap <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>
+        <dfn>[</dfn> trace <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>
+        <dfn>[</dfn> reflection <i>mode</i> <dfn>]</dfn>
+        <dfn>[</dfn> refraction <i>mode</i> <dfn>]</dfn>
+        <dfn>[</dfn> transparency <i>mode</i> <dfn>]</dfn>
+        <dfn>[</dfn> select <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>
+        <dfn>[</dfn> tagged <dfn>[</dfn>on<dfn>|</dfn>off<dfn>] ]</dfn>
+        <dfn>[</dfn> caustic on<dfn>|</dfn>off <dfn>]</dfn>
+        <dfn>[</dfn> globillum on<dfn>|</dfn>off <dfn>]</dfn>
+        <dfn>[</dfn> finalgather on<dfn>|</dfn>off <dfn>]</dfn>
+        <dfn>[</dfn> caustic <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> globillum <dfn>[</dfn><i>mode</i><dfn>] ]</dfn>
+        <dfn>[</dfn> finalgather <i>mode</i> <dfn>]</dfn>
+        <dfn>[</dfn> finalgather file <i>file (list)</i> <dfn>]</dfn>
+        <dfn>[</dfn> face <dfn>[</dfn><i>front<dfn>|</dfn>back<dfn>|</dfn>both</i><dfn>] ]</dfn>
+        <dfn>[</dfn> box <dfn>[</dfn><i>x<sub>min</sub> y<sub>min</sub> z<sub>min</sub> x<sub>max</sub> y<sub>max</sub> z<sub>max</sub></i><dfn>] ]</dfn>
+        <dfn>[</dfn> motion box <dfn>[</dfn><i>x<sub>min</sub> y<sub>min</sub> z<sub>min</sub> x<sub>max</sub> y<sub>max</sub> z<sub>max</sub></i><dfn>] ]</dfn>
+        <dfn>[</dfn> max displace <i>value</i> <dfn>]</dfn>
+        <dfn>[</dfn> ray offset <i>value</i> <dfn>]</dfn>
+        <dfn>[</dfn> samples <i>min  max</i> <dfn>]</dfn>
+        <dfn>[</dfn> shading samples <i>samples</i><sub>scalar</sub> <dfn>]</dfn>
+        <dfn>[</dfn> data null<dfn>|</dfn>"<i>data_name</i>" <dfn>]</dfn>
+        <dfn>[</dfn> tag <i>label_number</i><sub>int</sub> <dfn>]</dfn>
+        <dfn>[</dfn> file "<i>file_name</i>" <dfn>]</dfn>
+        <dfn>[</dfn> <i>basis list</i> <dfn>]</dfn>
+        group
+            <i>vector list</i>
+            <i>vertex list</i>
+            <i>geometry list</i>
+            <i>approximation list</i>
+        end group
+    end object
+</pre>
+<p>The individual parameters are:</p>
+<ul>
+<li>The <tt><a href="node83.html#INDEX268">object</a></tt> name
+<i>object_name</i> serves to uniquely identify the object. The name
+is not used by mental ray in any form except to give meaningful
+progress reports and error messages. Object names should be
+enclosed in double quotes to disambiguate them from reserved
+words.</li>
+
+<li>The <tt>visible</tt> flag<a id="INDEX272"></a>
+causes the object to be visible. Most objects will have this flag set.
+Not setting it, or setting it to <code>off</code> will make the object
+invisible to <a href="node124.html#INDEX489">primary ray</a>s (those
+originating from the <a href="node77.html#INDEX226">camera</a>), which
+means it will disappear from the image. The optional boolean argument
+defaults to <tt>on</tt>. If no <tt>trace</tt> statement is present, it
+defaults to <tt>off</tt> (this is also true for all other boolean
+flags).</li>
+
+<li class="note" style="list-style-type:none">
+Note, that <a href="node76.html#INDEX199">transparency ray</a>s will
+also hit objects marked <tt>visible</tt>. In this case, transparency
+is not considered a special case of refraction, but as a scanline
+rendering feature. This apparent inconsistency permits using
+transparency effects even if <a href="node102.html#INDEX390">ray
+tracing</a> is turned off altogether. More importantly, it also keeps
+objects that have the <tt>visible</tt> flag but not the <tt>trace</tt>
+flag out of the BSP tree that is used to accelerate ray tracing, which
+has a significant performance impact. This tradeoff can become very
+significant for large scenes.</li>
+
+<li>The <tt>shadow</tt> flag<a id="INDEX273"></a>
+causes the object to cast <a href="node76.html#INDEX197">shadow</a>s.
+The standard case is
+specifying both the <tt>visible</tt> and <tt>shadow</tt> flags. If an
+object is very complex, it may be desirable to set only the
+<tt>visible</tt> flag but not the <tt>shadow</tt> flag, and create
+a second object that resembles the first one but is much simpler
+and set the <tt>shadow</tt> but not the <tt>visible</tt> flag on
+it. The effect is that the object appears unchanged, but shadow
+calculations see a much simpler shadow object that casts approximately the
+same shadow as the primary visible object would. Shadows are globally
+disabled if the scene <a href="node76.html#INDEX180">options block</a>
+specifies <tt>shadow off</tt>.</li>
+
+<li style="list-style-type:none">
+The <tt>shadow</tt> <var>mode</var> allows to control shadowing details
+of the object. It specifies whether the object casts shadows (<tt>1</tt>),
+receives shadows (<tt>2</tt>), does both (<tt>3</tt>), or has no impact
+on any shadows (<code>0</code>). The default is <tt>2</tt>.</li>
+
+<li>The <tt>shadowmap</tt> flag<a id="INDEX274"></a> controls whether
+an object can cast a shadowmap. The default is <tt>on</tt>. For an object to
+cast shadowmap shadows, the shadow <var>mode</var> must have casting enabled
+as well. This flag is useful for transparent volume bounding objects called
+<span id="INDEX275"><b>hull objects</b></span>, such as visible light cones,
+that are fully transparent but should not cast shadows.</li>
+
+<li>The <tt>trace</tt> flag<a id="INDEX276"></a> serves a similar purpose as
+the <tt>shadow</tt> flag. Normally, it is always set along with the
+<tt>visible</tt> and <tt>shadow</tt> flags. It controls whether the object is
+visible to secondary (reflected or refracted) rays. If the reflecting or
+refracting objects are fuzzy or only slightly reflective or refractive,
+it may result in a considerable speedup to make the
+<a href="node142.html#INDEX581">reflection</a> and
+<a href="node115.html#INDEX446">refraction</a> rays see a much simpler object
+than primary rays would. Like with the <tt>shadow</tt> flag, this is achieved
+by not setting the <tt>trace</tt> flag in the primary, high-definition object,
+and create a second one that roughly resembles the primary object that has the
+<tt>trace</tt> flag (and perhaps the <tt>shadow</tt> flag) but not the
+<tt>visible</tt> flag set. Ray tracing is globally disabled if the scene
+<a href="node76.html#INDEX180">options block</a> specifies <tt>trace off</tt>.
+</li>
+
+<li>The <tt>reflection</tt> <var>mode</var><a id="INDEX277"></a>
+controls if an object is visible in reflections on other objects, and if it
+shows reflections of other objects: <code>1</code> enables reflection casting,
+<code>2</code> enables reflection receiving, <code>3</code> enables both, and
+<code>0</code> disables both. Default is <i>mode</i> <code>2</code>.</li>
+
+<li class="note" style="list-style-type:none" id="mi:objectmode">
+Note, that <em>casting reflections</em> has an opposite meaning to <em>casting
+reflection rays</em>: in order to <em>cast reflections</em> or <em>become
+visible in reflections on other objects</em> an object must <em>receive
+reflection rays</em>, and to <em>receive reflections</em> or <em>show
+reflections of other objects</em> an object has to <em>cast reflection
+rays</em>. The <var>mode</var> controls casting and receiving the <em>shading
+effect</em>, like in <em>casting shadows</em>.</li>
+
+<li>The <tt>refraction</tt> <var>mode</var><a id="INDEX278"></a>
+controls if an object is visible in refractions on other objects, and if it
+shows other objects in refractions: <code>1</code> enables refraction casting,
+<code>2</code> enables refraction receiving, <code>3</code> enables both, and
+<code>0</code> disables both. Default is <i>mode</i> <code>2</code>. Note,
+that <em>casting</em> means <em>casting a refraction</em>, which is the
+opposite to <em>casting a refraction ray</em>. See
+<a href="#mi:objectmode">reflection mode notice</a> for details.</li>
+
+<li>The <tt>transparency</tt> <var>mode</var><a id="INDEX279"></a>
+controls if an object is visible in transparent parts of other objects, and
+if it shows other objects in transparent parts: <code>1</code> enables
+transparency casting, <code>2</code> enables transparency receiving,
+<code>3</code> enables both, and <code>0</code> disabled both. Default is
+<i>mode</i> <code>3</code>. See <a href="#INDEX278">refraction mode</a> for
+details.</li>
+
+<li>The <tt>select</tt> flag makes the object subject to select-tracing.
+This feature is used by some applications to perform interactive object
+picking by sending a ray into the scene (perhaps where a user point-clicked
+the mouse) and receiving a list of objects visited by the ray. Only objects
+with the <tt>select</tt> flag will appear in this list.</li>
+
+<li><a id="mi:tagged"></a>
+The <tt>tagged</tt> flag<a id="INDEX280"></a>
+changes the way geometry is stored. Normally, every polygon, surface, and
+triangle comes with its own optional material. If an object specifies no
+materials, the material is inherited from the instance. Objects
+marked <tt>tagged</tt> do not store materials at all and always
+rely on the inherited instance material, and permit specifying a
+non-optional label integer in place of the material in polygon and
+surface definitions. (Non-optional means that a tagged object
+<i>must</i> contain one label integer for every polygon and
+surface.) This label can be accessed by shaders during rendering
+(not in output shaders) using the <tt>miQ_GEO_LABEL</tt>
+<i><a href="miquery.html#api:mi_query">query</a></i>.
+The idea is that a shared material distinguishes parts of the object by label
+integer, instead of attaching a different material to each polygon or surface.
+</li>
+
+<li>The <tt>caustic on</tt> flag
+lets the object participate in optimized generation of caustics. A caustic is
+an illumination effect caused by light that undergoes specular reflections or
+refractions before it hits a diffuse object. For example, a water surface
+which casts irregular light patterns on the floor of a swimming pool.
+To simulate this effect, the light source must emit <tt>caustic photon</tt>s
+and contain appropriate photon energy settings, and the
+<a href="node115.html#INDEX440">material shader</a> of the floor object needs
+to pick up caustic light information. For optimized caustic generation, the
+rendering options should specify <code>caustic 0</code> and the water surface
+and floor objects must have the <tt>caustic</tt> flag set. Setting this flag
+to <tt>off</tt> means that the object is hidden from caustics alltogether.
+Caustics can be globally disabled in the render
+<a href="node76.html#INDEX180">options</a> with <tt>caustic off</tt>.</li>
+
+<li style="list-style-type:none">
+The <tt>caustic</tt> <i>mode</i> controls the interaction of caustics with the
+object:
+<code>1</code> enables caustic casting, <code>2</code> enables caustic receiving,
+<code>3</code> enables both, and <code>0</code> disables both. In the pool
+example, the water surface should have <i>mode</i> <code>1</code> and the
+floor should have <i>mode</i> <code>2</code>. If the <tt>caustic</tt> keyword
+is given without <i>mode</i> argument it defaults to <code>3</code>. If no
+<tt>caustic</tt> keyword is given the <i>mode</i> defaults to <code>0</code>.
+</li>
+
+<li>The <tt>globillum on</tt> flag
+lets the object participate in optimized generation of global illumination.
+Global illumination is a lighting effect caused by diffuse interreflection,
+such as a red table bleeding<a id="INDEX281"></a> red color onto an adjacent
+white wall. To simulate this effect, the
+<a href="node115.html#INDEX440">material</a> of both the table and the wall
+must provide <a href="node142.html#INDEX580">photon shader</a>s, the light
+source must emit <tt>globillum photon</tt>s and contain appropriate photon
+energy settings, and the <a href="node115.html#INDEX440">material shader</a>
+of the wall must pick up global illumination light information.
+For optimized global illumination simulation, the render options should
+specify <code>globillum 0</code> and the red table and white wall must have
+the <tt>globillum</tt> flag set. Setting the flag to <tt>off</tt> means that
+the object is hidden to global illumination
+<a href="node142.html#INDEX579">photon</a>s, and <tt>on</tt> (the default)
+enables global illumination interactions with this object. Global illumination
+can be globally disabled in the render <a href="node76.html#INDEX180">options</a>
+with <tt>globillum off</tt>.</li>
+
+<li style="list-style-type:none">
+The <tt>globillum</tt> <i>mode</i> controls the
+<a href="node48.html#INDEX95">global illumination</a> interaction with the
+object:
+<code>1</code> enables global illumination casting,
+<code>2</code> enables global illumination receiving,
+<code>3</code> enables both, and <code>0</code> disables both.
+The default <var>mode</var> can be specified in the
+<a href="node76.html#INDEX0">options</a>.In the table example, the red table
+should have (at least) <i>mode</i> <code>1</code> and the white wall should
+have (at least) <i>mode</i> <code>2</code>. If the <tt>globillum</tt> keyword is
+given without <i>mode</i> argument, the <i>mode</i> defaults to <code>3</code>.
+</li>
+<li class="note"style="list-style-type:none">
+If an object is very complex it may be desirable to set only the <tt>visible</tt>
+flag but not the <tt>globillum</tt> flag, and create a second object with
+simplified geometry that resembles the first one with the <tt>globillum</tt>
+but not the <tt>visible</tt> flag set. The effect is that the rendered object
+appears in full detail but simulation of global illumination is faster since a
+simpler object representation is used.</li>
+
+<li>The <tt>finalgather on<dfn>|</dfn>off</tt> and
+<tt>finalgather</tt> <i>mode</i> control final gathering for this object.
+If set to <tt>off</tt> means that the object is hidden to final gather rays,
+and <tt>on</tt>, the default, enables final gathering illumination interactions
+with this object. The <i>mode</i> <code>1</code> enables final gather
+illumination casting. If the bit is not set but <i>finalgather on</i> is given
+then finalgather ray would be terminated by the object and return black color.
+The <var>mode</var> <code>2</code> enables final gather illumination receiving,
+<code>3</code> enables both, and <code>0</code> disables both. Default is
+<i>mode</i> <code>0</code>.</li>
+
+<li>The <tt>finalgather file</tt> <i>file (list)</i>
+argument allows to specify a file name or a list of file names with
+finalgather map(s) to be used for the object. If identical file
+names or file name lists are used for several objects, only one
+copy of finalgather map will be kept in memory.</li>
+
+<li>The <tt>face</tt> flag
+controls face culling for the object.
+<a id="INDEX282"></a> The possible values are <tt>'f'</tt> for <dfn>front</dfn>,
+<tt>'b'</tt> for <dfn>back</dfn>, and <tt>'a'</tt> for <dfn>both</dfn> (all).
+If not specified, the culling flag default of the options or the override in
+the shader state will be used.</li>
+
+<li>The <tt>box</tt> statement specifies a bounding box for the object,
+in the space of the object. For polygons, this is easy to compute: the box
+components are simply the smallest ( <i>min</i>) and largest ( <i>max</i>)
+point-in-space ( <tt>v</tt>) vector components. For free-form surfaces,
+the box can in principle be derived in the same way; however, such a box
+would often be much too large, especially for NURBS. Boxes that are too large
+are legal but inefficient. If the box statement is omitted, mental ray will
+compute one from all vertices, which is also not very efficient. Boxes are
+required if the object is demand-loaded. The box should not include
+enlargement caused by displacement or motion.</li>
+
+<li>The <tt>motion box</tt> is similar to the box, but contains the
+minimum and maximum components of all
+<a href="node32.html#INDEX62">motion vector</a>s. Note that this is not the
+same as the smallest and largest vector; the motion box vectors are
+pieced together from the individual smallest and largest motion
+vector <i>components</i>. A motion box must be specified if the
+object has both a box and motion vectors.</li>
+
+<li><a id="maxdisplace"></a><a id="INDEX283"></a>
+The <tt>max displace</tt> statement
+specifies the maximum displacement applied to object control points in
+local object space in normal direction. If a displacement shader returns
+a value grater than <i>value</i>, the rendered geometry may appear clipped
+and a warning is printed. Displaced objects should always specify a
+maximum displacement. The default is 0. Without <tt>max displace</tt>
+mental ray will truncate any displacement to 0.0, actually disabling
+displacement.
+
+<li class="note" style="list-style-type:none">
+A <code>max displace</code> value that is too large generates correct images
+but puts more pressure on memory and performance, since larger areas of an
+object may be displaced, thus creating much more triangles in longer time.
+In particular, mental ray may suffer serious performance losses, even by an
+order of magnitude, if the displaced object uses <i>fine</i> approximations.
+If the <code>max displace</code> value is too small, mental ray will limit
+the absolute displacement to the <code>max displace</code> value.</li>
+
+<li>The <tt>ray offset</tt> allows to enforce an offset for the origin of
+secondary rays cast from the geometry, in world space units. When a ray is
+traced, any intersections which are closer to the emanating surface than the
+given offset <em>value</em> are ignored. This can be useful to avoid
+self-intersections, especially in situations where multiple, slightly
+different, tessellations of the same geometry are used, like rasterized
+triangles for primary visible rendering and approximate tessellations for
+ray tracing.</li>
+
+<li>The <tt>samples</tt>
+statement controls per-object <b><a id="INDEX284"></a>oversampling</b>.
+For all pixels that touch this object, the normal samples range specified
+in the <a href="node76.html#INDEX180">options block</a> is constrained to
+the <i>min</i> <i>max</i> range, such that at least
+<span class="math">2<sup>min</sup></span> and at most
+<span class="math">2<sup>max</sup></span> samples are taken. Constraints
+that exceed the <i>min</i> and <i>max</i> limits in the render
+<a href="node76.html#INDEX180">options block</a> are ignored, so that the
+options can be used to force quick preview rendering without having to
+change all object sampling specifiers. If the pixel touches multiple
+objects, perhaps due to reflection or refraction, the highest <i>min</i>
+and the highest <i>max</i> are used. If the pixel touches no objects at all,
+the default limits <i>defmin</i> and <i>defmax</i> defined in the
+<a href="node76.html#INDEX180">options</a> are used. The defaults are
+-128 127, which disables per-object sampling limits. Note that this setting
+is not used by the rasterizer.</li>
+
+<li>The <tt>shading samples</tt>
+controls per-object sampling for the
+<i><a href="node34.html">rasterizer</a></i>. This will locally override the
+global setting in the render <a href="node76.html#INDEX180">options</a>.
+It is also possible to specify this setting per-instance, if needed, but the
+instance setting will override the object setting, when both are present.
+Typically, this is used to keep the global scene default low for performance
+reasons, but boost the setting for selected objects or instances only, to
+achieve the desired quality in the final rendering.
+</li>
+
+<li>The <tt>tag</tt>
+assigns a <var>label</var> number to the object for identification. The number
+is an arbitrary 32-bit integer value. The term <i>label</i> is normally used
+in mental ray for this identifier, the keyword <tt>tag</tt> is retained for
+backwards compatibility (a <i>tag</i> is used in shaders to identify entries
+in the scene database). With an appropriate <tt>output</tt> or
+<tt>framebuffer</tt> statement in the
+<var><a href="node77.html#INDEX226">camera</a></var> it is possible to let
+mental ray write a label file that, for each pixel, contains the label code
+of the object that the camera ray hits first. Exactly which label is stored
+is under control of the material shader; using the label of the foremost object
+regardless of reflections and refractions is merely the default behavior.
+</li>
+
+<li>The <tt>data</tt>
+statement attaches <b><a id="INDEX285"></a>user data</b> to the object.
+The argument must be the name of a previously defined data element in the scene
+file. If <tt>null</tt> is specified instead of a data element name, a previously
+existing data reference is removed.</li>
+
+<li id="mi:object_file"><a id="mi:placeholder"></a>
+The <tt>file</tt> statement can be used to load the final object from a
+separate file when mental ray hits the bounding box of the object, also
+known as a <b>placeholder</b> object. The <dfn>placeholder</dfn> object
+needs to specify a valid <tt>box</tt>, optionally a <tt>motion box</tt> if
+the object has <a href="node32.html#INDEX62">motion vector</a>s, and a
+<tt>max displace</tt> setting if the object is displaced. The actual geometry
+in the <tt>group ... end group</tt> block can be omitted. The specified file
+must contain an exact copy of the object, except that the <tt>file</tt>
+statement is replaced with the <tt>group ... end group</tt> block and the
+<tt>incremental</tt> keyword is specified for the <tt>object</tt>. The
+object may have only a single <a href="node83.html#mi:group">object group</a>.
+Demand-loaded objects are useful to avoid parsing and permanently storing
+large objects that may or may not be required for rendering.
+The <code style="white-space:nowrap">-echo explode</code> command-line option
+can be used to automatically create demand-loaded object files.</li>
+
+<li>The <i>basis list</i> is a list of bases to be used in
+<a href="node9.html#INDEX13">free-form surface</a> descriptions. Only
+<a href="node85.html#INDEX0">curve</a>s and surfaces use bases. For
+a list of supported bases, see section <a href="node85.html#basis">basis</a>.
+The defined bases can be used in all
+groups that follow, until the end of the object.</li>
+
+<li>The <code>group</code>
+contains the actual geometric representation. Multiple object groups are
+supported for backwards compatibility but deprecated; mental ray will
+automatically convert a multi-group object to an instance group containing
+multiple sub-objects. See <a href="#mi:group">object group</a> for details.
+</li>
+</ul>
+
+<p>The <tt>visible</tt>, <tt>shadow</tt>, <tt>trace</tt>, <tt>reflection</tt>,
+<tt>refraction</tt>, <tt>transparency</tt>, <tt>caustic</tt>,
+<tt>globillum</tt>, <tt>finalgather</tt> and <tt>face</tt> flags can be
+overridden by the instance using the standard
+<a href="node90.html#INDEX348">inheritance</a> mechanism. Instances can
+specify that a flag in the instanced object is turned on or off, or that
+it is left unchanged. The object flags are used only if all the instances
+from the root of the <b><a id="INDEX286"></a>scene DAG</b> down to the
+object all leave the flag unchanged.</p>
+
+<h4 id="mi:group">Object Group</h4>
+<p>
+Object groups contain the actual <b>geometry</b>. Common to all geometry
+are <i>vector list</i>s and <i>vertex list</i>s.</p>
+
+<h5 id="mi:vectors">Vector List</h5>
+<p>
+The <i>vector list</i> contains 3D <a href="node83.html#INDEX0">vector</a>s
+which describe points in space, normals, texture vertices, basis vectors,
+motion vectors, and others. Vectors are anonymous, they are triples of
+floating-point numbers separated by <a href="node60.html#INDEX112">whitespace</a>
+without inherent meaning. They are numbered beginning with 0. Numbering restarts
+at 0 whenever a new <a href="node83.html#mi:group">object group</a> starts.</p>
+
+<p>mental ray also accepts a compressed binary
+<a id="INDEX287"></a> format for vectors. Instead of three floating-point
+numbers, a sequence of 12 bytes enclosed in backquotes is accepted.
+These 12 bytes are the memory image of three floats in IEEE 854 format,
+using big-endian byte order. This format is intended to increase translation
+and parsing speed when ray is connected to a native translator; it should not
+be used in files to be modified with text editors or filters, since they may
+refuse to accept files containing binary data, or corrupt them.</p>
+
+<h5 id="mi:vertices">Vertex List</h5>
+
+<p>Vertices<a id="INDEX288"></a> build on vectors.
+In the <tt>.mi</tt> format, there is no syntactical difference between polygon
+vertices and control points vertices for free-form surfaces; both are
+collectively referred to as <var>vertices</var> in this discussion. All
+vertices define a point in space and optional vertex normals, motion vectors,
+derivatives, zero or more textures and basis vectors, and optional
+<a href="node83.html#INDEX294">user vector</a>s:
+</p>
+<pre>
+    v <i>index</i><sub>int</sub>  
+    <dfn>[</dfn> n <i>index</i><sub>int</sub> <dfn>]</dfn>  
+    <dfn>[</dfn> d <i>index</i><sub>int</sub> <i>index</i><sub>int</sub> <dfn>[</dfn> <i>index</i><sub>int</sub> <dfn>[</dfn> <i>index</i><sub>int</sub> <i>index</i><sub>int</sub> <dfn>] ] ]</dfn>  
+    <dfn>[</dfn> t <i>index</i><sub>int</sub> <dfn>[</dfn> <i>index</i><sub>int</sub> <i>index</i><sub>int</sub> <dfn>] ]</dfn>  
+    <dfn>[</dfn> m <i>index</i><sub>int</sub> <dfn>]</dfn>  
+    <dfn>[</dfn> u <i>index</i><sub>int</sub>  
+    ...  
+</pre>
+<p>Polygon vertices may use all of these. Free-form surface control
+points may use <tt>v</tt> and <tt>m</tt> only; the others are
+either computed analytically or are specified in other ways as part
+of the surface definition.</p>
+<dl>
+<dt><tt>v</tt></dt>
+<dd>specifies the point in space,</dd>
+
+<dt><tt>n</tt></dt>
+<dd>specifies the <a href="node83.html#INDEX288">vertex</a>
+<b><a id="INDEX289"></a>normal vector</b> (ignored when the vertex is used
+as a curve or surface <a href="node85.html#INDEX311">control point</a>).
+A normal vector defines the orientation (vertical) of the surface at this
+vertex.</dd>
+
+<dt><tt>m</tt></dt>
+<dd>specifies the <a href="node32.html#INDEX62">motion vector</a>.
+mental ray permits up to 15 <tt>m</tt> statements per <tt>v</tt> statement
+for nonlinear <b><a id="INDEX290"></a>motion path</b>s. If multiple motion
+vectors are specified, the shutter time interval 0..1 is equally subdivided,
+and each motion vector specifies the motion from the origin specified by
+the <tt>v</tt> vector to the corresponding point on the path. In other words,
+multiple motion vectors do not form a connected chain but a bundle of "rays"
+originating at the same point <tt>v</tt>.</dd>
+
+<dt><tt>t</tt></dt>
+<dd>specifies a <b><a id="INDEX291"></a>texture vertex</b>
+<a id="INDEX292"></a> with an optional X/Y <b><a id="INDEX293"></a>basis
+vector</b> pair for <a href="node21.html#INDEX39">bump map</a> calculation.
+There can be up to 64 <tt>t</tt> lines for any given <tt>v</tt> vertex.
+The texture and basis vectors are ignored when the vertex is used as a curve
+or surface control point. Texture and basis information for surfaces is defined
+using a "texture surface", described below.</dd>
+
+<dt><tt>d</tt></dt>
+<dd>specifies a first and/or second <a href="node88.html#INDEX333">surface
+derivative</a>. First derivatives describe the UV parametric gradient of a
+surface; second derivatives describe the curvature. mental ray can compute
+surface derivatives analytically for free-form surfaces but not for polygons
+because polygons have no inherent UV coordinate space. Therefore, the
+<tt>d</tt> keyword must be used to define explicit surface derivatives for
+polygons. If <tt>d</tt> is followed by two indices they are taken to reference
+the first derivative <i>d P du</i> and <i>d P dv</i> (with P being the point
+in space); if three indices follow they are taken to reference the second
+derivative <i>d^2 P du^2</i>, <i>d^2 P dv^2</i>, and <i>d^2 P du dv</i>;
+and if five indices follow the first two describe the first derivatives and
+the next three the second derivatives. Derivatives are not used by mental ray,
+they are made available to shaders only.</dd>
+
+<dt><tt>u</tt></dt>
+<dd>specifies a <b><a id="INDEX294"></a>user vector</b>. No constraints are
+imposed on user vectors. mental ray does not operate on them in any way,
+they are passed through with the vertex and can be picked up by the shader.
+</dd>
+</dl>
+
+<p>Every vertex begins with a <tt>v</tt> statement and ends with
+the next <tt>v</tt> statement or with the start of the geometry
+description. All occurrences of <i>index</i> above reference the
+vector list; 0 is the first vector in this group. References of
+different types (for example, <tt>v</tt> and <tt>n</tt>) may not
+reference the same vector. As stated before, all vectors are 3D. If
+the third coordinate is not used (as is the case for 2D texture
+vertices, for 2D curve control points, and for 2D surface special
+points) it should be set to 0.0 by convention. If both the second
+and third coordinates are unused (as is the case for 1D curve
+special points), they should both be set to 0.0.</p>
+<p>Vertices themselves are numbered independently of vectors. The
+first vertex in every group is numbered 0. The geometry description
+is referencing vertices by <b><a id="INDEX295"></a>vertex index</b>,
+just like vertices are referencing vectors by <b><a id="INDEX296"></a>vector
+index</b>. This results in a three-stage definition of geometry:</p>
+<ol>
+<li>List of vectors</li>
+<li>List of vertices</li>
+<li>List of geometry</li>
+</ol>
+<p>The reason for this three-stage process is that it allows both sharing
+vectors and sharing vertices. This is best illustrated with the following
+examples.</p>
+
+<h4>Example</h4>
+<p>
+The examples will use the simplest form of <b><a id="INDEX297"></a>polygon</b>
+syntax that will be described later in this section.</p>
+<p>
+Consider two triangles ABC and ABD sharing an edge AB.
+The simplest definition of this two-triangle
+object is:</p>
+<pre>
+    object "twotri"
+        visible
+        group
+            0.0  0.0  0.0
+            1.0  0.0  0.0
+            0.0  1.0  0.0
+            1.0  0.0  0.0
+            1.0  1.0  0.0
+            0.0  1.0  0.0
+     
+            v 0
+            v 1
+            v 2
+            v 3
+            v 4
+            v 5
+     
+            p "material_name" 0 1 2
+            p 3 4 5
+        end group
+    end object
+</pre>
+<p>The first three vectors are used to build the first three
+vertices, which are used in the first triangle. The remaining three
+vectors build the next three vertices, which are used for the
+second triangle. Two vectors are listed twice and can be shared:</p>
+<pre>
+    object "twotri"
+        visible
+        group
+            0.0  0.0  0.0
+            1.0  0.0  0.0
+            0.0  1.0  0.0
+            1.0  1.0  0.0
+     
+            v 0
+            v 1
+            v 2
+            v 1
+            v 3
+            v 2
+     
+            p "material_name" 0 1 2
+            p 3 4 5
+        end group
+    end object
+</pre>
+<p>The order of vector references is noncontiguous to ensure that
+the second triangle is in counter-clockwise order. Two vertices are
+redundant and can also be removed by sharing:</p>
+<pre>
+    object "twotri"
+        visible
+        group
+            0.0  0.0  0.0
+            1.0  0.0  0.0
+            0.0  1.0  0.0
+            1.0  1.0  0.0
+     
+            v 0
+            v 1
+            v 2
+            v 3
+     
+            p "material_name" 0 1 2
+            p 1 3 2
+        end group
+    end object
+</pre>
+<p>The need for sharing both vectors and vertices can be shown by
+specifying vertex normals:</p>
+<pre>
+    object "twotri"
+        visible
+        group
+            0.0  0.0  0.0
+            1.0  0.0  0.0
+            0.0  1.0  0.0
+            1.0  1.0  0.0
+            0.0  0.0  1.0
+     
+            v 0  n 4
+            v 1  n 4
+            v 2  n 4
+            v 3  n 4
+     
+            p "material_name" 0 1 2
+            p 1 3 2
+        end group
+    end object
+</pre>
+<p>In this last example, both vector sharing and vertex sharing
+takes place. The normal in this example is actually redundant: if
+no normal is specified, mental ray uses the <b><a name="INDEX298"
+id="INDEX298"></a>polygon normal</b>. Defaulting to the polygon
+normal is slightly more efficient than interpolating vertex
+normals, if vertex normals are explicitly specified.</p>
+
+<h5 id="mi:geometry">Geometry List</h5>
+
+<p>Various types of geometry can be contained in the <i>geometry list</i>,
+like polygonal geometry, triangle lists, free-from and subdivision surfaces.
+In the next sections the syntax of these definitions is described in detail.
+</p>
+
+<h5 id="mi:approximations">Approximation List</h5>
+
+<p>At the end of each object <code>group</code> several
+<a href="node89.html#INDEX334">approximation</a> statements may be given
+which control the tessellation of the geometry. In polygonal object groups,
+the approximation is used only for polygons whose material contains a
+displacement shader. Free-form and subdivision surfaces are always controlled
+by their approximations. See <a href="node89.html#approx">approxomations</a>
+for details.</p>
+
+<p class="note">An <var>object group</var> permits only one type of
+<a href="node83.html#INDEX269">geometry</a>, either polygons or surfaces
+but not both. It is recommended that objects contain only a single object
+group, so normally objects are either polygonal or surface objects but not
+both at the same time. Also, vector sharing is supported only for vectors
+of similar types (point in space, normal, motion, texture, basis vector,
+derivative, or user vector. A vector may not be referenced by vertices
+once as a point in space and once as a normal, for example.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node82.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node84.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,57 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Boolean_in_raster_position_range
+{
+  input:
+    float minimum_x = 0.0
+	{	
+		display_name("Minimum X");
+		soft_range(float(0),float(100));
+		description( "The low horizontal end of the valid raster position "
+					 "range." );
+	};
+    float minimum_y = 0.0
+	{	
+		display_name("Minimum Y");
+		soft_range(float(0),float(100));
+		description( "The low vertical end of the valid raster position "
+					 "range." );
+	};
+    float maximum_x = 4096.0
+	{	
+		display_name("Maximum X");
+		soft_range(float(0),float(100));
+		description( "The high horizontal end of the valid raster position "
+					 "range." );
+	};
+    float maximum_y = 4096.0
+	{		
+		display_name("Maximum Y");
+		soft_range(float(0),float(100));
+		description( "The high vertical end of the valid raster position "
+					 "range." );
+	};
+  
+  output:
+    bool trueFalse;
+    
+    void main()
+    {
+		if( raster.x >= minimum_x &&
+			raster.x <= maximum_x &&
+			raster.y >= minimum_y &&
+			raster.y <= maximum_y )
+			trueFalse = true;
+		else
+			trueFalse = false;
+    }
+}
+{
+	description( "Returns true when the current shading point is within "
+	             "specified bounds." );
+}
+;
+

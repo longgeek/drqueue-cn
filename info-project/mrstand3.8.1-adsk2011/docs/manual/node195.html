@@ -1,0 +1,211 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Miscellaneous</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node194.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node196.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION193"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_api_delete">mi_api_delete</a></li>
+<li><a href="#api:mi_api_delete_tree">mi_api_delete_tree</a></li>
+<li><a href="#api:mi_api_touch">mi_api_touch</a></li>
+<li><a href="#api:mi_api_debug">mi_api_debug</a></li>
+</ul>
+
+<h3>Miscellaneous</h3>
+
+<a id="INDEX1056"></a>
+<h5 class="anchor" id="api:mi_api_delete">mi_api_delete</h5>
+<pre>
+    miBoolean mi_api_delete(
+        char            *what)     /* element to delete */
+</pre>
+<p>Delete a single element from the scene database. This function
+may be used only after all references to the element have been
+deleted. For example, before deleting an object all instances
+referencing it must be deleted, or incrementally changed to
+reference something else, and so on.</p>
+<a id="INDEX1057"></a>
+<h5 class="anchor" id="api:mi_api_delete">mi_api_delete_tree</h5>
+<pre>
+    miBoolean mi_api_delete_tree(
+        char            *what)     /* element to delete */
+</pre>
+<p>Delete a tree anchored at the named element in the scene
+database. This function takes care of deleting all members of the
+tree in the proper order such that references to an element are
+removed before the element itself is deleted, but only within the
+named tree - multiple instancing from outside is not recognized,
+and outside references to <i>what</i> itself are also not
+removed.</p>
+<p><a id="INDEX1058"></a></p>
+<h5 class="anchor" id="api:mi_api_touch">mi_api_touch</h5>
+<pre>
+    miBoolean mi_api_touch(
+        char            *what)     /* element to touch */
+</pre>
+<p>Mark the named toplevel scene element for re-evaluation. This is
+useful to mark objects for retessellation when a displacement
+shader or one of its direct or indirect subshaders changes (mental
+ray cannot discover this by itself), or when the content of a
+texture file has changed on disk and need to be reloaded.</p>
+<a id="INDEX1059"></a>
+<h5 class="anchor" id="api:mi_api_debug">mi_api_debug</h5>
+<pre>
+    miBoolean mi_api_debug(
+        char            *what,     /* what to dump */
+        char            *arg)      /* if scene dump, item */
+</pre>
+<p>This function is useful for debugging code that calls the API
+module. It is not essential for scene definition. The <i>what</i>
+argument specifies what to check, and the <i>arg</i> argument
+specifies the name of a scene element to be checked, depending on
+what is being checked. The following <i>what</i> strings are
+supported:</p>
+<div align="center">
+<table class="table">
+<tr>
+<th><i>what</i></th>
+<th><i>arg</i></th>
+<th>operation</th>
+</tr>
+<tr>
+<td>sym</td>
+<td>-</td>
+<td>print all symbol tables</td>
+</tr>
+<tr>
+<td>sym global</td>
+<td>-</td>
+<td>print the global (.mi2) symbol table</td>
+</tr>
+<tr>
+<td>sym declare</td>
+<td>-</td>
+<td>print the declaration symbol table</td>
+</tr>
+<tr>
+<td>sym options</td>
+<td>-</td>
+<td>print the .mi1 options symbol table</td>
+</tr>
+<tr>
+<td>sym camera</td>
+<td>-</td>
+<td>print the .mi1 camera symbol table</td>
+</tr>
+<tr>
+<td>sym light</td>
+<td>-</td>
+<td>print the .mi1 light symbol table</td>
+</tr>
+<tr>
+<td>sym object</td>
+<td>-</td>
+<td>print the .mi1 object symbol table</td>
+</tr>
+<tr>
+<td>sym instance</td>
+<td>-</td>
+<td>print the .mi1 instance symbol table</td>
+</tr>
+<tr>
+<td>sym group</td>
+<td>-</td>
+<td>print the .mi1 instance group symbol table</td>
+</tr>
+<tr>
+<td>sym material</td>
+<td>-</td>
+<td>print the .mi1 material symbol table</td>
+</tr>
+<tr>
+<td>sym ctexture</td>
+<td>-</td>
+<td>print the .mi1 color texture symbol table</td>
+</tr>
+<tr>
+<td>sym stexture</td>
+<td>-</td>
+<td>print the .mi1 scalar texture symbol table</td>
+</tr>
+<tr>
+<td>sym vtexture</td>
+<td>-</td>
+<td>print the .mi1 vector texture symbol table</td>
+</tr>
+<tr>
+<td>mem summary</td>
+<td>-</td>
+<td>print per-module MEM memory usage summary</td>
+</tr>
+<tr>
+<td>mem dump</td>
+<td>-</td>
+<td>print all allocated MEM memory blocks</td>
+</tr>
+<tr>
+<td>mem check</td>
+<td>-</td>
+<td>run a consistency check on MEM memory</td>
+</tr>
+<tr>
+<td>db statistics</td>
+<td>-</td>
+<td>print DB database access statistics</td>
+</tr>
+<tr>
+<td>db dump</td>
+<td>-</td>
+<td>print a list of all DB database entries</td>
+</tr>
+<tr>
+<td>task statistics</td>
+<td>-</td>
+<td>print TASK task queue statistics</td>
+</tr>
+<tr>
+<td>img verbose</td>
+<td>-</td>
+<td>future image file accesses print messages</td>
+</tr>
+<tr>
+<td>scene check</td>
+<td>element</td>
+<td>consistency check of a scene element</td>
+</tr>
+<tr>
+<td>scene dump</td>
+<td>element</td>
+<td>recursively print info on scene element</td>
+</tr>
+<tr>
+<td>scene alldump</td>
+<td>element</td>
+<td>recursively print detailed element info</td>
+</tr>
+</table>
+</div>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node194.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node196.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

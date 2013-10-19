@@ -1,0 +1,65 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product shader generating bumped normals based on a highfield texture
+ *****************************************************************************/
+
+enum Mcp_blend_mode {
+    BLEND     = 0,
+    ADD   = 1,
+    MULTIPLY  = 2,
+    SCREEN  = 3,
+    OVERLAY  = 4
+};
+Spectrum Mcp_blend( Spectrum t, Spectrum b, float w,  Mcp_blend_mode m)
+{
+    Spectrum op_result=t;
+    switch (m) {
+        case ADD:
+            op_result+=b;
+        break;
+        case MULTIPLY:
+            op_result*=b;
+        break;
+        case SCREEN:
+            op_result+=t-t*b;
+        break;
+        case OVERLAY:
+            op_result = (max_value(t) >= 0.5) ? 2.0 * (t+b - t*b - 0.5) : 2.0 * t*b;
+        break;
+        case BLEND:
+        default:
+            //nothing to be done
+        break;
+    }
+    return lerp( b, op_result, w );
+}
+
+
+struct Mcp_color_layer {
+    Spectrum layer_color;
+    float weight ;
+    Mcp_blend_mode blend_mode ;
+};
+
+shader Mcp_blend_color_layers {
+  input:
+    Spectrum base = Spectrum(0.0);
+    Mcp_color_layer layers[];
+  output:
+    Spectrum result;
+    float greyscale_result; 
+
+    void main()
+    {
+        result = base; 
+        for (int i=0; i < layers.count; ++i) {		
+            result = Mcp_blend(layers[i].layer_color, result, layers[i].weight, layers[i].blend_mode);
+        }
+        greyscale_result = max_value(result);
+    }
+};
+

@@ -1,0 +1,1484 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>mental ray</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node244.html">&laquo;&nbsp;prev</a></li>
+<li><a href="configuration.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION243"></a>
+<h2 id="cli:ray">mental ray</h2>
+
+<p>When started from a shell command line, the mental ray rendering
+software accepts a large number of options. Most of these correspond to
+similar commands or camera and options statements in the scene file.
+When an option is given on the command line it will override the related
+command or statement in the scene file, which in turn overrides the
+built-in default settings. Certain command line options given below
+have a default choice that applies only if the corresponding setting
+is not present in the scene file.</p>
+
+<p>mental ray is started as</p>
+<pre>
+ray <i>options</i> <dfn>[</dfn><i>scenefile</i><dfn>]</dfn>
+</pre>
+
+<p>
+If no scene file is given, the scene is read from standard input.
+Scene file names normally end in <tt>.mi</tt>. If the extension is
+missing mental ray will read the name as specified, and if this fails,
+retry with <tt>.mi</tt> added.</p>
+<p>
+The command-line options can be abbreviated as long as the given
+substring is unambiguous. mental ray checks for ambiguities and
+prints an error message listing the choices. For example,
+<tt>-resolution</tt> can be abbreviated as <tt>-res</tt>. For
+frequently-used options such as <tt>-verbose</tt> and <tt>-filename</tt>,
+short forms are available. The available options are:</p>
+
+<dl class="dict">
+
+<dt id="cli:acceleration">
+<tt>-acceleration bsp<dfn>|</dfn>bsp2 <dfn>|</dfn>largebsp</tt></dt>
+<dd>Selects the standard binary space partitioning (
+<a href="node76.html#INDEX203">BSP</a>) algorithm, or the new
+<code>bsp2</code> algorithm to be used for the large scenes and
+scenes with assemblies. The <code>largebsp</code> algorithm is kept
+for the compatibility. The default is <a href="node76.html#INDEX203">BSP</a>.
+All these algorithms accelerate ray tracing.</dd>
+
+<dt id="cli:ao">
+<tt>-ao on<dfn>|</dfn>off</tt> </dt>
+<dd>Can be used to disable ambient occlusion support completely.
+Default is on. Actual computation is performed on demand of shaders only.</dd>
+<dt>
+<tt>-ao_rays</tt> <var>nrays</var><sub>int</sub> </dt>
+<dd>Number of rays to compute ambient occlusion. The default is 256.</dd>
+<dt>
+<tt>-ao_cache on<dfn>|</dfn>off</tt> </dt>
+<dd>Toggle ambient occlusion cache precomputation. Default is off.</dd>
+<dt>
+<tt>-ao_cache_density</tt> <var>density</var> </dt>
+<dd>Maximum ambient occlusion cache points density per pixel. Default is 1.0.</dd>
+<dt>
+<tt>-ao_cache_points</tt> <var>points</var> </dt>
+<dd>Ambient occlusion cache points to lookup. The default value is 64.</dd>
+<dt>
+<tt>-approx</tt> <dfn>[</dfn><i>options</i><dfn>]</dfn><tt>--</tt></dt>
+<dd>Specifying override <a href="node89.html#INDEX334">approximation</a>s
+on the command line. Override approximations override any object approximations
+in the scene file. They are primarily useful for fast preview rendering,
+where approximation accuracy is not required. The following <i>options</i>
+can be specified:
+<table class="table">
+<tr>
+<td><tt>view</tt>
+<td id="INDEX1070">view-dependent approximation
+<tr>
+<td><tt>fine</tt>
+<td><a href="node89.html#INDEX337">fine approximation</a> with microtriangles
+<tr>
+<td><tt>sharp</tt>
+<td>faceted, useful for fine displacement
+<tr>
+<td><tt>parametric</tt> <i>U V</i>
+<td>rectangular grid of <var>U &times; V</var> triangles
+<tr>
+<td><tt>regular</tt> <i>U V</i>
+<td>rectangular grid that spans patches
+<tr>
+<td><tt>length</tt> <i>L</i>
+<td>triangle edge length less than <i>D</i>
+<tr>
+<td><tt>distance</tt> <i>D</i>
+<td>distance from true surface less than <i>D</i>
+<tr>
+<td><tt>angle</tt> <i>A</i>
+<td>angle between neighboring triangles less than <i>A</i> degrees
+<tr>
+<td><tt>any</tt>
+<td>any of length, distance, and angle is satisfied
+<tr>
+<td><i>min max</i>
+<td>subdivide at least <i>min</i> and at most <i>max</i> times, default 0 5
+</table>
+<dd>Except for <tt>any</tt>, which must be spelled out, all options
+can be abbreviated by their first letter. If no options are
+specified ( <tt>-approx&nbsp;--</tt> ), parametric 0 0 is used, which
+produces a very fast low-quality approximation. See the scene
+description chapter for detailed information on approximations.</dd>
+<dt>
+<tt>-approx_displace</tt>
+<dfn>[</dfn><i>options</i><dfn>]</dfn><tt>--</tt></dt>
+<dd>This option is similar to <tt>-approx</tt> and accepts the same
+options, but sets the override approximation for displacement. If
+no options are given, it defaults to parametric 0 0, which is so
+low that most displacements turn into a vaguely bumpy surface.
+High-quality displacement requires an approximation like
+<pre>
+-approx fine view length 0.25 0 7 --
+</pre></dd>
+<dt>
+<tt>-aperture</tt> <i>aperture</i></dt>
+<dd>The <a href="node77.html#INDEX230">aperture</a> is the width of
+the <a href="node77.html#INDEX229">viewing plane</a>. The height of
+the viewing plane is <i>aperture</i> divided by <i>aspect</i>.</dd>
+<dt>
+<tt>-aspect</tt> <i>aspect</i></dt>
+<dd>This is the <a href="node77.html#INDEX231">aspect ratio</a> of
+the camera. The default is 1.33. In
+<a href="node101.html#INDEX370">camera space</a>, <i>aperture</i> is the
+width of the <a href="node77.html#INDEX229">viewing plane</a>, and
+<i>aperture</i> divided by <i>aspect</i> is the height. The viewing
+plane is divided into pixels as specified by the
+<tt>resolution</tt> <i>viewdef</i>, so the aspect will result in
+nonsquare pixels if it is not equal to the X
+<a href="node77.html#INDEX232">resolution</a> divided by the Y resolution.</dd>
+
+<dt id="cli:assembly">
+<tt>-assembly_path "</tt><i>path1:path2:&hellip;</i><tt>"</tt> </dt>
+<dd>Specifies a directory where assembly files are stored. By default,
+assembly files are searched in the current working directory.</dd>
+<dt>
+<tt>-bsp_depth</tt> <i>depth</i><sub>int</sub></dt>
+<dd>The maximum number of levels in the <a href="node76.html#INDEX203">BSP</a>
+tree. This option is used only if
+binary space partitioning is enabled. Larger tree depths reduce
+rendering time but increase memory consumption, and also slightly
+increase preprocessing time. The default is 40.</dd>
+<dt>
+<tt>-bsp_size</tt> <i>size</i><sub>int</sub></dt>
+<dd>The maximum number of primitives in a leaf of the
+<a href="node76.html#INDEX203">BSP</a> tree. Larger leaves will be
+subdivided unless the bsp_depth is reached. This option is used
+only if binary space partitioning is enabled. Larger leaf sizes
+reduce memory consumption but increase rendering time. The default is 10.</dd>
+<dt>
+<tt>-bsp_shadow on<dfn><dfn>|</dfn></dfn>off</tt></dt>
+<dd>Allow mental ray to create a separate shadow BSP tree to accelerate
+raytraced shadows. It can greatly improve speed if shadows are cast by
+simplified shadow-only objects because it is no longer necessary to populate
+the master BSP tree with large hero objects. This mode is off by default.</dd>
+<dt>
+<tt>-caustic on<dfn><dfn>|</dfn></dfn>off</tt></dt>
+<dd>Enable or disable the generation of <a href="node41.html#INDEX86">caustics</a>
+in an appropriately defined scene. The default is <tt>off</tt>.</dd>
+<dt>
+<tt>-caustic_accuracy</tt> <i>nphotons</i> <dfn>[</dfn><i>radius</i><dfn>]</dfn></dt>
+<dd>The number of <a href="node142.html#INDEX579">photon</a>s used
+to estimate <a href="node41.html#INDEX86">caustics</a> during
+rendering and the maximum radius to be used when picking up the
+photons. The number of photons may be set to 0, which means that
+all photons within the given radius are used. The defaults are 100
+and a scene-size dependent <i>radius</i>.</dd>
+<dt>
+<tt>-caustic_merge</tt> <i>distance</i></dt>
+<dd>To reduce photon map size, merge caustic photons which are
+closer than the specified <i>distance</i>.</dd>
+<dt>
+<tt>-caustic_scale</tt> <i>r</i><i>g</i><i>b</i><dfn>[</dfn><i>a</i><dfn>]</dfn></dt>
+<dd>Caustics are multiplied by the specified color. Factors greater
+than 1.0 make the caustic brighter.</dd>
+<dt>
+<tt>-clip</tt> <i>hither yon</i></dt>
+<dd>The <i>hither</i> (near) and <i>yon</i> (far) planes are planes
+parallel to the <a href="node77.html#INDEX229">viewing plane</a>
+that delimit the rendered scene for scanline rendering. Raytracing
+is not affected. Points outside the space between the hither and
+<a href="node77.html#INDEX233">yon plane</a>s will not be rendered.
+The defaults are 0.001 and 1000000.0.</dd>
+<dt>
+<tt>-code "</tt><i>filename</i><tt>"</tt> ... <tt>--</tt></dt>
+<dd>The named <i>filename</i> is interpreted as a C source file
+(ending with the extension ".c") and compiled and linked into mental ray.</dd>
+<dt>
+<tt>-colorclip rgb<dfn>|</dfn>alpha<dfn>|</dfn>raw</tt></dt>
+<dd><a id="INDEX1071"></a>This option controls the
+rules used to clip an RGBA color before quantization to an 8-bit or
+16-bit frame buffer. The <tt>rgb</tt> mode states that RGB are
+first to be clipped to the range <i>[0,1]</i> before A is clipped
+to <var>[</var>max(R,G,B)<var>,1]</var>. This is the default mode.
+The <i>alpha</i> mode lets A first be clipped to <i>[0,1]</i>
+before RGB is clipped to <i>[0,A]</i>. Both of these modes ensure
+that all channels are within <i>[0,1]</i> and that A is no less
+than any of R, G, and B, which is is the valid domain of
+premultiplied colors. The third mode, <i>raw</i>, ignores all
+requirements, and clips both A and RGB to <i>[0,1]</i>. This is
+useful to make mental ray modify output colors as little as
+possible. Because the color output may be invalid, the raw mode
+overrides the <tt>premultiply off</tt> option if present.
+Desaturation is always applied if enabled. Since mental ray 3.5, color
+clipping is applied to the color averaged over the time if motion
+blur is rendered.</dd>
+<dt>
+<tt>-contrast</tt> <i>r g b</i><dfn>[</dfn><i>a</i><dfn>]</dfn></dt>
+<dd>The <a href="node76.html#INDEX182">contrast</a> controls
+<a href="node83.html#INDEX284">oversampling</a>. If neighboring
+samples differ by more than the color <i>r, g, b, a</i>,
+<a href="node83.html#INDEX284">oversampling</a> is done as specified by the
+sampling options. The default is 0.1 0.1 0.1 0.1. If missing, the
+default for <i>a</i> is the average of <i>r</i>, <i>g</i>, and
+<i>b</i>. Note that this option has no effect with the rasterizer.</dd>
+<dt>
+<tt>-c_compiler "</tt><i>filename</i><tt>"</tt></dt>
+<dd>If this option is given, the standard C compiler <tt>"cc"</tt>
+is replaced with <i>filename</i>.</dd>
+<dt>
+<tt>-c_flags "</tt><i>options</i><tt>"</tt></dt>
+<dd>The <i>options</i> string replaces the standard options given
+to the C compiler. The defaults depend on the machine type. If the
+<i>options</i> begin with two plus signs<sup>2.1</sup>, such as
+<tt>"++ -I."</tt>, it is inserted into the default options instead
+of replacing them.</dd>
+<dt>
+<tt>-c_linker "</tt><i>filename</i><tt>"</tt></dt>
+<dd>If this option is given, the standard linker <tt>"ld"</tt> is
+replaced with <i>filename</i>.</dd>
+<dt>
+<tt>-desaturate on<dfn>|</dfn>off</tt></dt>
+<dd>If a rendered sample returns an RGBA color whose components are
+outside the legal range, mental ray will clip the color into this
+legal range. This option determines how the clipping of R, G, and B
+is performed. If <a href="node36.html#INDEX72">desaturation</a> is
+turned off, which is the default, the components are clipped
+individually. If turned on, then if any of R, G, and B exceed the
+allowed range, the color is shifted towards the grayscale axis of
+the color cube in order to try to maintain the perceived brightness
+of that color, effectively bleaching out the color. The valid range
+of RGBA is controlled by the <tt>colorclip</tt> option.</dd>
+<dt>
+<tt>-diagnostic bsp depth<dfn>|</dfn>size</tt></dt>
+<dd>This <b><a id="INDEX1072"></a>diagnostic
+mode</b> can be used to visualize the parameters for
+<a href="node76.html#INDEX203">BSP</a> tree parameters (see <tt>-bsp
+depth</tt> and <tt>-bsp size</tt> options), to find the reason for
+unexpected large depths or sizes reported after rendering. This
+does not work in <tt>largebsp</tt> nor <tt>bsp2</tt>mode because
+they never create a single fixed BSP tree from which consistent
+diagnostics could be computed.</dd>
+<dt>
+<tt>-diagnostic grid off<dfn>|</dfn>object<dfn>|</dfn>world<dfn>|</dfn>camera</tt>
+<i>size</i></dt>
+<dd>This <b><a id="INDEX1073"></a>diagnostic mode</b> is intended for
+scene debugging. Unless set to <tt>off</tt>, it draws a colored grid
+on all objects in the scene that shows object, world, or
+<a href="node101.html#INDEX370">camera space</a> coordinates. Steps
+on the X, Y, and Z axes are shown with red, green, and blue grid lines,
+respectively. The distance between grid lines is <i>size</i> units.
+This is useful to estimate the size and distances between objects
+in mental ray, or to visualize object space coordinates. The
+<tt>off</tt> argument disables the grid, which is the default.</dd>
+<dt>
+<tt>-diagnostic hardware</tt>
+<tt>solid<dfn>|</dfn>wire<dfn>|</dfn>window<dfn>|</dfn>debug</tt></dt>
+<dd>Hardware rendering diagnostics. The <var>solid</var> mode turns
+off shading and uses a default gray material. The <var>wire</var>
+mode does not shade at all but displays the wire-frame model only.
+The <tt>window</tt> mode pops up a window on the screen, showing
+rendering progress. The <tt>debug</tt> mode enables Cg compiler
+debugging. Disabled by default.</dd>
+<dt>
+<tt>-diagnostic photon off<dfn>|</dfn>density<dfn>|</dfn>irradiance</tt> <i>max</i></dt>
+<dd>When rendering <a href="node41.html#INDEX86">caustics</a> or
+<a href="node48.html#INDEX95">global illumination</a>, this option
+disables all material shaders in the scene and produces a
+<a href="node76.html#INDEX221">false-color</a> rendering of photon density,
+or the average of the red, green, and blue
+<a href="node48.html#INDEX97">irradiance</a> components. Photon density is
+the number of photons per unit surface area. <i>max</i> is the
+density (or irradiance) that is assigned to 100%, or red. The
+colors are, from 0% to 100%: Blue, cyan, green, yellow, and red.
+Higher values fade to white. <i>max</i> can be given as zero in
+which case the appropriate maximum is automatically found. This is
+done after the whole image has been rendered. This mode is useful
+when tuning the number of photons in a photonmap and setting the
+various <tt>_accuracy</tt> options, since the density (or
+irradiance) is estimated using those settings. The default is
+<tt>off</tt>.</dd>
+<dt>
+<tt>-diagnostic samples on<dfn>|</dfn>off</tt></dt>
+<dd>Switch to <b><a id="INDEX1074"></a>sampling
+visualization</b> mode and create grayscale images representing
+sampling densities instead of color images. A black pixel has had
+no samples, whereas a white pixel has had the maximum amount as
+specified by the <tt>-samples</tt> option. In addition, a red grid
+shows task rectangle boundaries. Off by default.</dd>
+<dt>
+<tt>-diagnostic finalgather</tt></dt>
+<dd>This mode shows final gathering points, as green dots for
+initial raster-space final gathering points, blue dots for final
+gathering points from per-object finalgather map files, and red
+dots for render-time final gathering points.</dd>
+<dt>
+<tt>-displace on<dfn>|</dfn>off</tt></dt>
+<dd>Ignore all <a href="node127.html#INDEX494">displacement
+shader</a>s if set to <tt>off</tt>. The default is
+<tt>on</tt>.</dd>
+<dt>
+<tt>-displace_presample on<dfn>|</dfn>off</tt></dt>
+<dd>Enables or disables presampling of displacement-mapped
+geometry. Presampling increases performance by introducing a
+preprocessing phase before tessellation, and is enabled by default.
+If turned off, rendering begins earlier but takes longer; this is
+sometimes useful for preview rendering.</dd>
+<dt>
+<tt>-dither on<dfn>|</dfn>off</tt></dt>
+<dd>Dithering<a href="node76.html#INDEX214">dithering</a> mitigates
+8-bit and 16-bit color quantization errors by introducing noise
+into the pixel such that the round-off errors are randomly
+distributed. The default is <tt>off</tt>.</dd>
+<dt>
+<tt>-echo "</tt><i>filename</i><tt>"</tt> [<tt>ascii</tt>]
+[<tt>source</tt>] [<tt>approx</tt>] [<tt>norendercommand</tt>]
+[<tt>textures</tt>] [<tt>incremental</tt>]
+[<tt>omit "</tt><i>S</i><tt>"</tt>]
+[<tt>norecurse "</tt><i>S</i><tt>"</tt>]
+[<tt>explode</tt> [<i>N</i>]] <tt>--</tt></dt>
+<dd><a id="INDEX1075"></a>Echo the current scene
+to the file <i>filename</i>. The options specify the format of the
+echoed file. Allowed options are: <tt>ascii</tt> uses ASCII format
+for the vectors (default is binary), <tt>source</tt> prefers source
+geometry over triangles if available (default), <tt>approx</tt>
+prefers triangles over source geometry if available,
+<tt>norendercommand</tt> disables the echo of the <b>render</b>
+command, <tt>textures</tt> includes texture pixel data verbatim.
+<tt>incremental</tt> causes multiframe animations to be echoed in a
+more compact format, by omitting scene elements that did not change
+since the previous frame. <tt>omit</tt> specifies that certain
+types of elements, specified by <i>S</i>, should be omitted from
+the output. It is supported by mental ray 3.0 only. Note that both
+<tt>omit</tt> and <tt>norecurse</tt> will produce incomplete and
+nonrenderable scene files. These options are useful for extracting
+subsets of a scene. <tt>norecurse</tt> specifies that references of
+certain types of elements specified by <i>S</i> should be omitted
+from the output. It is supported by mental ray 3.0 only. For
+example, if <i>S</i> contains <tt>icil</tt>, instances of cameras
+and lights would be echoed (unless disabled by <tt>omit</tt>), but
+the instanced camera or light would not be echoed first. The
+<i>S</i> strings of the <tt>omit</tt> and <tt>norecurse</tt>
+attributes are sequences of the following codes:
+<table class="table">
+<tr>
+<th><i>code</i></th>
+<th><i>element</i></th>
+<th><i>affected statement</i></th>
+</tr>
+<tr><td><tt>g</tt><td>instance group<td><tt>instgroup</tt></td></tr>
+<tr><td><tt>o</tt><td>geometric object<td><tt>object</tt></td></tr>
+<tr><td><tt>c</tt><td>camera<td><tt>camera</tt></tr>
+<tr><td><tt>l</tt><td>light source<td><tt>light</tt></td></tr>
+<tr><td><tt>m</tt><td>material<td><tt>material</tt></tr>
+<tr><td><tt>t</tt><td>texture<td><tt>texture</tt></tr>
+<tr><td><tt>p</tt><td>option block<td><tt>options</tt></tr>
+<tr><td><tt>s</tt><td>named shader<td><tt>shader</tt></tr>
+<tr><td><tt>d</tt><td>declaration<td><tt>declare</tt></tr>
+<tr><td><tt>u</tt><td>user data<td><tt>data</tt></tr>
+<tr><td><tt>ig</tt><td>instance of an instance group<td><tt>instance</tt></tr>
+<tr><td><tt>io</tt><td>instance of an object<td><tt>instance</tt></tr>
+<tr><td><tt>ic</tt><td>instance of a camera<td><tt>instance</tt></tr>
+<tr><td><tt>il</tt><td>instance of a light<td><tt>instance</tt></tr>
+<tr><td><tt>is</tt><td>instance of a geometry shader<td><tt>instance</tt></tr>
+</table>
+<dd>
+Note that triangle echos have displacement mapping already
+applied to the triangles, but the displacement shaders are not
+removed from the materials so the echoed file will get displaced
+twice when rendered. The echo option must be terminated with a
+double minus. <tt>explode</tt> causes all objects with more than
+<i>N</i> vertices to be written to a separate file with a name
+beginning with <tt>autoload</tt>. This file will be referenced by a
+placeholder object with an appropriate <tt>file</tt> statement in
+the main echo file. If omitted, <i>N</i> defaults to 1; a typical
+good value is 10000 to make sure that the overhead of opening a
+file is not wasted on really small objects.</dd>
+<dt>
+<tt>-face front<dfn>|</dfn>back<dfn>|</dfn>both</tt></dt>
+<dd>The <i>front</i> side of a geometric object in the scene is
+defined to be the side its normal vector points away from. By
+specifying that only front-facing triangles are to be rendered,
+speed can be improved because fewer triangles need to be tested for
+a ray. The default is <tt>face both</tt>.</dd>
+
+<dt id="cli:framebuffer">
+<tt>-fb_dir "</tt><i>directory</i><tt>"</tt></dt>
+<dd>Specifies a directory for temporarily storing
+<a href="node37.html#INDEX77">frame buffer file</a>s.
+If this option is not provided, the
+<a href="configuration.html#INDEX1085">environment variable</a>s <tt>TMPDIR</tt>
+and <tt>TEMP</tt> are examined. If they are also not defined the
+current working directory is used for storing memory mapped frame
+buffer files.</dd>
+<dt>
+<tt>-fb_virtual on<dfn>|</dfn>off<dfn>|</dfn>cache</tt> </dt>
+<dd>Controls storage of <a href="node37.html">frame buffers</a> in files
+on disk to conserve memory. Default is <code>on</code>, which enables
+disk storage in memory mapped files. The
+<code>cache</code> option enables frame buffer
+caching, which only stores frame buffer fragments in disk files on demand.
+This option may save significant amount of memory when rendering very high
+resolution images, especially on 32bit systems. File storage can be disabled
+completely by setting the option to <tt>off</tt>, for example to gain speed
+on systems where sufficient memory is available.</dd>
+<dt>
+<tt>-file_dir</tt> "<i>path</i>"</dt>
+<dd>If set then all output images are written to the given
+directory <i>path</i>. This is especially useful for animations
+with multiple frames.</dd>
+<dt>
+<tt>-file_name "</tt><i>filename</i><tt>"</tt></dt>
+<dd>Overrides the file name given by the first file <tt>output</tt>
+statement in the camera definition in the scene file. The full file
+or path name must be given, including extension if desired.</dd>
+<dt>
+<tt>-file_type "</tt><i>format</i><tt>"</tt></dt>
+<dd>Overrides the file format given by the first file
+<tt>output</tt> statement in the camera definition in the scene
+file. File formats include <tt>"pic"</tt> for Softimage image
+files, <tt>"rla"</tt> for Wavefront RLA files, and <tt>"ps"</tt>
+for PostScript files if contour mode is enabled.</dd>
+<dt>
+<tt>-filter</tt><dfn>[</dfn><tt>clip</tt><dfn>]</dfn>
+<tt>box<dfn>|</dfn>triangle<dfn>|</dfn>gauss<dfn>|</dfn>mitchell<dfn>|</dfn>lanczos</tt>
+<i>width</i><dfn>[</dfn><i>height</i><dfn>]</dfn></dt>
+<dd>This option specifies how multiple samples in recursive
+sampling mode are to be combined. The filter defaults to a box
+filter of width and height 1. The filter size can also be
+specified, in pixel units. Good filter sizes are 1.0 for
+<tt>box</tt>, 2.0 for <tt>triangle</tt>, 3.0 for <tt>gauss</tt>,
+and 4.0 for <tt>mitchell</tt> and <tt>lanczos</tt>. mental ray 3.2
+and up also support <tt>clip mitchell</tt> and <tt>clip
+lanczos</tt> to clip the filter result to the sample range under
+the filter, which avoids ringing in these filters because they
+contain negative coefficients. This option requires a sampling
+density of at least <tt>-1 0</tt>.</dd>
+
+<dt id="cli:fg">
+<tt>-finalgather on<dfn>|</dfn>off<dfn>|</dfn>only<dfn>|</dfn>fastlookup</tt></dt>
+<dd>Enables or disables <a href="node52.html#INDEX98">final
+gathering</a>. It is disabled by default. Final gathering is a
+rendering technique used for computing
+<a href="node80.html#INDEX259">indirect illumination</a> with a
+one-generation raytracing step. mental ray 3.0 added a third
+choice, <tt>fastlookup</tt>, that enables final gathering and also
+arranges for <a href="node48.html#INDEX97">irradiance</a> to be
+stored in the <a href="node48.html#INDEX96">photon map</a>. This
+slows down <a href="node142.html#INDEX579">photon</a> tracing but
+greatly accelerates final gathering. mental ray 3.3 added the
+<tt>only</tt> keyword, which computes the finalgather map and skips
+rendering.</dd>
+<dt>
+<tt>-finalgather_accuracy</tt><dfn>[</dfn><tt>view</tt><dfn>]</dfn>
+<i>nrays</i><sub>int</sub>
+<dfn>[</dfn><i>maxdist</i><dfn>[</dfn><i>mindist</i><dfn>]]</dfn></dt>
+<dd><i>nrays</i> is the number of rays cast in a final gathering
+step during rendering. The default is 1000. <i>maxdist</i> is the
+maximum distance within which a final gather result can be reused.
+The default is scene dependent. <i>mindist</i> is the minimum
+distance within which final gather results must be reused. The
+default is scene dependent. Both distances are specified in world
+space units, or <a href="node101.html#INDEX371">raster space</a>
+units if <tt>view</tt> is specified.</dd>
+<dt>
+<tt>-finalgather_contrast</tt> <i>r g b</i><dfn>[</dfn><i>a</i><dfn>]</dfn></dt>
+<dd>Similar to <a href="node76.html#INDEX182">contrast</a>, but
+controls the adaptivity in the final gather pre-computing. The
+default value is <a href="node76.html#INDEX182">contrast</a>.</dd>
+<dt>
+<tt>-finalgather_depth</tt> <i>reflect</i><sub>int</sub>
+<dfn>[</dfn><i>refract</i><sub>int</sub>
+<dfn>[</dfn><i>diffuse</i><sub>int</sub>
+<dfn>[</dfn><i>sum</i><sub>int</sub><dfn>]]]</dfn></dt>
+<dd>This option is similar to <tt>-trace_depth</tt> but applies
+only to finalgather rays. The defaults are all 0, which prevents
+finalgather rays from spawning subrays. This means that
+<a href="node80.html#INDEX259">indirect illumination</a> computed by final
+gathering cannot pass through glass or mirrors, for example. A
+depth of 1 (where the sum must not be less than the other two)
+would allow a single refraction or reflection. Diffuse
+bounces can also be controlled. It is not normally
+necessary to choose depths greater than 2. This is not compatible
+with mental ray 3.1 and earlier, which used the <tt>trace
+depth</tt> (which defaults to 2 2 4) for final gathering.</dd>
+<dt>
+<tt>-finalgather_display on<dfn>|</dfn>off</tt></dt>
+<dd>Allows image previewing during the finalgather presampling
+stage if the <tt>imf_disp</tt> viewer is attached to the output
+image file. This is disabled by default. The quality of the preview
+image is very low, but it allows fast detection of illumination
+problems in a scene. This option has no impact on the final image.
+To improve performance it is recommended to disable this option for
+non-interactive rendering.</dd>
+<dt>
+<tt>-finalgather_falloff</tt><dfn>[</dfn><i>start</i><dfn>]</dfn><i>stop</i></dt>
+<dd>Limits the length of final gather rays to a distance of
+<i>stop</i> in world space. If no object is found within a distance
+of <i>stop</i>, the ray defaults to the environment color. The
+<i>start</i> parameter defines the beginning of a linear falloff
+range; objects at a distance between <i>start</i> and <i>stop</i>
+will fade towards the environment color. This option is useful for
+reducing memory usage for the geometry cache.</dd>
+<dt>
+<tt>-finalgather_file "</tt><i>name</i><tt>"</tt>
+<dfn>[</dfn><tt>"</tt><i>name</i><tt>"</tt> <tt>"</tt><i>name</i><tt>"</tt>
+&hellip; <dfn>]</dfn>&minus;&minus;</dt>
+<dd>Tells mental ray to use the given file(s) for loading and
+saving final gather points. Only the first file is used for writing
+and upgrading, any additional files are only read and merged. If
+the <b><a id="INDEX1076"></a>finalgather file</b>
+does not exist, it is created and the complete final gather map is
+saved. If mental ray creates extra final gather points, they are
+appended to the (first) file. This means that the file may grow
+without bounds. If first <var>name</var> is <code>off</code> the
+feature is disabled.</dd>
+<dt>
+<tt>-finalgather_filter</tt> <i>size</i><sub>int</sub></dt>
+<dd>Final gathering uses an speckle elimination filter that
+prevents samples with extreme brightness from skewing the overall
+energy stored in a finalgather hemisphere. This is done by
+filtering neighboring samples such that extreme values are
+discarded in the filter size. The default is 1; 0 turns speckle
+elimination off and greater values remove more speckles and soften
+contrasts. Sizes greater than 4 or so are not normally useful.</dd>
+
+<dt id="finalgather_mode">
+<tt>-finalgather_mode</tt><i>mode</i></dt>
+<dd>Select one of the four finalgather modes. <tt>3.4</tt> and
+<tt>strict3.4</tt> are the compatibility modes. The former one
+focuses on usage of the same argument set, but with rendering
+improvement, The latter focuses on rendering identical or very
+similar images as mental ray 3.4. The <tt>automatic</tt> mode
+primarily targets rendering of single still images. The
+<tt>multiframe</tt> mode targets rendering of the camera
+fly-through animations. Both use the <tt>finalgather points</tt>
+argument for the approximate resp. minimal number of final gather
+points used in interpolation. In both mode, all finalgather points
+are produced in the finalgather precomputing stage. For the
+<tt>multiframe</tt> mode, the <tt>finalgather accuracy</tt> <i>max
+radius</i> is used to limit the maximal validity distance of a
+finalgather point to avoid picking up illumination from remote
+objects if the density of finalgather points is insufficient. See
+also the <a href="node52.html#modes">functionality description</a>
+and <a href="node76.html#finalgather_mode">scene file syntax</a>.</dd>
+<dt>
+<tt>-finalgather_points</tt><i>P</i><sub>int</sub>
+<dd>In the <tt>automatic</tt> and <tt>multiframe</tt> finalgather
+modes, the number of finalgather points used for interpolation of
+the indirect illumination.</dd>
+<dt>
+<tt>-finalgather_presample_density</tt><i>T</i></dt>
+<dd>This option controls the density of initial finalgather points
+created during preprocessing (green dots in the diagnostic image).
+It increases (decreases if <i>T &lt; 1</i>) the number of
+precomputed finalgather points approximately <i>T</i> times.</dd>
+<dt>
+<tt>-finalgather_rebuild on<dfn>|</dfn>off<dfn>|</dfn>freeze</tt></dt>
+<dd>If a filename is specified using the <tt>-finalgather_file</tt>
+option, it is normally loaded and used if the file exists.
+<tt>-finalgather_rebuild on</tt> causes existing files to be
+ignored, all final gather points will be recomputed and an existing
+file will be overwritten. <tt>freeze</tt> is equivalent to
+<tt>on</tt>, except that the final gather map, once created by
+reading it from a file or building it in the first frame, will
+never be modified. Extra finalgather points created during
+rendering will not be appended, and the
+<a href="node245.html#INDEX1076">finalgather file</a> on disk will not be
+modified.</dd>
+<dt>
+<tt>-finalgather_scale</tt> <i>r g b</i><dfn>[</dfn><i>a</i><dfn>]</dfn></dt>
+<dd>The irradiance obtained from first bounce final gathering is
+multiplied by the specified color, making the irradiance effect
+brighter for factors greater than 1.0. Note that this option
+applies to a single bounce only.</dd>
+<dt>
+<tt>-finalgather_secondary_scale</tt> <i>r g b</i><dfn>[</dfn><i>a</i><dfn>]</dfn></dt>
+<dd>The irradiance obtained from secondary bounce final gathering
+is multiplied by the specified color, making the irradiance effect
+brighter for factors greater than 1.0.</dd>
+<dt>
+<tt>-focal</tt> <i>distance</i><tt><dfn>|</dfn>infinity</tt></dt>
+<dd>The <a href="node77.html#INDEX228">focal distance</a> is set to
+<i>distance</i>. The focal distance is the distance from the camera
+to the <a href="node77.html#INDEX229">viewing plane</a>. The
+viewing plane is the plane in front of the camera that the rendered
+scene is projected onto; its edges correspond to the edges of the
+rendered image. If <tt>infinity</tt> is used in place of the
+<i>distance</i>, an orthographic view<a id="INDEX1077"></a> is rendered.</dd>
+<dt>
+<tt>-gamma</tt> <i>gamma_factor</i></dt>
+<dd>Gamma correction can be applied to rendered color pixels to
+compensate for output devices with a nonlinear color response. All
+quantized R, G, B, and alpha component values (ie. not if the frame
+buffer is floating-point or RGBE) are raised to
+<i>gamma_factor</i>. The default gamma factor is 1.0, which turns
+<a href="node76.html#INDEX215">gamma correction</a> off. The
+reverse correction is applied to all quantized texture images.</dd>
+<dt>
+<tt>-geometry on<dfn>|</dfn>off</tt></dt>
+<dd>Ignore all <a href="node179.html#INDEX857">geometry shader</a>s
+if set to <tt>off</tt>. The default is <tt>on</tt>.</dd>
+<dt><tt>-globillum on<dfn>|</dfn>off</tt></dt>
+<dd>Enable or disable the computation of <a href="node48.html#INDEX95">global
+illumination</a>. The default is
+<tt>off</tt>. To actually compute global illumination, lights must
+have an energy, and materials must have photon shaders.</dd>
+<dt>
+<tt>-globillum_accuracy</tt> <i>nphotons</i><sub>int</sub>
+<dfn>[</dfn><i>radius</i><dfn>]</dfn></dt>
+<dd>The number of <a href="node142.html#INDEX579">photon</a>s used
+to estimate <a href="node48.html#INDEX95">global illumination</a>
+during rendering and the maximum radius to be used when reading
+photons during rendering. The defaults number of photons is 500. If
+<i>nphotons</i> is set to 0, all photons within the given radius
+are used. The default radius is scene size dependent.</dd>
+<dt>
+<tt>-globillum_merge</tt> <i>distance</i></dt>
+<dd>To reduce photon map size, merge globillum photons which are
+closer than the specified <i>distance</i>.</dd>
+<dt>
+<tt>-globillum_scale</tt> <i>r g b</i><dfn>[</dfn><i>a</i><dfn>]</dfn></dt>
+<dd>The irradiance obtained from the globillum photonmap lookup is
+multiplied by the specified color, making the effect brighter for
+factors greater than 1.0.</dd>
+<dt>
+<tt>-H "</tt><i>path</i><tt>"</tt></dt>
+<dd>Specifies the directory where hardware shaders are located.
+This is a shorthand for <tt>hardware_path</tt>.</dd>
+<dt>
+<tt>-hair on<dfn>|</dfn>off</tt></dt>
+<dd>Hair rendering can be enabled or disabled from the commandline
+with this switch. This can be useful for faster test renders
+without the full effects. The default is <tt>on</tt>.</dd>
+<dt>
+<tt>-hardware off<dfn>|</dfn>on<dfn>|</dfn>all --</tt></dt>
+<dd>Specify <i>which</i> objects should be rendered with
+<a href="node167.html#INDEX847">hardware rendering</a>: <tt>off</tt>
+disables hardware rendering (this is the default), <tt>on</tt> uses
+hardware rendering for all materials that specify a hardware
+shader, and <tt>all</tt> uses hardware rendering for all objects
+and tries to find hardware substitutes for materials that do not
+specify an explicit hardware shader. The most useful mode is
+<tt>all</tt>. Note that this option only selects which objects are
+eligible for hardware rendering, but mental ray may still fall back
+on software rendering for objects for which no appropriate hardware
+shaders are available. This is controlled separately by the
+following options.</dd>
+<dt>
+<tt>-hardware cg<dfn>|</dfn>native<dfn>|</dfn>fast* --</tt>
+<dfn>[</dfn><tt>force</tt><dfn>]</dfn></dt>
+<dd>This option controls <i>how</i> hardware shaders are selected
+for an object that is eligible for <a href="node167.html#INDEX847">hardware
+rendering</a>, as specified by the
+previous option. mental ray will try all approaches allowed by this
+option in turn: <tt>cg</tt> means that mental ray will first look
+for shaders implemented in <a href="node178.html#INDEX854">NVIDIA</a>'s
+<a href="node173.html#INDEX853">Cg</a> 1.2 shader programming language.
+This is the default. <tt>native</tt> looks for shaders implemented
+in the <a href="node56.html#INDEX106">OpenGL</a> 2.0 native shader
+programming language, which is less powerful than
+<a href="node173.html#INDEX853">Cg</a>. <tt>fast</tt> uses hardcoded
+<a href="node56.html#INDEX106">OpenGL</a> materials that do not
+involve programmable shaders at all. This is limited to simple
+Gouraud models. <tt>force</tt> specifies that the search stops
+here, and objects that cannot use any of the above methods use a
+simple gray default material. If <tt>force</tt> is not specified,
+mental ray will fall back on software rendering for the object. The
+hardware options can be combined. For example, <tt>-hardware all cg
+native fast force --</tt> will render all objects with the best
+available hardware shading method but never with software; this is
+useful for fast preview rendering. The option <tt>-hardware all cg
+native --</tt> is best for quality rendering, and so on.</dd>
+<dt>
+<tt>-hardware_echo</tt>
+<dfn>[</dfn><tt>error</tt><dfn>]</dfn><tt>"</tt><i>path</i><tt>"</tt></dt>
+<dd>Write the <a href="node173.html#INDEX853">Cg</a> source code as
+it is passed to the Cg compiler and the resulting assembly code to
+disk, to the directory <i>path</i>. If the <tt>error</tt> option is
+specified, only those files are written for which compilation has
+failed. This is useful for debugging, and to extract shader code
+from mental ray for use in game engines or other standalone
+applications.</dd>
+<dt>
+<tt>-hardware_path "</tt><i>path</i><tt>"</tt></dt>
+<dd>Specifies the directory where hardware shaders are located. Can
+also be abbreviated as <tt>-H</tt>.</dd>
+<dt>
+<tt>-hardware_samples</tt> <i>multi</i><sub>int</sub>
+<i>super</i><sub>int</sub></dt>
+<dd>Specify the <b><a id="INDEX1078"></a>multisampling</b> and
+supersampling rates to be
+used for hardware rendering. Multisampling is done by the hardware
+pixel pipeline, which takes more samples per triangle and writes
+the result to the frame buffer. Supersampling is done by mental
+ray, by increasing the frame buffer size and rendering at a higher
+resolution, and then downfiltering to the requested frame buffer
+resolution. Multisampling is much faster and does not increase
+hardware video memory usage (or even exceed the GPU resolution
+capacity), but supersampling looks better.</dd>
+<dt>
+<tt>-help</tt></dt>
+<dd>Print a summary of all options with their allowed parameters,
+and terminate.</dd>
+
+<dt id="cli:hosts"><tt>-hosts "</tt><i>hostname</i>
+<dfn>[</dfn><tt>:</tt><i>portnumber</i><dfn>]</dfn>
+<dfn>[</dfn><i>remote parameters</i><dfn>]</dfn><tt>"</tt>&hellip;
+<tt>--</tt></dt>
+<dd>The machine list overrides the machine list taken from the
+<tt>.rayhosts</tt> file, if present. One slave is started on each
+machine specified. Machine names must be given as expected by the
+local name resolving method (such as <tt>/etc/hosts</tt>) or as a
+numeric IP address ( <tt>nnn.nnn.nnn.nnn</tt>).</dd>
+<dt>
+<tt>-I "</tt><i>path1:path2:&hellip;</i><tt>"</tt></dt>
+<dd>Overrides the path used to resolve <tt>$include</tt> commands
+in the .mi scene file. The default path contains the directories
+<tt>.</tt>, <tt>{_MI_REG_INCLUDE}</tt>,
+<tt>/usr/local/mi/rayinc</tt>, <tt>/usr/include</tt>, and
+<tt>/usr/include/mi</tt>. Note that only one <tt>-I</tt> option can
+be specified. It may contain a colon-separated (
+<a href="node100.html#INDEX363">Unix</a> only) or semicolon-separated
+(<a href="node100.html#INDEX363">Unix</a> and Windows NT) list of
+directory paths that are tried in sequence if a <tt>$include</tt>
+command using angle brackets is used in the .mi scene file. Paths
+introduced with an exclamation point are special; they are applied
+to quoted <tt>$include</tt> paths too, and substitute the entire
+directory path. This can be used to force mental ray to use a
+specified path regardless of the path specified in the
+<tt>$include</tt> command, for example because that path points to
+an obsolete version of a declaration file. For example, <tt>-I
+/a:/b:!/new</tt> tries to find a path <tt>&lt;x/y/z&gt;</tt> first
+as <tt>/a/x/y/z</tt>, then <tt>/b/x/y/z</tt>, then <tt>/new/z</tt>.</dd>
+<dt>
+<tt>-imgpipe</tt> <i>fd</i><sub>int</sub></dt>
+<dd>Normally mental ray prints connection information into the
+output image file that let programs like
+<tt><a href="node248.html#INDEX1087">imf_disp</a></tt> connect and display
+images while being rendered. If <tt>-imgpipe</tt> is used, the
+relevant information is printed to the given file descriptor
+<i>fd</i> instead. This can be used for command lines such as
+<pre>
+ray -imgpipe 1 scene.mi | imf_disp -
+</pre>
+The <tt>imf_disp</tt> program is a viewer provided by mental images
+that supports image piping.</dd>
+
+<dt id="cli:importons">
+<tt>-importon on<dfn>|</dfn>off</tt> </dt>
+<dd>Control the emission of importons. The default is off.</dd>
+<dt>
+<tt>-importon_density</tt> <var>density</var> </dt>
+<dd>The density of importons that are emitted from the camera per
+pixel, on average. The default is 1.0, which means that one
+importon for each pixel will be emitted on average. Values lower
+than 1.0 mean less importons and thus coarser photon distribution
+for more speed but less quality. Values greater than 1.0 create
+more importons and thus finer photon distribution.</dd>
+<dt>
+<tt>-importon_trace_depth</tt> <var>depth</var> </dt>
+<dd>The maximum number of bounces that are allowed for importons.
+The default is 0 (that is, no diffusion). The higher this value,
+the more importons will get diffused in the scene. Note though that
+photon shaders might decide not to diffuse them anyway.</dd>
+<dt>
+<tt>-importon_traverse on<dfn>|</dfn>off</tt> </dt>
+<dd>Enables the complete traversal of the scene for importons, that
+is they will be stored for all intersections of the ray with the
+objects of the scene from the camera to infinity. The default is
+on. This means that more importons are being stored in the scene
+(and hence more photons later during photon shooting) to remove or
+reduce artifacts due to photon distribution discontinuities.</dd>
+
+<dt id="cli:ip">
+<tt>-ip on<dfn>|</dfn>off</tt> <span class="recent">3.7</span></dt>
+<dd>Enables irradiance particles. This may enforce other options in mental
+ray which are not compatible to be disabled or ignored. The default is off.
+<dt>
+<tt>-ip_rays</tt> <var>nrays</var><sub>int</sub> <span class="recent">3.7</span></dt>
+<dd>Controls the number of rays shot while estimating the irradiance. This
+value has similar meaning to the number of rays used for final gathering,
+but specifies a maximum number. Irradiance particels typically deliver better
+quality compared to final gathering used with the same number of rays. The
+minimum is 2. The default value is 256.
+<dt>
+<tt>-ip_indirect_passes</tt> <var>n</var><sub>int</sub> <span class="recent">3.7</span></dt>
+<dd>Sets the number of possible passes of indirect lighting. If this number
+is 0 then irradiance particles will carry just direct illumination. Higher
+values enable computation of a sequence of passes to collect the irradiance
+coming from multiple indirect illumination bounces, which will be added to
+the irradiance particles. The default value is 0.
+<dt>
+<tt>-ip_scale</tt> <dfn>[</dfn><i>r g b</i><dfn>]</dfn><i>a</i> <span class="recent">3.7</span></dt>
+<dd>This is a global scale factor applied to the intensity of the irradiance
+during rendering. Values different from default do not lead to a physically
+correct rendering but are useful for artistic purposes. A single value may be
+specified which is applied to all R, G, and B color components, or individual
+values can be given for each color component. The default value is 1.0.
+<dt>
+<tt>-ip_interpolate</tt> <i>mode</i><sub>int</sub> <dfn>|</dfn> <tt>"</tt><dfn>string</dfn><tt>"</tt> <span class="recent">3.7</span></dt>
+<dd>Control the use of interpolation. It can either be a numeric value or a string.
+<code>0</code> means no interpolation, <code>1</code> means interpolate always, and
+<code>2</code> means interpolate only for secondary rays (that is, no interpolation
+for eye rays and interpolation for reflections, retractions, etc). Alternatively, the
+strings <code>"never"</code>, <code>"always"</code> or <code>"secondary"</code> may
+be used. The default value is <code>"always"</code>.
+<dt>
+<tt>-ip_interppoints</tt><var>n</var><sub>int</sub> <span class="recent">3.7</span></dt>
+<dd>Sets the number of irradiance particles used for the lookup interpolation.
+The default value is 64.
+<dt>
+<tt>-ip_env on<dfn>|</dfn>off</tt> <span class="recent">3.7</span></dt>
+<dd>This flag enables the use of the environment maps for irradiance
+computation. If enabled then a separate particle map is built just for the
+environment (if an environment shader is present) and used during rendering
+for image based lighting. The default value is on.
+<dt>
+<tt>-ip_env_rays</tt> <var>nrays</var><sub>int</sub> <span class="recent">3.7</span></dt>
+<dd>Controls the number of rays used for the computation of irradiance coming
+from the environment map. This number can be greater than the number of rays
+used for normal irradiance computation, especially if most of the environment
+is covered by scene geometry (like in a room with just one or two windows).
+For outdoor scenes, a smaller number of rays is often sufficient. The default
+is equal to the number of irradiance particle rays.
+<dt>
+<tt>-ip_env_scale</tt> <dfn>[</dfn><i>r g b</i><dfn>]</dfn><i>a</i> <span class="recent">3.7</span></dt>
+<dd>A global scale factor applied just to the irradiance contribution from
+the environment. The resulting irradiance will be further scaled by the global
+irradiance particle scale value. A single value or individual values per color
+component may be given, in the same way as for the general scale. The default
+value 1.0.
+<dt>
+<tt>-ip_file "</tt><i>name</i><tt>"</tt> <span class="recent">3.7</span></dt>
+<dd>Specifies the file name for the irradiance particle map on disk. If the
+file exists, mental ray will try to read the irradiance particle map from it
+unless the rebuild option is enabled. If the irradiance particle map can't be
+read from the file mental ray will compute it and save it to a file with the
+given name. This is consistent with the option for photon maps, for example.
+The default is no name, i.e. irradiance particles are not associated with a
+file.
+<dt>
+<tt>-ip_rebuild on<dfn>|</dfn>off</tt><span class="recent">3.7</span></dt>
+<dd>If set to <code>on</code>, mental ray will compute the irradiance particle
+map even if a file with a name given with the previous string option exists.
+If set to <code>off</code>, then mental ray will either read it from a file
+if specified, or it will reuse the irradiance particle map coming from the
+previous frame in an animation, useful to avoid flickering in fly-throughs.
+Note, the irradiance particle map may lose quality if objects or camera are
+moving. The default value is on.
+<dt id="cli:iray">
+<tt>-iray on<dfn>|</dfn>off</tt><span class="new">3.8</span></dt>
+<dd>If set to <code>on</code>, mental ray will use the
+<a href="iray.html#fo:iray">iray rendering mode</a> to render the scene.
+The default value is off.
+<dt>
+<tt>-jitter</tt> <i>jitter</i></dt>
+<dd>The <a href="node76.html#INDEX193">jitter</a>ing factor
+introduces systematic variations into spatial sample locations if
+<i>jitter</i> is set to 1.0, which is the default. Jittering can be
+disabled by specifying a <i>jitter</i> of 0.0.</dd>
+
+<dt>
+<tt>-L "</tt><i>path1:path2:&hellip;</i><tt>"</tt></dt>
+<dd>This is an abbreviation for <tt>-ld_path</tt>.</dd>
+
+<dt><tt>-ld_libs "</tt><i>libraries</i> <tt>"</tt></dt>
+<dd>The <i>libraries</i> string replaces the standard library
+options given to the linker. The defaults depend on the machine
+used, typically <tt>"-lm -lc"</tt>. Linker options are machine
+dependent and operating system dependent and cannot be changed.</dd>
+<dt>
+<tt>-ld_path "</tt><i>path1:path2:&hellip;</i><tt>"</tt></dt>
+<dd>Supply a list of library search paths that mental ray searches
+for shader libraries containing shader code. The paths given here
+precede those that can be given by the
+<a href="configuration.html#INDEX1085">environment variable</a>
+<tt>MI_LIBRARY_PATH</tt> and the built-in search path (consisting
+of the directories <tt>{_MI_REG_LIBRARY}</tt>,
+<tt>/usr/local/mi/lib</tt>, and <tt>.</tt>; see page regpath).</dd>
+<dt>
+<tt>-lens on<dfn>|</dfn>off</tt></dt>
+<dd>Ignore all <a href="node124.html#INDEX487">lens shader</a>s if
+set to <tt>off</tt>. The default is <tt>on</tt>.</dd>
+<dt><tt>-lightmap on<dfn>|</dfn>off<dfn>|</dfn>only</tt></dt>
+<dd>This mode enables rendering of lightmaps. By default, lightmaps
+are enabled. If this option is set to <tt>only</tt>, only the
+lightmaps but not the camera images are rendered.</dd>
+<dt>
+<tt>-lightprofile_path "</tt><i>path1:path2:&hellip;</i><tt>"</tt></dt>
+<dd>File search path for light profiles.</dd>
+<dt>
+<tt>-link "</tt><i>filename</i><tt>"</tt> &hellip; <tt>--</tt></dt>
+<dd>Like the code command, the link command attaches external
+shaders to mental ray, which can then be used as shading functions.
+While the code command accepts ".c" files as <i>filename</i>, the
+link command expects either object files ending in ".o" or ".obj",
+or <a href="node99.html#INDEX358">shader library</a> files ending
+in ".so" or ".dll".</dd>
+<dt>
+<tt>-M "</tt><i>path1:path2:&hellip;</i><tt>"</tt> <span class="new">3.8</span>
+<dd>This is an abbreviation for <tt>-map_path</tt>.
+<dt>
+<tt>-map_cache_size</tt> <i>size</i><sub>int</sub> <span class="new">3.8</span>
+<dd>The size of the global cache for all maps currently present in memory,
+where <var>size</var> is the amount in Megabytes. The default is 10 (MB).
+<dt>
+<tt>-map_page_size</tt> <i>size</i><sub>int</sub> <span class="new">3.8</span>
+<dd>The internal memory for storing maps is subdivided in pages, whose size is
+controlled by this option, where <var>size</var> is the amount in Kilobytes.
+The default is 16 (KB).
+<dt>
+<tt>-map_path "</tt><i>path1:path2:&hellip;</i><tt>"</tt> <span class="new">3.8</span>
+<dd>File search path for map data files.</dd>
+<dt>
+<tt>-maxdisplace</tt> <i>dist</i></dt>
+<dd>This option overrides all max displace values in scene objects
+with <i>dist</i> if <i>dist &gt; 0</i>. This is useful to render
+old scene files built for mental ray 1.x or 2.x, which did not
+support max displace, and so would fail to show any displacement
+when rendered with mental ray 3.x.</dd>
+
+<dt id="cli:memory">
+<tt>-memory</tt> <i>limit</i></dt>
+<dd>The <i>limit</i> argument specifies the size of mental ray's total memory
+usage in megabytes, including heap (non-scene data), scene database, and
+virtual memory. The default is 1000 (~1GB) on 32bit systems, and 0 (unlimited)
+on 64bit systems. Note, that high values can result in out-of-memory situations
+with very large scenes, and should be set to be somewhat lower than the actual
+amount of memory that is available to a process on the specific machine.
+20% less than the maximum available memory is a good starting point.
+Swap space specified with <tt>-swap_limit</tt> is not included.
+Memory limits have no effect on slave hosts.</dd>
+
+<dt id="cli:message">
+<tt>-message</tt> <i>module class_list</i> &hellip; <tt>--</tt></dt>
+<dd>Enable or disable individual message classes, per module. The
+module names are printed at the beginning of every message printed
+by mental ray; <tt>all</tt> can be used to modify the message
+classes of all modules. The <var>class_list</var> is a
+comma-separated list of classes to print. Supported message classes
+are <tt>phase</tt>, <tt>progress</tt>, <tt>vprogress</tt>,
+<tt>time</tt>, <tt>scene</tt>, <tt>memory</tt>, <tt>render</tt>,
+<tt>vrender</tt>, <tt>resources</tt>, <tt>network</tt>,
+<tt>files</tt>, and <tt>debug</tt>. The special words
+<tt>default</tt>, <tt>all</tt>, and <tt>none</tt> are also
+supported. A class can be inverted by prepending an exclamation
+point. For example, to print less verbose RC progress messages and
+make all modules report every file accessed, specify
+<pre>
+-message rc default,!vprogress all default,files --
+</pre>
+The message codes that perform useful actions are listed in the following table:
+<table class="table">
+<tr>
+<th><i>module</i></th>
+<th><i>class</i></th>
+<th><i>default</i></th>
+<th><i>action</i></th>
+</tr>
+<tr><td>all<td>msgtrans<td>-<td>network transfers</td></tr>
+<tr><td>echo<td>debug<td>-<td>add comments to <tt>-echo incremental</tt> output</td></tr>
+<tr><td>gapmi<td>progress<td>on<td>tessellation and displacement sampling</td></tr>
+<tr><td>geomi<td>tessellate<td>-<td>triangles created by tessellation</td></tr>
+<tr><td>img<td>files<td>-<td>opened image files, texture caching</td></tr>
+<tr><td>job<td>debug<td>-<td>job execution, slave transfers, status</td></tr>
+<tr><td>job<td>resources<td>-<td>post-render job execution statistics</td></tr>
+<tr><td>mi<td>files<td>-<td>opened include files</tr><tr>
+<td>mi<td>progress<td>on<td>line numbers every 50000 lines</td></tr>
+<tr><td>msg<td>network<td>-<td>slave host rendezvous details</td></tr>
+<tr><td>msg<td>progress<td>on<td>host list, connecting hosts</td></tr>
+<tr><td>phen<td>debug<td>-<td>check shader results for
+<b><a id="INDEX1079"></a>NaN (Not a Number)</b> values</td></tr>
+<tr><td>rc<td>phase<td>on<td>rectangle rendering begin and end</td></tr>
+<tr><td>rc<td>scene<td>on<td>camera/option dump before rendering</td></tr>
+<tr><td>rci<td>debug<td>-<td>BSP subtree creation</td></tr>
+<tr><td>scene<td>phase<td>on<td>preprocessing, geometry shaders</td></tr>
+<tr><td>scene<td>resources<td>-<td>postprocessing statistics</tr><tr>
+<td>spdl<td>debug<td>-<td>echo MI declaration equivalents</td></tr>
+</table>
+<dt>
+<tt>-motion on<dfn>|</dfn>off</tt></dt>
+<dd>Normally the <a href="#shutter"><tt>-shutter</tt></a> option
+controls whether motion blurring is enabled, and turns it on if
+there is a nonzero shutter interval. The <tt>-motion</tt> option
+overrides this and turns motion blurring on or off explicitly. For
+example, it is useful to define a zero shutter interval and then
+(order is important) turn motion blurring on, so that shaders get a
+correct <code>state&rarr;motion</code> vector. If motion blurring
+is turned off, this vector is not computed.<p>
+<p class="note"><b>Note:</b> to turn motion blur off, the
+command line option <tt>-shutter 0</tt> should be used.
+<dt>
+<tt>-motion_steps</tt> <i>steps</i><sub>int</sub></dt>
+<dd>Approximate instance <a href="node90.html#INDEX343">motion
+transform</a>ations with <i>steps</i> segments. This results in a
+smooth <a href="node83.html#INDEX290">motion path</a>, as if a
+similar number of <a href="node32.html#INDEX62">motion vector</a>s
+had been specified. <i>steps</i> must be a number between 1 and 15;
+1 is the default. If objects with <a href="node90.html#INDEX343">motion
+transform</a>ations also specify
+<a href="node32.html#INDEX62">motion vector</a>s, the number of
+motion vectors per vertex must agree with the motion steps
+value.</dd>
+<dt id="cli:nomaster">
+<tt>-nomaster</tt></dt>
+<dd>When rendering with multiple hosts, schedule all jobs on slaves
+only, if possible. For example, the master host will not render,
+tessellate, compute shadow maps, etc, if possible; but it will
+still load textures of the slaves, and will also collect and save
+rendered images. The master may execute certain rendering jobs only
+if the slaves run out of resources. This is useful if the master
+host also runs front-end applications that must remain responsive
+even under heavy load.</dd>
+<dt>
+<tt>-o "</tt><i>filename</i><tt>"</tt></dt>
+<dd>This is an abbreviation for <tt>-file_name</tt>.</dd>
+<dt>
+<tt>-offset</tt> <i>x y</i></dt>
+<dd>An offset for the rendered image. The default is <i>0.0</i> for
+both <i>x</i> and <i>y</i>, which means that the image will be
+centered on the camera's Z axis. Positive values translate the
+image up and to the right. The offset is measured in pixel units.</dd>
+<dt>
+<tt>-output on<dfn>|</dfn>off</tt></dt>
+<dd>Ignore all <a href="node126.html#INDEX492">output shader</a>s
+if set to <tt>off</tt>. The default is <tt>on</tt>. File
+<a href="node77.html#INDEX227">output statement</a>s are not affected.</dd>
+<dt>
+<tt>-photonmap_file "</tt><i>filename</i><tt>"</tt></dt>
+<dd>Use <i>filename</i> for the <a href="node48.html#INDEX96">photon map</a>,
+in all frames. If the photon
+map file does not exist, it is created and saved. If it exists, it
+is loaded and used. For multiple frames it is only created for the
+first frame and then loaded for the remaining frames, which can
+greatly speed up rendering in scenes where the illumination does
+not change much, such as camera fly-throughs.</dd>
+<dt>
+<tt>-photonmap_only on<dfn>|</dfn>off</tt></dt>
+<dd>If this option is set, only the photon maps but not the camera
+images are rendered. The default is off.</dd>
+<dt>
+<tt>-photonvol_accuracy</tt> <i>nphotons</i><sub>int</sub>
+<dfn>[</dfn><i>radius</i><dfn>]</dfn></dt>
+<dd>Controls how global illumination or caustics in participating
+media are estimated by looking up the <a href="node48.html#INDEX96">photon
+map</a> during rendering.
+<i>nphotons</i> is the maximum number of photons to examine and
+<i>radius</i> the maximum radius to search. if <i>nphotons</i> is
+0, all <a href="node142.html#INDEX579">photon</a>s are examined up
+to the <i>radius</i> limit. A <i>radius</i> of 0 means that a scene
+size dependent radius will be used. The defaults are <i>30</i> and
+<i>0.0</i>.</dd>
+<dt>
+<tt>-photonvol_merge</tt> <i>distance</i></dt>
+<dd>To reduce photon map size, merge volume photons which are
+closer than the specified <i>distance</i>.</dd>
+<dt>
+<tt>-photonvol_scale</tt> <i>r g b</i><dfn>[</dfn><i>a</i><dfn>]</dfn></dt>
+<dd>The illumination contributed by volume photons is multiplied by
+the specified color, making the effect brighter for factors greater
+than 1.0.</dd>
+<dt>
+<tt>-photon_depth</tt> <i>reflect</i><sub>int</sub>
+<dfn>[</dfn><i>refract</i><sub>int</sub>
+<dfn>[</dfn><i>sum</i><sub>int</sub><dfn>]]</dfn></dt>
+<dd><tt>photon_depth</tt> is similar to <tt>trace_depth</tt> except
+that it applies to photons. If set to 0, no photons will be
+reflected; if set to 1, one level is allowed but a photon cannot be
+reflected again, and so on. The defaults are 5 5 5.</dd>
+<dt>
+<tt>-premultiply on<dfn>|</dfn>off</tt></dt>
+<dd>Premultiplication means that colors are stored with alpha
+multiplied to R, G, and B. This is the default. For example, white
+at 10% opacity is not stored as (1, 1, 1, 0.1) but as (0.1, 0.1,
+0.1, 0.1). If turned off, mental ray writes the colors without
+<a href="node76.html#INDEX211">premultiplication</a>; in this case
+color clipping should also be switched to raw mode.</dd>
+
+<dt id="cli:progressive">
+<tt>-progressive on<dfn>|</dfn>off</tt> <span class="recent">3.7</span>
+<dd>Enable <a href="node6.html#fo:progressive">progressive rendering</a>
+if set to <code>on</code>. Default is <code>off</code>.
+<dt>
+<tt>-progressive_error_threshold</tt> <i>threshold</i> <span class="new">3.8</span>
+<dt>
+<tt>-progressive_max_samples</tt> <i>num</i><sub>int</sub> <span class="new">3.8</span>
+<dd>Set criteria for automatic stop of
+<a href="node6.html#fo:progressive">progressive rendering</a> and
+<a href="iray.html#fo:iray">iray</a>. See related
+<a href="node76.html#progressive">scene options</a> for detailed description.
+<dt>
+<tt>-progressive_min_samples</tt> <i>num</i><sub>int</sub> <span class="recent">3.7</span>
+<dt>
+<tt>-progressive_subsampling_size</tt> <i>size</i><sub>int</sub> <span class="recent">3.7</span>
+<dd>Control <a href="node6.html#fo:progressive">progressive rendering</a>
+behavior and performance. See related
+<a href="node76.html#progressive">scene options</a> for detailed description.
+</dd>
+
+<dt id="rast_motion_factor">
+<tt>-rast_motion_factor</tt> <i>factor</i> </dt>
+<dd>Takes a positive floating point value which divides the shading
+samples taken proportional to the speed of the motion of the object
+in screen space. It can be used to improve rendering performance
+for motion scenes without a visual quality decrease. The default
+value is 0.0, which disables this feature. A good starting value
+for many scenes would be 1.0.</dd>
+<dt>
+<tt>-rast_transparency_depth</tt> <i>depth</i> </dt>
+<dd>When set to a positive integer, the transparency compositing will end
+at the depth specified. The default is 250. This is a performance tuning
+parameter for scenes where it is known that the main colour information is
+provided by the first few depth layers.</dd>
+<dt>
+<tt>-rast_useopacity on<dfn>|</dfn>off</tt> 
+<dd>When enabled then transparency/opacity compositing is performed by the
+rasterizer on all user color frame buffers (i.e. non-primary color buffers),
+regardless of the individual setting on user frame buffers.
+By default, this compositing is only performed on the primary color buffer,
+and on user frame buffers that have been marked for compositing explicitly.
+</dd>
+
+<dt id="reload">
+<tt>-reload</tt> <i>bytes</i></dt>
+<dd>If this option is specified then mental ray attempts to avoid
+keeping geometric objects in memory permanently, and instead
+re-reads them from disk as needed. Only objects larger than
+<tt><em>bytes</em></tt> are considered for this optimization. This
+may save large amounts of memory on certain complex scenes. Note
+that it is not possible to reload objects in some cases, for
+example when the input scene is piped into mental ray or if objects
+contain multiple merge groups.
+<dd>The recommended size for <tt><em>bytes</em></tt> is about 30000,
+corresponding to an object with about 1,000 vertices. The default
+of 0 disables reloading of objects.
+<dd>Reloadable objects occupy memory only for a short period of
+time. They are read from the .mi file only when needed
+(intersection hit) and not already present in memory. The mental
+ray cache manager may decide to flush such objects when sufficient
+memory is not available.
+<dd>It is recommended to specify object bounding boxes in the .mi
+file, otherwise mental ray must calculate them when an object is
+made reloadable.</dd>
+<dt>
+<tt>-render</tt> <i>begin</i><sub>int</sub>
+<dfn>[</dfn><i>end</i><sub>int</sub>
+<dfn>[</dfn><i>inc</i><sub>int</sub><dfn>]]</dfn></dt>
+<dd>Render only frames <i>begin</i> through <i>end</i>. If
+<i>end</i> is omitted, <i>begin</i> and all following frames are
+rendered. If <i>inc</i> is given, only every <i>inc</i>-th frame is
+rendered. Frame 1 is considered the first <tt>render</tt> statement
+in the scene file; camera frame specifiers are not considered. For
+example, <tt>4 8 2</tt> will skip the first three frames, then
+render frame 4, 6, and 8, and omit the rest. It is not an error if
+the scene file has fewer frames than requested.</dd>
+<dt>
+<tt>-resolution</tt> <i>x</i><sub>int</sub><i>y</i><sub>int</sub></dt>
+<dd>Specifies the width and height of the output image in pixels.
+The default is 768 576.</dd>
+<dt>
+<tt>-samplelock on<dfn>|</dfn>off</tt></dt>
+<dd>This option selects whether sampling of area light sources,
+motion blur, and depth-of-field is static or dependent on the
+<a href="node199.html#INDEX1061">frame number</a>. The default is
+on (static).</dd>
+<dt>
+<tt>-samples</tt> <i>min</i><sub>int</sub><i>max</i><sub>int</sub>
+<dfn>[</dfn><i>defmin</i><sub>int</sub> <i>defmax</i><sub>int</sub><dfn>]</dfn></dt>
+<dd>This option determines the minimum and maximum
+<a href="node76.html#INDEX186">sample rate</a> given as powers of 2. Each
+pixel is sampled at least 2<sup>2&middot;min</sup> and at most
+2<sup>2&middot;max</sup> times. Positive values increase the sample
+rate; negative numbers reduce it. The default is <var>&minus;2
+0</var>. This option has no effect with the rasterizer. The two
+optional extra parameters set the default object sample limits.
+Objects may constrain sampling of the pixels they cover. The
+<i>defmin</i><sub>int</sub> and <i>defmax</i><sub>int</sub>
+parameters apply to pixels where no objects are seen, or all the
+objects that are seen have no <tt>samples</tt> limit. mental ray
+will never take fewer than 2<sup>2&middot;min</sup> and more than
+2<sup>2&middot;max</sup> samples, and in areas with no object sample
+settings it will further reduce that range to
+2<sup>2&middot;defmin</sup> through 2<sup>2&middot;defmax</sup>. The
+defaults are <var>&minus;2 0 &minus;128 127</var>; the latter two
+are markers for "no further restrictions" because they are outside
+the &minus;2 0 range.</dd>
+<dt>
+<tt>-shading_samples</tt> <i>num</i></dt>
+<dd>Rasterizer (formerly called <a href="node34.html#INDEX66">Rapid
+Motion</a>) sampling is controlled by the <tt>-shading_samples</tt>
+option. The units are shading samples per pixel, and the default is 1.0.</dd>
+<dt>
+<tt>-samples_collect</tt> <i>num</i></dt>
+<dd>The <a href="node34.html#INDEX67">rasterizer</a> adds a
+separate collection phase after tile rendering that combines
+subpixel samples to pixels. The <i>num</i> argument controls how
+many shading points should be used for compositing one pixel.
+Unlike the <tt>-samples</tt> arguments, the <i>num</i> argument is
+a linear count per pixel dimension, x and y. The default is 4,
+which gives 16 samples per pixel. The rasterizer (formerly known as
+Rapid Motion) no longer uses the <tt>-samples</tt> option.
+Rasterizer sampling is not adaptive.</dd>
+<dt>
+<tt>-samples_motion</tt> <i>num</i><sub>int</sub></dt>
+<dd>Determines at how many points in time a moving object is shaded
+in rasterizer (Rapid Motion) mode. The default is 1, which means
+that a moving object is sampled once at shutter open time, and this
+result is blurred across the motion path. Higher values than 1
+sample at more points during the shutter interval. This option does
+not apply to regular scanline rendering because it does not cache
+shading results.</dd>
+
+<dt id="scanline">
+<tt>-scanline on<dfn>|</dfn>off<dfn>|</dfn>opengl<dfn>|</dfn>rasterizer<dfn>|</dfn>rapid</tt></dt>
+<dd>Mode <tt>off</tt> allows turning off the
+<a href="node76.html#INDEX202">scanline rendering</a> algorithm to force
+mental ray to rely exclusively on <a href="node102.html#INDEX390">ray
+tracing</a>. This will slow down
+rendering in most cases. The <tt>rasterizer</tt> mode enables a
+different algorithm that greatly improves motion blurring speed. It
+is synonymous with <tt>rapid</tt>; the term "Rapid Motion" is
+deprecated in favor of "rasterizer" because the rasterizer is a
+full rendering algorithm, not only a motion blurring accelerator.
+The <tt>opengl</tt> mode uses local <a href="node56.html#INDEX106">OpenGL</a>
+hardware to accelerate rendering, which sacrifice some accuracy for a large
+speed gain. If <a href="node80.html#INDEX261">shadow map</a>ping is also
+used, <tt>-shadowmap opengl</tt> should also be chosen. See page
+<a href="node76.html#opengl">opengl</a> for more information. The default
+scanline mode is <tt>on</tt>.</dd>
+<dt>
+<tt>-shadow off<dfn>|</dfn>on<dfn>|</dfn>sort<dfn>|</dfn>segments</tt></dt>
+<dd>Choose the shadow mode, or disable shadows. The default is
+<tt>on</tt>. <tt>off</tt> disables all shadows, including
+<a href="node80.html#INDEX261">shadow map</a>s. <tt>on</tt> enables
+standard shadows. <tt>sort</tt> enables shadows and sorts shadow
+intersections before calling <a href="node121.html#INDEX481">shadow
+shader</a>s. Some shadow shaders require this. <tt>segments</tt>
+enables shadows and traces shadow rays like visible rays. Some
+shadow shaders require this.</dd>
+<dt>
+<tt>-shadowmap</tt>
+<dfn>[</dfn><tt>on<dfn>|</dfn>off<dfn>|</dfn>opengl</tt><dfn>]</dfn>
+<dfn>[</dfn><tt>only</tt><dfn>]</dfn>
+<dfn>[</dfn><tt>rebuild</tt><dfn>]</dfn>
+<dfn>[</dfn><tt>reuse</tt><dfn>]</dfn>
+<dfn>[</dfn><tt>motion</tt><dfn>]</dfn>
+<dfn>[</dfn><tt>nomotion</tt><dfn>]</dfn><tt>--</tt></dt>
+<dd>This option can be used to control
+<a href="node80.html#INDEX261">shadow map</a>s. The option list is a
+sequence of one or more keywords. <tt>on</tt> activates use of
+shadow maps. <tt>off</tt> disables use of shadow maps. This is the
+default. <tt>opengl</tt> enables use of shadow maps, and uses local
+<a href="node56.html#INDEX106">OpenGL</a> hardware to accelerate
+shadow map rendering, at a small accuracy loss. See also page
+<a href="node76.html#opengl">opengl</a> and <tt>-scanline
+opengl</tt> above; it often makes sense to enable
+<a href="node56.html#INDEX106">OpenGL</a> in both options. <tt>only</tt>
+causes only shadow maps to be rendered, without rendering a color
+image. By default the color image is rendered also. This is useful
+to precompute shadow maps before the actual color rendering passes
+begin. This does not work with
+<a href="node80.html#INDEX264">detail shadowmap</a>s because detail
+shadowmap files only store shadowmap tiles that were needed during
+rendering. <tt>rebuild</tt> causes all shadow maps to be
+recomputed, even if they exist in memory from a previous frame or
+are found on disk. By default shadow maps are computed only if they
+are found neither in memory nor on disk. <tt>reuse</tt> allow the
+reuse of shadowmaps. This is the default. If a shadowmap is found
+in memory or on disk it is used instead of recomputing it. This
+only works if <a href="node101.html#INDEX369">object space</a> mode
+is selected in the <a href="node76.html#INDEX180">options block</a>
+of the scene. <tt>motion</tt> activates motion blurred shadow maps.
+This is enabled by default if shadow maps are turned on.
+<tt>nomotion</tt> disables motion blurred shadow maps. This
+improves rendering speed. <tt>merge</tt> specifies that if the
+shadowmap was saved to disk (using a <tt>shadowmap file</tt>
+statement in the light description), this file should be read.
+Whenever a regular shadowmap computation shows that a
+shadow-casting object is closer to the light than the shadowmap on
+disk specifies, the closer value is used; otherwise the shadowmap
+remains unchanged at that point. This can be used to build up
+shadowmaps for <a href="node182.html#INDEX893">pass rendering</a>.</dd>
+
+<dt id="shutter">
+<tt>-shutter</tt><dfn>[</dfn><i>delay</i><dfn>]</dfn> <i>shutter</i></dt>
+<dd>This option controls <a href="node32.html#INDEX60">motion
+blur</a>ring. The camera <a href="node76.html#INDEX195">shutter</a>
+opens at time <i>delay</i> and closes at time <i>shutter</i>. The
+defaults are both 0.0. If <i>shutter</i> is equal to <i>delay</i>,
+motion blurring is disabled; if <i>shutter</i> is greater than
+<i>delay</i>, motion blurring is enabled. The normal range is (0,
+1), which uses the full length of the
+<a href="node32.html#INDEX62">motion vector</a>s or motion vector paths. It
+can be useful to set <i>delay</i> and <i>shutter</i> both to 0.5,
+which disables motion blurring but renders with an offset of one
+half frame, which allows bidirectional post-blurring in an
+<a href="node126.html#INDEX492">output shader</a>.</dd>
+
+<dt id="cli:stereo">
+<tt>-stereo</tt><i>method</i> <i>eyedistance</i></dt>
+<dd>This option controls <a href="node28.html#fo:stereo">stereoscopic
+rendering</a>. It sets or overrides the existing
+<a href="node77.html#mi:stereo">stereo</a> parameters on the
+(first) render camera in the scene.</dd>
+
+<dt>
+<tt>-swap_dir "</tt><i>directory</i><tt>"</tt></dt>
+<dd>Specifies a directory for disk swapping. When mental ray runs
+out of memory, it can push memory objects to disk, and load them
+back when they are needed again. mental ray does this much more
+efficiently than the operating system, which has no semantic
+knowledge of the data. For example, source geometry is not likely
+to be needed anytime soon, or at all, after it has been
+tessellated. The directory should be on a local disk, not a file
+server. This option should be used together with
+<tt>-swap_limit</tt>, and given before <tt>-swap_limit</tt> on the
+command line.</dd>
+<dt>
+<tt>-swap_limit</tt> <i>size</i></dt>
+<dd>Specifies the number of megabytes to write to the swap
+directory specified with <tt>-swap_dir</tt>. This space effectively
+becomes an extension of system memory. The default is 0, which
+turns off swapping. Good numbers are in the low thousands.</dd>
+<dt>
+<tt>-shutter</tt> <i>shutter</i></dt>
+<dd>This option specifies the <a href="node76.html#INDEX195">shutter</a>
+open time. A <i>shutter</i> value of 0.0 turns
+<a href="node32.html#INDEX60">motion blur</a>ring off, values greater than
+0.0 turn motion blurring on. The standard value for enabling motion blurring
+is 1.0; larger values increase the blur length. The default is 0.0.</dd>
+<dt>
+<tt>-T "</tt><i>path1:path2:&hellip;</i><tt>"</tt></dt>
+<dd>Specifies a list of directories where texture files will be
+searched. The default is the current directory. The list is
+colon-separated (<a href="node100.html#INDEX363">Unix</a> only) or
+semicolon-separated (<a href="node100.html#INDEX363">Unix</a> and
+Windows NT). As with the <tt>-I</tt> option, paths introduced with
+an exclamation point are special: they substitute the entire
+directory path of the texture name and keep only the last component
+(the file name) when searching.</dd>
+<dt>
+<tt>-task_order
+hilbert<dfn>|</dfn>spiral<dfn>|</dfn>rightleft<dfn>|</dfn>leftright<dfn>|</dfn>topdown<dfn>|</dfn>bottomup</tt></dt>
+<dd>Controls the order of image rectangles to be rendered. The default
+is hilbert, which is rendering surrounding tiles first to benefit from
+caching of data from close objects in neighboring tiles. This option can
+have impact on performance which is related to the distribution of objects
+in the final image.</dd>
+<dt>
+<tt>-task_size</tt> <i>task_size</i><sub>int</sub></dt>
+<dd>This option specifies the size of the image rectangles during
+rendering. Smaller <a href="node76.html#INDEX223">task size</a>s
+are convenient for previewing, but also increase the overall
+rendering time and reduce the effectiveness of edge following. This
+option can also be used to optimize load balancing for parallel
+rendering. If the <tt>task_size</tt> is not specified, an
+appropriate default value such as 32 is used.</dd>
+<dt>
+<tt>-texture_continue</tt></dt>
+<dd>Normally, standalone versions of mental ray abort as early as
+possible when a texture file cannot be read, to avoid spending a
+lot of time on unusable images and letting the farm controller know
+as soon as possible. If this option is specified, mental ray will
+continue and use transparent black or red-and-black checkerboard
+defaults (depending on the shader) for missing texture files.</dd>
+<dt>
+<tt>-threads</tt> <i>nthreads</i><sub>int</sub></dt>
+<dd>Normally, mental ray starts one thread for each processor in
+the system. The number of threads can be changed with this option.
+mental ray will create more threads than specified, but only
+<i>nthreads</i><sub>int</sub> will perform compute-intensive tasks
+simultaneously. In mental ray 3.3 and later, this includes threads
+on hyperthreaded<a id="INDEX1080"></a> Intel CPUs, which do not consume
+licenses. For example, a two-processor hyperthreaded Xeon system would
+run four threads and pull two licenses.</dd>
+<dt>
+<tt>-time_contrast</tt> <i>r g b</i> [<i>a</i>]</dt>
+<dd>The <a href="node76.html#INDEX185">time contrast</a> controls
+temporal <a href="node83.html#INDEX284">oversampling</a> for
+<a href="node32.html#INDEX60">motion blur</a>red scenes. It works
+similar to the spatial contrast parameter explained above but
+applies to motion blur only; the number of temporal samples is
+approximately proportional to the inverse of the time contrast
+value. The default is 0.2 0.2 0.2 0.2. For fast
+<a href="node32.html#INDEX60">motion blur</a>, the time contrast must be
+set to 0 0 0 and minimum and maximum sampling must have the same
+value, such as 2 2.</dd>
+<dt>
+<tt>-trace on<dfn>|</dfn>off</tt></dt>
+<dd>Normally, mental ray will use a combination of a
+<a href="node76.html#INDEX202">scanline rendering</a> algorithm and
+<a href="node102.html#INDEX390">ray tracing</a> to calculate
+samples of the scene. If <tt>-trace off</tt> is specified, ray
+tracing is disabled, and mental ray will rely exclusively on the
+scanline algorithm.</dd>
+<dt>
+<tt>-trace_depth</tt> <i>reflect</i><sub>int</sub>
+<dfn>[</dfn><i>refract</i><sub>int</sub>
+<dfn>[</dfn><i>sum</i><sub>int</sub><dfn>]]</dfn></dt>
+<dd><i>reflect</i> limits the number of recursive
+<a href="node142.html#INDEX581">reflection</a> rays. If it is set to 0, no
+reflection rays will be cast; if it is set to 1, one level is
+allowed but a reflection ray can not be reflected again, and so on.
+Similarly, <i>refract</i> controls the maximum depth of
+<a href="node115.html#INDEX446">refraction</a> and
+<a href="node76.html#INDEX200">transparency</a> rays. Additionally, it is
+possible to limit the sum of reflection and refraction rays with
+<i>sum</i>. The defaults are 2 2 4.</dd>
+<dt>
+<tt>-v on<dfn>|</dfn>off<dfn>|</dfn><i>level</i></tt><sub>int</sub></dt>
+<dd>An abbreviation for <tt>-verbose</tt>.</dd>
+<dt>
+<tt>-verbose on<dfn>|</dfn>off<dfn>|</dfn></tt><i>level</i><sub>int</sub></dt>
+<dd>This command controls <b><a id="INDEX1081"></a>verbose message</b>s.
+There are seven levels: fatal errors (1), errors (2), warnings (3),
+informational messages (4), progress reports (5), debugging messages (6),
+and verbose debugging messages (7). All message categories numerically equal
+to or less than <i>level</i> are printed. Verbose <tt>off</tt> is
+equivalent to level 2 (fatal errors and errors); verbose <tt>on</tt> is
+equivalent to level 5 (everything except debugging messages).</dd>
+<dt>
+<tt>-version</tt></dt>
+<dd>Print version information and exit.</dd>
+<dt>
+<tt>-volume on<dfn>|</dfn>off</tt></dt>
+<dd>Ignore all <a href="node117.html#INDEX460">volume shader</a>s
+if set to <tt>off</tt>. The default is <tt>on</tt>.</dd>
+<dt>
+<tt>-window</tt> <i>x_low</i><sub>int</sub>
+<i>y_low</i><sub>int</sub> <i>x_high</i><sub>int</sub>
+<i>y_high</i><sub>int</sub></dt>
+<dd>Only the sub-rectangle of the image specified by the four
+bounds will be rendered. All pixels that fall outside the rectangle
+will be left black. This option does not have an affect on the size
+of the frame buffer or saved image files; it merely suppresses
+rendering pixels outside the window.</dd>
+<dt>
+<tt>-xcolor</tt><dfn>[</dfn><tt>"</tt><i>control</i> <tt>"</tt><dfn>]</dfn></dt>
+<dd>Print colored messages. Error messages, for example, are
+printed in red, which makes them stand out much better in verbose
+reports. The control string allows customization.</dd>
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node244.html">&laquo;&nbsp;prev</a></li>
+<li><a href="configuration.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+<dl>
+</body>
+</html>

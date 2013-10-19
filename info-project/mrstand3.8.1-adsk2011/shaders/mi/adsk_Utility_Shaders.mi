@@ -1,0 +1,3508 @@
+#*****************************************************************************
+# Copyright 2008 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	t_tarpm
+# Purpose:	General purpose utility base shaders for phen writers and protein materials
+#
+#
+# ---------------------------------------------
+# Exports:
+#
+# ------------------------------------------------------- switchers/mixers
+# - adsk_Utility_MultiMixer
+# - adsk_Utility_ColorByObject_Switch
+# - adsk_Utility_SimpleMixer
+# - adsk_Utility_SimpleFloatMixer
+# - adsk_Utility_Shader_PassThrough
+# - adsk_Utility_ColorPassThrough
+# - adsk_Utility_Mix2Color
+# - adsk_Utility_Mix2Shader
+# - adsk_Utility_Mix8Shader
+# - adsk_Utility_Mix3Bump
+# - adsk_Utility_Bump
+# - adsk_Utility_Combine3Bump (phen)
+# - adsk_Utility_Switch8Shader
+# - adsk_Utility_ColorShaderSwitcher
+# - adsk_Utility_ScalarShaderSwitcher
+# - adsk_Utility_Switch8Color
+#
+# ------------------------------------------------------- converters
+# - to_bw					# <- NEEDS TO BE RENAMED
+# - adsk_Utility_State
+# - adsk_Utility_VectorCoords
+# - adsk_Utility_ColorState
+# - adsk_Utility_ScalarState
+# - adsk_Utility_VectorState
+# - adsk_Utility_IntState
+# - adsk_Utility_Color_to_Float
+# - adsk_Utility_Color_to_Float3
+# - adsk_Utility_Color_to_Bool
+# - adsk_Utility_Float_to_Color
+# - adsk_Utility_Float3_to_Color
+# - adsk_Utility_Float_to_Float3
+# - adsk_Utility_Float3_to_Float
+# - adsk_Utility_Bool_to_Int
+# - adsk_Utility_Int_to_Float
+#
+# ------------------------------------------------------- textures utilities
+# - adsk_Tex_Output			# <- NEEDS TO BE RENAMED
+# - adsk_Utility_Output
+# - adsk_Utility_Curve
+# - adsk_Utility_CurveControl
+#
+# ------------------------------------------------------- generators
+# - adsk_Base_UVGenerator
+# - adsk_Base_XYZGenerator
+#
+# ------------------------------------------------------- textures
+# - adsk_Bitmap				# <- NEEDS TO BE RENAMED (there's already a phen adsk_bitmap !!)
+# - adsk_Tex_Bricks
+# - adsk_Tex_Cellular
+# - adsk_Tex_Checker
+# - adsk_Tex_Gradient
+# - adsk_Tex_Marble
+# - adsk_Utility_Noise		# <- NEEDS TO BE RENAMED
+# - adsk_Tex_Smoke
+# - adsk_Tex_Speckle
+# - adsk_Tex_Wood
+# - adsk_Tex_Water
+#
+# - adsk_Utility_Falloff
+# - adsk_ToneOpLog
+#
+# ------------------------------------------------------- lights
+# - adsk_Light_Photometric
+# - adsk_Light_Default
+#
+# ------------------------------------------------------- specializations
+# - adsk_Utility_PatternGenerator
+#
+# ------------------------------------------------------- utilities
+# - adsk_Utility_Change_Range
+# - adsk_Utility_Condition
+# - adsk_Utility_Contrast
+# - adsk_Utility_Gamma
+# - adsk_Utility_MultiplyDivide
+#
+# ------------------------------------------------------- phen utilities
+# - adsk_bitmap				# <- NEEDS TO BE RENAMED
+# - adsk_Utility_Bitmap
+# - adsk_Utility_Bitmap_Tweak
+# - adsk_Utility_GenericNoise
+# - adsk_Utility_Noise_Tweakable
+# 
+# ------------------------------------------------------- others
+# - adsk_environment
+# - adsk_SS_Environment
+# - adsk_decal
+# - adsk_Utility_LightmapSwitcher
+# - adsk_Utility_scale_zero_up
+# - adsk_Utility_InvertScalar
+# - adsk_Utility_LuminanceToIntensity
+#
+# ------------------------------------------------------- mia wrappers
+# - adsk_Utility_Mia
+# - adsk_Utility_Mia_Basic
+#
+# ------------------------------------------------------- prototypes
+# - adsk_Utility_TexLookup_Phen
+# - adsk_Utility_BumpLookup_Phen
+#
+#
+#
+# ---------------------------------------------
+# History:
+#
+# February, 14 2007 - mtarpini, initial implementation
+# March, 	20 2007 - mtarpini, added phen -> displace combiner
+# January, 	07 2009 - mtarpini, changed params names for future metasl compatibility
+# June, 	12 2009 - mtarpini, added converters 
+# June, 	17 2009 - mtarpini, added maya style color corrections shaders 
+# June, 	20 2009 - mtarpini, added surfaceluminance and perforation shaders
+# Sept, 	20 2009 - eburque, mtarpini, added shaders from de-maxification
+# Nov, 		12 2009 - mtarpini, moved some decls here from AdskShaders.mi
+#
+#****************************************************************************/
+
+min version "3.7"
+
+
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_MultiMixer
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_MultiMixer"
+	(
+		array struct "layers"
+		{
+			shader "the_shader",
+			color "opacity",
+			integer "mode",		#blend, add, multiply, screen ...
+			scalar "offset",
+			boolean "disabled"
+		},
+		integer "switcher",
+		integer "is_switcher",		
+		integer "type"			#color, mono, normal
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_MultiMixer" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_ColorByObject_Switch
+# Switches between the object/node color, and another color provided as input.
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_ColorByObject_Switch"
+	(
+    boolean "color_by_object",
+    color "material_color"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_ColorByObject_Switch" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_SimpleMixer
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_SimpleMixer"
+	(
+    scalar "blend_amount",
+    color "color_a",
+    color "color_b"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_SimpleMixer" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_SimpleFloatMixer
+#------------------------------------------------------------------------
+declare shader
+	scalar "adsk_Utility_SimpleFloatMixer"
+	(
+    scalar "blend_amount",
+    scalar "float_a",
+    scalar "float_b"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_SimpleFloatMixer" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_Shader_PassThrough
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_Shader_PassThrough"
+	(
+		shader "the_shader",
+		integer "type"
+	)
+	apply texture
+	version 1
+	
+	gui "gui_adsk_Utility_Shader_PassThrough" { control "Global" "Global" ("hidden")}	
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_ColorPassThrough
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_ColorPassThrough"
+	(
+		color "color"
+	)
+	version 1
+	apply texture
+	
+	gui "gui_adsk_Utility_ColorPassThrough" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Mix2Color
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_Mix2Color"
+	(
+		color	"color1",
+		color	"color2",
+		integer "mixing_mode",
+		scalar	"mixing_factor"
+	)
+	apply texture
+	version 1
+	
+	gui "gui_adsk_Utility_Mix2Color" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Mix2Shader
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_Mix2Shader"
+	(
+		shader "shader1",
+		shader "shader2",
+		integer "mixing_mode",
+		scalar "mixing_factor",
+		boolean "disable_shader2"
+	)
+	apply texture
+	version 1
+	
+	gui "gui_adsk_Utility_Mix2Shader" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Mix8Shader
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_Mix8Shader"
+	(
+		#-------------------------------------
+		shader "shader1",
+		
+		#-------------------------------------
+		shader  "shader2",
+		integer "mix2_mode",
+		color   "mix2_factor",
+		
+		#-------------------------------------
+		shader  "shader3",
+		integer "mix3_mode",
+		color   "mix3_factor",	
+		
+		#-------------------------------------
+		shader  "shader4",
+		integer "mix4_mode",
+		color   "mix4_factor",
+		
+		#-------------------------------------
+		shader  "shader5",
+		integer "mix5_mode",
+		color   "mix5_factor",		
+		
+		#-------------------------------------
+		shader  "shader6",
+		integer "mix6_mode",
+		color   "mix6_factor",		
+		
+		#-------------------------------------
+		shader  "shader7",
+		integer "mix7_mode",
+		color   "mix7_factor",		
+		
+		#-------------------------------------
+		shader  "shader8",
+		integer "mix8_mode",
+		color   "mix8_factor"
+	)
+	apply texture
+	version 1
+		
+	gui "gui_adsk_Utility_Mix8Shader" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Mix3Bump (to plug it to the bump slot of A&D)
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_Mix3Bump"
+	(
+		shader "bump_1",
+		scalar "factor_1",
+		
+		shader "bump_2",
+		scalar "factor_2",
+		
+		shader "bump_3",
+		scalar "factor_3",
+
+		scalar "global_factor",
+
+		boolean "set_normal"
+	)
+	apply texture
+	version 1
+	
+		
+	gui "gui_adsk_Utility_Mix3Bump" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_Bump
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Utility_Bump" (
+		scalar "Multiplier",
+		color texture "Map"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Bump" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_Combine3Bump (to work with phenomena)
+#------------------------------------------------------------------------
+declare phenomenon
+	color "adsk_Utility_Combine3Bump"
+	(
+		shader "the_shader",
+		scalar "factor_global",		
+		
+		shader "bump_1",
+		scalar "factor_1",
+		
+		shader "bump_2",
+		scalar "factor_2",
+		
+		shader "bump_3",
+		scalar "factor_3"		
+	)
+	apply texture
+	version 1
+	
+	
+	shader "combiner__instance" "adsk_Utility_MultiMixer"
+	(
+		"layers"[
+			{
+				"the_shader" = interface "the_shader",
+				"offset" = interface "factor_global"
+			},
+			{
+				"the_shader" = interface "bump_1",
+				"offset" = interface "factor_1"
+			},
+			{
+				"the_shader" = interface "bump_2",
+				"opacity" 1 1 1,
+				"mode" 1,
+				"offset" = interface "factor_2"
+			},
+			{
+				"the_shader" = interface "bump_3",
+				"opacity" 1 1 1,
+				"mode" 1,
+				"offset" = interface "factor_3"
+			}		
+		],
+		"type" 3	#bumpcombiner mode
+	)
+	
+	
+	root = "combiner__instance"
+	
+	gui "gui_adsk_Utility_Combine3Bump" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Switch8Shader
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_Switch8Shader"
+	(
+		integer "switcher",
+		integer "type",
+		shader "shader_1",		
+		shader "shader_2",		
+		shader "shader_3",
+		shader "shader_4",		
+		shader "shader_5",		
+		shader "shader_6",		
+		shader "shader_7",		
+		shader "shader_8"
+	)
+	apply texture
+	version 1
+		
+	gui "gui_adsk_Utility_Switch8Shader" { control "Global" "Global" ("hidden")}
+end declare
+#------------------------------------------------------------------------
+# <- end, Phens from Mixer shader
+#------------------------------------------------------------------------
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_ColorShaderSwitcher
+# Switches between a color and a color shader, depending on whether
+# the shader is enabled and present, and blends the shader result with the
+# color. Do note that the shader is ignored if it's not specified.
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_ColorShaderSwitcher"
+	(
+		boolean "enable_shader",
+		color "the_color",		
+		shader "the_shader",
+		scalar "blend_amount"		# 1.0 = 100% map, 0.0 = 100% color
+	)
+	apply texture
+	version 1
+	
+	gui "gui_adsk_Utility_ColorShaderSwitcher" { control "Global" "Global" ("hidden")}
+end declare
+#------------------------------------------------------------------------
+# <- end, adsk_Utility_ColorShaderSwitcher
+#------------------------------------------------------------------------
+
+#------------------------------------------------------------------------
+# adsk_Utility_ScalarShaderSwitcher
+# Switches between a color and a color shader, depending on whether
+# the shader is enabled and present, and blends the shader result with the
+# color. Do note that the shader is ignored if it's not specified.
+#------------------------------------------------------------------------
+declare shader
+	scalar "adsk_Utility_ScalarShaderSwitcher"
+	(
+		boolean "enable_shader",
+		scalar "the_scalar",		
+		shader "the_shader",
+		scalar "blend_amount"		# 1.0 = 100% map, 0.0 = 100% scalar value
+	)
+	apply texture
+	version 1
+	
+	gui "gui_adsk_Utility_ScalarShaderSwitcher" { control "Global" "Global" ("hidden")}
+end declare
+#------------------------------------------------------------------------
+# <- end, adsk_Utility_ScalarShaderSwitcher
+#------------------------------------------------------------------------
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Switch8Color
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_Switch8Color"
+	(
+		integer "switcher",
+		color "color_1",		
+		color "color_2",		
+		color "color_3",
+		color "color_4",		
+		color "color_5",		
+		color "color_6",		
+		color "color_7",		
+		color "color_8"
+	)
+	apply texture
+	version 1
+	
+	gui "gui_adsk_Utility_Switch8Color" { control "Global" "Global" ("hidden")}
+end declare
+#------------------------------------------------------------------------
+# <- end, Switch8Color phen
+#------------------------------------------------------------------------
+
+
+
+#-------------------------------------------------------------------------------------------- Converters
+
+#------------------------------------------------------------------------
+# to_bw
+#------------------------------------------------------------------------
+declare shader
+	color "to_bw" (
+		scalar		"r_weight",
+		scalar		"g_weight",
+		scalar		"b_weight"
+	)
+	version 1
+	apply lens
+	
+    gui "gui_to_bw"{ control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_State
+#------------------------------------------------------------------------
+declare shader
+	vector	"adsk_Utility_State"
+	(
+		vector	"the_state",
+		integer	"iState",
+		integer "manage_state"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_State" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_VectorCoords
+#------------------------------------------------------------------------
+declare shader
+	vector	"adsk_Utility_VectorCoords"
+	(
+		shader	"coords"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_VectorCoords" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_ColorState
+#------------------------------------------------------------------------
+declare shader
+	color	"adsk_Utility_ColorState"
+	(
+		color	"the_color"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_ColorState" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_ScalarState
+#------------------------------------------------------------------------
+declare shader
+	scalar	"adsk_Utility_ScalarState"
+	(
+		scalar	"the_float"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_ScalarState" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_VectorState
+#------------------------------------------------------------------------
+declare shader
+	vector	"adsk_Utility_VectorState"
+	(
+		vector	"the_vector"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_VectorState" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_IntState
+#------------------------------------------------------------------------
+declare shader
+	integer	"adsk_Utility_IntState"
+	(
+		integer	"the_int"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_IntState" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Color_to_Float
+#------------------------------------------------------------------------
+declare shader
+	scalar "adsk_Utility_Color_to_Float"
+	(
+		color	"the_color"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Color_to_Float" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Color_to_Float3
+#------------------------------------------------------------------------
+declare shader
+	vector	"adsk_Utility_Color_to_Float3"
+	(
+		color	"the_color"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Color_to_Float3" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_color_to_bool
+#------------------------------------------------------------------------
+declare shader
+	struct 
+	{
+		#-------------------------------------
+		# Out
+		#-------------------------------------
+		boolean      "r_bool",
+		boolean      "g_bool",
+		boolean      "b_bool"
+	}
+	"adsk_Utility_Color_to_Bool"
+	(
+		#-------------------------------------
+		# In
+		#-------------------------------------
+		color		"color",
+		scalar		"threshold"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Color_to_Bool" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Float_to_Color
+#------------------------------------------------------------------------
+declare shader
+	color	"adsk_Utility_Float_to_Color"
+	(
+		#------------------------------
+		scalar	"the_scalar"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Float_to_Color" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Float3_to_Color
+#------------------------------------------------------------------------
+declare shader
+	color	"adsk_Utility_Float3_to_Color"
+	(
+		#------------------------------
+		vector	"the_vector"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Float3_to_Color" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Float_to_Float3
+#------------------------------------------------------------------------
+declare shader
+	vector	"adsk_Utility_Float_to_Float3"
+	(
+		#------------------------------
+		scalar	"the_scalar"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Float_to_Float3" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Float3_to_Float
+#------------------------------------------------------------------------
+declare shader
+	scalar	"adsk_Utility_Float3_to_Float"
+	(
+		#------------------------------
+		vector	"the_vector"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Float3_to_Float" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_bool_to_int
+#------------------------------------------------------------------------
+declare shader
+	integer	"adsk_Utility_Bool_to_Int"
+	(
+		#------------------------------
+		boolean		"bool_in"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Bool_to_Int" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Int_to_Float
+#------------------------------------------------------------------------
+declare shader
+	scalar "adsk_Utility_Int_to_Float"
+	(
+		#------------------------------
+		integer		"the_int"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Int_to_Float" { control "Global" "Global" ("hidden")}
+end declare
+
+
+
+#-------------------------------------------------------------------------------------------- Texture Utilities
+
+#------------------------------------------------------------------------
+# adsk_Tex_Output
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Tex_Output" 
+	(
+		struct "Parameters" {
+			color texture "Map1",
+			boolean "Map1Enabled",
+			shader "Output"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_adsk_Tex_Output" { control "Global" "Global" ("hidden")}
+
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_Output
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Utility_Output" (
+		scalar "RGBAmount",
+		scalar "RGBOffset",
+		scalar "OutputAmount",
+		scalar "BumpAmount",
+		boolean "Invert",
+		boolean "Clamp",
+		boolean "AlphaFromRGB",
+		boolean "UseColorMap",
+		boolean "UseRGBCurve",
+		shader "RGBCurve",
+		shader "IntensityCurve"
+	)
+	version 1
+
+    gui "gui_adsk_Utility_Output"{ control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_Curve
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Utility_Curve" (
+		integer "Flags",
+		integer "LookupTableSize",
+		array struct "Points" {
+				scalar "x",
+				scalar "y",
+				scalar "xIn",
+				scalar "yIn",
+				scalar "xOut",
+				scalar "yOut",
+				integer "Flags"
+		}
+	)
+	version 1
+
+    gui "gui_adsk_Utility_Curve" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_CurveControl
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Utility_CurveControl" (
+		integer "Flags",
+		scalar "XMin",
+		scalar "XMax",
+		scalar "YMin",
+		scalar "YMax",
+		array shader "Curves"
+	)
+	version 1
+
+    gui "gui_adsk_Utility_CurveControl" {control "Global" "Global" ("hidden")}
+end declare
+
+
+
+#-------------------------------------------------------------------------------------------- Coords generators
+
+#------------------------------------------------------------------------
+# adsk_base_UVGenerator
+#------------------------------------------------------------------------
+declare shader
+	"adsk_base_UVGenerator" (
+		integer "MapSlotType",
+		integer "EnvType",
+		integer "MapChannel",
+		integer "UVWSource",
+		boolean "ShowMapOnBack",
+		scalar  "UOffset",
+		scalar  "UScale",
+		boolean "UWrap",
+		boolean "UMirror",
+		scalar  "VOffset",
+		scalar  "VScale",
+		boolean "VWrap",
+		boolean "VMirror",
+		scalar  "UAngle",
+		scalar  "VAngle",
+		scalar  "WAngle",
+		integer "UVAxis",
+		boolean "Clip",
+		scalar  "Blur",
+		scalar  "BlurOffset",
+		boolean "Noise",
+		boolean "Animate",
+		scalar  "Amount",
+		scalar  "Size",
+		integer "Level",
+		scalar  "Phase",
+		boolean "RealWorldMapSize",
+		integer "XCanvasSize",
+		integer "YCanvasSize"
+	)
+	version 3
+    apply texture
+
+    gui "gui_adsk_base_UVGenerator" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_XYZGenerator
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Utility_XYZGenerator" (
+		integer "CoordinateSystem",
+		integer "MapChannel",
+		vector "Offset",
+		vector "Tiling",
+		vector "Angle",
+		scalar "Blur",
+		scalar "BlurOffset"
+	)
+	version 2
+    apply texture
+
+    gui "gui_adsk_Utility_XYZGenerator" { control "Global" "Global" ( "hidden" )}
+end declare
+
+
+
+#-------------------------------------------------------------------------------------------- Textures
+
+#------------------------------------------------------------------------
+# adsk_Bitmap
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Bitmap" (
+		struct "Parameters" {
+			scalar "ClipU",
+			scalar "ClipV",
+			scalar "ClipW",
+			scalar "ClipH",
+			scalar "Jitter",
+			boolean "UseJitter",
+			boolean "Apply",
+			integer "CropPlace",
+			integer "Filtering",
+			integer "MonoOutput",
+			integer "RGBOutput",
+			integer "AlphaSource",
+			boolean "PreMultAlpha",
+			color texture "Bitmap",
+			shader "Coords",
+			shader "Output"
+		},
+		struct "time parameters" {
+			integer "startTime",
+			scalar "playBackRate",
+			integer "endCondition",
+			boolean "tieTimeToMatIDs"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID",
+			integer "currentTime",
+			integer "firstFrame",           	# BitmapInfo::FirstFrame()
+			integer "lastFrame",            	# BitmapInfo::LastFrame()
+			integer "ticksPerFrame",
+			array color texture "bitmapFrames",	#used when tieTimeToMatIDs is true
+			integer  "bitmapFrames_Padding",   	#required by shader for optimisation tricks
+
+			boolean "useBitmapEvalCallback",
+			integer "bitmapEvalCallback",
+			integer "bitmapEvalArg",
+			integer "bitmapType",
+			array integer "bitmapEvalArgFrames", #used when tieTimeToMatIDs is true
+			integer "bitmapEvalArgFrames_Padding",
+
+			integer "bitmapWidth",
+			integer "bitmapHeight",
+			integer "filterEvalCallback",
+
+			# Only really needed for 64 bit builds; hi-order values of the pointers.
+			integer  "bitmapEvalCallbackHi64",
+			integer  "bitmapEvalArgHi64",
+			integer "filterEvalCallbackHi64",
+			array integer "bitmapEvalArgFramesHi64",
+			integer "bitmapEvalArgsFramesHi64_Padding"
+		}
+	)
+	version 3
+	apply texture
+	
+    gui "gui_adsk_Bitmap" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Tex_Bricks
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Tex_Bricks" 
+	(
+		struct "Parameters" {
+			color "MortarColor",
+			color "BrickColor",
+			scalar "HorizontalCount",
+			scalar "VerticalCount",
+			scalar "ColorVariance",
+			scalar "VerticalGap",
+			scalar "HorizontalGap",
+			scalar "LineShift",
+			scalar "RandomShift",
+			integer "Holes",
+			integer "RandomSeed",
+			integer "LockGapSymmetry",
+			scalar "FadeVariance",
+			scalar "EdgeRoughness",
+			boolean "ShowTextureSwatches",
+			boolean "UseRowEdit",
+			boolean "UseColumnEdit",
+			scalar "ChangeRow",
+			scalar "ChangeColumn",
+			integer "PerColumn",
+			integer "PerRow",
+			integer "BrickType",
+			shader "Coords",
+			color texture "MortarMap",
+			color texture "BrickMap",
+			boolean "MortarMapEnabled",
+			boolean "BrickMapEnabled"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+    gui "gui_adsk_Tex_Bricks" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Tex_Cellular
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Tex_Cellular" 
+	(
+		struct "Parameters" {
+			color "CellColor",
+			color "DivColor1",
+			color "DivColor2",
+			color texture "CellMap",
+			color texture "DivMap1",
+			color texture "DivMap2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			boolean "Map3Enabled",
+			scalar "Variation",
+			scalar "Size",
+			scalar "Spread",
+			scalar "LowThresh",
+			scalar "MidThresh",
+			scalar "HighThresh",
+			integer "type",
+			boolean "Fractal",
+			scalar "Iteration",
+			scalar "Roughness",
+			scalar "Smooth",
+			boolean "Adaptive",
+			shader "Coords",
+			shader "Output"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+    gui "gui_adsk_Tex_Cellular" {control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Tex_Checker
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Tex_Checker" 
+	(
+		struct "Parameters" {
+			scalar "Soften",
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+    gui "gui_adsk_Tex_Checker" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Tex_Gradient
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Tex_Gradient"
+	(
+		integer "grad_type",
+		integer "grad_interp",
+
+		scalar "noise_amount",
+		scalar "noise_size",
+		scalar "noise_phase",
+		integer "noise_type",
+		scalar "noise_levels",
+
+		scalar "noise_th_low",
+		scalar "noise_th_high",
+		scalar "noise_th_smooth",
+
+		shader "uv_coords",
+
+		array scalar	"flag_position",
+		array integer	"flag_interpolation",
+		array color		"flag_color"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Tex_Gradient" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Tex_Marble
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Tex_Marble" 
+	(
+		struct "Parameters" {
+			color texture "Map1",
+			color texture "Map2",
+			color "Color1",
+			color "Color2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			scalar "Size",
+			scalar "Width",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+    gui "gui_adsk_Tex_Marble" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_Noise
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Utility_Noise" 
+	(
+		struct "Parameters" {
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			scalar "Size",
+			scalar "Phase",
+			scalar "Levels",
+			scalar "ThresholdLow",
+			scalar "ThresholdHigh",
+			integer "Type",
+			shader "Coords",
+			shader "Output"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_adsk_Utility_Noise" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Tex_Smoke
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Tex_Smoke" 
+	(
+		struct "Parameters" {
+			scalar "Size",
+			integer "Iterations",
+			scalar "Exponent",
+			scalar "Phase",
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1On",
+			boolean "Map2On",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_adsk_Tex_Smoke" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Tex_Speckle
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Tex_Speckle" 
+	(
+		struct "Parameters" {
+			scalar "Size",
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1On",
+			boolean "Map2On",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_adsk_Tex_Speckle" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Tex_Water
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Tex_Water" 
+	(
+		struct "Parameters" {
+			integer "NumWaveSets",
+			scalar "WaveRadius",
+			scalar "WaveLenMin",
+			scalar "WaveLenMax",
+			scalar "Amplitude",
+			scalar "Phase",
+			integer "Distribution",
+			integer "RandomSeed",
+			color "Color1",
+			color "Color2",
+			color texture "Map1",
+			color texture "Map2",
+			boolean "Map1On",
+			boolean "Map2On",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_adsk_Tex_Water" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Tex_Wood
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Tex_Wood" 
+	(
+		struct "Parameters" {
+			color texture "Map1",
+			color texture "Map2",
+			color "Color1",
+			color "Color2",
+			boolean "Map1Enabled",
+			boolean "Map2Enabled",
+			scalar "Thickness",
+			scalar "RadialNoise",
+			scalar "AxialNoise",
+			shader "Coords"
+		},
+		struct "ExtraParameters" {
+			integer "GBufferID"
+		}
+	)
+	version 1
+	apply texture
+
+	gui "gui_adsk_Tex_Wood" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_Falloff
+#------------------------------------------------------------------------
+declare shader
+	"adsk_Utility_Falloff" 
+	(
+		struct "Parameters" 
+		{
+			color "Color1",
+			scalar "Map1Amount",
+			color texture "Map1",
+			boolean "Map1On",
+			color "Color2",
+			scalar "Map2Amount",
+			color texture "Map2",
+			boolean "Map2On",
+			integer "Type",
+			integer "Direction",
+			boolean "MtlIOROverride",
+			scalar "Ior",
+			boolean "ExtrapolateOn",
+			scalar "NearDistance",
+			scalar "FarDistance"
+		},
+		struct "ExtraParameters" 
+		{
+			integer "GBufferID",
+			vector "Position",
+			shader "Output",
+			shader "CurveControl",
+			boolean "Self"
+		}
+	)
+	version 1
+	apply texture
+
+    gui "gui_adsk_Utility_Falloff" {control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_ToneOpLog
+#------------------------------------------------------------------------
+declare shader 
+	"adsk_ToneOpLog" 
+	(
+		struct "LightscapeExposureControlParamsBlock" {
+			boolean "active",
+			scalar "physicalScale",
+			boolean "chromaticAdaptation",
+			boolean "colorDifferentiation",
+			color "whiteColor",
+			boolean "processBG",
+			scalar "brightness",
+			scalar "contrast",
+			scalar "midTones",
+			boolean "daylight",
+			boolean "exterior",
+			boolean "useLegacyAlgorithm",
+		    
+			# Side channel, outputs the un-exposed color into a separate buffer
+			integer "side_channel_mode" default 0,	# 0=off, 1=raw
+			integer  "side_channel"
+		}
+	)
+	version 2
+	apply lens
+
+    gui "gui_adsk_ToneOpLog" { control "Global" "Global" ("hidden")}
+end declare
+
+
+
+#-------------------------------------------------------------------------------------------- lights
+
+#------------------------------------------------------------------------
+# adsk_Light_Photometric
+#------------------------------------------------------------------------
+declare shader
+    "adsk_Light_Photometric" (
+
+        # General Parameters
+        boolean "on",
+        boolean "shadowOn",
+
+        # Intensity/Color/Distribution
+        integer "distribution",
+        color "lightColor",
+        color "filterColor",
+        scalar "intensity",
+        scalar "cutoff_start_farattenuation" default 0,
+        scalar "cutoff_end_farattenuation" default 0,
+
+        # Shadow Parameters
+        color "shadowCol",
+        scalar "shadowDensity",
+        boolean "useShadowColMap",
+        color texture "shadowColMap",
+        boolean "lightAffectShadowCol",
+        boolean "atmosShadowOn",
+        scalar "atmosShadowOpacity",
+        scalar "atmosShadowColAmnt",
+
+        # Advanced Parameters
+        scalar "contrast",
+        scalar "softDiffEdges",
+        boolean "diffuse",
+        boolean "specular",
+        boolean "ambientOnly",
+        boolean "projMapOn",
+        color texture "projMap",
+        integer "traceTransparent" default 1,
+        scalar "visibleBrightness" default 1.0,
+
+        # Spotlight parameters (for spot distributions only)
+        scalar "hotSpot",       		# in radians
+        scalar "fallOff",       		# in radians
+
+        # Web parameters (for web distributions only)
+        lightprofile "lightProfile",
+        transform "webTransform",   	# rotation transform for the web
+
+        # Global parameters
+        scalar "physicalScale",
+        scalar "meterScale",
+
+        # Extended parameters
+        boolean "webHasSymmetry",
+        boolean "forceAsLinearLight",	# forces linear light behaviour, 
+										# whatever the rectangle area dimensions
+
+        # Eclusion list
+        array boolean "exclusionList"
+    )
+    version 3
+    apply light
+
+    gui "gui_adsk_Light_Photometric"  { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Light_Default
+#------------------------------------------------------------------------
+declare shader
+         "adsk_Light_Default" (
+                 color "color",
+                 scalar "multiplier",
+                 boolean "ambientOnly"
+         )
+         version 2
+         apply light
+    gui "gui_adsk_Light_Default"  { control "Global" "Global" ( "hidden" )}
+end declare
+
+
+
+#-------------------------------------------------------------------------------------------- mayabase emul
+
+#------------------------------------------------------------------------
+# adsk_Utility_Change_Range
+#------------------------------------------------------------------------
+declare shader
+	scalar "adsk_Utility_Change_Range"
+	(
+		#------------------------------
+		scalar	"the_value",
+		
+		scalar	"i_min",
+		scalar	"i_max",
+
+		scalar	"o_min",
+		scalar	"o_max",
+
+		integer "mode"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Change_Range" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_Condition
+#------------------------------------------------------------------------
+declare shader 
+	color "adsk_Utility_Condition"
+	(
+		integer	"operation",
+		scalar	"firstTerm",
+		scalar	"secondTerm",
+		color	"color1",
+		color	"color2"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Condition" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_Contrast
+#------------------------------------------------------------------------
+declare shader 
+	color "adsk_Utility_Contrast"
+	(
+		vector	"value",
+		vector	"contrast",
+		vector	"bias"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Contrast" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_Gamma
+#------------------------------------------------------------------------
+declare shader 
+	vector "adsk_Utility_Gamma"
+	(
+		vector	"value",
+		vector	"gamma"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_Gamma" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_MultiplyDivide
+#------------------------------------------------------------------------
+declare shader 
+	vector "adsk_Utility_MultiplyDivide"
+	(
+		integer "operation",
+		vector	"input1",
+		vector	"input2"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_MultiplyDivide" { control "Global" "Global" ("hidden")}
+end declare
+
+
+
+#-------------------------------------------------------------------------------------------- Specialized shaders
+
+#------------------------------------------------------------------------
+# adsk_Utility_PatternGenerator
+#------------------------------------------------------------------------
+declare shader
+	color	"adsk_Utility_PatternGenerator"
+	(
+		integer		"pattern_type",
+
+		color		"back_color",
+		color		"item_color",
+		shader		"item_custom",
+
+		scalar		"item_width",
+		scalar		"item_height",
+		vector		"item_center",
+		vector		"item_space",
+
+		scalar		"item_bsmooth",
+
+		vector		"coords",
+		vector		"coords_tiling",
+		vector		"coords_shift"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_PatternGenerator" { control "Global" "Global" ("hidden")}
+end declare
+
+
+
+#-------------------------------------------------------------------------------------------- Others
+
+#------------------------------------------------------------------------
+# adsk_environment
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_environment" (
+		shader "Shader",
+		boolean "OverrideBackgroundColor",
+		color "BackgroundColor"
+	)
+	version 1
+	apply environment
+	
+    gui "gui_adsk_environment" { control "Global" "Global" ( "hidden" )}	
+end declare
+
+#------------------------------------------------------------------------
+# adsk_SS_Environment
+#------------------------------------------------------------------------
+declare shader
+	"adsk_SS_Environment" (
+		boolean "UseAlpha",
+		color "Color",
+		color texture "Map",
+		array light "skylights",
+		shader "Sky"
+	)
+	version 1
+	apply environment
+
+	gui "gui_adsk_SS_Environment" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_decal
+#------------------------------------------------------------------------
+declare shader
+    color "adsk_decal" (
+        material "surface_material",
+        array material "decal",
+        array vector "top_left", # coordinates of decal attachment points in UV coords
+        array vector "top_right",
+        array vector "bottom_right",
+        array vector "bottom_left"
+    )
+    version 1
+    apply material
+	
+    gui "gui_adsk_decal" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_LightmapSwitcher
+#------------------------------------------------------------------------
+declare shader
+	struct 
+	{
+		#-------------------------------------
+		# Out
+		#-------------------------------------
+		vector      "point",
+		vector		"normal"
+	}
+	"adsk_Utility_LightmapSwitcher"
+	(
+		#-------------------------------------
+		# In
+		#-------------------------------------
+		shader      "lightmap_shader",
+		integer		"switcher"
+	)
+	apply lightmap
+	version 1
+
+	gui "gui_adsk_Utility_LightmapSwitcher" { control "Global" "Global" ("hidden")}
+end declare
+	
+	
+#------------------------------------------------------------------------
+# adsk_Utility_scale_zero_up
+#------------------------------------------------------------------------
+declare shader
+	scalar "adsk_Utility_scale_zero_up"
+	(
+		#------------------------------
+		scalar		"op1_in",
+		scalar		"op2_in"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_scale_zero_up" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_InvertScalar
+#------------------------------------------------------------------------
+declare shader
+	scalar "adsk_Utility_InvertScalar"
+	(
+		scalar		"the_float"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_UtilityInvertScalar" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_LuminanceToIntensity
+#------------------------------------------------------------------------
+declare shader
+	scalar "adsk_Utility_LuminanceToIntensity"
+	(
+		scalar		"luminance",
+		boolean     "include_pi_factor"
+	)
+	apply texture
+	version 1
+
+	gui "gui_adsk_Utility_LuminanceToIntensity" { control "Global" "Global" ("hidden")}
+end declare
+
+#-------------------------------------------------------------------------------------------- Phen for Protein
+
+
+#------------------------------------------------------------------------
+# Bitmap phenomenon that encapsulates the UV generator and output shader.
+# Makes it easier to setup a bitmap without worrying about the output 
+# shader and UV generator.
+#------------------------------------------------------------------------
+declare phenomenon "adsk_bitmap"
+  (
+      struct "m" 
+      {
+       color texture "Bitmap",
+       scalar "RGBAmount"
+      },
+ 
+      struct "a" 
+      {
+       integer "Filtering", #Pyramidal:0 | Summed Area:1 | None:2
+       scalar "Blur",
+       boolean "Invert"
+      },
+      
+      struct "u" 
+      {
+      	scalar "UScale",
+      	scalar "VScale",
+      	scalar "UOffset",
+      	scalar "VOffset",
+      	scalar "WAngle",
+      	boolean "UWrap",
+      	boolean "VWrap",
+      	boolean "UMirror",
+      	boolean "VMirror",
+      	integer "MapChannel",
+      	boolean "RealWorldMapSize"
+      }
+   )
+
+	shader "UVGen|Shader" "adsk_base_UVGenerator" 
+	(
+		"MapSlotType" 0,
+		"EnvType" 0,
+		"UVWSource" 0,
+		"MapChannel" = interface "u.MapChannel", 
+		#------------------------
+		"ShowMapOnBack" on, 
+		"RealWorldMapSize" = interface "u.RealWorldMapSize",				
+		#-------------------------
+		"UOffset" = interface "u.UOffset",
+		"UScale" = interface "u.UScale", 
+		"UWrap" = interface "u.UWrap",
+		"UMirror" = interface "u.UMirror", 
+		#-------------------------
+		"VOffset" = interface "u.VOffset",
+		"VScale" = interface "u.VScale", 
+		"VWrap" = interface "u.VWrap",
+		"VMirror" = interface "u.VMirror", 
+		#---------------------
+		"UAngle" 0, 								
+		"VAngle" 0, 					
+		"WAngle" = interface "u.WAngle",
+		"UVAxis" 0, 
+		#---------------------
+		"Blur" = interface "a.Blur",
+		"BlurOffset" 0, 
+		#-----------------------
+		"Clip" off, 
+		"Noise" off, 
+		"Animate" off, 
+		"Amount" 1, 
+		"Size" 1, 
+		"Level" 1, 
+		"Phase" 0, 
+		#-----------------------
+		"XCanvasSize" 0, 
+		"YCanvasSize" 0
+	)
+
+	shader "TextureOutput|Shader" "adsk_Utility_Output"
+	(
+		"RGBAmount" = interface "m.RGBAmount", 
+		"RGBOffset" 0, 
+		"OutputAmount" 1, 
+		"BumpAmount" 1, 
+		"Invert" = interface "a.Invert", 
+		"Clamp" off, 
+		"AlphaFromRGB" off, 
+		"UseColorMap" off, 
+		"UseRGBCurve" off
+	)
+
+	shader "Map_Bitmap|Texmap|Shader" "adsk_Bitmap" 	
+	(	
+		"Parameters"
+		{
+			"ClipU" 0, 
+			"ClipV" 0, 
+			"ClipW" 1, 
+			"ClipH" 1, 
+			"Jitter" 1, 
+			"UseJitter" off, 
+			"Apply" off, 
+			"CropPlace" 0, 
+			"Filtering" = interface "a.Filtering", #Pyramidal:0 | Summed Area:1 | None:2
+			"MonoOutput" 0, 
+			"RGBOutput" 0, 
+			"AlphaSource" 2, 
+			"PreMultAlpha" on, 
+			"Bitmap" = interface "m.Bitmap", 
+			"Coords" "UVGen|Shader", 
+			"Output" "TextureOutput|Shader"	
+		}, #end Parameters
+
+		"time parameters" 
+		{
+			"startTime" 0, 
+			"playBackRate" 1, 
+			"endCondition" 0, 
+			"tieTimeToMatIDs" off	
+		},
+
+		"ExtraParameters" 
+		{
+			"GBufferID" 0, 
+			"currentTime" 0, 
+			"firstFrame" 0, 
+			"lastFrame" 0, 
+			"ticksPerFrame" 0, 
+			"bitmapFrames_Padding" 0, 
+			"useBitmapEvalCallback" off, 
+			"bitmapEvalCallback" 0, 
+			"bitmapEvalArg" 0, 
+			"bitmapType" 2, 
+			"bitmapEvalArgFrames_Padding" 0, 
+			"bitmapWidth" 0, 
+			"bitmapHeight" 0, 
+			"filterEvalCallback" 0, 
+			"bitmapEvalCallbackHi64" 0, 
+			"bitmapEvalArgHi64" 0, 
+			"filterEvalCallbackHi64" 0, 
+			"bitmapEvalArgsFramesHi64_Padding" 0	
+		}
+	)
+	
+	
+	root = "Map_Bitmap|Texmap|Shader"
+	apply texture
+
+	gui "gui_adsk_bitmap" { control "Global" "Global" ( "hidden" )}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_Bitmap
+#------------------------------------------------------------------------
+declare phenomenon
+	color "adsk_Utility_Bitmap"
+	(	
+		color texture "color_texture",
+        scalar "UScale" default 1,
+        scalar "VScale" default 1
+	)
+	apply texture
+	version 1
+
+
+	shader "|UVGen|Shader" "adsk_base_UVGenerator" 
+	(
+		"MapSlotType" 0, 
+		"EnvType" 4, 
+		"MapChannel" 1, 
+		"UVWSource" 0, 
+		"ShowMapOnBack" on, 
+		"UOffset" 0, 
+		"UScale" = interface "UScale", 
+		"UWrap" on, 
+		"UMirror" off, 
+		"VOffset" 0, 
+		"VScale" = interface "VScale", 
+		"VWrap" on, 
+		"VMirror" off, 
+		"UAngle" 0, 
+		"VAngle" 0, 
+		"WAngle" 0, 
+		"UVAxis" 0, 
+		"Clip" off, 
+		"Blur" 1, 
+		"BlurOffset" 0, 
+		"Noise" off, 
+		"Animate" off, 
+		"Amount" 1, 
+		"Size" 1, 
+		"Level" 1, 
+		"Phase" 0, 
+		"RealWorldMapSize" off, 
+		"XCanvasSize" 0, 
+		"YCanvasSize" 0
+	)
+
+
+	shader "|TextureOutput|Shader" "adsk_Utility_Output" 
+	(
+		"RGBAmount" 1,
+		"RGBOffset" 0,
+		"OutputAmount" 1,
+		"BumpAmount" 1,
+		"Invert" off,
+		"Clamp" off,
+		"AlphaFromRGB" off,
+		"UseColorMap" off,
+		"UseRGBCurve" off
+	)
+
+	shader "max_Bitmap__instance" "adsk_Bitmap" 
+	(
+		"Parameters" {
+			"ClipU" 0, 
+			"ClipV" 0, 
+			"ClipW" 1, 
+			"ClipH" 1, 
+			"Jitter" 1, 
+			"UseJitter" off, 
+			"Apply" off, 
+			"CropPlace" 0, 
+			"Filtering" 0, 
+			"MonoOutput" 0, 
+			"RGBOutput" 0, 
+			"AlphaSource" 0, 
+			"PreMultAlpha" on, 
+			"Bitmap" = interface "color_texture", 
+			"Coords" "|UVGen|Shader", 
+			"Output" "|TextureOutput|Shader"	
+		}, 
+		"time parameters" {
+			"startTime" 0, 
+			"playBackRate" 1, 
+			"endCondition" 0, 
+			"tieTimeToMatIDs" off	
+		}, 
+		"ExtraParameters" {
+			"GBufferID" 0, 
+			"currentTime" 0, 
+			"firstFrame" 0, 
+			"lastFrame" 0, 
+			"ticksPerFrame" 0, 
+			"bitmapFrames_Padding" 0, 
+			"useBitmapEvalCallback" off, 
+			"bitmapEvalCallback" 0, 
+			"bitmapEvalArg" 0, 
+			"bitmapType" 2, 
+			"bitmapEvalArgFrames_Padding" 0, 
+			"bitmapWidth" 0, 
+			"bitmapHeight" 0, 
+			"filterEvalCallback" 0, 
+			"bitmapEvalCallbackHi64" 0, 
+			"bitmapEvalArgHi64" 0, 
+			"filterEvalCallbackHi64" 0, 
+			"bitmapEvalArgsFramesHi64_Padding" 0	
+		}
+	)
+	root = "max_Bitmap__instance"
+	
+	gui "gui_adsk_Utility_Bitmap" { control "Global" "Global" ("hidden")}
+end declare
+
+	
+#------------------------------------------------------------------------
+# adsk_Utility_Bitmap_Tweak
+#------------------------------------------------------------------------
+declare phenomenon
+	color "adsk_Utility_Bitmap_Tweak"
+	(	
+		color texture "color_texture",
+		
+		scalar "RGBAmount",
+		scalar "RGBOffset",		
+		scalar "OutputAmount",
+		
+		scalar "Uscale",
+		scalar "Vscale",
+		
+		integer "UVchannel"
+		
+	)
+	apply texture
+	version 1
+
+
+	shader "|UVGen|Shader" "adsk_base_UVGenerator" 
+	(
+		"MapSlotType" 0, 
+		"EnvType" 4, 
+		"MapChannel" = interface "UVchannel", 
+		"UVWSource" 0, 
+		"ShowMapOnBack" on, 
+		"UOffset" 0, 
+		"UScale" = interface "Uscale", 
+		"UWrap" on, 
+		"UMirror" off, 
+		"VOffset" 0, 
+		"VScale" = interface "Vscale",
+		"VWrap" on, 
+		"VMirror" off, 
+		"UAngle" 0, 
+		"VAngle" 0, 
+		"WAngle" 0, 
+		"UVAxis" 0, 
+		"Clip" off, 
+		"Blur" .01,				############ hard set(temp)
+		"BlurOffset" 0, 
+		"Noise" off, 
+		"Animate" off, 
+		"Amount" 1, 
+		"Size" 1, 
+		"Level" 1, 
+		"Phase" 0, 
+		"RealWorldMapSize" off, 
+		"XCanvasSize" 0, 
+		"YCanvasSize" 0
+	)
+
+
+	shader "|TextureOutput|Shader" "adsk_Utility_Output" 
+	(
+		"RGBAmount" = interface "RGBAmount",		#1
+		"RGBOffset" = interface "RGBOffset",		#0,
+		"OutputAmount" = interface "OutputAmount",		#1,
+		"BumpAmount" 1,
+		"Invert" off,
+		"Clamp" off,
+		"AlphaFromRGB" off,
+		"UseColorMap" off,
+		"UseRGBCurve" off
+	)
+
+	shader "max_Bitmap__instance" "adsk_Bitmap" 
+	(
+		"Parameters" {
+			"ClipU" 0, 
+			"ClipV" 0, 
+			"ClipW" 1, 
+			"ClipH" 1, 
+			"Jitter" 1, 
+			"UseJitter" off, 
+			"Apply" off, 
+			"CropPlace" 0, 
+			"Filtering" 0, 
+			"MonoOutput" 0, 
+			"RGBOutput" 0, 
+			"AlphaSource" 0, 
+			"PreMultAlpha" on, 
+			"Bitmap" = interface "color_texture", 
+			"Coords" "|UVGen|Shader", 
+			"Output" "|TextureOutput|Shader"	
+		}, 
+		"time parameters" {
+			"startTime" 0, 
+			"playBackRate" 1, 
+			"endCondition" 0, 
+			"tieTimeToMatIDs" off	
+		}, 
+		"ExtraParameters" {
+			"GBufferID" 0, 
+			"currentTime" 0, 
+			"firstFrame" 0, 
+			"lastFrame" 0, 
+			"ticksPerFrame" 0, 
+			"bitmapFrames_Padding" 0, 
+			"useBitmapEvalCallback" off, 
+			"bitmapEvalCallback" 0, 
+			"bitmapEvalArg" 0, 
+			"bitmapType" 2, 
+			"bitmapEvalArgFrames_Padding" 0, 
+			"bitmapWidth" 0, 
+			"bitmapHeight" 0, 
+			"filterEvalCallback" 0, 
+			"bitmapEvalCallbackHi64" 0, 
+			"bitmapEvalArgHi64" 0, 
+			"filterEvalCallbackHi64" 0, 
+			"bitmapEvalArgsFramesHi64_Padding" 0	
+		}
+	)
+	root = "max_Bitmap__instance"
+	
+	gui "gui_adsk_Utility_Bitmap_Tweak" { control "Global" "Global" ("hidden")}
+end declare
+
+#------------------------------------------------------------------------
+# adsk_Utility_GenericNoise
+#------------------------------------------------------------------------
+declare phenomenon
+	color "adsk_Utility_GenericNoise"
+	(
+		scalar "noise_size",
+		
+		color "noise_color1",
+		color "noise_color2"
+	)
+	apply texture
+	version 1
+	
+	
+	shader "max_base_XYZGen__instance" "adsk_Utility_XYZGenerator"
+	(
+		"CoordinateSystem" 0, 
+		"MapChannel" 1, 
+		"Offset" 0 0 0, 
+		"Tiling" 1 1 1, 
+		"Angle" 0 0 0, 
+		"Blur" 0.01, 
+		"BlurOffset" 0
+	)
+
+
+	shader "max_base_Output__instance" "adsk_Utility_Output"
+	(
+		"RGBAmount" 1,
+		"RGBOffset" 0,
+		"OutputAmount" 1,
+		"BumpAmount" 1,
+		"Invert" off,
+		"Clamp" off,
+		"AlphaFromRGB" off,
+		"UseColorMap" off,
+		"UseRGBCurve" off
+	)
+
+	shader "Concrete_GenericNoise" "adsk_Utility_Noise"
+	(
+		"Parameters" {
+			"Color1" = interface "noise_color1", 
+			"Color2" = interface "noise_color2",
+			"Map1Enabled" on, 
+			"Map2Enabled" on, 
+			"Size" = interface "noise_size", 
+			"Phase" 0, 
+			"Levels" 3, 
+			"ThresholdLow" 0, 
+			"ThresholdHigh" 1, 
+			"Type" 1, 
+			"Coords" "max_base_XYZGen__instance", 
+			"Output" "max_base_Output__instance"	
+		}, 
+		"ExtraParameters" {
+			"GBufferID" 0	
+		}
+	)
+	
+	root = "Concrete_GenericNoise"
+	
+	gui "gui_adsk_Utility_GenericNoise" { control "Global" "Global" ("hidden")}
+end declare
+
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_Noise_Tweakable
+#------------------------------------------------------------------------
+declare phenomenon
+	color "adsk_Utility_Noise_Tweakable"
+	(
+		scalar "noise_size",
+
+		color "noise_color1",
+		color "noise_color2",
+
+		scalar "low",
+		scalar "high",
+
+		vector "tiling",
+		vector "angle"
+	)
+	apply texture
+	version 1
+
+
+	shader "max_base_XYZGen__instance" "adsk_Utility_XYZGenerator"
+	(
+		"CoordinateSystem" 0, 
+		"MapChannel" 1, 
+		"Offset" 0 0 0, 
+		"Tiling" = interface "tiling", 
+		"Angle" = interface "angle", 
+		"Blur" 0.01, 
+		"BlurOffset" 0
+	)
+
+
+	shader "max_base_Output__instance" "adsk_Utility_Output"
+	(
+		"RGBAmount" 1,
+		"RGBOffset" 0,
+		"OutputAmount" 1,
+		"BumpAmount" 1,
+		"Invert" off,
+		"Clamp" off,
+		"AlphaFromRGB" off,
+		"UseColorMap" off,
+		"UseRGBCurve" off
+	)
+
+	shader "tweakNoise__instance" "adsk_Utility_Noise"
+	(
+		"Parameters" {
+			"Color1" = interface "noise_color1", 
+			"Color2" = interface "noise_color2",
+			"Map1Enabled" on, 
+			"Map2Enabled" on, 
+			"Size" = interface "noise_size", 
+			"Phase" 0, 
+			"Levels" 3, 
+			"ThresholdLow" = interface "Low",
+			"ThresholdHigh" = interface "High", 
+			"Type" 0, 
+			"Coords" "max_base_XYZGen__instance", 
+			"Output" "max_base_Output__instance"	
+		}, 
+		"ExtraParameters" {
+			"GBufferID" 0	
+		}
+	)
+	
+	root = "tweakNoise__instance"
+	
+	gui "gui_adsk_Utility_Noise_Tweakable" { control "Global" "Global" ("hidden")}
+end declare
+
+
+
+#-------------------------------------------------------------------------------------------- CC utilities
+
+#------------------------------------------------------------------------
+# adsk_Utility_ColorCorrection2
+#------------------------------------------------------------------------
+declare phenomenon
+	color "adsk_Utility_ColorCorrection2"
+	(
+		shader "shader",
+		integer "type",
+		
+		scalar "gamma",
+		scalar "contrast",
+		scalar "bias"
+	)
+	version 1
+	apply texture
+	
+	
+
+	#----------------------------
+	shader "color_passthrough__instance" "adsk_Utility_Shader_PassThrough"
+	(
+		"the_shader" = interface "shader",
+		"type" = interface "type"
+	)
+	
+	shader "the_input" "adsk_Utility_Color_to_Float3" 
+	(
+		"the_color" = "color_passthrough__instance"
+	)
+	
+	
+	#----------------------------
+	shader "contrast_scalar__instance" "adsk_Utility_Float_to_Float3" 
+	(
+		"the_scalar" = interface "contrast"
+	)	
+	shader "bias_scalar__instance" "adsk_Utility_Float_to_Float3" 
+	(
+		"the_scalar" = interface "bias"
+	)	
+
+	
+	#----------------------------
+	shader "contrastCorrect_color_instance" "adsk_Utility_Contrast" 
+	(
+		"value" = "the_input",
+		"contrast" = "contrast_scalar__instance",
+		"bias" = "bias_scalar__instance",
+	)
+	shader "contrastCorrect_instance" "adsk_Utility_Color_to_Float3" 
+	(
+		"the_color" = "contrastCorrect_color_instance"
+	)
+
+	#----------------------------
+	shader "gamma_scalar_instance" "adsk_Utility_Float_to_Float3" 
+	(
+		"the_scalar" = interface "gamma"
+	)	
+	shader "gammaCorrect_instance" "adsk_Utility_Gamma" 
+	(
+		"value" = "contrastCorrect_instance",
+		"gamma" = "gamma_scalar_instance"
+	)
+	
+	
+	shader "ccolor__instance" "adsk_Utility_Float3_to_Color" (
+		"the_vector" = "gammaCorrect_instance"
+	)
+	
+	
+	root = "ccolor__instance"
+	
+	gui "gui_adsk_Utility_ColorCorrection2" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_ColorCorrection (internal)
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_ColorCorrection"
+	(
+		color "input",
+		scalar "gamma" default 1.0,
+		scalar "gain" default 0.5,
+		scalar "bias" default 0.5,
+		scalar "hue" default 0.0,
+		scalar "sat" default 0.0,
+		scalar "value" default 0.0,
+		boolean "invert",
+		boolean "dynRangeEnable",
+		scalar "dynRangeExpand" default 1.0,
+		scalar "dynRangeStartLum" default 0.5,
+		scalar "dynRangeExponent" default 2.0,
+		integer "cache_mode"
+	)
+	apply texture
+	version 1
+	
+	gui "gui_adsk_Utility_ColorCorrection" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_ColorCorrection (internal)
+#------------------------------------------------------------------------
+declare phenomenon
+	color "adsk_Utility_Color_Correction"
+	(
+		color "input",
+		
+		#-------------------------
+		struct "g"
+		{
+			scalar  "gamma",
+			scalar  "gain",
+			scalar  "bias",
+			boolean "invert"
+		},
+		
+		struct "h"
+		{		
+			scalar "hue",
+			scalar "sat",
+			scalar "value"
+		},
+		
+		struct "d"
+		{
+			boolean "dynRangeEnable",
+			scalar  "dynRangeExpand",
+			scalar  "dynRangeStartLum",
+			scalar  "dynRangeExponent"
+		}
+	)
+	apply texture
+	version 1
+
+
+
+	#-------------------------------------
+	shader "cc__instance" "adsk_Utility_ColorCorrection"
+	(
+		"input" = interface "input",
+		
+		"gamma" = interface "g.gamma",
+		"gain" = interface "g.gain",
+		"bias" = interface "g.bias",
+		
+		"hue" = interface "h.hue",
+		"sat" = interface "h.sat",
+		"value" = interface "h.value",
+			
+		"invert" = interface "g.invert",
+		
+		"dynRangeEnable" = interface "d.dynRangeEnable",
+		"dynRangeExpand" = interface "d.dynRangeExpand",
+		"dynRangeStartLum" = interface "d.dynRangeStartLum",
+		"dynRangeExponent" = interface "d.dynRangeExponent",
+		
+		"cache_mode" 0
+	)
+	
+	#--------------------
+	root = "cc__instance"
+
+	gui "gui_adsk_Utility_Color_Correction" { control "Global" "Global" ("hidden")}
+end declare
+
+
+
+
+#-------------------------------------------------------------------------------------------- Mia_mat Prototypes
+
+#------------------------------------------------------------------------
+#------------------------------------------------------------------------
+# adsk_Utility_Mia_Basic
+#------------------------------------------------------------------------
+declare phenomenon
+	material "adsk_Utility_Mia_Basic"
+	(
+		struct "m"
+		{
+			scalar  "diffuse",
+			scalar  "reflectivity",
+			scalar  "transparency",
+			boolean "conserve_energy"
+		},
+		struct "p"
+		{
+			integer "refl_depth",
+			integer "refr_depth"
+		},
+		
+		struct "x"
+		{
+			#----------------------------------
+	      	integer "gbuffer_id"
+		},		
+		
+		integer     "mode",
+		array light "lights"		
+	)
+	version 1
+
+
+
+    #-------------------------------------
+    # Diffuse Reflectance
+    #-------------------------------------
+	shader "gen_vec__diffuse" "adsk_Utility_Float_to_Float3" 
+	(
+		"the_scalar" = interface "m.diffuse"
+	)
+	shader "divide__diffuse" "adsk_Utility_MultiplyDivide" 
+	(
+		"operation" 2,
+		"input1" = "gen_vec__diffuse",
+		"input2" 100 100 100
+	)
+	shader "vec_to_color__diffuse" "adsk_Utility_Float3_to_Color" 
+	(
+		"the_vector" = "divide__diffuse"
+	)
+
+    #-------------------------------------
+    # Specular Reflectance
+    #-------------------------------------
+	shader "gen_vec__specular" "adsk_Utility_Float_to_Float3" 
+	(
+		"the_scalar" = interface "m.reflectivity"
+	)
+	shader "divide__specular" "adsk_Utility_MultiplyDivide" 
+	(
+		"operation" 2,
+		"input1" = "gen_vec__specular",
+		"input2" 100 100 100
+	)
+	shader "vec_to_scalar__specular" "adsk_Utility_Float3_to_Float" 
+	(
+		"the_vector" = "divide__specular"
+	)	
+
+    #-------------------------------------
+    # Transmittance
+    #-------------------------------------
+	shader "gen_vec__transm" "adsk_Utility_Float_to_Float3" 
+	(
+		"the_scalar" = interface "m.transparency"
+	)
+	shader "divide__transm" "adsk_Utility_MultiplyDivide" 
+	(
+		"operation" 2,
+		"input1" = "gen_vec__transm",
+		"input2" 100 100 100
+	)
+	shader "vec_to_scalar__transm" "adsk_Utility_Float3_to_Float" 
+	(
+		"the_vector" = "divide__transm"
+	)	
+	
+	
+    #-------------------------------------
+    # A&D material
+    #-------------------------------------	
+    shader "mia_material__instance" "mia_material"
+    (
+        #----------------------------------
+		"diffuse_weight" 1, 
+		"diffuse" = "vec_to_color__diffuse",
+		"diffuse_roughness" 0.0, 
+
+        #----------------------------------
+        "reflectivity" = "vec_to_scalar__specular",
+        "refl_color"  1 1 1 1,
+        "refl_gloss" 1.0,
+        "refl_gloss_samples" 8,
+
+        #----------------------------------
+        "transparency" = "vec_to_scalar__transm",
+		"refr_color" 1 1 1 1,
+		"refr_gloss" 1,
+		"refr_ior" 1.0,
+		"refr_gloss_samples" 8,
+
+        #----------------------------------
+        "brdf_fresnel" off,
+        "brdf_0_degree_refl" 1.0,
+        "brdf_90_degree_refl" 1.0,
+        "brdf_curve" 5.0,
+        "brdf_conserve_energy" = interface "m.conserve_energy",
+
+        #----------------------------------
+        "refl_depth" = interface "p.refl_depth",
+        "refl_cutoff" 0.00,
+        "refr_depth" = interface "p.refr_depth",
+        "refr_cutoff" 0.00,
+        "hl_vs_refl_balance" 1,
+
+        #----------------------------------
+        "mode" = interface "mode",
+        "lights" = interface "lights"
+    )
+        
+    #------------------------------------------------------------------------
+    # Render Elements support  ##############################################
+    #------------------------------------------------------------------------    
+    shader "max_mia_mat_renderelem__instance" "adsk_Utility_MiaDecomposer" 
+    (
+        "mia_material" "mia_material__instance", 
+        "GBufferID"  = interface "x.gbuffer_id"
+    )
+
+
+    #------------------------------------------------------------------------    
+    #------------------------------------------------------------------------
+    # Material Connections
+    #------------------------------------------------------------------------
+    material "mat"
+                    = "max_mia_mat_renderelem__instance"
+        shadow		= "mia_material__instance"                
+        photon		= "mia_material__instance"
+    end material
+    root material "mat"
+
+	gui "gui_adsk_Utility_Mia_Basic" { control "Global" "Global" ("hidden")}
+end declare
+
+
+#------------------------------------------------------------------------
+# The MiaMaterial as it comes from mifile. 
+# Just structs to group params plus defaults and correct ranges.
+#------------------------------------------------------------------------
+#------------------------------------------------------------------------
+# adsk_Utility_Mia
+#------------------------------------------------------------------------
+declare phenomenon
+	color "adsk_Utility_Mia"
+	(
+		struct "a"
+		{
+			scalar  "diffuse_weight",
+			color   "diffuse",
+			scalar  "diffuse_roughness"
+		},
+		
+		struct "b"
+		{
+			scalar  "reflectivity",
+			color   "refl_color",
+			scalar  "refl_gloss",
+			integer "refl_gloss_samples",
+			boolean "refl_interpolate",
+			boolean "refl_hl_only",
+			boolean "refl_is_metal"
+		},
+		
+		struct "c"
+		{
+			scalar  "transparency",
+			color   "refr_color",
+			scalar  "refr_gloss",
+			scalar  "refr_ior",
+			integer "refr_gloss_samples",
+			boolean "refr_interpolate",
+			boolean "refr_translucency",
+			color   "refr_trans_color",
+			scalar  "refr_trans_weight"
+		},
+		
+		struct "d"
+		{
+			scalar  "anisotropy",
+			scalar  "anisotropy_rotation",
+			integer "anisotropy_channel"
+		},
+		
+		struct "e"
+		{
+			boolean "brdf_fresnel",
+			scalar  "brdf_0_degree_refl",
+			scalar  "brdf_90_degree_refl",
+			scalar  "brdf_curve",
+			boolean "brdf_conserve_energy"
+		},
+		
+		struct "f"
+		{      
+			integer "intr_grid_density",
+			integer "intr_refl_samples",
+			boolean "intr_refl_ddist_on",
+			scalar  "intr_refl_ddist",
+			integer "intr_refr_samples",
+			boolean "single_env_sample"
+		},
+		
+		struct "g"
+		{
+			boolean  "refl_falloff_on",
+			scalar   "refl_falloff_dist",
+			boolean  "refl_falloff_color_on",
+			color    "refl_falloff_color",
+			integer  "refl_depth",
+			scalar   "refl_cutoff"
+		},
+	    
+		struct "h"
+		{
+			boolean  "refr_falloff_on",
+			scalar   "refr_falloff_dist",
+			boolean  "refr_falloff_color_on",
+			color    "refr_falloff_color",
+			integer  "refr_depth",
+			scalar   "refr_cutoff"
+		},
+		
+		struct "i"
+		{
+			scalar   "indirect_multiplier",
+			scalar   "fg_quality",
+			scalar   "fg_quality_w"
+		},
+		
+		struct "l"
+		{
+			boolean  "ao_on",
+			integer  "ao_samples",
+			scalar   "ao_distance",
+			color    "ao_dark",
+			color    "ao_ambient",
+			boolean  "ao_do_details"
+		},
+		
+		struct "m"
+		{
+			boolean  "thin_walled",
+			boolean  "no_visible_area_hl",
+			boolean  "skip_inside_refl",
+			boolean  "do_refractive_caustics",
+			boolean  "backface_cull",
+			boolean  "propagate_alpha"
+		},
+		
+		struct "n"
+		{    
+			scalar   "hl_vs_refl_balance",
+			scalar   "cutout_opacity",
+			color    "additional_color"
+		},
+		
+		struct "o"
+		{        
+			shader   "bump_shader",   
+			boolean  "no_diffuse_bump"
+		},
+		
+		
+		# --------------- lights
+		integer     "mode",
+		array light "lights"
+
+    
+	)
+	apply material, photon, shadow
+	version 1
+
+
+	shader "mia_material1" "mia_material" 
+	(
+		"diffuse_weight" = interface "a.diffuse_weight",
+		"diffuse" = interface "a.diffuse",
+		"diffuse_roughness" = interface "a.diffuse_roughness",
+		
+		"reflectivity" = interface "b.reflectivity",
+		"refl_color" = interface "b.refl_color",
+		"refl_gloss" = interface "b.refl_gloss",
+		"refl_gloss_samples" = interface "b.refl_gloss_samples",
+		"refl_interpolate" = interface "b.refl_interpolate",
+		"refl_hl_only" = interface "b.refl_hl_only",
+		"refl_is_metal" = interface "b.refl_is_metal",
+		
+		"transparency" = interface "c.transparency",
+		"refr_color" = interface "c.refr_color",
+		"refr_gloss" = interface "c.refr_gloss",
+		"refr_ior" = interface "c.refr_ior",
+		"refr_gloss_samples" = interface "c.refr_gloss_samples",
+		"refr_interpolate" = interface "c.refr_interpolate",
+		"refr_translucency" = interface "c.refr_translucency",
+		"refr_trans_color" = interface "c.refr_trans_color",
+		"refr_trans_weight" = interface "c.refr_trans_weight",
+		
+		"anisotropy" = interface "d.anisotropy",
+		"anisotropy_rotation" = interface "d.anisotropy_rotation",
+		"anisotropy_channel" = interface "d.anisotropy_channel",
+		
+		"brdf_fresnel" = interface "e.brdf_fresnel",
+		"brdf_0_degree_refl" = interface "e.brdf_0_degree_refl",
+		"brdf_90_degree_refl" = interface "e.brdf_90_degree_refl",
+		"brdf_curve" = interface "e.brdf_curve",
+		"brdf_conserve_energy" = interface "e.brdf_conserve_energy",
+		
+		"intr_grid_density" = interface "f.intr_grid_density",
+		"intr_refl_samples" = interface "f.intr_refl_samples",
+		"intr_refl_ddist_on" = interface "f.intr_refl_ddist_on",
+		"intr_refl_ddist" = interface "f.intr_refl_ddist",
+		"intr_refr_samples" = interface "f.intr_refr_samples",		
+		"single_env_sample" = interface "f.single_env_sample",
+		
+		"refl_falloff_on" = interface "g.refl_falloff_on",
+		"refl_falloff_dist" = interface "g.refl_falloff_dist",
+		"refl_falloff_color_on" = interface "g.refl_falloff_color_on",
+		"refl_falloff_color" = interface "g.refl_falloff_color",
+		"refl_depth" = interface "g.refl_depth",
+		"refl_cutoff" = interface "g.refl_cutoff",
+		
+		"refr_falloff_on" = interface "h.refr_falloff_on",
+		"refr_falloff_dist" = interface "h.refr_falloff_dist",
+		"refr_falloff_color_on" = interface "h.refr_falloff_color_on",
+		"refr_falloff_color" = interface "h.refr_falloff_color",
+		"refr_depth" = interface "h.refr_depth",
+		"refr_cutoff" = interface "h.refr_cutoff",
+		
+		"indirect_multiplier" = interface "i.indirect_multiplier",
+		"fg_quality" = interface "i.fg_quality",
+		"fg_quality_w" = interface "i.fg_quality_w",
+		
+		"ao_on" = interface "l.ao_on",
+		"ao_samples" = interface "l.ao_samples",
+		"ao_distance" = interface "l.ao_distance",
+		"ao_dark" = interface "l.ao_dark",
+		"ao_ambient" = interface "l.ao_ambient",
+		"ao_do_details" = interface "l.ao_do_details",
+		
+		"thin_walled" = interface "m.thin_walled",
+		"no_visible_area_hl" = interface "m.no_visible_area_hl",
+		"skip_inside_refl" = interface "m.skip_inside_refl",
+		"do_refractive_caustics" = interface "m.do_refractive_caustics",
+		"backface_cull" = interface "m.backface_cull",
+		"propagate_alpha" = interface "m.propagate_alpha",
+		
+		"hl_vs_refl_balance"  = interface "n.hl_vs_refl_balance",
+		"cutout_opacity" = interface "n.cutout_opacity",
+		"additional_color" = interface "n.additional_color",
+		
+		"bump" = interface "bump_shader",
+		"no_diffuse_bump" = interface "o.no_diffuse_bump",
+		
+		"mode" = interface "mode",
+		"lights" = interface "lights",
+	)	
+		
+	root = "mia_material1"
+	
+	
+	#------------------------------------------------------------------------
+	# UI
+	#------------------------------------------------------------------------
+	gui "gui_adsk_Utility_Mia" {	
+		control "Global" "Global" (
+			"uiName" "Utility Mia Material (adsk)",
+			"category" "Material", "hidden"
+		)
+		
+		control "a" "struct" ("uiName" "Diffuse")
+		{
+			control "diffuse_weight" "scalar" ("value" 1.0, "range" 0.0 1.0)
+			control "diffuse" "color" ("value" 0.5 0.5 0.5)
+			control "diffuse_roughness" "scalar" ("value" 0.0, "range" 0.0 1.0)
+		}
+		
+		control "b" "struct" ("uiName" "Reflectivity")
+		{
+			control "reflectivity" "scalar" ("value" 0.6, "range" 0.0 1.0)
+			control "refl_color" "color" ("value" 1.0 1.0 1.0)
+			control "refl_gloss" "scalar" ("value" 1.0, "range" 0.0 1.0)
+			control "refl_gloss_samples" "integer" ("value" 24, "range" 0 128)
+			control "refl_interpolate" "boolean" ("value" 0)
+			control "refl_hl_only" "boolean" ("value" 0)			
+			control "refl_is_metal" "boolean" ("value" 0)					
+		}
+		
+		control "c" "struct" ("uiName" "Transparency")
+		{
+			control "transparency" "scalar" ("value" 0.0, "range" 0.0 2.0)
+			control "refr_color" "color" ("value" 1.0 1.0 1.0)
+			control "refr_gloss" "scalar" ("value" 1.0, "range" 0.0 1.0)
+			control "refr_ior" "scalar" ("value" 1.4, "range" 0.1 5.0)			
+			control "refr_gloss_samples" "integer" ("value" 24, "range" 0 128)
+			control "refr_interpolate" "boolean" ("value" 0)
+			control "refr_translucency" "boolean" ("value" 0)			
+			control "refr_trans_color" "color" ("value" 0.7 0.6 0.5)		
+			control "refr_trans_weight" "scalar" ("value" 0.5, "range" 0.0 1.0)
+		}
+		
+		control "d" "struct" ("uiName" "Anisotropy")
+		{
+			control "anisotropy" "scalar" ("value" 1.0, "range" 0.0 20.0)
+			control "anisotropy_rotation" "scalar" ("value" 0.0, "range" -1.0 1.0)
+			control "anisotropy_channel" "integer" ("value" -1, "range" -1 64)
+		}
+		
+		control "e" "struct" ("uiName" "BRDF")
+		{
+			control "brdf_fresnel" "boolean" ("value" 0)		
+			control "brdf_0_degree_refl" "scalar" ("value" 0.1, "range" 0.0 1.0)
+			control "brdf_90_degree_refl" "scalar" ("value" 1.0, "range" 0.0 1.0)		
+			control "brdf_curve" "scalar" ("value" 5.0, "range" 0.01 20)
+			control "brdf_conserve_energy" "boolean" ("value" 1)
+		}
+		
+		control "l" "struct" ("uiName" "Ambient Occlusion")
+		{
+			control "ao_on" "boolean" ("value" 0)
+			control "ao_samples" "integer" ("value" 16, "range" 0 256)
+			control "ao_distance" "scalar" ("value" 10.0)
+			control "ao_dark" "color" ("value" 0.2 0.2 0.2)	
+			control "ao_ambient" "color" ("value" 0 0 0)			
+			control "ao_do_details" "boolean" ("value" 1)
+		}
+				
+		control "f" "struct" ("uiName" "Interpolation")
+		{      
+			control "intr_grid_density" "integer" ("value" 2, "range" 0 5)		
+			control "intr_refl_samples" "integer" ("value" 2, "range" 0 5)		
+			control "intr_refl_ddist_on" "boolean" ("value" 0)	
+			control "intr_refl_ddist" "scalar" ("value" 0.0)
+			control "intr_refr_samples" "integer" ("value" 2, "range" 0 5)			
+			control "single_env_sample" "boolean" ("value" 0)
+		}
+		
+		control "g" "struct" ("uiName" "Reflect Optimization")
+		{
+			control "refl_falloff_on" "boolean" ("value" 0)		
+			control "refl_falloff_dist" "scalar" ("value" 0.0)		
+			control "refl_falloff_color_on" "boolean" ("value" 0)		
+			control "refl_falloff_color" "color" ("value" 0 0 0)		
+			control "refl_depth" "integer" ("value" 5, "range" 0 10)		
+			control "refl_cutoff" "scalar" ("value" 0.01, "range" 0.0 1.0)
+		}
+	    
+		control "h" "struct" ("uiName" "Refract Optimization")
+		{
+			control "refr_falloff_on" "boolean" ("value" 0)		
+			control "refr_falloff_dist" "scalar" ("value" 0.0)		
+			control "refr_falloff_color_on" "boolean" ("value" 0)		
+			control "refr_falloff_color" "color" ("value" 0 0 0)		
+			control "refr_depth" "integer" ("value" 5, "range" 0 10)		
+			control "refr_cutoff" "scalar" ("value" 0.01, "range" 0.0 1.0)
+		}
+		
+		control "i" "struct" ("uiName" "FG Optimization")
+		{
+			control "indirect_multiplier" "scalar" ("value" 1.0, "range" 0.0 3.14)		
+			control "fg_quality" "scalar" ("value" 1.0, "range" 0.0 10)		
+			control "fg_quality_w" "scalar" ("value" 1.0, "range" 0.0 1.0)
+		}
+		
+
+		
+		control "m" "struct" ("uiName" "Special Settings")
+		{
+			control "thin_walled" "boolean" ("value" 0)		
+			control "no_visible_area_hl" "boolean" ("value" 1)
+			control "skip_inside_refl" "boolean" ("value" 1)		
+			control "do_refractive_caustics" "boolean" ("value" 0)			
+			control "backface_cull" "boolean" ("value" 0)		
+			control "propagate_alpha" "boolean" ("value" 0)
+		}
+		
+		control "n" "struct" ("uiName" "Extra Settings")
+		{
+			control "hl_vs_refl_balance" "scalar" ("value" 1.0, "range" 0.0 1.0)		
+			control "cutout_opacity" "scalar" ("value" 1.0, "range" 0.0 1.0)
+			control "additional_color" "color" ("value" 0 0 0)
+		}
+		
+		control "o" "struct" ("uiName" "Bump")
+		{
+			control "bump_shader" "shader" ()
+			control "no_diffuse_bump" "boolean" ("value" 0)
+		}
+		
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")	
+		
+	}
+end declare
+#------------------------------------------------------------------------
+# <- end, Mia Material
+#------------------------------------------------------------------------
+
+
+
+#-------------------------------------------------------------------------------------------- Texlookup prototypes
+
+#------------------------------------------------------------------------
+# adsk_Utility_TexLookup
+#------------------------------------------------------------------------
+declare shader
+	color "adsk_Utility_TexLookup"
+	(	
+		vector "coord",
+		
+		boolean		"elipt_enable",
+		scalar		"elipt_disc_r",
+		scalar		"elipt_eccmax",
+		scalar		"elipt_maxminor",
+		scalar		"elipt_circle",		
+		boolean		"elipt_bilinear",
+		integer		"elipt_space",
+		shader		"elipt_remap",
+		
+		scalar		"gamma",
+		
+		integer		"switcher_slot",
+		boolean		"is_color_only",	
+		
+		color texture "input_texture_00",
+		color texture "input_texture_01",		
+		color texture "input_texture_02",
+		color texture "input_texture_03",			
+		color texture "input_texture_04",
+		color texture "input_texture_05",		
+		color texture "input_texture_06",
+		color texture "input_texture_07",
+			
+		color "input_color_00",
+		color "input_color_01",		
+		color "input_color_02",
+		color "input_color_03",			
+		color "input_color_04",
+		color "input_color_05",		
+		color "input_color_06",
+		color "input_color_07"
+	)
+	apply material, photon, shadow, texture
+	version 1
+	
+
+	gui "gui_adsk_Utility_TexLookup" {	
+		control "Global" "Global" (
+			"uiName" "Utility Texture Lookup (adsk)",
+			"category" "Texture", "hidden"
+		)	
+		control "input_color" "color" ("value" 1.0 0.5 0.0)
+		
+		control "elipt_disc_r" "scalar" ("value" 0.3, "range" 0.1 2.0, "nonConnectable")
+		control "elipt_eccmax" "scalar" ("value" 20, "range" 2 60, "nonConnectable")		
+		control "elipt_maxminor" "scalar" ("value" 1.3, "range" 1 20, "nonConnectable")
+		control "elipt_circle" "scalar" ("value" 0.5, "range" 0.1 2, "nonConnectable")				
+		control "elipt_bilinear" "boolean" ("value" on, "nonConnectable")
+		control "elipt_space" "integer" ("value" 0, "range" 0 63, "nonConnectable")
+
+		control "gamma" "scalar" ("value" 1.0, "range" 0.0 2.0, "nonConnectable")				
+		
+		control "switcher_slot" "integer" ("value" 0, "range" 0 7, "nonConnectable")			
+		control "is_color_only" "boolean" ("value" 0, "nonConnectable")			
+
+	}	
+end declare	
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_BumpLookup
+#------------------------------------------------------------------------
+declare shader
+	vector "adsk_Utility_BumpLookup"
+	(		
+		vector "coord",
+		
+		boolean		"elipt_enable",
+		scalar		"elipt_disc_r",
+		scalar		"elipt_eccmax",
+		scalar		"elipt_maxminor",
+		scalar		"elipt_circle",		
+		boolean		"elipt_bilinear",
+		integer		"elipt_space",
+		shader		"elipt_remap",
+		
+		vector	"u",
+		vector	"v",
+		vector	"step",
+		scalar	"factor",
+		
+		integer		"switcher_slot",
+		boolean		"is_3Dbump",
+		
+		color texture	"input_texture_00",
+		color texture	"input_texture_01",		
+		color texture	"input_texture_02",
+		color texture	"input_texture_03",			
+		color texture	"input_texture_04",
+		color texture	"input_texture_05",		
+		color texture	"input_texture_06",
+		color texture	"input_texture_07",
+		
+		color "input_color_00",
+		color "input_color_01",		
+		color "input_color_02",
+		color "input_color_03",			
+		color "input_color_04",
+		color "input_color_05",		
+		color "input_color_06",
+		color "input_color_07"	
+	)
+	apply material, photon, shadow, texture
+	version 1
+	
+
+	gui "gui_adsk_Utility_BumpLookup" {	
+		control "Global" "Global" (
+			"uiName" "Utility Bump Lookup (adsk)",
+			"category" "Texture", "hidden"
+		)	
+		control "input_color" "color" ("value" 1.0 0.5 0.0)
+		
+		control "elipt_disc_r" "scalar" ("value" 0.3, "range" 0.1 2.0, "nonConnectable")
+		control "elipt_eccmax" "scalar" ("value" 20, "range" 2 60, "nonConnectable")		
+		control "elipt_maxminor" "scalar" ("value" 1.3, "range" 1 20, "nonConnectable")
+		control "elipt_circle" "scalar" ("value" 0.5, "range" 0.1 2, "nonConnectable")				
+		control "elipt_bilinear" "boolean" ("value" 1, "nonConnectable")
+		control "elipt_space" "integer" ("value" 0, "range" 0 63, "nonConnectable")				
+	
+		control "step" "vector" ("value" 0.002 0.002 0.002, "nonConnectable")
+		control "factor" "scalar" ("value" 0.5, "range" -2 2, "nonConnectable")	
+		
+		control "switcher_slot" "integer" ("value" 0, "range" 0 7, "nonConnectable")
+	}	
+end declare	
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_TexLookup_Phen (Phen, to be used in 3dsmax)
+#------------------------------------------------------------------------
+declare phenomenon
+	color
+	"adsk_Utility_ElliptTex"
+	(	
+	
+		struct "t"
+		{
+			color texture	"input_texture_00",		
+			scalar			"gamma"		
+		},
+		
+		struct "e"
+		{		
+			boolean			"elipt_enable",
+			scalar			"elipt_disc_r",
+			scalar			"elipt_circle",					
+			scalar			"elipt_eccmax",
+			scalar			"elipt_maxminor",	
+			boolean			"elipt_bilinear"
+		},		
+
+		struct "s"
+		{
+			integer			"switcher_slot",
+			boolean			"is_color_only",	
+			
+
+			color texture	"input_texture_01",		
+			color texture	"input_texture_02",
+			color texture	"input_texture_03",			
+			color texture	"input_texture_04",
+			color texture	"input_texture_05",		
+			color texture	"input_texture_06",
+			color texture	"input_texture_07",
+				
+			color			"input_color_00",
+			color			"input_color_01",		
+			color			"input_color_02",
+			color			"input_color_03",			
+			color			"input_color_04",
+			color			"input_color_05",		
+			color			"input_color_06",
+			color			"input_color_07"
+		}
+	)
+	apply texture
+	version 1
+
+
+	shader "|UVGen|Shader" "adsk_base_UVGenerator"
+	(
+		"MapSlotType" 0,
+		"EnvType" 4,
+		"MapChannel" 1,
+		"UVWSource" 0,
+		"ShowMapOnBack" on,
+		"UOffset" 0,
+		"UScale" 1,
+		"UWrap" on,
+		"UMirror" off,
+		"VOffset" 0,
+		"VScale" 1,
+		"VWrap" on,
+		"VMirror" off,
+		"UAngle" 0,
+		"VAngle" 0,
+		"WAngle" 0,
+		"UVAxis" 0,
+		"Clip" off,
+		"Blur" 1,
+		"BlurOffset" 0,
+		"Noise" off,
+		"Animate" off,
+		"Amount" 1,
+		"Size" 1,
+		"Level" 1,
+		"Phase" 0,
+		"RealWorldMapSize" off,
+		"XCanvasSize" 0,
+		"YCanvasSize" 0
+	)
+	
+	shader "UVGen_tovector__instance" "adsk_Utility_VectorCoords"
+	(
+		"coords" "|UVGen|Shader"
+	)	
+		
+	shader "mib_texture_remap1"	"mib_texture_remap" 
+	(
+		"input" 0.0 0.0 0.0,
+		"transform" 1. 0. 0. 0. 0. 1. 0. 0. 0. 0. 1. 0. 0. 0. 0. 1.,
+		"repeat" 1. 1. 1.,
+		"alt_x" off,
+		"alt_y" off,
+		"alt_z" off,
+		"torus_x" on,
+		"torus_y" on,
+		"torus_z" on,
+		"min" 0. 0. 0.,
+		"max" 1. 1. 1.,
+		"offset" 0. 0. 0.
+	)
+
+	shader "mib_texture_filter_lookup1"	"adsk_Utility_TexLookup"
+	(
+		"coord" = "UVGen_tovector__instance",
+		
+		"elipt_enable" = interface "e.elipt_enable",
+		"elipt_disc_r" = interface "e.elipt_disc_r",
+		"elipt_eccmax" = interface "e.elipt_eccmax",
+		"elipt_maxminor" = interface "e.elipt_maxminor",
+		"elipt_circle" = interface "e.elipt_circle",
+		"elipt_bilinear" = interface "e.elipt_bilinear",
+		"elipt_space" 0,		
+		"elipt_remap" "mib_texture_remap1",
+		
+		"gamma" = interface "t.gamma",
+		
+		"switcher_slot" = interface "s.switcher_slot",
+		"is_color_only" = interface "s.is_color_only",
+		
+		"input_texture_00" = interface "t.input_texture_00",
+		"input_texture_01" = interface "s.input_texture_01",
+		"input_texture_02" = interface "s.input_texture_02",
+		"input_texture_03" = interface "s.input_texture_03",			
+		"input_texture_04" = interface "s.input_texture_04",
+		"input_texture_05" = interface "s.input_texture_05",
+		"input_texture_06" = interface "s.input_texture_06",
+		"input_texture_07" = interface "s.input_texture_07",
+
+		"input_color_00" = interface "s.input_color_00",
+		"input_color_01" = interface "s.input_color_01",
+		"input_color_02" = interface "s.input_color_02",
+		"input_color_03" = interface "s.input_color_03",			
+		"input_color_04" = interface "s.input_color_04",
+		"input_color_05" = interface "s.input_color_05",
+		"input_color_06" = interface "s.input_color_06",
+		"input_color_07" = interface "s.input_color_07"			
+	)	
+	
+	root = "mib_texture_filter_lookup1"
+	
+	
+	gui "gui_adsk_Utility_ElliptTex" {	
+		control "Global" "Global" (
+			"uiName" "Utility Elliptical Tex (adsk)",
+			"category" "Texture", "hidden"
+		)	
+		
+		#-------------------------------------
+		control "t" "struct" ("uiName" "Texture")
+		{		
+			control "input_texture_00" "color texture" ("uiName" "Texture", "nonConnectable")		
+			control "gamma" "scalar" ("uiName" "Gamma", "value" 1.0, "range" 0.0 2.0, "nonConnectable")		
+		}
+		
+		#-------------------------------------
+		control "e" "struct" ("uiName" "Elliptical Filter")
+		{
+			control "elipt_enable" "boolean" ("uiName" "Enable", "value" 0, "nonConnectable")		
+			control "elipt_disc_r" "scalar" ("uiName" "Disc Radius", "value" 0.3, "range" 0.1 2.0, "nonConnectable")
+			control "elipt_circle" "scalar" ("uiName" "Circle Radius", "value" 1.0, "range" 0.1 2, "nonConnectable")			
+			control "elipt_eccmax" "scalar" ("uiName" "Max Eccentricity", "value" 20, "range" 2 60, "nonConnectable")		
+			control "elipt_maxminor" "scalar" ("uiName" "Max Pixels for Min Radius", "value" 1.3, "range" 1 32, "nonConnectable")
+			control "elipt_bilinear" "boolean" ("uiName" "Bilinear Interpolation", "value" 1, "nonConnectable")
+		}
+		
+		#-------------------------------------
+		control "s" "struct" ("hidden", "uiName" "Extra Textures")
+		{			
+			control "switcher_slot" "integer" ("hidden", "value" 0, "range" 0 7, "nonConnectable")
+			control "is_color_only" "boolean" ("hidden", "hidden", "value" 0, "nonConnectable")	
+	
+			control "input_texture_01" "color texture" ("hidden", "uiName" "2Dtexture ->01", "nonConnectable")
+			control "input_texture_02" "color texture" ("hidden", "uiName" "2Dtexture ->02", "nonConnectable")			
+			control "input_texture_03" "color texture" ("hidden", "uiName" "2Dtexture ->03", "nonConnectable")
+			control "input_texture_04" "color texture" ("hidden", "uiName" "2Dtexture ->04", "nonConnectable")
+			control "input_texture_05" "color texture" ("hidden", "uiName" "2Dtexture ->05", "nonConnectable")
+			control "input_texture_06" "color texture" ("hidden", "uiName" "2Dtexture ->06", "nonConnectable")
+			control "input_texture_07" "color texture" ("hidden", "uiName" "2Dtexture ->07", "nonConnectable")
+			
+			control "input_color_00" "color" ("hidden", "uiName" "3Dtexture ->01")				
+			control "input_color_01" "color" ("hidden", "uiName" "3Dtexture ->01")	
+			control "input_color_02" "color" ("hidden", "uiName" "3Dtexture ->02")				
+			control "input_color_03" "color" ("hidden", "uiName" "3Dtexture ->03")				
+			control "input_color_04" "color" ("hidden", "uiName" "3Dtexture ->04")	
+			control "input_color_05" "color" ("hidden", "uiName" "3Dtexture ->05")				
+			control "input_color_06" "color" ("hidden", "uiName" "3Dtexture ->06")
+			control "input_color_07" "color" ("hidden", "uiName" "3Dtexture ->07")					
+		}
+	}		
+	
+end declare	
+
+
+#------------------------------------------------------------------------
+# adsk_Utility_BumpLookup_Phen (Phen, to be used in 3dsmax)
+#------------------------------------------------------------------------
+declare phenomenon
+	color "adsk_Utility_ElliptBump"
+	(
+
+		struct "t"
+		{
+			color texture	"input_texture_00",		
+			color			"input_color_00"
+		},
+		
+		struct "b"
+		{
+			scalar		"bump_multiplier",
+			boolean		"is_3Dbump"
+		},
+		
+		struct "e"
+		{
+			boolean "elipt_enable",
+			scalar "elipt_disc_r",	
+			scalar "elipt_circle",				
+			scalar "elipt_eccmax",
+			scalar "elipt_maxminor",
+			boolean "elipt_bilinear"
+		},
+		
+		struct "s"
+		{
+			integer			"switcher_slot",			
+
+			color texture	"input_texture_01",	
+			color "input_color_01",					
+			color texture	"input_texture_02",
+			color "input_color_02",			
+			color texture	"input_texture_03",	
+			color "input_color_03",					
+			color texture	"input_texture_04",
+			color "input_color_04",			
+			color texture	"input_texture_05",	
+			color "input_color_05",				
+			color texture	"input_texture_06",
+			color "input_color_06",			
+			color texture	"input_texture_07",
+			color "input_color_07"
+		}
+	)
+	apply texture
+	version 1
+	
+	
+	shader "max_base_UVGenerator__instance" "adsk_base_UVGenerator"
+	(
+		"MapSlotType" 0,
+		"EnvType" 4,
+		"MapChannel" 1,
+		"UVWSource" 0,
+		"ShowMapOnBack" on,
+		"UOffset" 0,
+		"UScale" 1,
+		"UWrap" on,
+		"UMirror" off,
+		"VOffset" 0,
+		"VScale" 1,
+		"VWrap" on,
+		"VMirror" off,
+		"UAngle" 0,
+		"VAngle" 0,
+		"WAngle" 0,
+		"UVAxis" 0,
+		"Clip" off,
+		"Blur" 1,
+		"BlurOffset" 0,
+		"Noise" off,
+		"Animate" off,
+		"Amount" 1,
+		"Size" 1,
+		"Level" 1,
+		"Phase" 0,
+		"RealWorldMapSize" off,
+		"XCanvasSize" 0,
+		"YCanvasSize" 0
+	)
+	
+
+	shader "UVGen_tovector__instance" "adsk_Utility_VectorCoords"
+	(
+		"coords" "max_base_UVGenerator__instance"
+	)		
+	shader "mib_texture_remap__instance"	"mib_texture_remap" 
+	(
+		"input" = "UVGen_tovector__instance",
+		"transform" 1. 0. 0. 0. 0. 1. 0. 0. 0. 0. 1. 0. 0. 0. 0. 1.,
+		"repeat" 1. 1. 1.,
+		"alt_x" off,
+		"alt_y" off,
+		"alt_z" off,
+		"torus_x" off,
+		"torus_y" off,
+		"torus_z" off,
+		"min" 0. 0. 0.,
+		"max" 1. 1. 1.,
+		"offset" 0. 0. 0.
+	)
+
+	shader "mib_bump_basis__instance" "mib_bump_basis"
+	(
+		"project" 0,
+		"ntex" 0
+	)
+
+	shader "adsk_Utility_BumpLookup__instance" "adsk_Utility_BumpLookup"
+	(
+		
+		"coord" = "UVGen_tovector__instance",
+		"elipt_enable" = interface "e.elipt_enable",
+		"elipt_disc_r" = interface "e.elipt_disc_r",
+		"elipt_eccmax" = interface "e.elipt_eccmax",
+		"elipt_maxminor" = interface "e.elipt_maxminor",
+		"elipt_circle" = interface "e.elipt_circle",
+		"elipt_bilinear" = interface "e.elipt_bilinear",
+		"elipt_space" 0,
+		"elipt_remap" "mib_texture_remap__instance",
+		"u" = "mib_bump_basis__instance.u",
+		"v" = "mib_bump_basis__instance.v",
+		"step" 0.001 0.001 0.001,
+		"factor" = interface "b.bump_multiplier",
+		
+		"switcher_slot" = interface "s.switcher_slot",
+		"is_3Dbump" = interface "b.is_3Dbump",
+		
+		"input_texture_00" = interface "t.input_texture_00",
+		"input_texture_01" = interface "s.input_texture_01",
+		"input_texture_02" = interface "s.input_texture_02",
+		"input_texture_03" = interface "s.input_texture_03",			
+		"input_texture_04" = interface "s.input_texture_04",
+		"input_texture_05" = interface "s.input_texture_05",
+		"input_texture_06" = interface "s.input_texture_06",
+		"input_texture_07" = interface "s.input_texture_07",
+		
+		"input_color_00" = interface "t.input_color_00",
+		"input_color_01" = interface "s.input_color_01",
+		"input_color_02" = interface "s.input_color_02",
+		"input_color_03" = interface "s.input_color_03",			
+		"input_color_04" = interface "s.input_color_04",
+		"input_color_05" = interface "s.input_color_05",
+		"input_color_06" = interface "s.input_color_06",
+		"input_color_07" = interface "s.input_color_07"	
+	)
+
+	shader "color__root" "adsk_Utility_Float3_to_Color" 
+	(
+		"the_vector" = "adsk_Utility_BumpLookup__instance"
+	)	
+	
+	
+	
+	root = "color__root"	
+	
+	gui "gui_adsk_Utility_ElliptBump" {	
+		control "Global" "Global" (
+			"uiName" "Utility Elliptical Bump (adsk)",
+			"category" "Texture", "hidden"
+		)
+		
+		#-------------------------------------
+		control "t" "struct" ("uiName" "Texture")
+		{		
+			control "input_texture_00" "color texture" ("uiName" "Texture", "nonConnectable")
+			control "input_color_00" "color" ("hidden", "uiName" "3Dtexture")			
+		}
+		
+		#-------------------------------------
+		control "b" "struct" ("uiName" "Bump Settings")
+		{
+			control "bump_multiplier" "scalar" ("uiName" "Multiplier", "value" 0.5, "range" -2 2)
+			control "is_3Dbump" "boolean" ("hidden", "value" 0, "nonConnectable")
+		}		
+
+		
+		#-------------------------------------
+		control "e" "struct" ("uiName" "Elliptical Filter")
+		{
+			control "elipt_enable" "boolean" ("uiName" "Enable", "value" 0, "nonConnectable")		
+			control "elipt_disc_r" "scalar" ("uiName" "Disc Radius", "value" 0.3, "range" 0.1 2.0, "nonConnectable")
+			control "elipt_circle" "scalar" ("uiName" "Circle Radius", "value" 1.0, "range" 0.1 2, "nonConnectable")			
+			control "elipt_eccmax" "scalar" ("uiName" "Max Eccentricity", "value" 20, "range" 2 60, "nonConnectable")		
+			control "elipt_maxminor" "scalar" ("uiName" "Max Pixels for Min Radius", "value" 1.3, "range" 1 32, "nonConnectable")
+			control "elipt_bilinear" "boolean" ("uiName" "Bilinear Interpolation", "value" 1, "nonConnectable")
+		}			
+
+		
+		#-------------------------------------
+		control "s" "struct" ("hidden", "uiName" "Extra Textures")
+		{			
+			control "switcher_slot" "integer" ("hidden", "value" 0, "range" 0 7, "nonConnectable")
+			control "input_texture_01" "color texture" ("hidden", "uiName" "2Dtexture ->01", "nonConnectable")
+			control "input_color_01" "color" ("hidden", "uiName" "3Dtexture ->01")	
+			control "input_texture_02" "color texture" ("hidden", "uiName" "2Dtexture ->02", "nonConnectable")
+			control "input_color_02" "color" ("hidden", "uiName" "3Dtexture ->02")				
+			control "input_texture_03" "color texture" ("hidden", "uiName" "2Dtexture ->03", "nonConnectable")
+			control "input_color_03" "color" ("hidden", "uiName" "3Dtexture ->03")				
+					
+			control "input_texture_04" "color texture" ("hidden", "uiName" "2Dtexture ->04", "nonConnectable")
+			control "input_color_04" "color" ("hidden", "uiName" "3Dtexture ->04")	
+			control "input_texture_05" "color texture" ("hidden", "uiName" "2Dtexture ->05", "nonConnectable")
+			control "input_color_05" "color" ("hidden", "uiName" "3Dtexture ->05")				
+			control "input_texture_06" "color texture" ("hidden", "uiName" "2Dtexture ->06", "nonConnectable")
+			control "input_color_06" "color" ("hidden", "uiName" "3Dtexture ->06")
+			control "input_texture_07" "color texture" ("hidden", "uiName" "2Dtexture ->07", "nonConnectable")
+			control "input_color_07" "color" ("hidden", "uiName" "3Dtexture ->07")					
+		}
+	}
+end declare
+#------------------------------------------------------------------------
+# <- end, Elliptical Filtering
+#------------------------------------------------------------------------
+
+
+#------------------------------------------------------------------------
+# <- eof
+#------------------------------------------------------------------------

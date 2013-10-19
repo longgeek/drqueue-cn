@@ -1,0 +1,1518 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#define ZAP_SIMPLIFIED
+
+#include <max_common.msl>
+
+shader max_base_UVGenerator {
+ input:
+  //  bool sampler_magic = true;
+  int texture_eval_type = mi_MAX_EVAL_COLOR {
+    hard_range(0, 2);
+  };
+  // parameters for max_base_UVGenerator:
+  // ------------------------------------
+  // see mrStdUV in max_texmaps.h
+  int MapSlotType = 0 {                // mapSlotType
+    hard_range(0, 1);
+  };
+  int EnvType = 4 {                    // envType
+    hard_range(0, 5);
+  };
+  int MapChannel = 1 {                 // mapChannel
+  };
+  int UVWSource = 0 {                  // uvwSrc
+    hard_range(0, 3);
+  };
+  const bool ShowMapOnBack = true {    // showMapBack
+  };
+  float UOffset = 0.0 {                // uoffs
+  };
+  float UScale = 1.0 {                 // uscl
+  };
+  const bool UWrap = true {            // uwrap
+  };
+  const bool UMirror = false {         // umirror
+  };
+  float VOffset = 0.0 {                // voffs
+  };
+  float VScale = 1.0 {                 // vscl
+  };
+  const bool VWrap = true {            // vwrap
+  };
+  const bool VMirror = false {         // vmirror
+  };
+  float UAngle = 0.0 {                 // uAngle
+  };
+  float VAngle = 0.0 {                 // vAngle
+  };
+  float WAngle = 0.0 {                 // wAngle
+  };
+  int UVAxis = 0 {                     // uvAxis
+  };
+  const bool Clip = false {            // clip
+  };
+  float Blur = 1.0 {                   // blur
+  };
+  float BlurOffset = 0.0 {             // blurOffs
+  };
+  const bool Noise = false {           // ns
+  };
+  const bool Animate = false {         // nsAni
+  };
+  float Amount = 10.0 {                // nsAmt
+  };
+  float Size = 0.5 {                   // nsSize
+  };
+  const int Level = 3 {                // nsLev
+  };
+  float Phase = 0.0 {                  // nsPhs
+  };
+  const bool RealWorldMapSize = true { // realWorldMapSize
+  };
+  int XCanvasSize;                     // xCanvasSize
+  int YCanvasSize;                     // yCanvasSize
+  Texture2d noise_texture = "noise_out.dds" {
+    disable_filtering();
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+
+ output:
+  Color result;
+  // extra outputs
+  float3 xtra_dP;
+  float3 xtra_bumpDP_0;
+  float3 xtra_bumpDP_1;
+  float3 xtra_bumpDP_2;
+
+  // see max_stduv.cpp
+  float maxMirror2(in float x, inout bool b) {
+    if (x < 0.5) {
+      b = false;
+      return 2.0 * x;
+    } // if (x < 0.5)
+    else {
+      b = true;
+      return 1.0 - 2.0 * (x - 0.5);
+    } // else [ if (x < 0.5) ]
+  } // maxMirror2
+
+#ifdef ZAP_SIMPLIFIED
+  bool maxSampleSimplified(inout float3 UV, inout float3 dUV)
+  {
+    bool clipped = false;
+
+    if (UMirror) 
+      {
+	bool side = false;
+	UV.x   = maxMirror2(frac(UV.x), side);
+	dUV.x *= 2.0;
+      }
+
+    if (VMirror) 
+      {
+	bool side = false;
+	UV. y = maxMirror2(frac(UV.y), side);
+	dUV.y *= 2.0;
+      }
+
+    if (!UWrap && (UV.x < 0.0 || UV.x > 1.0)) clipped = true;
+    if (!VWrap && (UV.y < 0.0 || UV.y > 1.0)) clipped = true;
+
+    if (Clip)
+      {
+	UV.x = frac(UV.x);
+	UV.y = frac(UV.y);
+      }
+
+    if (dUV.x >= 1.0) dUV.x = 0.9999;
+    if (dUV.y >= 1.0) dUV.y = 0.9999;
+
+    return clipped;
+  } // maxSampleSimplified
+#else
+  // see max_support.h
+  float maxFLOOR(in float x) {
+    if (x < 0.0) return ((int) x - 1.0);
+    else return (int) x;
+  } // maxFLOOR
+
+  // see max_support.h
+  float maxFRAC(in float x) {
+    return x - maxFLOOR(x);
+  } // maxFRAC
+
+  // see max_stduv.cpp
+  Color maxAVSample(in float u, in float v, in float du, in float dv) {
+    // local copies
+    float local_u = u;
+    float local_v = v;
+    float local_du = du;
+    float local_dv = dv;
+    // others
+    float vfrac = maxFRAC(v);
+    float dv2 = local_dv / 2.0;
+    float va = 0.0;
+    float vb = 0.0;
+    float f = 0.0;
+    Color s0 = Color(0.0, 0.0, 0.0, 0.0);
+    bool clipped = false;
+    float vfloor = local_v - vfrac;
+    if (VWrap) {
+      local_v = vfrac;
+      va = local_v - dv2;
+      vb = local_v + dv2;
+      if (va < 0.0) {
+	// 3DM sample outside part
+	if (!Clip) {
+	  // instead of calling sampler->sample_filter we return uv-coords !!!
+	  s0 = Color(local_u, vfloor + 0.5 * va, local_du, local_dv);
+	  local_v = vfloor + 0.5 * vb;
+	} // if (!Clip)
+	else {
+	  // instead of calling sampler->sample_filter we return uv-coords !!!
+	  s0 = Color(local_u, 1.0 + 0.5 * va, local_du, local_dv);
+	  local_v = 0.5 * vb;
+	} // else [ if (!Clip) ]
+	// 3DM set up inside part to sample below
+	f = -va / local_dv; // 3DM fraction outside
+	local_dv = vb;
+	clipped = true;
+      } // if (va < 0.0)
+      else if ( vb > 1.0) {
+	float d1 = vb - 1.0;
+	// 3DM sample outside part
+	if (!Clip) {
+	  // instead of calling sampler->sample_filter we return uv-coords !!!
+	  s0 = Color(local_u, vfloor + 1.0 + 0.5 * d1, local_du, local_dv);
+	  local_v = vfloor + 0.5 * (1.0 + va);
+	} // if (!Clip)
+	else {
+	  // instead of calling sampler->sample_filter we return uv-coords !!!
+	  s0 = Color(local_u, 0.5 * d1, local_du, local_dv);
+	  local_v = 0.5 * (1.0 + va);
+	} // else [ if (!Clip) ]
+	// 3DM set up inside part to sample below
+	f = d1 / local_dv; // 3DM fraction out
+	local_dv = local_dv - d1;
+	clipped = true;
+      } // else if ( vb > 1.0)
+    } // if (VWrap) {
+    else if (VMirror) {
+      bool side = false;
+      local_v = maxMirror2(vfrac, side);
+      // double the sample size because mirroring compresses texture
+      dv2 = local_dv;
+      local_dv += local_dv;
+      if (dv >= 1.0) {
+	local_dv = 0.9999;
+	dv2 = .49995;
+      } // if (dv >= 1.0)
+      va = local_v - dv2;
+      vb = local_v + dv2;
+      if (va < 0.0) {
+	// 3DM sample outside part
+	if (!Clip) {
+	  float vout = vfloor - 0.5 * va;
+	  if (side) vout += 1.0;
+	  else vout -= 1.0;
+	  // instead of calling sampler->sample_filter we return uv-coords !!!
+	  s0 = Color(local_u, vout, local_du, local_dv);
+	  local_v = vfloor + 0.5 * vb;
+	} // if (!Clip)
+	else {
+	  // instead of calling sampler->sample_filter we return uv-coords !!!
+	  s0 = Color(local_u, -0.5 * va, local_du, local_dv);
+	  local_v = 0.5 * vb;
+	} // else [ if (!Clip) ]
+	// 3DM set up inside part to sample below
+	f = -va / local_dv;  /* fraction outside */
+	local_dv = vb;
+	clipped = true;
+      } // if (va < 0.0)
+      else if (vb > 1.0) {
+	float d1 = vb - 1.0;
+	// 3DM sample outside part
+	if (!Clip) {
+	  // instead of calling sampler->sample_filter we return uv-coords !!!
+	  s0 = Color(local_u, vfloor + 1.0 - 0.5 * d1, local_du, local_dv);
+	  local_v = vfloor + 0.5 * (1.0 + va);
+	} // if (!Clip)
+	else {
+	  // instead of calling sampler->sample_filter we return uv-coords !!!
+	  s0 = Color(local_u, 1.0 - 0.5 * d1, local_du, local_dv);
+	  local_v = 0.5 * (1.0 + va);
+	} // else [ if (!Clip) ]
+	// 3DM set up inside part to sample below
+	f = d1 / local_dv; // 3DM fraction out
+	local_dv = local_dv - d1;
+	clipped = true;
+      } // else if (vb > 1.0)
+    } // else if (VMirror) {
+    else {
+      // 3DM check for out of bounds
+      va = local_v - dv2;
+      vb = local_v + dv2;
+      if ((vb < 0.0) || (va > 1.0)) {
+	return Color(0.0, 0.0, 0.0, 0.0);;
+      } // if ((vb < 0.0) || (va > 1.0))
+      // 3DM Truncate the rectangle to be inside the u = [0,1] interval.
+      if (vb > 1.0) {
+	vb = 1.0;
+	clipped = true;
+      } // if (vb > 1.0)
+      if (va < 0.0) {
+	va = 0.0;
+	clipped = true;
+      } // if (va < 0.0)
+      if (clipped) {
+	float dvclip = vb - va;
+	local_v = (va + vb) / 2.0;
+	// instead of calling sampler->sample_filter we return uv-coords !!!
+	s0 = Color(local_u, local_v, local_du, local_dv);
+	dvclip = dvclip / local_dv;
+	s0.r = dvclip * s0.r;
+	s0.g = dvclip * s0.g;
+	s0.b = dvclip * s0.b;
+	s0.a = dvclip * s0.a;
+	return s0;
+      } // if (clipped)
+      else {
+	// instead of calling sampler->sample_filter we return uv-coords !!!
+	return Color(local_u, local_v, local_du, local_dv);
+      } // else [ if (clipped) ]
+    } // else
+    if (clipped) {
+      Color s1 = Color(0.0, 0.0, 0.0, 0.0);
+      float one_minus_f = 1.0 - f;
+      // instead of calling sampler->sample_filter we return uv-coords !!!
+      s1 = Color(local_u, local_v, local_du, local_dv);
+      s0.r = f * s0.r + one_minus_f * s1.r;
+      s0.g = f * s0.g + one_minus_f * s1.g;
+      s0.b = f * s0.b + one_minus_f * s1.b;
+      s0.a = f * s0.a + one_minus_f * s1.a;
+      return s0;
+    } // if (clipped)
+    else {
+      if (!Clip) {
+	local_v += vfloor;
+      } // if (!Clip)
+      // instead of calling sampler->sample_filter we return uv-coords !!!
+      return Color(local_u, local_v, local_du, local_dv);
+    } // else [ if (clipped) ]
+  } // maxAVSample
+
+  // see max_stduv.cpp
+  Color maxAASymSample(in float u, in float v, in float du, in float dv) {
+    // local copies
+    float local_u = u;
+    float local_v = v;
+    float local_du = du;
+    float local_dv = dv;
+    // others
+    float du2 = 0.0;
+    float ua = 0.0;
+    float ub = 0.0;
+    float f = 0.0; // 3DM fraction clipped
+    Color s0 = Color(0.0, 0.0, 0.0, 0.0);
+    bool clipped = false;
+
+    if (local_du >= 1.0) local_du = 0.9999;
+    if (local_dv >= 1.0) local_dv = 0.9999;
+    du2 = local_du / 2.0;
+    float ufrac = maxFRAC(u);
+    float ufloor = local_u - ufrac;
+
+    if (UWrap) {
+      local_u = ufrac;
+      ua = local_u - du2;
+      ub = local_u + du2;
+      if (ua < 0.0) {
+	// 3DM sample outside part
+	if (!Clip) {
+	  s0 = maxAVSample(ufloor + 0.5 * ua, local_v, -ua, local_dv);
+	  local_u = ufloor + 0.5 * ub;
+	} // if (!Clip)
+	else {
+	  s0 = maxAVSample(1.0 + 0.5 * ua, local_v, -ua, local_dv);
+	  u = 0.5 * ub;
+	} // else [ if (!Clip) ]
+	// 3DM set up inside part to sample below
+	f = -ua / local_du; // 3DM fraction outside
+	local_du = ub;
+	clipped = true;
+      } // if (ua < 0.0)
+      else if (ub > 1.0) {
+	float d1 = ub - 1.0;
+	// 3DM sample outside part
+	if (!Clip) {
+	  s0 = maxAVSample (ufloor + 1.0 + 0.5 * d1, local_v, d1, local_dv);
+	  local_u = ufloor + 0.5 * (1.0 + ua);
+	} // if (!Clip)
+	else {
+	  s0 = maxAVSample(0.5 * d1, local_v, d1, local_dv);
+	  local_u = 0.5 * (1.0 + ua);
+	} // else [ if (!Clip) ]
+	// 3DM set up inside part to sample below
+	f = d1 / local_du; // 3DM fraction out
+	local_du = local_du - d1;
+	clipped = true;
+      } // else if (ub > 1.0)
+    } // if (UWrap)
+    else if (UMirror) {
+      bool side = false;
+      local_u = maxMirror2(ufrac, side);
+      // double the sample size because mirroring compresses texture
+      du2 = local_du;
+      local_du += local_du;
+      if (local_du >= 1.0) {
+	local_du = 0.9999;
+	du2 = 0.49995;
+      } // if (local_du >= 1.0)
+      ua = local_u - du2;
+      ub = local_u + du2;
+      if (ua < 0.0) {
+	// 3DM sample outside part
+	if (!Clip) {
+	  float uout = ufloor - 0.5 * ua;
+	  if (side) uout += 1.0;
+	  else uout -= 1.0;
+	  s0 = maxAVSample(uout, local_v, -ua, local_dv);
+	  local_u = ufloor + 0.5 * ub;
+	} // if (!Clip)
+	else {
+	  s0 = maxAVSample(-0.5 * ua, local_v, -ua, local_dv);
+	  local_u = 0.5 * ub;
+	} // else [ if (!Clip) ]
+	// 3DM set up inside part to sample below
+	f = -ua / local_du; // 3DM fraction outside
+	local_du = ub;
+	clipped = true;
+      } // if (ua < 0.0)
+      else if (ub > 1.0) {
+	float d1 = ub - 1.0;
+	// sample outside part
+	if (!Clip) {
+	  s0 = maxAVSample(ufloor + 1.0 - 0.5 * d1, local_v, d1, local_dv);
+	  local_u = ufloor + 0.5 * (1.0 + ua);
+	} // if (!Clip)
+	else {
+	  s0 = maxAVSample(1.0 - 0.5 * d1, local_v, d1, local_dv);
+	  local_u = 0.5 * (1.0 + ua);
+	} // else [ if (!Clip) ]
+	// 3DM set up inside part to sample below
+	f = d1 / local_du; // 3DM fraction out
+	local_du = local_du - d1;
+	clipped = true;
+      } // else if (ub > 1.0)
+    } // else if (UMirror)
+    else {
+      // 3DM check for out of bounds
+      ua = local_u - du2;
+      ub = local_u + du2;
+      if ((ub<0.0) || (ua>1.0)) return Color(0.0, 0.0, 0.0, 0.0);
+      // 3DM Truncate the rectangle to be inside the u = [0,1] interval.
+      if (ub > 1.0) {
+	ub = 1.0;
+	clipped = true;
+      } // if (ub > 1.0)
+      if (ua < 0.0) {
+	ua = 0.0;
+	clipped = true;
+      } // if (ua < 0.0)
+      if (clipped) {
+	float duclip = (ub - ua);
+	local_u = (ua + ub) / 2.0;
+	s0 = maxAVSample(local_u, local_v, duclip, local_dv);
+	duclip /= local_du;
+	s0.r = duclip * s0.r;
+	s0.g = duclip * s0.g;
+	s0.b = duclip * s0.b;
+	s0.a = duclip * s0.a;
+	return s0;
+      } // if (clipped)
+      else {
+	return maxAVSample(local_u, local_v, local_du, local_dv);
+      } // else [ if (clipped) ]
+    } // else
+    if (clipped) {
+      Color s1 = Color(0.0, 0.0, 0.0, 0.0);
+      float o_m_f = 1.0 - f;
+      s1 = maxAVSample(local_u, local_v, local_du, local_dv);
+      s0.r = s1.r * o_m_f + f * s0.r;
+      s0.g = s1.g * o_m_f + f * s0.g;
+      s0.b = s1.b * o_m_f + f * s0.b;
+      s0.a = s1.a * o_m_f + f * s0.a;
+      return s0;
+    } // if (clipped)
+    else  {
+      if (!Clip) local_u += ufloor;
+      return maxAVSample(local_u, local_v, local_du, local_dv);
+    } // else [ if (clipped) ]
+  } // maxAASymSample
+#endif
+
+  // see max_texutil.cpp
+  void maxSetup(in float v,
+		inout int b0, inout int b1,
+		inout float r0, inout float r1) {
+    float t = v + RN;
+    int it = (int) t;
+    b0 = it - (it / B) * B; // ((int)t) & BM;
+    // (b0+1) & BM;
+    b1 = b0 + 1;
+    if (b1 >= B) b1 = 0;
+    r0 = (float)(t - (int) t);
+    r1 = r0 - 1.0; // what if r0 < 1.0?
+  } // maxSetup
+
+  // additional functions for texture lookup
+  int p(in int i1) {
+    // int x_pix = i1 % 114;
+    int y_pix = i1 / 114; // 0 <= y < 9
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    // return int((511.0 * tex2d(noise_texture, float2(x, y)).r + 0.5));
+    Color c = 
+      Texture2D_sampler_color(noise_texture, 0.0, "none").lookup(float2(x, y));
+    return int((c.r + 0.5));
+  } // p
+
+  float g1(in int i1) {
+    // int x_pix = i1 % 114;
+    int y_pix = 9 + i1 / 114; // 9 <= y < 18
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    // return 2.0 * tex2d(noise_texture, float2(x, y)).r - 1.0;
+    Color c = 
+      Texture2D_sampler_color(noise_texture, 0.0, "none").lookup(float2(x, y));
+    return c.r;
+  } // g1
+
+  float g2(in int i1, in int i2) {
+    // int x_pix = i1 % 114;
+    int y_pix = 18 + i1 / 114; // 18 <= y < 27
+    // float x = (2.0 * float(x_pix) + 1.0) / (2.0 * 114.0);
+    float x = (2.0 * fmod(i1, 114) + 1.0) / (2.0 * 114.0); // use fmod !!!
+    float y = (2.0 * float(y_pix) + 1.0) / (2.0 * 45.0);
+    Color c = 
+      Texture2D_sampler_color(noise_texture, 0.0, "none").lookup(float2(x, y));
+    if (i2 == 0)
+      return c.r;
+    else if (i2 == 1)
+      return c.g;
+    else {
+      error("g2(noise_texture, %d, %d)", i1, i2);
+      return 0.0;
+    }
+  } // g2
+
+  // see max_texutil.cpp
+  float maxNoise1(in float arg) {
+    int bx0 = 0;
+    int bx1 = 0;
+    float rx0 = 0.0;
+    float rx1 = 0.0;
+    maxSetup(arg, bx0, bx1, rx0, rx1);
+    float sx = maxS_curve(rx0);
+    float u = rx0 * g1(p(bx0));
+    float v = rx1 * g1(p(bx1));
+    return maxLerp(sx, u, v);
+  } // maxNoise1
+
+  // max_texutil.cpp
+  float maxNoise2(in float x, in float y) {
+    int bx0 = 0;
+    int bx1 = 0;
+    int by0 = 0;
+    int by1 = 0;
+    float rx0 = 0.0;
+    float rx1 = 0.0;
+    float ry0 = 0.0;
+    float ry1 = 0.0;
+    float q = 0.0;
+    maxSetup(x, bx0, bx1, rx0, rx1);
+    maxSetup(y, by0, by1, ry0, ry1);
+    int i = p(bx0);
+    int j = p(bx1);
+    int b00 = p(i + by0);
+    int b10 = p(j + by0);
+    int b01 = p(i + by1);
+    int b11 = p(j + by1);
+    float sx = maxS_curve(rx0);
+    float sy = maxS_curve(ry0);
+    float u = rx0 * g2(b00, 0) + ry0 * g2(b00, 1);
+    float v = rx1 * g2(b10, 0) + ry0 * g2(b10, 1);
+    float a = maxLerp(sx, u, v);
+    u = rx0 * g2(b01, 0) + ry1 * g2(b01, 1);
+    v = rx1 * g2(b11, 0) + ry1 * g2(b11, 1);
+    float b = maxLerp(sx, u, v);
+    return maxLerp(sy, a, b);
+  } // maxNoise2
+
+  // see max_stduv.cpp
+  float maxTurb(in float x) {
+    float m = 0.0;
+    float s = 1.0;
+    float local_x = x;
+    int	i = 0;
+    for (i = 0; i < Level; i++) {
+      m += abs(maxNoise1(local_x) / s);
+      s *= 2.0;
+      local_x *= 2.0;
+    } // for (i = 0; i < nlev; i++)
+    return m;
+  } // maxTurb
+
+  // see max_stduv.cpp
+  float maxTurb2(in float x) {
+    float m = 0.0;
+    float s = 1.0;
+    float local_x = x;
+    float local_y = Phase;
+    int	i = 0;
+    for (i = 0; i < Level; i++) {
+      m += abs(maxNoise2(local_x, local_y) / s);
+      s *= 2.0;
+      local_x *= 2.0;
+      local_y *= 2.0;
+    } // for (i = 0; i < Level; i++)
+    return m;
+  } // maxTurb2
+
+  // see max_matrix.cpp
+  float3 maxVectorTransform(in float3 v, in float4x3 m) {
+    float3 r = float3(0.0, 0.0, 0.0);
+    r.x =  m[0][0] * v.x + m[1][0] * v.y + m[2][0] * v.z;
+    r.y =  m[0][1] * v.x + m[1][1] * v.y + m[2][1] * v.z;
+    r.z =  m[0][2] * v.x + m[1][2] * v.y + m[2][2] * v.z;
+    return r;
+  } // maxVectorTransform
+
+  // see max_stduv.cpp
+  float flabs(in float a) {
+    return a > 0.0 ? a : -a;
+  } // flabs
+
+  // see max_stduv.cpp
+  float3 maxAbsTransform(in float3 v, in float4x3 m) {
+    float3 r = float3(0.0, 0.0, 0.0);
+    r.x = flabs(v.x * m[0][0]) + flabs(v.y * m[1][0]) + flabs(v.z * m[2][0]);
+    r.y = flabs(v.x * m[0][1]) + flabs(v.y * m[1][1]) + flabs(v.z * m[2][1]);
+    r.z = flabs(v.x * m[0][2]) + flabs(v.y * m[1][2]) + flabs(v.z * m[2][2]);
+    return r;
+  } // maxAbsTransform
+
+  // see max_stduv.cpp
+  void maxTransformUV(// inst
+		      in bool inst_anyUVWRot,
+		      in float4x3 inst_transform,
+		      // return values
+		      inout float3 t, inout float3 d) {
+    float centerOffset = RealWorldMapSize ? 0.0 : 0.5;
+    t.x -= UOffset + centerOffset;
+    t.y -= VOffset + centerOffset;
+    t.z -= centerOffset;
+    if (MapSlotType == MAPSLOT_TEXTURE) {
+      if (inst_anyUVWRot) {
+	t = maxVectorTransform(t, inst_transform);
+	// rotate the derivative vector
+	d = maxAbsTransform(d, inst_transform);
+      } // if (inst_anyUVWRot)
+      else
+	{
+          float f;
+          /* Special case for efficiency */
+
+          switch (UVAxis)
+	    {
+	    case AXIS_VW:
+	      f = t.x;	t.x = t.y;	t.y = t.z;	t.z = f;
+	      f = d.x;	d.x = d.y; 	d.y = d.z;	d.z = f;
+	      break;
+            case AXIS_WU:
+	      f = t.y;	t.y = t.x;	t.x = t.z;	t.z = f;
+	      f = d.x;	d.x = d.y;	d.y = d.z;	d.z = f;
+	      break;
+	    }
+	}
+      //       }
+      //     else
+      //       {
+      // /* Environment maps just get the W-rotation */
+
+      // if (inst->ang_sin != 0.0f)
+      //   {
+      //     float tx = t->x;
+      //     t->x =  tx* inst->ang_cos + t->y* inst->ang_sin;
+      //     t->y = -tx* inst->ang_sin + t->y* inst->ang_cos;
+      //     tx = d->x;
+      //     d->x = flabs(tx * inst->ang_cos) + flabs(d->y * inst->ang_sin);
+      //     d->y = flabs(tx * inst->ang_sin) + flabs(d->y * inst->ang_cos);
+      //   }
+    } // if (MapSlotType == MAPSLOT_TEXTURE)
+
+    if (UScale != 1.0) {
+      t.x *= UScale;
+      d.x *= UScale;
+      // 3DM bigger coords, means texture is shrinking, so sample is bigger
+      if (d.x < 0.0) d.x = -d.x;
+    } // if (UScale != 1.0)
+    if (VScale != 1.0) {
+      t.y *= VScale;
+      d.y *= VScale;
+      if (d.y < 0.0) d.y = -d.y;
+    } // if (VScale != 1.0)
+    t.x += centerOffset;
+    t.y += centerOffset;
+    t.z += centerOffset;
+  } // maxTransformUV
+
+#if 0
+    // see max_context.cpp
+  float3 maxContext_VectorFrom(in float3 v,
+			       in int contextType,
+			       in int coordType)
+  {
+    float3 res = float3(0.0, 0.0, 0.0);
+    switch (contextType) {
+      // if a reflection, refract, or transparency ray hits the
+      // environment, the values need to be calculated against the
+      // surface which was hit by the previous (parent) ray.
+    case mi_MAX_ENV_CONTEXT:
+      // TODO
+      // switch(state->type) {
+      // case miRAY_TRANSPARENT:
+      // case miRAY_REFLECT:
+      // case miRAY_REFRACT:
+      // // when doing rapid scanline, it's possible that we have a
+      // // transparent ray with no parent state
+      // if(state->parent != NULL) {
+      // state = state->parent;
+      // }
+      // break;
+      // default:
+      // {
+      // float3	r;
+      // switch (coordType)
+      // {
+      // case REF_WORLD:
+      // mi_vector_from_world (state, &r, v);
+      // return r;
+      // case REF_OBJECT:
+      // case REF_CAMERA:
+      // default:
+      // return res;
+      // }
+      // }
+      // }
+      // Fall through...
+    case mi_MAX_MTL_CONTEXT:
+      // {
+      // float3	r = float3(0.0, 0.0, 0.0);
+      // switch (coordType)
+      // {
+      // case REF_WORLD:
+      // r = transform_vector("world", "internal", v);
+      // return r;
+      // case REF_OBJECT:
+      // r = transform_vector("object", "internal", v);
+      // return r;
+      // case REF_CAMERA:
+      // {
+      // float4x4 tm;
+      // float4x4 m;
+      // // mi_query(miQ_TRANS_CAMERA_TO_INTERNAL, state, miNULLTAG, &tm);
+      // tm = get_transform("camera", "internal");
+      // m = tm;
+      // float3 row0 = m[0].xyz; // (float3 *)&(m)[0]
+      // float3 row1 = m[1].xyz; // (float3 *)&(m)[4]
+      // float3 row2 = m[2].xyz; // (float3 *)&(m)[8]
+      // row0 = normalize(row0);
+      // row1 = normalize(row1);
+      // row2 = normalize(row2);
+      // // write back to the matrix
+      // m[0][0] = row0.x;
+      // m[0][1] = row0.y;
+      // m[0][2] = row0.z;
+      // m[1][0] = row1.x;
+      // m[1][1] = row1.y;
+      // m[1][2] = row1.z;
+      // m[2][0] = row2.x;
+      // m[2][1] = row2.y;
+      // m[2][2] = row2.z;
+      // // TODO: mi_vector_transform (&r, v, m);
+      // return r;
+      // }
+      // default:
+      // break;
+      // }
+      // break;
+      // }
+    case mi_MAX_LGT_CONTEXT:
+      return res;
+
+    default:
+      break;
+    }
+    return res;
+  } // maxContext_VectorFrom
+
+    // see max_context.cpp
+  float3 maxContext_VectorTo() {
+    return float3(0.0, 0.0, 0.0);
+    // switch (contextType)
+    // {
+    // /* [dl | 8july2002]
+    //    If a reflection, refract, or transparency ray hits the environment,
+    //    the values need to be calculated against the surface which was hit
+    //    by the previous (parent) ray.
+    // */
+    // case mi_MAX_ENV_CONTEXT:
+    // switch(state->type) {
+    // case miRAY_TRANSPARENT:
+    // case miRAY_REFLECT:
+    // case miRAY_REFRACT:
+    // if(state->parent != NULL) {
+    // state = state->parent;
+    // }
+    // break;
+    // default:
+    // {
+    // float3	r;
+    // switch (coordType)
+    // {
+    // case REF_WORLD:
+    // transform_vector_to_world (state, &r, v);
+    // return r;
+    // case REF_OBJECT:
+    // case REF_CAMERA:
+    // default:
+    // return *v;
+    // }
+    // }
+    // }
+    // /* Fall through... */
+    // case mi_MAX_MTL_CONTEXT:
+    // {
+    // float3	r;
+    // switch (coordType)
+    // {
+    // case REF_WORLD:
+    // transform_vector_to_world (state, &r, v);
+    // return r;
+    // case REF_OBJECT:
+    // transform_vector_to_object (state, &r, v);
+    // return r;
+    // case REF_CAMERA:
+    // transform_vector_to_camera (state, &r, v);
+    // return r;
+    // default:
+    // break;
+    // }
+    // break;
+    // }
+    // case mi_MAX_LGT_CONTEXT:
+    // return *v;
+    // default:
+    // break;
+    // }
+    // return *v;
+  } // maxContext_VectorTo
+#endif
+
+  // see max_context.cpp
+  float3 maxContext_UVW(in int contextType, in int chan) {
+    if (contextType == mi_MAX_MTL_CONTEXT) {
+      float4 tex_coords = texture_coordinate[chan];
+      float u = tex_coords.x;
+      float v = tex_coords.y;
+      return float3(u, v, 0.0);
+    }
+    else {
+      // TODO: switch (mi_MAX_ENV_CONTEXT, mi_MAX_LGT_CONTEXT, default)
+      return float3(0.0, 0.0, 0.0);
+    }
+  } // maxContext_UVW
+
+  // max_context.cpp
+  float3 maxContext_DUVWmtl(in int chan) {
+    /*    float3 duvw = float3(.0, 0.0, 0.0); // return value
+    // TODO: Is this a correct approximation to max values? Not sure. - Zap    
+    duvw.x = 0; // length(texture_du[chan]);
+    duvw.y = 0; // length(texture_dv[chan]);*/
+
+    float3 duvw = (abs(ddx(texture_coordinate[chan]).xyz) +
+		   abs(ddy(texture_coordinate[chan]).xyz));
+    // no derivatives supported? use small fixed value
+    if(duvw.x == 0.0 && duvw.y == 0.0 && duvw.z == 0.0) {
+      duvw=float3(.002,.002,.002);
+    }
+    // clamping upwards TODO: correct clamping
+    // duvw = min(duvw,float3(1.,1.,1.)); 
+    // clamping downwards TODO: correct clamping
+    // duvw = max(duvw,float3(.00001,.00001,.00001));
+    
+    return duvw;
+  } // maxContext_DUVWmtl
+
+  // see max_context.cpp
+  float3 maxContext_DUVW(in int contextType, in int chan) {
+    if (chan != -1) {
+      if (contextType == mi_MAX_MTL_CONTEXT) { 
+	return maxContext_DUVWmtl(chan);
+      }
+      else {
+	// TODO: switch (mi_MAX_ENV_CONTEXT, mi_MAX_LGT_CONTEXT, default)
+	return float3(0.0, 0.0, 0.0);
+      }
+    } // if (chan != -1)
+  } // maxContext_DUVW
+
+  // see max_matrix.cpp
+  float3 maxGetColumn(in float4x3 r, in int i) {
+    float3 p = float3(0.0, 0.0, 0.0);
+    p.x = r[0][i];
+    p.y = r[1][i];
+    p.z = r[2][i];
+    return p;
+  } // maxGetColumn
+
+  // see max_matrix.cpp
+  void maxInverse(inout float4x3 r, in float4x3 m) {
+    float det = 0.0;
+    float f = 0.0;
+    // compute matrix of cofactors
+    r[0][0] = (m[1][1]*m[2][2]-m[1][2]*m[2][1]);
+    r[1][0] = (m[1][2]*m[2][0]-m[1][0]*m[2][2]);
+    r[2][0] = (m[1][0]*m[2][1]-m[1][1]*m[2][0]);
+    r[0][1] = (m[2][1]*m[0][2]-m[2][2]*m[0][1]);
+    r[1][1] = (m[2][2]*m[0][0]-m[2][0]*m[0][2]);
+    r[2][1] = (m[2][0]*m[0][1]-m[2][1]*m[0][0]);
+    r[0][2] = (m[0][1]*m[1][2]-m[0][2]*m[1][1]);
+    r[1][2] = (m[0][2]*m[1][0]-m[0][0]*m[1][2]);
+    r[2][2] = (m[0][0]*m[1][1]-m[0][1]*m[1][0]);
+    det = m[0][0]*r[0][0] + m[1][0]*r[0][1] + m[2][0]*r[0][2];
+    // divide cofactors by determinant
+    f = (det==0.0)? 10000000.0 : 1.0/det;
+    r[0][0] *= f;	r[0][1] *= f;	r[0][2] *= f;
+    r[1][0] *= f;	r[1][1] *= f;	r[1][2] *= f;
+    r[2][0] *= f;	r[2][1] *= f;	r[2][2] *= f;
+    r[3][0] = -(m[3][0]*r[0][0] + m[3][1]*r[1][0] + m[3][2]*r[2][0]);
+    r[3][1] = -(m[3][0]*r[0][1] + m[3][1]*r[1][1] + m[3][2]*r[2][1]);
+    r[3][2] = -(m[3][0]*r[0][2] + m[3][1]*r[1][2] + m[3][2]*r[2][2]);
+  } // maxInverse
+
+  // see max_matrix.cpp
+  void maxRotateX(inout float4x3 r, in float ang) {
+    float s = sin(ang);
+    float c = cos(ang);
+    float tmp;
+    float3 t;
+    int i = 0;
+    for (i = 3; i >= 0; i--) {
+      t = r[i];
+      tmp = t[1]*c - t[2]*s;
+      t[2] = t[1]*s + t[2]*c;
+      t[1] = tmp;
+      // write back to matrix
+      r[i][2] = t[2];
+      r[i][1] = t[1];
+    } // for (i = 3; i >= 0; i--)
+  } // maxRotateX
+
+  // see max_matrix.cpp
+  void maxRotateY(inout float4x3 r, in float ang) {
+    float s = sin(ang);
+    float c = cos(ang);
+    float tmp;
+    float3 t;
+    int i = 0;
+    for (i = 3; i >= 0; i--) {
+      t = r[i];
+      tmp = t[2]*c - t[0]*s;
+      t[0] = t[2]*s + t[0]*c;
+      t[2] = tmp;
+      // write back to matrix
+      r[i][0] = t[0];
+      r[i][2] = t[2];
+    } // for (i = 3; i >= 0; i--)
+  } // maxRotateY
+
+  // see max_matrix.cpp
+  void maxRotateZ(inout float4x3 r, in float ang) {
+    float s = sin(ang);
+    float c = cos(ang);
+    float tmp;
+    float3 t;
+    int i = 0;
+    for (i = 3; i >= 0; i--) {
+      t = r[i];
+      tmp = t[0]*c - t[1]*s;
+      t[1] = t[0]*s + t[1]*c;
+      t[0] = tmp;
+      // write back to matrix
+      r[i][0] = t[0];
+      r[i][1] = t[1];
+    } // for (i = 3; i >= 0; i--)
+  } // maxRotateZ
+
+  void maxIdentity(inout float4x3 r) {
+    float3 row0 = float3(1.0, 0.0, 0.0);
+    float3 row1 = float3(0.0, 1.0, 0.0);
+    float3 row2 = float3(0.0, 0.0, 1.0);
+    float3 row3 = float3(0.0, 0.0, 0.0);
+    r[0] = row0;
+    r[1] = row1;
+    r[2] = row2;
+    r[3] = row3;
+  }
+
+#if 0
+  // see max_context.cpp
+  float3 maxContext_DPObj(// state
+			  in float3 state_point,
+			  // others
+			  in int contextType) {
+    switch (contextType) {
+    case mi_MAX_ENV_CONTEXT:
+      error("TODO: mi_MAX_ENV_CONTEXT");
+      // fall through...
+    case mi_MAX_MTL_CONTEXT:
+      error("maxContext_DPObjMtl: missing triangle access");
+      // return maxContext_DPObjMtl();
+      return float3(0.0, 0.0, 0.0); // TODO
+    case mi_MAX_LGT_CONTEXT:
+      return float3(0.0, 0.0, 0.0);
+    }
+    return float3(0.0, 0.0, 0.0);
+  } // maxContext_DPObj
+#endif
+
+  // see max_context.cpp
+  float3 maxContext_PObjRelBox(// state
+			       in float3 state_point,
+			       // others
+			       in int contextType,
+			       in float3 bbmin,
+			       in float3 bbmax) {
+    float3 v = float3(0.0, 0.0, 0.0);
+    switch (contextType) {
+    case mi_MAX_ENV_CONTEXT:
+      error("TODO: mi_MAX_ENV_CONTEXT");
+      // fall through...
+    case mi_MAX_MTL_CONTEXT:
+      // TODO: get access to the real bounding box data !!!
+      // TODO: if(objectData != NULL) {...}
+      // TODO: else if(state->pri != NULL) {...}
+      float3 p = transform_point("internal", "object", state_point);
+      v.x = 2.0 * (p.x - bbmin.x) / (bbmax.x - bbmin.x) - 1.0;
+      v.y = 2.0 * (p.y - bbmin.y) / (bbmax.y - bbmin.y) - 1.0;
+      v.z = 2.0 * (p.z - bbmin.z) / (bbmax.z - bbmin.z) - 1.0;
+      return v;
+    case mi_MAX_LGT_CONTEXT:
+      error("TODO: mi_MAX_LGT_CONTEXT");
+      return float3(0.0, 0.0, 0.0);
+    }
+    return float3(0.0, 0.0, 0.0);
+  } // maxContext_PObjRelBox
+
+  // see max_context.cpp
+  float3 maxContext_DPObjRelBox(// state
+				in float3 state_point,
+				// others
+				in int contextType,
+				in float3 bbmin,
+				in float3 bbmax
+				) 
+  {
+    float3 v = float3(0.0, 0.0, 0.0);
+    switch (contextType) 
+      {
+      case mi_MAX_ENV_CONTEXT:
+	error("TODO: mi_MAX_ENV_CONTEXT");
+	// fall through...
+      case mi_MAX_MTL_CONTEXT:
+	// TODO: if(objectData != NULL) {...}
+	// TODO: else if(state->pri != NULL) {...}
+	v = float3(0,0,0); // TODO! TEMP! NEEDS TO BE FIXED!! xtra_v;
+	// TODO: use baked values for now !!!
+#if 0
+      v = maxContext_DPObj(// state
+			   state_point,
+			   // others
+			   contextType);
+#endif
+	// TMP
+	float3 tt = texture_tangent[0];
+	float3 tb = texture_binormal[0];
+	v = 0.5 * (abs(tt) + abs(tb));
+	// TMP
+ 	v.x *= 2.0 / (bbmax.x - bbmin.x);
+	v.y *= 2.0 / (bbmax.y - bbmin.y);
+	v.z *= 2.0 / (bbmax.z - bbmin.z);
+	return v;
+      case mi_MAX_LGT_CONTEXT:
+	return float3(0.0, 0.0, 0.0);
+      }
+    return float3(0.0, 0.0, 0.0);
+  } // maxContext_DPObjRelBox
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    xtra_bumpDP_0 = float3(0.0, 0.0, 0.0);
+    xtra_bumpDP_1 = float3(0.0, 0.0, 0.0);
+    xtra_bumpDP_2 = float3(0.0, 0.0, 0.0);
+    // scene data
+    float3 bbox_min = float3(-1.0, -1.0, -1.0); // avoid division by zero
+    float3 bbox_max = float3( 1.0,  1.0,  1.0); // somewhere else in the code
+    if (MapSlotType == MAPSLOT_TEXTURE &&
+	get_scene_data("mi_instance", bbox_min, "bbox min") &&
+	get_scene_data("mi_instance", bbox_max, "bbox max")) {
+      bbox_min = transform_point("internal", "object", bbox_min);
+      bbox_max = transform_point("internal", "object", bbox_max);
+    }
+    // TODO: maxGetTLS(...);
+    bool inst_transformCacheValid = false;
+    bool inst_anyUVWRot = false;
+    float inst_uAngle = 0.0;
+    float inst_vAngle = 0.0;
+    float inst_wAngle = 0.0;
+    float inst_ang_sin = 0.0;
+    float inst_ang_cos = 0.0;
+    float4x3 inst_transform = float4x3(0.0, 0.0, 0.0,
+				       0.0, 0.0, 0.0,
+				       0.0, 0.0, 0.0,
+				       0.0, 0.0, 0.0);
+    float4x3 inst_invTransform = float4x3(0.0, 0.0, 0.0,
+					  0.0, 0.0, 0.0,
+					  0.0, 0.0, 0.0,
+					  0.0, 0.0, 0.0);
+    // TODO: maxGetTLS(...);
+
+    // Massively simplified: 
+    // Only gets the UV, dUV, dPdu and dPdv for all types of calls
+
+    float3 local_xtra_dP = float3(0.0, 0.0, 0.0);
+    float3 local_xtra_bumpDP_0 = float3(0.0, 0.0, 0.0);
+    float3 local_xtra_bumpDP_1 = float3(0.0, 0.0, 0.0);
+    // begin maxEvalUVMap
+    float3 UV = float3(0.0, 0.0, 0.0);
+    // begin maxGetUV
+    // begin maxGetUVNoBlur
+    float3 t = float3(0.0, 0.0, 0.0);
+    float3 d = float3(0.0, 0.0, 0.0);
+    int evalContext = 0; // TODO
+    // begin maxEvalTransform
+    float f = 0.0;
+    f = UAngle;
+    if (inst_uAngle != f) {
+      inst_uAngle = f;
+      inst_transformCacheValid = false;
+    } // if (inst_uAngle != f)
+    f = VAngle;
+    if (inst_vAngle != f) {
+      inst_vAngle = f;
+      inst_transformCacheValid = false;
+    } // if (inst_vAngle != f)
+    f = WAngle;
+    if (inst_wAngle != f) {
+      inst_wAngle = f;
+      inst_transformCacheValid = false;
+    } // if (inst_wAngle != f)
+    if (!inst_transformCacheValid) {
+      inst_transformCacheValid = true;
+      inst_ang_cos = cos(inst_wAngle);
+      inst_ang_sin = sin(inst_wAngle);
+      maxIdentity(inst_transform);
+      if ((inst_uAngle != 0.0) || (inst_vAngle != 0.0) ||
+    	  (inst_wAngle != 0.0)) {
+    	maxRotateX(inst_transform, inst_uAngle);
+    	maxRotateY(inst_transform, inst_vAngle);
+    	maxRotateZ(inst_transform, inst_wAngle);
+    	inst_anyUVWRot = true;
+      } // if ((inst_uAngle != 0.0) || ...)
+      else {
+    	inst_anyUVWRot = false;
+      } // else [ if ((inst_uAngle != 0.0) || ...) ]
+      if (MapSlotType == MAPSLOT_TEXTURE) {
+    	float3 r2 = float3(0.0, 0.0, 0.0);
+    	float3 r1 = float3(0.0, 0.0, 0.0);
+    	float3 r0 = float3(0.0, 0.0, 0.0);
+    	if (UVAxis == AXIS_VW) {
+    	  r2 = inst_transform[2];
+    	  r1 = inst_transform[1];
+    	  r0 = inst_transform[0];
+	  inst_transform[2] = r1;
+	  inst_transform[1] = r0;
+	  inst_transform[0] = r2;
+    	} // if (UVAxis == AXIS_VW)
+    	else {
+    	  if (UVAxis == AXIS_WU) {
+    	    r2 = inst_transform[2];
+    	    r1 = inst_transform[1];
+    	    r0 = inst_transform[0];
+	    inst_transform[0] = r1;
+	    inst_transform[1] = r2;
+	    inst_transform[2] = r0;
+    	  } // if (UVAxis == AXIS_WU)
+	} // else [ if (UVAxis == AXIS_VW) ]
+      } // if (MapSlotType == MAPSLOT_TEXTURE)
+      maxInverse(inst_invTransform, inst_transform);
+    } // if (!inst_transformCacheValid)
+    // end maxEvalTransform
+    float3 n = float3(0.0, 0.0, 0.0);
+    float curve = 0.0;
+    float coneAngle = 0.0;
+    float context_xscale = 0.0;
+    float r = 0.0;
+    if (MapSlotType == MAPSLOT_TEXTURE) {
+      bool bTiling = (UWrap || UMirror ||
+		      VWrap || VMirror);
+      switch (UVWSource) {
+      case UVWSRC_EXPLICIT:
+      case UVWSRC_EXPLICIT2:
+	int chan = 0;
+	// 	chan = maxContext_UVWChan (state, inst_context, evalContext,
+	// 				   add_info, UVWSource,
+	// 				   MapChannel);
+	if (!ShowMapOnBack && !bTiling) {
+	  n = float3(0.0, 0.0, 0.0);
+	  float3 c = float3(0.0, 0.0, 0.0);
+	  // 	  n = maxContext_UVWNormal (state, inst_context, evalContext,
+	  // 				    chan);
+	  c = maxGetColumn(inst_transform, 2);
+	  if (dot(c, n) <= 0.0) {
+	    // set coordinates outside of map so it will appear
+	    // transparent
+	    UV.x = UV.y = -0.2;
+	    local_xtra_dP.x = local_xtra_dP.y = 0.0;
+	    return;
+	  } // if (dot(c, n) <= 0.0) {
+	} // if (!ShowMapOnBack && !bTiling)
+	t = maxContext_UVW(evalContext, chan// , state_texture_coordinate
+			   );
+	d = maxContext_DUVW(evalContext, chan);
+
+        if (texture_eval_type == mi_MAX_EVAL_NORMAL) {
+	  // This is done here instead of separate function, for simplicity
+	  // In the original code it happens in maxGetBumpDP
+	  local_xtra_bumpDP_0 = texture_tangent[chan];
+	  local_xtra_bumpDP_1 = texture_binormal[chan];
+	  local_xtra_bumpDP_0 = transform_vector("internal", "world", 
+						 local_xtra_bumpDP_0);
+	  local_xtra_bumpDP_1 = transform_vector("internal", "world", 
+						 local_xtra_bumpDP_1);
+	  local_xtra_bumpDP_0 = maxVectorTransform(local_xtra_bumpDP_0, 
+						   inst_invTransform);
+	  local_xtra_bumpDP_1 = maxVectorTransform(local_xtra_bumpDP_1, 
+						   inst_invTransform);
+        }
+	break;
+      case UVWSRC_OBJXYZ:
+	// TODO: see below
+	// 	if (!ShowMapOnBack && !bTiling) {
+	// 	  miVector wax;
+	// 	  miVector N;
+	// 	  // Prevent maps on the "back side" from showing compute the
+	// 	  // direction of the W axis in object space
+	// 	  wax = maxGetRow (inst_invTransform, 2);
+	// 	  // compare the surface normal (camera space) with the
+	// 	  // direction of the W axis in camera space
+	// 	  wax = maxContext_VectorFrom(state, &wax, evalContext,
+	// 				      REF_OBJECT);
+	// 	  wax = maxContext_VectorTo(state, &wax, evalContext,
+	// 				    REF_CAMERA);
+	// 	  mi_vector_to_camera (state, &N, &state->normal);
+	// 	  if (mi_vector_dot (&N, &wax) < 0.0) {
+	// 	    // set coordinates outside of map so it will appear
+	// 	    // transparent
+	// 	    UV->x = UV->y = -.2f;
+	// 	    local_xtra_dP->x = local_xtra_dP->y = 0.0;
+	// 	    return;
+	// 	  }
+	// 	}
+	t = maxContext_PObjRelBox(// state
+				  position,
+				  // others
+				  evalContext,
+				  bbox_min, bbox_max);
+	t.x =  0.499 * t.x + 0.5; // map from (-1,+1) to (0,1)
+	t.y =  0.499 * t.y + 0.5; // map from (-1,+1) to (0,1)
+	t.z =  0.499 * t.z + 0.5; // map from (-1,+1) to (0,1)
+	d = maxContext_DPObjRelBox(// state
+				   position,
+				   // others
+				   evalContext,
+				   bbox_min, bbox_max);
+	d.x *= 0.5;
+	d.y *= 0.5;
+	d.z *= 0.5;
+
+        if (texture_eval_type == mi_MAX_EVAL_NORMAL) {
+	  // This is done here instead of separate function, for simplicity
+	  // In the original code it happens in maxGetBumpDP
+	  local_xtra_bumpDP_0 = transform_vector("object", "internal", 
+						 inst_invTransform[0].xyz);
+	  local_xtra_bumpDP_1 = transform_vector("object", "internal", 
+						 inst_invTransform[1].xyz);
+        }
+	break;
+      case UVWSRC_WORLDXYZ:
+	// TODO: see below
+	// 	if (!ShowMapOnBack && !bTiling) {
+	// 	  miVector wax;
+	// 	  miVector N;
+	// 	  // Prevent maps on the "back side" from showing compute the
+	// 	  // direction of the W axis in object space
+	// 	  wax = maxGetRow (inst_invTransform, 2);
+	// 	  // compare the surface normal (camera space) with the
+	// 	  // direction of the W axis in camera space
+	// 	  wax = maxContext_VectorFrom(state, &wax, evalContext,
+	// 				       REF_OBJECT);
+	// 	  wax = maxContext_VectorTo(state, &wax, evalContext,
+	// 				    REF_CAMERA);
+	// 	  mi_vector_to_camera (state, &N, &state->normal);
+	// 	  if (mi_vector_dot (&N, &wax) < 0.0) {
+	// 	    // set coordinates outside of map so it will appear
+	// 	    // transparent
+	// 	    UV->x = UV->y = -.2f;
+	// 	    local_xtra_dP->x = local_xtra_dP->y = 0.0;
+	// 	    return;
+	// 	  }
+	// 	}
+	// 	t = maxContext_P (state, inst_context, evalContext);
+	// 	t = maxContext_PointTo (state, &t, evalContext, REF_WORLD);
+        t = transform_point("internal", "world", position);
+        // TODO: d.x = (ddx(t.x) + ddy(t.x)) / 2; 
+        // TODO: d.y = (ddx(t.y) + ddy(t.y)) / 2; 
+	// 	d = maxContext_DP (state, inst_context, evalContext);
+	// 	d = maxContext_VectorTo (state, &d, evalContext, REF_WORLD);
+	// error("TODO: UVWSRC_WORLDXYZ");
+        if (texture_eval_type == mi_MAX_EVAL_NORMAL) {
+	  // This is done here instead of separate function, for simplicity
+	  // In the original code it happens in maxGetBumpDP
+	  local_xtra_bumpDP_0 = transform_vector("world", "internal", 
+						 inst_invTransform[0].xyz);
+	  local_xtra_bumpDP_1 = transform_vector("world", "internal", 
+						 inst_invTransform[1].xyz);
+        }
+	break;
+      } // switch (UVWSource)
+    } // if (MapSlotType == MAPSLOT_TEXTURE)
+    else {
+      switch (EnvType) {
+      case UVMAP_SPHERE_ENV:
+        // 	      /* n = sc.VectorTo(sc.V(),REF_WORLD);*/
+	// 	      n = maxContext_VectorTo (state, &state->dir, evalContext,
+	// 				       REF_WORLD);
+        n = transform_vector("internal", "world", direction);
+	t.x = 0.5 + (float)atan2(n.x,-n.y)/TWO_PI;
+	t.y = 0.5 + (float)asin(n.z)/PI;
+	t.z = 0.0;
+	// maxContext_Curve(...) returns 0.0 !!!
+	curve = 0.0;
+	coneAngle = 0.0;
+	context_xscale = 0.0;
+	if (orthographic) {
+	  context_xscale = image_x_resolution / aperture;
+	  // context_yscale = - aspect_ratio * context_xscale;
+	  coneAngle = 0.0;
+	} // if (orthographic)
+	else {
+	  // from rendutil.cpp
+	  float fac = -2.0 * dof_focus / aperture;
+	  context_xscale =  fac * image_x_resolution / 2.0;
+	  // context->yscale = - aspect_ratio * context_xscale;
+	  // the following line is from maxContext_RayConeAngleMtl(...)
+	  coneAngle = abs(1.0 / context_xscale);
+	} // else [ if (orthographic) ]
+	float dd = (abs(curve + coneAngle) / ((1.0 - n.z * n.z + 0.1) * PI));
+
+	// 	      dd = ((float)fabs(maxContext_Curve (state, inst_context,
+	// 						  evalContext) +
+	// 				maxContext_RayConeAngle (state, inst_context,
+	// 							 evalContext))/
+	// 		    ((1.0f-n.z*n.z+.1f)*((float)M_PI)));
+
+	d.x = d.y = d.z = dd;
+	break;
+      case UVMAP_CYL_ENV:
+	// 	      /* n = sc.VectorTo(sc.V(),REF_WORLD);*/
+	// 	      n = maxContext_VectorTo (state, &state->dir, evalContext,
+	// 				       REF_WORLD);
+        n = transform_vector("internal", "world", direction);
+	t.x = 0.5 + atan2(n.x, -n.y) / TWO_PI;
+	r = sqrt(n.x * n.x + n.y * n.y);
+	if (abs(n.z) > r) {
+	  t.y  = (n.z > 0.0) ? 1.0 - 0.25 * (r / n.z) : -0.25 * (r / n.z);
+	}
+	else t.y = 0.25 * (2.0 + n.z / r);
+	t.z = 0.0;
+	// maxContext_Curve(...) returns 0.0 !!!
+	curve = 0.0;
+	coneAngle = 0.0;
+	context_xscale = 0.0;
+	if (orthographic) {
+	  context_xscale = image_x_resolution / aperture;
+	  // context_yscale = - aspect_ratio * context_xscale;
+	  coneAngle = 0.0;
+	} // if (orthographic)
+	else {
+	  // from rendutil.cpp
+	  float fac = -2.0 * dof_focus / aperture;
+	  context_xscale =  fac * image_x_resolution / 2.0;
+	  // context->yscale = - aspect_ratio * context_xscale;
+	  // the following line is from maxContext_RayConeAngleMtl(...)
+	  coneAngle = abs(1.0 / context_xscale);
+	} // else [ if (orthographic) ]
+	d.x = d.y = d.z = (abs(curve + coneAngle) / PI);
+	// 	      /*d.x = d.y = sc.Curve();*/ /* 3DM TBD DERIVATIVES */
+	// 	      d.x = d.y = d.z =
+	// 		((float)fabs (maxContext_Curve (state,
+	// 						inst_context,
+	// 						evalContext) +
+	// 			      maxContext_RayConeAngle (state,
+	// 						       inst_context,
+	// 						       evalContext))/
+	// 		 ((float)M_PI));
+	break;
+      case UVMAP_SHRINK_ENV:
+	// 	      /* n = sc.VectorTo(sc.V(),REF_WORLD);*/
+	// 	      n = maxContext_VectorTo (state, &state->dir, evalContext,
+	// 				       REF_WORLD);
+        float3 n = transform_vector("internal", "world", direction);
+	float a1 = atan2(n.x, -n.y);
+	float a2 = asin(n.z);
+	r = 0.5 - (a2 + HALF_PI) / TWO_PI;
+	t.x = 0.5 + r * cos(a1);
+	t.y = 0.5 + r * sin(a1);
+	t.z = 0.0;
+	// maxContext_Curve(...) returns 0.0 !!!
+	curve = 0.0;
+	coneAngle = 0.0;
+	context_xscale = 0.0;
+	if (orthographic) {
+	  context_xscale = image_x_resolution / aperture;
+	  // context_yscale = - aspect_ratio * context_xscale;
+	  coneAngle = 0.0;
+	} // if (orthographic)
+	else {
+	  // from rendutil.cpp
+	  float fac = -2.0 * dof_focus / aperture;
+	  context_xscale =  fac * image_x_resolution / 2.0;
+	  // context->yscale = - aspect_ratio * context_xscale;
+	  // the following line is from maxContext_RayConeAngleMtl(...)
+	  coneAngle = abs(1.0 / context_xscale);
+	} // else [ if (orthographic) ]
+	d.x = d.y = d.z = (abs(curve + coneAngle) / (1.01 - 4.0 * r * r) / PI);
+	// 	      /*d.x = d.y = sc.Curve(); */ /* 3DM TBD DERIVATIVES */
+	// 	      d.x = d.y = d.z =
+	// 		((float)fabs (maxContext_Curve (state, inst_context,
+	// 						evalContext) +
+	// 			      maxContext_RayConeAngle (state, inst_context,
+	// 						       evalContext))/
+	// 		 (1.01f-4.0f*r*r)/((float)M_PI));
+	break;
+      case UVMAP_SCREEN_ENV:
+	// TODO: see below
+	// 	      float delta =
+	// 		(1.0f / (float)pow (2.0,
+	// 				       (double)state->options->max_samples));
+	// 	      /*sc.ScreenUV(t,d);*/ /* 3DM screen coordinate */
+	// t = maxContext_ScreenUV (state, evalContext);
+
+        float delta = 0.5; // TODO
+
+	t.x = ( raster.x ) / (float)( image_x_resolution );
+	t.y = ( raster.y ) / (float)( image_y_resolution );
+	t.z = 0.0f;
+
+	d.x = delta / image_x_resolution;
+	d.y = delta / image_y_resolution;
+        d.z = 0.0;
+	break;
+      case UVMAP_CANVAS_ENV:
+	// TODO: see below
+	// 	      int x_canvas_size = *mi_eval_integer (&XCanvasSize);
+	// 	      int y_canvas_size = *mi_eval_integer (&YCanvasSize);
+	// 	      float delta =
+	// 		(1.0f / (float)pow (2.0,
+	// 				       (double)state->options->max_samples));
+
+	// 	      // If a valid canvas size is provided compute the UVs relative
+	// 	      // to the full canvas size.  Otherwise, compute the UVs
+	// 	      // relative to the screen only, as with UVMAP_SCREEN_ENV.
+	// 	      if (x_canvas_size > 0 && y_canvas_size > 0)
+	// 		{
+	// 		  t = maxContext_CanvasUV (state, evalContext,
+	// 					   x_canvas_size, y_canvas_size);
+	// 		}
+	// 	      else
+	// 		{
+	// 		  t = maxContext_ScreenUV (state, evalContext);
+	// 		}
+
+	// 	      d.x = delta / state->camera->x_resolution;
+	// 	      d.y = delta / state->camera->y_resolution;
+	// 	      d.z = 0.0;
+	error("TODO: UVMAP_CANVAS_ENV");
+	break;
+      } // switch (EnvType)
+    } // else [ if (MapSlotType == MAPSLOT_TEXTURE) ]
+    maxTransformUV(// inst
+		   inst_anyUVWRot,
+		   inst_transform,
+		   // return values
+		   t, d);
+
+    bool ns = Noise;
+    if (ns) {
+      bool nsAni = Animate;
+      float nsSize = Size;
+      float nsAmt = Amount;
+      float x = t.x / nsSize;
+      float y = t.y / nsSize;
+      float f = 0.1 * nsAmt;
+      if (nsAni) {
+	t.x += f * maxTurb2(y);
+	t.y += f * maxTurb2(x);
+      }
+      else {
+	t.x += f * maxTurb(y);
+	t.y += f * maxTurb(x);
+      }
+    } // if (ns)
+    UV = t;
+    local_xtra_dP = d;
+    // miASSERT(!isnan(UV.x) && !isnan(UV.y) && !isnan(UV.z));
+    // end maxGetUVNoBlur
+    local_xtra_dP.x = BlurOffset + Blur * local_xtra_dP.x;
+    local_xtra_dP.y = BlurOffset + Blur * local_xtra_dP.y;
+    // end maxGetUV
+    // TODO: send back additional information to the calling shader
+#ifdef ZAP_SIMPLIFIED
+    if (maxSampleSimplified(UV, local_xtra_dP)) {
+      // this is the marker for "map is outside bounds" and calling
+      // shaders should return "transparent"
+      UV  = float3(0,0,0);
+      local_xtra_dP = float3(0,0,0);
+    }
+    Color col = Color(UV.x, UV.y, 0.0, 0.0);
+#else
+    Color col = maxAASymSample(UV.x, UV.y, local_xtra_dP.x, local_xtra_dP.y);
+#endif
+    // end maxEvalUVMap
+    xtra_dP = local_xtra_dP;
+    xtra_bumpDP_0 = local_xtra_bumpDP_0;
+    xtra_bumpDP_1 = local_xtra_bumpDP_1;
+    xtra_bumpDP_2=float3(0.);
+    result = col;
+  } // main
+};

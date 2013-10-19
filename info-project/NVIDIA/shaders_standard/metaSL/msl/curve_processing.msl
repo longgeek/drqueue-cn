@@ -1,0 +1,348 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#include <mi_msl_shared.msl>
+
+shader Curve_process_abs {
+
+  input:
+	float t = texture_coordinate[0].x {
+		display_name("Input");
+		description("Input for the values that will be processed.");
+	};
+	Shader curve_a {
+		display_name("Curve A");
+		description("Attach a curve shader that you want to utilize to "
+		"process the input");
+	};
+	
+  output:
+	float result;
+	Color graph_out;
+	
+	void main()
+	{
+		float res_a;
+		curve_a.call("input", "t", t,
+					  "output", "result", res_a);
+		
+		result = abs(res_a);
+		graph_out = texture_coordinate[0].y < result ? MI_LOWER_COL : MI_UPPER_COL;
+	}
+}
+{
+	description("Returns the max of the two attached curve shaders");
+};
+
+shader Curve_process_blend {
+
+  input:
+	float t = texture_coordinate[0].x {
+		display_name("Input");
+	};
+	Shader curve_a {
+		display_name("Curve A");
+		description("Input for function curve shader A");
+	};
+	Shader curve_b {
+		display_name("Curve B");
+		description("Input for function curve shader B");
+	};
+	float blend {
+		soft_range(0, 1);
+		display_name("Blend");
+		description("Controls the blending between Curve A and Curve B");
+	};
+	
+  output:
+	float result;
+	Color graph_out;
+
+	void main()
+	{
+		float res_a, res_b;
+		curve_a.call("input", "t", t,
+					  "output", "result", res_a);
+		curve_b.call("input", "t", t,
+					   "output", "result", res_b);
+		
+		result = blend * res_a + (1-blend)*res_b;
+		graph_out = texture_coordinate[0].y < result ? MI_LOWER_COL : MI_UPPER_COL;
+	}
+};
+
+
+
+shader Curve_process_clamp {
+  
+   input:
+	float t = texture_coordinate[0].x {
+		display_name("Input");
+	}; 
+	Shader curve_a {
+		display_name("Curve"); 
+		description("Input of function curve shader A");
+	};  
+	 float lower_bound = 0.2 {
+		display_name("Low Value");
+		description("No function value will be lower than the min value");
+	};  
+	float upper_bound = 0.8 {
+		display_name("High_value"); 
+		description("No function value will be bigger than the max value");
+	};
+
+   output:
+	float result;
+	Color graph_out;
+	
+	 void main()
+	{
+		float res_a;
+		curve_a.call("input", "t", t,
+					  "output", "result", res_a);
+		result = res_a < lower_bound ? lower_bound : 
+				 res_a > upper_bound ? upper_bound : res_a;
+		graph_out = texture_coordinate[0].y < result ? MI_LOWER_COL : MI_UPPER_COL;
+	}
+}
+{
+	description("Returns the max of the two attached curve shaders");
+};
+
+shader Curve_process_curve_blend
+{
+  input:
+	float t = texture_coordinate[0].x {
+		display_name("Input");
+	};
+	Shader curve_a {
+		display_name("Curve A");
+		description("Input for function curve shader A");
+	};
+	Shader curve_b {
+		display_name("Curve B");
+		description("Input for function curve shader A");
+	};
+	Shader curve_blend {
+		display_name("Curve Blend");
+		description("The curve attached to this input defines the weighting "
+				"between curve A and curve B");
+	};
+  output:
+	float result;
+	Color graph_out;
+
+	void main()
+	{
+		float blend = 0.0;
+		float res_a, res_b;
+		
+		curve_blend.call("input", "t", t,
+					  "output", "result", blend);
+		curve_a.call("input", "t", t,
+					  "output", "result", res_a);
+		curve_b.call("input", "t", t,
+					   "output", "result", res_b);
+		
+		result = blend * res_a + (1-blend)*res_b;
+		graph_out = texture_coordinate[0].y < result ? MI_LOWER_COL : MI_UPPER_COL;
+	}
+};
+
+shader Curve_process_max {
+
+  input:
+	float t = texture_coordinate[0].x {
+		display_name("Input");
+	};
+	Shader curve_a {
+		display_name("Curve A");
+		description("Input for function curve shader A");
+	};
+	Shader curve_b {
+		display_name("Curve B");
+		description("Input for function curve shader B");
+	};	
+	
+  output:
+	float result;
+	Color graph_out;
+	
+	void main()
+	{
+		float res_a, res_b;
+		curve_a.call("input", "t", t,
+					  "output", "result", res_a);
+		curve_b.call("input", "t", t,
+					   "output", "result", res_b);
+		
+		result = max(res_a, res_b);
+		graph_out = texture_coordinate[0].y < result ? MI_LOWER_COL : MI_UPPER_COL;
+	}
+}
+{
+	description("Returns the maximum of the two attached curve shaders");
+};
+
+shader Curve_process_min
+{
+  input:
+	float t = texture_coordinate[0].x { 
+		display_name("Input");
+	};
+	Shader curve_a 	{
+		display_name("Curve A");
+		description("Input for function curve shader A");
+	};
+	Shader curve_b 	{
+		display_name("Curve B");
+		description("Input for function curve shader B");
+	};
+	
+  output:
+	float result;
+	Color graph_out;
+	
+	void main()
+	{
+		float res_a, res_b;
+		curve_a.call("input", "t", t,
+					  "output", "result", res_a);
+		curve_b.call("input", "t", t,
+					   "output", "result", res_b);
+		
+		result = min(res_a, res_b);
+		graph_out = texture_coordinate[0].y < result ? MI_LOWER_COL : MI_UPPER_COL;
+	}
+}
+{
+	description("Returns the minimum of the two attached curve shaders");
+};
+
+
+
+
+// To invert incoming values between 0 ... 1, set 
+// scale_midpoint to 0.5 and scale to -1
+shader Curve_process_scale {
+  input:
+	float t = texture_coordinate[0].x	{
+		display_name("Input");
+	};
+	float scale_midpoint = 0.5 {
+		display_name("Scale Midpoint");
+		description("The function will 'contract' around this value when the scale "
+		"parameter approaches 0");
+	};
+	float scale = 1.0 {
+		display_name("Scale");
+		description("How much the function will be scaled");
+	};
+	Shader curve_a {
+		display_name("Curve A");
+		description("Input for function curve shader A");
+	};
+	
+  output:
+	float result;
+	Color graph_out;
+		
+	void main()
+	{
+		float res;
+		Color upper = Color(0.9, 0.9, 0.9, 1);
+		Color lower = Color(0.25, 0.5, 0.8, 1);
+		float m_t;		
+		
+		if(curve_a.call("input", "t", t,
+						"output", "result", res) == true) {
+			m_t = res;
+		}
+		else {
+			m_t = t;		
+		}
+		
+		m_t -= scale_midpoint;
+		m_t *= scale;
+		m_t += scale_midpoint;
+		
+		result = m_t;
+		graph_out = texture_coordinate[0].y < m_t? MI_LOWER_COL : MI_UPPER_COL;
+	}
+}
+{
+	description("Scales the incoming values around the 'Scale Midpoint'. "
+	"To invert a curve, set 'Scale Midpoint' to 0.5 and 'Scale' to -1");
+};
+
+shader Color_curve_remap
+{
+  input:
+	Color input = Color(0.5, 0.5, 0.5, 0.5) {
+		display_name("Input");
+	};
+	Shader curve_a {
+		display_name("Curve A");
+		description("Input for function curve shader A");
+	};
+	
+  output:
+	Color result;
+	
+	void main()
+	{
+		curve_a.call("input", "t", input.r,
+					  "output", "result", result.r);
+		curve_a.call("input", "t", input.g,
+					  "output", "result", result.g);
+		curve_a.call("input", "t", input.b,
+					  "output", "result", result.b);
+		curve_a.call("input", "t", input.a,
+					  "output", "result", result.a);
+	}
+}
+{
+	description("Remaps the incoming color using the curve shader "
+			"attached to the 'Curva A' input. Each component is processed "
+			"individually.");
+};
+
+
+shader Float_curve_remap {
+  input:
+	float input = 0.5 {
+		display_name("Input");
+	};
+	Shader curve_a {
+		display_name("Curve A");
+		description("Input for function curve shader A");
+	};
+  output:
+	float result;
+	
+	void main()
+	{
+		curve_a.call("input", "t", input,
+					  "output", "result", result);
+	}
+}
+{
+	description("Remaps the incoming float value using the curve shader "
+			"attached to the 'Curva A' input");
+};
+
+// declaration for curve shader pack backwards compatibility
+shader curve_process_abs : Curve_process_abs { };
+shader curve_process_blend : Curve_process_blend { };
+shader curve_process_clamp : Curve_process_clamp { };
+shader curve_process_curve_blend : Curve_process_curve_blend { };
+shader curve_process_max : Curve_process_max { };
+shader curve_process_min : Curve_process_min { };
+shader curve_process_scale : Curve_process_scale { };
+shader color_curve_remap : Color_curve_remap { };
+shader float_curve_remap : Float_curve_remap { };
+
+

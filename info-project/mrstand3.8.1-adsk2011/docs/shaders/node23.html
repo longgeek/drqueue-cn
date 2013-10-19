@@ -1,0 +1,117 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Photon Tracing in Participating Media</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node22.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node24.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION21"></a>
+
+  <h2>Photon Tracing in Participating Media</h2>
+
+  <p>In order to compute volume caustics and global illumination in
+  participating media, the media need volume photon shaders. A
+  volume photon shader will usually have the same name as the
+  corresponding volume shader, but with " <tt>_photon</tt>"
+  appended. Details on photon tracing in volumes can be found in
+  the mental ray manual.</p>
+
+  <h3>Volume Photon Shader</h3>
+
+  <p>The volume photon shader that
+  matches <i><a href="node22.html#mi_shader__parti_volume">parti_volume</a></i>.
+  It has the same parameters.</p>
+
+<a id="INDEX73"></a>
+<h5 class="anchor" id="mi_shader__parti_volume_photon">parti_volume_photon</h5>
+<pre>
+    color "parti_volume_photon" (
+        integer         "mode",
+        color           "scatter",
+        scalar          "extinction",
+        scalar          "r",
+        scalar          "g1",
+        scalar          "g2",
+        scalar          "height",
+        scalar          "nonuniform",
+        scalar          "min_step_len",
+        scalar          "max_step_len",
+        scalar          "light_dist",
+        integer         "min_level",
+        boolean         "no_globil_where_direct",
+        array light     "lights")
+</pre>
+
+<dl>
+  <dt>scatter<dd> is the color of the scattering medium.  This determines
+  the color of the indirect light that is scattered by the medium. 
+  It also acts as a multiplier of the photon energy for the photons in
+  the photon volume map. Note that in mental ray there are three data
+  structures where photon can stored: the <em>GI</em>, the 
+  <em>caustics</em> and the <em>volume photon</em> photon map, the first two
+  can be independently color corrected.
+
+  <dt>min_level<dd> is the minimum refraction level at which photons
+  are stored. This is handled differently for caustic and GI photons.
+  For GI photons the maximum level is set with the global option
+  <tt>photon_refraction_depth</tt>. Caustics photons storage is very
+  different. It depends on more variables. First the global option
+  <tt>photon autovolume</tt> can be set or not. If it is not set then caustic
+  photons are only stored after at least one refraction or reflection.
+  If it is set, and the light source is inside the volume then caustic
+  photons can be stored. If the light source is outside the volume, then
+  caustic photons are only stored after at least one refraction or reflection.
+
+  <dt>light_dist
+  <br>no_globil_where_direct
+  <br>lights
+  <dd> are ignored since there is no direct illumination in the photon shader.
+</dl>
+
+  <p> All other parameters, especially <var>extinction</var>, need to be identical
+  to the parameters of <em>parti_volume</em>, this to preserve consistency in
+  the algorithm.</p>
+
+  <h3>Transparent Photon</h3>
+
+  <p>
+  <span class="depr">Deprecated</span> 
+  <i>transmat_photon</i> is the material photon shader that matches
+  <i><a href="node22.html#mi_shader__transmat">transmat</a></i>, used for an
+  enclosing surface of a participating medium or volume that is not a mental
+  ray <dfn>hull</dfn> object. It simply continues to trace the incoming photon
+  in the same direction without any interaction with the current object.
+  Such a volume container should be invisible to photons itself.</p>
+
+  <a id="INDEX74"></a>
+<h5 class="anchor" id="mi_shader__transmat_photon">transmat_photon</h5>
+  <pre>
+    color "transmat_photon" ()
+</pre>
+
+  <p>There are no parameters.</p>
+
+<p><br />
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node22.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node24.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

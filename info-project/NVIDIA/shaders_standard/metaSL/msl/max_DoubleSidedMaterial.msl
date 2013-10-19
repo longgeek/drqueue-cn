@@ -1,0 +1,109 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+#define HLSL_OPTIMIZE
+#ifdef HLSL_OPTIMIZE
+#define BLEND saturate(Translucency/100.) 
+#else
+#define BLEND saturate(sp.Translucency/100.) 
+#endif
+shader max_DoubleSidedMaterial {
+ input:
+#ifdef HLSL_OPTIMIZE
+    const bool Map1Enabled = true{
+    display_name("Map1 Enabled");
+  };
+    const bool Map2Enabled = true{
+    display_name("Map2 Enabled");
+  };
+    const float Translucency = 0{
+    display_name("Translucency");
+  };
+#else
+  struct Parameters {
+    // material Material1
+    // material Material2
+    bool Map1Enabled;
+    bool Map2Enabled;
+    float Translucency;
+  }; // Parameters
+  Parameters sp = Parameters(true, true, 0.0);
+#endif
+  struct ExtraParameters {
+    int GBufferID;
+  }; // ExtraParameters
+  ExtraParameters extra;
+  // shader type parameters
+  Shader Material1{
+    display_name("Facing Material");
+  };
+  Shader Material2{
+    display_name("MBack Material");
+  };
+
+ output:
+  Color result;
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 1.0);
+    // TODO: max_DoubleSidedMaterial_Photon
+    // max_DoubleSidedMaterial_Shade
+#ifdef HLSL_OPTIMIZE
+    if (Translucency == 0.0) {
+      if (backside&& Map2Enabled) {
+	// call material 2
+	Material2.call("output", "result", result);
+      } // if (backside)
+      else if(Map1Enabled){
+	// call material 1
+	Material1.call("output", "result", result);
+      } // else [ if (backside) ]
+    } // if (sp.Translucency == 0.0)
+#else
+    if (sp.Translucency == 0.0) {
+      if (backside && sp.Map2Enabled) {
+	// call material 2
+	Material2.call("output", "result", result);
+      } // if (backside)
+      else if(sp.Map1Enabled){
+	// call material 1
+	Material1.call("output", "result", result);
+      } // else [ if (backside) ]
+    } // if (sp.Translucency == 0.0)
+#endif
+    else {
+      Color c1 = Color(0.0, 0.0, 0.0, 1.0);
+      Color c2 = Color(0.0, 0.0, 0.0, 1.0);
+#ifdef HLSL_OPTIMIZE
+      if (Map2Enabled) {
+	// call material 2
+	Material2.call("output", "result", c2);
+   	  }
+      if (Map1Enabled) {
+	// call material 2
+	Material1.call("output", "result", c1);
+	  }
+#else
+      if (sp.Map2Enabled) {
+	// call material 2
+	Material2.call("output", "result", c2);
+	}
+      if (sp.Map1Enabled) {
+	// call material 2
+	Material1.call("output", "result", c1);
+	}
+#endif
+	  float blendvalue = BLEND;
+	  if(backside) {
+		result = c1*blendvalue + c2*(1-blendvalue);
+	  }
+	  else {
+		result = c2*blendvalue + c1*(1-blendvalue);
+	  }
+//      result.a = 1.0;
+    } // else [ if (sp.Translucency == 0.0) ]
+  } // main
+};

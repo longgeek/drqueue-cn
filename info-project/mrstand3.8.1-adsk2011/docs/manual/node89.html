@@ -1,0 +1,441 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Approximations</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="catmullclark.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node90.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION87"></a>
+<h3>Approximations</h3>
+<p><a id="approx"></a> Approximations<a id="INDEX334"></a>
+are defined within an <a href="node83.html#mi:group">object group</a>
+and they specify how
+previously defined polygons, surfaces, and curves should be
+tessellated. Within an object group containing free-form surface
+geometry the approximation statements are given separately for the
+surface itself and for curves used by the surface. The
+<tt>surface</tt> approximation statement sets the approximation
+technique for the surface itself. If it carries a displacement map
+this statement refers to the underlying geometric base surface and
+does not take the displacement into account. One may specify the
+approximation criteria on the displaced surface with an additional
+<tt>displace</tt> approximation statement or even leave out the
+<tt>surface</tt> approximation statement altogether.</p>
+<p>If the material of the surface does not contain a displacement
+shader the <tt>displace</tt> approximation statement is ignored. A
+<tt>trim</tt> approximation statement applies to all trimming, hole
+and special curves attached to the given surface or surfaces
+collectively; it is equivalent to separate <tt>curve</tt>
+approximations for each individual curve. When the keyword
+<tt>approximate</tt> is directly followed by an approximation
+technique it refers to a polygon or a list of polygons. It only has
+an effect on displacement mapped polygons. If the
+<tt><a href="node76.html#INDEX0">options</a></tt> statement specifies
+approximation statements for base surfaces and/or displacements,
+they override the approximation statements in the object. This can
+be used for quick previews with low tessellation quality, for
+example.</p>
+<pre>
+    <i>flags</i> approximate  
+        <i>technique</i> [ <i>min</i><sub>int</sub> <i>max</i><sub>int</sub> ]  
+     
+    <i>flags</i> approximate surface  
+        <i>technique</i> [ <i>min</i><sub>int</sub> <i>max</i><sub>int</sub> ] [ max <i>max</i><sub>int</sub> ] "<i>surface_name</i>" ...  
+     
+    <i>flags</i> approximate displace  
+        <i>technique</i> [ <i>min</i><sub>int</sub> <i>max</i><sub>int</sub> ] "<i>surface_name</i>" ...  
+     
+    <i>flags</i> approximate trim  
+        <i>technique</i> [ <i>min</i><sub>int</sub> <i>max</i><sub>int</sub> ] "<i>surface_name</i>" ...  
+     
+    <i>flags</i> approximate curve  
+        <i>technique</i> [ <i>min</i><sub>int</sub> <i>max</i><sub>int</sub> ] "<i>curve_name</i>" ...  
+     
+    <i>flags</i> approximate space curve  
+        <i>technique</i> [ <i>min</i><sub>int</sub> <i>max</i><sub>int</sub> ] "<i>spacecurve_name</i>" ...  
+</pre>
+<p>The dots indicate that there may be more than one
+<i>surface_name</i> or <i>curve_name</i> following the
+approximation statement. The given approximation is then used for
+all named surfaces or curves. The flags are explained in more
+detail in subsection <a href="node89.html#approxflag">approxflag</a> below.</p>
+<p><i>technique</i> stands for one or more of the following:</p>
+<pre>
+    view  
+    offscreen  
+    tree  
+    grid  
+    fine<sup>3.1</sup>  
+    delaunay  
+    [ regular ] parametric <i>u_subdiv</i> [ <i>v_subdiv</i> ]  
+    [ regular ] parametric <i>u_subdiv%</i> [ <i>v_subdiv%</i> ]  
+    any  
+    sharp <i>sharp</i><sup>3.1</sup>  
+    length <i>edge</i>  
+    distance <i>dist</i>  
+    angle <i>angle</i>  
+    spatial [ view ] <i>edge</i>  
+    curvature [ view ] <i>dist angle</i>  
+    grading <i>angle</i>  
+</pre>
+<p><tt>tree</tt>, <tt>grid</tt>, <tt>fine</tt>, and
+<tt>delaunay</tt> are mutually exclusive. <tt>parametric</tt>
+cannot be combined with any of the others except <tt>grid</tt>,
+which is the default for the parametric case anyway.
+<tt>regular</tt> can only be used together with
+<tt>parametric</tt>. <tt>view</tt> has no effect unless one of
+<tt>length</tt>, <tt>distance</tt>, <tt>spatial</tt>, or
+<tt>curvature</tt> is also given. Grading can only be used in
+combination with Delaunay triangulation.</p>
+<p><b>View-dependent approximation</b> is enabled if the
+<tt>view</tt> statement is present. It controls whether the
+<i>edge</i> argument of the <tt>length</tt> and <tt>spatial</tt>
+statements, and the <tt>dist</tt> argument of the <tt>distance</tt>
+and <tt>curvature</tt> statements, are in the space the object is
+defined in or in <a href="node101.html#INDEX371">raster
+space</a>.</p>
+<p>Normally geometry outside the viewing frustum is tessellated
+much more coarsely because it is not directly visible. However, in
+some cases it may become visible due to large flat mirrors, or is
+casting shadows on visible geometry. In these cases the
+<tt>offscreen</tt> flag can be used to tessellate geometry outside
+the viewing frustum at the full accuracy. Note that this can
+generate very large numbers of triangles for things like large
+displaced ground planes very close to the camera.</p>
+<p><b>Tree, grid, and Delaunay approximation</b> algorithms are
+available for surface approximation. The grid algorithm tessellates
+on a regular grid of isolines in parameter space; the tree
+algorithm tessellates in a hierarchy of successive refinements that
+produces fewer triangles for the same quality criteria;
+<b><a id="INDEX335"></a>Delaunay triangulation</b> creates a
+successive refinement that maximizes triangle equiangularity. By
+definition parametric approximations always use the grid algorithm;
+all others can use either but <tt>tree</tt> is the default.
+<tt>tree</tt>, <tt>grid</tt>, and <tt>delaunay</tt> have no effect
+on curve approximations. Delaunay triangulation creates more
+regular triangles but takes longer to compute.</p>
+<p><b>Parametric approximation</b> subdivides each patch of the
+surface into <i>u_subdiv</i>&middot;&nbsp;<span class="math">degree</span>
+equal-sized pieces in the U parameter direction, and
+<i>v_subdiv</i>&middot;&nbsp;<span class="math">degree</span> equal-sized
+pieces in the V parameter
+direction. If <tt>regular</tt> the number of pieces the whole
+surface is subdivided into simply equals the parameter value; the
+number of subdivisions may also be specified as the percentage of
+<i>v_subdiv</i> must be present for <tt>surface</tt> approximations
+and must be omitted for <tt>curve</tt> and <tt>trim</tt>
+approximations. Note that the factor is a floating point number,
+although a patch can only be subdivided an integral number of
+times. For example, if a factor of 2.0 is given and the surface is
+of degree three, each patch will be subdivided six times in each
+parametric direction. If a factor of 0.0 is given, each patch is
+approximated by two triangles.</p>
+<p>Curves are subdivided in
+<span class="math">subdiv&nbsp;&middot;&nbsp;degree</span> equal pieces by the
+<tt>parametric</tt> approximation and into <i>subdiv</i> equal
+pieces by the <tt>regular parametric</tt> approximation.</p>
+<p>For displacement mapped polygons and displacement mapped
+surfaces with a <tt>displace</tt> statement <tt>regular
+parametric</tt> has the same meaning as <tt>parametric</tt> in the
+approximation. For displacement mapped polygons the <i>u_subdiv</i>
+constant specifies that each edge in the triangulation of the
+original polygon is subdivided for the displacement
+<span class="math">2<sup>u_subdiv</sup></span> times. If a <tt>displace</tt>
+approximation is given for a displacement mapped surface, the
+initial tessellation of the underlying geometric surface is
+subdivided in the same way as for polygons. For example, a value of
+2 leads to a fourfold subdivision of each edge. Non-integer values
+for the subdivision constant are admissible. Nothing is done if the
+expression above is smaller than 2 (if <i>u_subdiv</i> <i>&lt;
+1</i>). The <i>v_subdiv</i> constant is ignored for the parametric
+approximation of displacement maps.</p>
+<p><b>Length/distance/angle (LDA) approximation</b> specifies
+curvature-dependent approximation according to the criteria
+specified by the <tt>length</tt>, <tt>distance</tt>, and
+<tt>angle</tt> statements. These statements can be given in any
+combination and order, but cannot be combined with parametric
+approximation in the same <tt>approximate</tt> statement. If they
+are preceded by the <tt>any</tt> keyword the approximation stops as
+soon as any of the criteria is satisfied.</p>
+<p>The <tt>length</tt> statement subdivides the surface or curve
+such that no edge length of the tessellation exceeds the
+<i>edge</i> parameter. <i>edge</i> is given as a distance in the
+space the object is defined in, or as a fraction of a pixel
+diagonal in <a href="node101.html#INDEX371">raster space</a> if the
+<tt>view</tt> keyword is present. Small values such as 1.0 are
+recommended. For tree and grid approximation the <i>min</i> and
+<i>max</i> parameters, if present, specify the minimum and maximum
+number of recursion levels of the adaptive subdivision. The
+<i>min</i> parameter is a means to enforce a minimal triangulation
+fineness without any tests. Edges are further subdivided until they
+satisfy the given criterion is fulfilled or the <i>max</i>
+subdivision level is reached. The defaults are 0 and 5,
+respectively; 5 is a very high number. mental ray imposes a hard
+maximum of 7; mental ray 3.3 and higher have no hard limit for
+displacement. Good results can often be achieved with a maximum of
+3 subdivisions. For Delaunay approximation, the number <i>max</i>
+following the keyword <tt>max</tt> specifies the maximum number of
+triangles of the surface tessellation. This number will be exceeded
+only if required by trimming, hole, and special curves because
+every curve vertex must become part of the tessellation regardless
+of the specified maximum.</p>
+<p>For displacement mapped polygons and displacement mapped
+surfaces with a <tt>displace</tt> approximation statement the
+length criterion in the approximation limits the size of the edges
+of the displaced triangles and ensures that at least all features
+of this size are resolved. Subdivision stops as soon as an edge
+satisfies the criterion or when the maximum subdivision level is
+reached. It cannot be ruled out that at an even finer scale new
+details may show up which would lead again to longer edges. This
+caveat about the potential miss of high-frequency detail applies
+also to the distance and angle criteria.</p>
+<p>The <tt>distance</tt> statement specifies the maximum distance
+<i>dist</i> between the tessellation and the actual curve or
+surface. The value of <i>dist</i> is a distance in the space the
+object is defined in, or a fraction of a pixel diagonal in
+<a href="node101.html#INDEX371">raster space</a> if the <tt>view</tt>
+statement is present. As a starting point, a small distance such as
+0.1 is recommended. For tree and grid approximation the <i>min</i>
+and <i>max</i> parameters, if present, specify the minimum and
+maximum number of recursion levels of the adaptive subdivision. For
+Delaunay approximation, the number <i>max</i> following the keyword
+<tt>max</tt> specifies the maximum number of triangles of the
+surface tessellation.</p>
+<p>For displacement mapped polygons and displacement mapped
+surfaces with a <tt>displace</tt> approximation statement the
+distance criterion cannot be used in the same way because the
+displaced surface is not known analytically. Instead, the
+displacements of the vertices of a triangle in the tessellation are
+compared. The criterion is fulfilled only if they differ by less
+than the given threshold. Subdivision is finest in areas where the
+displacement changes. For example, if a black-and-white picture is
+used for the displacement map the triangulation will be finest
+along the borders between black and white areas but the resolution
+will be lower away from them in the uniformly colored areas. In
+such a case one could choose a moderately dense parametric
+<tt>surface</tt> approximation that samples the displacement map at
+sufficient density to catch small features, and use the
+curvature-dependent <tt>displace</tt> approximation to resolve the
+curvature introduced by the displacement map. Even if the base
+surface is triangulated without adding interior points, as if its
+trim curve defined a polygon in parameter space, it is still
+possible to guarantee a certain resolution by increasing the
+<i>min</i> subdivision level. Only the consecutive subdivisions are
+then performed adaptively.</p>
+<p>The <tt>angle</tt> statement specifies the maximum angle
+<i>angle</i> in degrees between normals of adjacent tiles of a
+displaced polygon or the tessellation of a surface or its
+displacement or between tangents of adjacent segments of the curve
+approximation. Large angles such as 45.0 are recommended. For tree
+and grid approximation the <i>min</i> and <i>max</i> parameters, if
+present, specify the minimum and maximum number of recursion levels
+of the adaptive subdivision. For Delaunay approximation, the number
+<i>max</i> following the keyword <tt>max</tt> specifies the maximum
+number of triangles of the surface tessellation.</p>
+<p><b>Spatial approximation</b> as specified by a <tt>spatial</tt>
+statement is a special case of an LDA approximation that specifies
+only the <tt>length</tt> statement. For backwards compatibility,
+the <tt>spatial</tt> statement has been retained; it is equivalent
+to the <tt>length</tt> statement plus an optional <tt>view</tt>
+statement.</p>
+<p><b>Curvature-dependent approximation</b> as specified by the
+<tt>curvature</tt> statement is also a special case of LDA
+approximation, equivalent to a <tt>distance</tt> statement, an
+<tt>angle</tt> statement, and an optional <tt>view</tt> statement.
+The <tt>spatial</tt> and <tt>curvature</tt> statements can be
+combined, but future designs should use <tt>length</tt>,
+<tt>distance</tt>, and <tt>angle</tt> directly.</p>
+<p><b>Grading</b> applies only to
+<a href="node89.html#INDEX335">Delaunay triangulation</a> controls the
+density of triangles around the border of the surface. It allows
+the density of triangles to vary quickly in a smooth transition
+between a finer curve approximation and a coarser surface
+approximation. The <i>angle</i> constant specifies a lower bound
+related to the degree of the minimum angle of a triangle. Values
+from 0.0 to 30.0 can be specified. Small values up to 20.0 are
+recommended. The default is 0.0. When using high grading values it
+is recommended to specify a maximum number of triangles because
+otherwise high grading values might result in a huge number of
+triangles or endless mesh refinement. The purpose of this option is
+to prevent a large number of tiny triangles at the trimming or
+<a href="node85.html#INDEX318">hole curve</a> to abruptly join very
+large triangles in the interior of the surface.</p>
+<p>The <tt>sharp</tt><sup>3.1</sup> keyword controls the
+<b><a id="INDEX336"></a>sharp approximation</b> of
+<a href="node83.html#INDEX289">normal vector</a>s. If set to 0.0,
+mental ray uses the interpolated normal as specified by the base
+surface, modified by displacement if available. If the argument
+<i>sharp</i> is set to 1.0, mental ray will use the geometric
+normal for a faceted look. This is primarily useful in
+<tt>fine</tt> mode. mental ray allows any <i>sharp</i> value
+between 0.0 and 1.0.</p>
+<p>If no approximation statement is given the parametric technique
+is used by default with <i>u_subdiv = v_subdiv</i> = 0 for
+surfaces, or <i>u_subdiv</i> = 0 in the case of curves and
+polygons.</p>
+<p>The following exceptions apply to subdivision surfaces:</p>
+<ul>
+<li>The <tt>displace</tt> approximation is ignored, and the regular
+approximation is used. Subdivision surfaces are refined during
+displacement in a single integrated pass, so the separation between
+base surface and displaced surface does not apply.</li>
+<li>There are no restrictions on the approximation techniques in
+fine mode. Any LDA mode may be used.</li>
+</ul>
+<h4>Fine Approximations</h4>
+<p><a id="fineapprox"></a><a id="INDEX337"></a>
+Standard approximations as described in the
+previous section work under the assumption that as few triangles as
+possible should be used to approximate a surface to achieve a
+user-defined quality. mental ray also supports an approximation mode
+called <i>fine approximation</i>, which addresses the problem from
+a different angle: it is capable of
+efficiently expending very large numbers of triangles to faithfully
+approximate even very complex surfaces, especially displaced
+surfaces, without excessive memory consumption.</p>
+<p>This is done by reducing the granularity of mental ray's cache
+manager. In mental ray 3.0, it operated on entire objects, which
+could become very large when tessellated. mental ray 3.1 applies
+cache management to smaller units formed by splitting objects into
+smaller sets, which can be individually tessellated without
+excessive memory requirements. This is especially useful for
+extremely detailed displacement maps.</p>
+<p>Fine approximations support a small subset of approximation
+techniques since the remainder exists only to trade off triangle
+counts vs. quality, which is no longer a problem for fine
+approximations:</p>
+<pre>
+    fine [ nosmoothing ]
+    [ sharp <i>sharp</i> ]
+    [ view ] length <i>edge</i>
+    parametric <i>u_subdiv</i> <i>v_subdiv</i>
+</pre>
+<p>The <tt>fine</tt> keyword enables fine approximation. It can be
+used for polygon displacement, free-form surface displacement,
+subdivision surface displacement and free-form surface
+approximations, but not for curves. <tt>fine nosmoothing</tt> can
+be used for polygon displacement for turning off a smoothing
+procedure which is used by default during fine polygon
+displacement. As with standard approximations, the <tt>sharp</tt>
+keyword controls normal-vector calculations. If set to 0.0, mental
+ray uses the interpolated normal as specified by the base surface,
+modified by displacement if available; if set to 1.0, mental ray
+will use the geometric normal to achieve a sharp faceted look.
+<a href="#FOOTNOTE12">[12]</a></p>
+<p>Fine approximation requires the choice of one of three
+techniques:</p>
+<ul>
+<li><tt>view length</tt> specifies that all triangles should be
+subdivided until they are smaller than <i>edge</i> pixel diagonals.
+The <i>edge</i> value is typically around 0.5, or 0.25 or even 0.1
+for very high quality. This technique is recommended for all fine
+approximations.</li>
+<li><tt>length</tt> specifies that the triangle edge length should
+stay under <i>edge</i> units in the object's
+<a href="node101.html#INDEX369">object space</a>. The <i>edge</i> parameter
+needs more careful tuning than in the view-dependent case, and very
+high values defeat the purpose of fine approximation.</li>
+<li><tt>parametric</tt> <a href="#FOOTNOTE13">[13]</a> tessellates
+a free-form surface such that all microtriangles have the same
+size. This results in very regular meshes but is harder to
+optimize, and may use significantly more memory.</li>
+</ul>
+<p>This simplicity makes it very easy to control fine displacement,
+without the risk of accidentally creating billions of triangles
+until memory runs out, and without juggling a large number of
+temperamental displacement-mapping parameters.</p>
+<p>However, fine displacement critically depends on the
+specification of a cache size limit, because otherwise the fine
+tessellation results would not flow through the cache but
+accumulate until memory runs out. The default cache limit
+(unlimited) can be overridden with the <tt>-memory</tt> command-line
+option. A good choice is 100 MB less than the maximum allocatable
+memory on 32-bit
+machines. If the number is too large, the operating system may run
+out of virtual address space; if it is too small, mental ray will
+perform too many cache flush operations.</p>
+<p>If <i>fine</i> is used to approximate displaced geometry, it is
+also important to specify a correct <i>max displace</i> value. This
+parameter specifies the maximum absolute scalar value a
+displacement shader may return and serves to give mental ray a hint
+of the maximum extension of the displaced object. It is measured in
+<a href="node101.html#INDEX369">object space</a>. This parameter is
+somewhat "sensible": if chosen too large, it may affect rendering
+performance; if chosen too small, any larger values returned by a
+displacement shader will be clipped. mental ray issues a warning
+message if <i>max displace</i> is chosen too small and a greater
+value is returned by the shader during rendering, thus providing a
+way to adjust <i>max displace</i> optimally. mental ray relies on
+max displace exclusively; if accidentally left at the default of
+zero, all displacement will disappear (with a warning message).</p>
+<p>Fine approximation cannot be used together with merging and
+<a href="node85.html#INDEX322">connection</a>s.</p>
+<h4>Flagged Approximations</h4>
+<p><a id="approxflag"></a><a id="INDEX338"></a>
+mental ray 3.2 allows flagged approximations. An
+object or instance may optionally prefix <tt>approximate</tt>
+statements with one or more of the flag keywords <tt>visible</tt>,
+<tt>trace</tt>, <tt>shadow</tt>, <tt>caustic</tt>, and
+<tt>globillum</tt>. The approximation then applies only if the
+object is hit by the corresponding ray or photon. If no flags are
+given, the approximation applies to all rays and photons, which is
+equivalent to specifying all five flags. For example,</p>
+<pre>
+    visible      approximate  fine view length 0.5 ...
+    trace shadow approximate  regular parametric 3 3 ...
+    visible      approximate  displace fine view length 0.25 ...
+</pre>
+<p>specifies that where the object is visible to primary rays, it
+will be fairly detailed (fine view length 0.5), but its
+reflections, refractions, and shadows are very coarse (regular
+parametric 3 3). Visible displacements are even finer (fine view
+length 0.25). In particular, final gathering falls under
+<tt>trace</tt>, and will also be coarsely approximated. In this
+example, mental ray will tessellate the object twice, once for
+<tt>visible</tt> and once for <tt>trace shadow</tt>. Missing
+approximations, in this example for caustic and globillum, use the
+default parametric 0 0. The trace flag also applies to
+<a href="node52.html#INDEX98">final gathering</a> and probe rays
+(<i><a href="node140.html#INDEX554">mi_trace_probe</a></i>).</p>
+<p>The intended use is for simple stand-ins. If the scene contains
+many detailed visible objects, it is undesirable to use the same
+level of detail for trace objects to compute shadows or global
+illumination because those rays are far less coherent, and pull in
+far more objects into the geometry cache simultaneously. Hence,
+simpler stand-ins should be used. This can be done by specifying
+entire separate objects with <tt>visible</tt> and <tt>trace</tt>
+object flags, but it is simpler to use the same objects and
+applying the flags only to the approximations.</p>
+<p>Since low-resolution shadow and trace stand-in objects are
+usually a small distance offset from the high-resolution visible
+object, it is often useful to offset rays at least that distance
+away from the visible object, using
+<i><a href="node140.html#INDEX561">mi_ray_offset</a></i> in the shader.</p>
+
+<p><a id="FOOTNOTE12">[12]</a> mental ray
+supports any value between 0.0 and 1.0.
+<p><a id="FOOTNOTE13">[13]</a> Parametric
+approximation is supported only for free-form surfaces and not for
+displaced geometry.
+<p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="catmullclark.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node90.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

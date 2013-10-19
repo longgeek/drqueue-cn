@@ -1,0 +1,112 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+#import  <mi_msl_shared.msl>
+
+shader Illumination_cook_torrance
+{
+  input:
+    Color  diffuse_color = Color(1,1,1,1)
+	{
+		display_name("Diffuse Color");
+		hard_range(Color(0,0,0,0),Color(1,1,1,1));
+		description( "The color used to tint the Diffuse Reflectance Color." );
+	};
+    float diffuse_scalar = 0.7
+	{
+		display_name("Diffuse Float");
+		hard_range(float(0),float(1));
+		description( "The intensity of the light diffusely reflected from "
+					 "this surface." );
+	};
+    Color  specular_color = Color(1,1,1,1)
+	{
+		display_name("Specular Color");
+		hard_range(Color(0,0,0,0),Color(1,1,1,1));
+		description("The color used to tint the Specular Reflectance "
+					 "Color." );
+	};
+    float specular_scalar = 0.17
+	{
+		display_name("Specular Float");
+		hard_range(0,0.5);
+		description( "The intensity of the specular light reflections from "
+					 "this surface." );
+	};
+
+    float roughness = 0.18
+	{
+		display_name("Specular Roughness");
+		hard_range(0,1);
+		description( "The width of specular highlights along the across the "
+					 "surface." );
+	};
+    Color ior = Color(15,15,15,1)
+    {
+		display_name("Index of Refraction");
+		soft_range(Color(0, 0, 0, 0), Color(255, 255, 255, 1));
+		description( "Effect of the Color on the color of specular "
+		             "reflections across the surface." );
+	};
+
+  output:
+    Color result;
+    Color sum;
+    Color diffuse;
+    Color specular;
+
+    void main()
+    {
+	diffuse  = Color(0,0,0,0);
+	specular = Color(0,0,0,0);
+
+	Color Rd = diffuse_color * diffuse_scalar;
+	Color Rs = specular_color * specular_scalar;
+
+	// normalize components
+	Color temp = Rd + Rs;
+	float maxc = max(max(temp.r,temp.g),temp.b);
+	if (maxc>1.0) {
+	    Rd /= maxc;
+	    Rs /= maxc;
+	}
+
+	float3 vdir = direction;
+
+	// enumerate lights
+	Light_iterator light;
+	foreach (light)
+	{
+	    float cos = saturate(light.dot_nl);
+	    if (cos > 0.0) {
+		diffuse += (cos / PI) * light.contribution;
+
+		Color s = mi_cooktorr_specular(vdir,
+			light.direction,
+			normal,
+			roughness,
+			ior);
+		specular += (s * cos) * light.contribution;
+	    }
+	}
+
+	diffuse *= Rd;
+	specular *= Rs;
+
+	// irradiance term
+	Irradiance_options irradiance_options;
+	irradiance_options.set_importance(diffuse_scalar);
+	diffuse += Rd/PI * irradiance(irradiance_options);
+
+	diffuse.a = 1.0;
+	specular.a = 1.0;
+	sum = diffuse + specular;
+	result = sum;
+    }
+}
+{
+	description( "An illumination model for rough, shiny "
+	             "surfaces, such as metals." );
+}
+;

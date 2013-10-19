@@ -1,0 +1,399 @@
+/******************************************************************************
+ * Copyright 1986-2009 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#include <max_common.msl>
+
+#define JAN_W
+
+#define MAX_WAVES 10
+
+//hardware replacement for maxNTrand
+#define USE_NOISE_TEXTURE
+
+struct mrWater_inst {
+  float3 center;
+  float period;
+  float rate;
+};
+
+shader max_Water {
+ input:
+  // parameters for max_Water:
+  // -------------------------
+  // see mrWater in max_texmaps.h
+#ifdef HLSL_OPTIMIZE
+  int NumWaveSets = 3 {
+  };
+  float WaveRadius = 1000.0 {
+  };
+  float WaveLenMin = 50.0 {
+  };
+  float WaveLenMax = 50 {
+  };
+  float Amplitude = 1.0 {
+  };
+  float Phase = 0.0 {
+  };
+  int Distribution = 0.0 {
+  };
+  int RandomSeed = 30159 {
+  };
+  Color Color1 = Color(1.0) {
+  };
+  Color Color2 = Color(0.0, 0.0, 0.0, 1.0) {
+  };
+  Shader Map1 = Shader() {
+  };
+  Shader Map2 = Shader() {
+  };
+  const bool Map1On = false {
+  };
+  const bool Map2On = false {
+  };
+  Shader Coords = Shader() {
+  };
+  // TODO: int GBufferID
+#else
+  struct Parameters_struct {
+    int NumWaveSets;  // count
+    float WaveRadius; // size
+    float WaveLenMin; // min_length
+    float WaveLenMax; // max_length
+    float Amplitude;  // amplitude
+    float Phase;      // phase
+    int Distribution; // distribution
+    int RandomSeed;   // seed
+    Color Color1;     // col1
+    Color Color2;     // col2
+    Shader Map1;      // tex1
+    Shader Map2;      // tex2
+    bool Map1On;      // tex1Enabled
+    bool Map2On;      // tex2Enabled
+    Shader Coords;    // xyz
+  }; // Parameters
+  Parameters_struct Parameters =
+    Parameters_struct(
+		      3,
+		      1000.0,
+		      50.0,
+		      50.0,
+		      1.0,
+		      0.0,
+		      0,//distribution
+		      30159,
+		      Color(1, 1, 1, 1),
+		      Color(0, 0, 0, 1),
+		      Shader(),
+		      Shader(),
+		      false,
+		      false,
+		      Shader());
+
+  struct ExtraParameters_struct {
+    int GBufferID;
+  }; // ExtraParameters
+  ExtraParameters_struct ExtraParameters;
+#endif
+
+#ifdef USE_NOISE_TEXTURE
+#ifdef JAN_W
+  // textures2
+  Texture2d noise_texture = "water_noise_out.dds" {
+    disable_filtering();
+    description( "The texture containing the random values." );
+    texture_coord_u("clamp");
+    texture_coord_v("clamp");
+  };
+#else
+  // textures
+  Texture1d noise_texture = "nrand.dds" {
+    disable_filtering();
+    description( "The texture containing the random values." );
+    texture_coord_u("clamp");
+  };
+#endif
+#endif
+  const bool evalNormal = false {
+  };
+
+ output:
+  Color result;
+
+ member:
+#ifndef JAN_W
+  //int m_holdrand;
+  void maxNTsrand(in int param_seed) {
+    //m_holdrand = param_seed;
+  } // maxNTsrand
+
+  int mask_rand(in int param_value) {
+    //apply mask & 7FFF
+    if(param_value >= 32768)
+      return param_value - 32768;
+    return param_value;
+  } // mask_rand
+
+#ifdef USE_NOISE_TEXTURE
+  int maxNTrand(inout int param_holdrand) {
+    // float x = float(param_holdrand) / 256.0;
+    float x = (2.0 * float(param_holdrand) + 1.0) / (2.0 * 256.0);
+    // Color r = tex1d(noise_texture, x);
+    Color r = Texture1D_sampler_color(noise_texture, 0.0, "none").lookup(x);
+    param_holdrand++;
+    return int(r.r * 32767.0);
+  } // maxNTrand
+#else
+  int maxNTrand(inout int param_holdrand) {
+    param_holdrand = param_holdrand * 214013 + 2531011;
+    int tmp = param_holdrand / 65536;//divide by 2^16
+    tmp = abs(tmp);
+    return mask_rand(tmp);
+  } // maxNTrand
+#endif
+
+  // see tex_water.cpp
+  float frand(inout int param_holdrand) {
+    int tmp = mask_rand(maxNTrand(param_holdrand));
+    return tmp/16384.0f - 1.0; //2^14
+  } // frand
+#else // JAN_W
+  Color noise_texture_lookup(in float x, in float y) {
+    Color col = Texture2D_sampler_color(noise_texture,
+					0.0, "none").lookup(float2(x, y));
+    return col;
+  } // noise_texture_lookup
+#endif
+
+  // see tex_water.cpp
+  float maxWater_swave(in float phase, in float3 v, in float rate) {
+    float d = length(v);
+    float t = (0.5*(1.0 + sin((d - phase * rate)*TWO_PI)));
+    return t;
+  } // maxWater_swave
+
+  // see tex_water.cpp
+  void maxWater_vwave(in float phase, in float3 v, in float rate,
+		      out float3 w) {
+    float d = length(v);
+    float f = cos((d - phase * rate) * TWO_PI);
+    w = f*v/d;
+  } // maxWater_vwave
+
+  // see tex_water.cpp
+  float maxWater_ScalarWave(in mrWater_inst param_inst[],
+                            in float3 param_p) {
+    float3 v = float3(0);
+    int count = PARAS(NumWaveSets) >= 1 ? PARAS(NumWaveSets) : 1;
+    float n = 0.0;
+    for (int i = 0; i < count; i++) {
+      v = (param_p - param_inst[i].center) / param_inst[i].period;
+      n += maxWater_swave(PARAS(Phase), v, param_inst[i].rate)
+	* param_inst[i].period / PARAS(WaveLenMax);
+    }
+    return n * PARAS(Amplitude) / count;
+  } // maxWater_ScalarWave
+
+  // see tex_water.cpp
+  void maxWater_VectorWave(in mrWater_inst param_inst[],
+                           in float3 p,
+                           inout float3 n) {
+    float f = 0.0;
+    float3 d = float3(0);
+    float3 v = float3(0);
+    int count = PARAS(NumWaveSets) >= 1 ? PARAS(NumWaveSets) : 1;
+    n = float3(0);
+
+    for(int i = 0; i < count; i++) {
+      v = (p - param_inst[i].center)/param_inst[i].period;
+      maxWater_vwave(PARAS(Phase), v, param_inst[i].rate, d);
+      f = param_inst[i].period / PARAS(WaveLenMax);
+      n += d*f;
+    }
+    f = PARAS(Amplitude) / count;
+    n *= f;
+  } // maxWater_VectorWave
+
+  //see tex_water.cpp
+  Color maxWater_EvalColor(in float3 param_xyz,
+                           in mrWater_inst param_inst[],
+                           in Color param_map1,
+                           in Color param_map2) {
+    Color res = Color(0, 0, 0, 0);
+    float d = 0;
+    Color c1 = param_map1;
+    Color c2 = param_map2;
+    d = maxWater_ScalarWave(param_inst,
+			    param_xyz);
+    if(d > 1.0)d = 1.0;
+    //TODO check correct
+    res = lerp(c1, c2, d);
+    return res;
+  } // maxWater_VectorWave
+
+  float3 maxWater_EvalNormalPerturb(in float3 param_xyz,
+                                    in mrWater_inst param_inst[],
+                                    // xtra
+				    in float3 param_xtra_bumpDP_0,
+				    in float3 param_xtra_bumpDP_1,
+				    in float3 param_xtra_bumpDP_2) {
+    float3 p = param_xyz;
+    float3 q = float3(0);
+    float3 np = float3(0);
+    maxWater_VectorWave(param_inst, p, q);
+    np.x = dot(q, param_xtra_bumpDP_0);
+    np.y = dot(q, param_xtra_bumpDP_1);
+    np.z = dot(q, param_xtra_bumpDP_2);
+    float4x4 m = get_transform("object", "internal");
+    // mi_matrix_copy (m, *tm);
+    float3 v;
+    float3 vn;
+    // mi_vector_normalize ((miVector *)&(m)[0]);
+    v = float3(m[0][0], m[1][0], m[2][0]);
+    vn = normalize(v);
+    m[0][0] = vn.x;
+    m[1][0] = vn.y;
+    m[2][0] = vn.z;
+    // mi_vector_normalize ((miVector *)&(m)[4]);
+    v = float3(m[0][1], m[1][1], m[2][1]);
+    vn = normalize(v);
+    m[0][1] = vn.x;
+    m[1][1] = vn.y;
+    m[2][1] = vn.z;
+    // mi_vector_normalize ((miVector *)&(m)[8]);
+    v = float3(m[0][2], m[1][2], m[2][2]);
+    vn = normalize(v);
+    m[0][2] = vn.x;
+    m[1][2] = vn.y;
+    m[2][2] = vn.z;
+    float3x3 m2;
+    m2[0] = m[0].xyz;
+    m2[1] = m[1].xyz;
+    m2[2] = m[2].xyz;
+    // mi_vector_transform (&np, &np, m);
+    np = m2 * np;
+    return np;
+  } // maxWater_EvalNormalPerturb
+
+  void max_Water_init(inout mrWater_inst param_inst[]) {
+#ifdef JAN_W
+    // read noise values from texture
+    int count = PARAS(NumWaveSets) >= 1 ? PARAS(NumWaveSets) : 1;
+    float3 c = float3(0.0, 0.0, 0.0);
+    Color col = Color(0.0, 0.0, 0.0, 0.0);
+    float x = 0.0;
+    float y = 0.0;
+    float d = 0.0;
+    int i = 0;
+    for (i = 0; i < count; i++) {
+      // x = (2.0 * float(i) + 1.0) / (2.0 * 10.0);
+      x = (2.0 * float(i) + 1.0) / 20.0;
+      // y = (2.0 * float(0.0) + 1.0) / (2.0 * 2.0);
+      y = 0.25;
+      col = noise_texture_lookup(x, y);
+      // col = Texture2D_sampler_color(noise_texture,
+      // 			      0.0, "none").lookup(float2(x, y));
+      c.xyz = col.rgb;
+      // d = paras->sp.size / (float)sqrt(c[0]*c[0]+c[1]*c[1]+c[2]*c[2]);
+      float len = length(c);
+      if (len != 0.0) {
+	d = PARAS(WaveRadius) / len;
+	// store center and apply shader parameter specific calculations !!!
+	param_inst[i].center = c * d;
+      } // if (len != 0.0)
+      // y = (2.0 * float(1.0) + 1.0) / (2.0 * 2.0);
+      y = 0.75;
+      col = noise_texture_lookup(x, y);
+      // col = Texture2D_sampler_color(noise_texture,
+      // 			      0.0, "none").lookup(float2(x, y));
+      if (col.r != 0.0) {
+	// store period and apply shader parameter specific calculations !!!
+	param_inst[i].period = 
+	  col.r * (PARAS(WaveLenMax) - PARAS(WaveLenMin)) + PARAS(WaveLenMax);
+	// calculate rate from known (not baked) values
+	param_inst[i].rate = sqrt(PARAS(WaveLenMax) / param_inst[i].period);
+      } // if (col.r != 0.0)
+    } // for (i = 0; i < count; i++)
+#else
+    float d = 0.0;
+    float3 c = float3(0);
+    int count = PARAS(NumWaveSets) >= 1 ? PARAS(NumWaveSets) : 1;
+    int distribution = PARAS(Distribution);
+    float size = PARAS(WaveRadius);
+    float max_length = PARAS(WaveLenMax);
+    float min_length = PARAS(WaveLenMin);
+#ifdef USE_NOISE_TEXTURE
+    int hold_rand = 0;
+#else
+    int hold_rand = PARAS(RandomSeed);
+#endif
+    for(int i = 0; i < count; i++) {
+      c.x = frand(hold_rand);
+      c.y = (distribution == 0) ? frand(hold_rand) : 0.0;
+      c.z = frand(hold_rand);
+      d = size /length(c);
+      param_inst[i].center = c*d;
+      param_inst[i].period = abs((mask_rand(maxNTrand(hold_rand))/32768.0f))*
+	( max_length - min_length )+ min_length;
+      param_inst[i].rate = sqrt(max_length/param_inst[i].period);
+    }
+#endif
+  } // max_Water_init
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    mrWater_inst inst[MAX_WAVES] = {    mrWater_inst(float3(0), 0, 0),
+                                        mrWater_inst(float3(0), 0, 0),
+                                        mrWater_inst(float3(0), 0, 0),
+                                        mrWater_inst(float3(0), 0, 0),
+                                        mrWater_inst(float3(0), 0, 0),
+                                        mrWater_inst(float3(0), 0, 0),
+                                        mrWater_inst(float3(0), 0, 0),
+                                        mrWater_inst(float3(0), 0, 0),
+                                        mrWater_inst(float3(0), 0, 0),
+                                        mrWater_inst(float3(0), 0, 0) };
+    Color map1_color = PARAS(Color1);
+    Color map2_color = PARAS(Color2);
+    //initialize the waves
+    max_Water_init(inst);
+    // get xyz-coordinates
+    float3 xyz = transform_point("internal", "object", position);
+    Color xyz_color = Color(0);
+    float3 shader_xtra_dP = float3(0.0, 0.0, 0.0);
+    float3 shader_xtra_bumpDP_0 = float3(0.0, 0.0, 0.0);
+    float3 shader_xtra_bumpDP_1 = float3(0.0, 0.0, 0.0);
+    float3 shader_xtra_bumpDP_2 = float3(0.0, 0.0, 0.0);
+    if (PARAS(Coords).call("output", "result", xyz_color,
+			   "output", "xtra_dP", shader_xtra_dP,
+			   "output", "xtra_bumpDP_0", shader_xtra_bumpDP_0,
+			   "output", "xtra_bumpDP_1", shader_xtra_bumpDP_1,
+			   "output", "xtra_bumpDP_2", shader_xtra_bumpDP_2)) {
+      xyz = xyz_color.rgb;
+    }
+    else {
+      xyz *= 500.0;
+    }
+    if(evalNormal == false)
+      {
+        if(PARAS(Map1On)) {
+	  PARAS(Map1).call("output", "result", map1_color);
+	}
+        if(PARAS(Map2On)) {
+	  PARAS(Map2).call("output", "result", map2_color);
+	}
+        result = maxWater_EvalColor(xyz,
+                                    inst,
+                                    map1_color,
+                                    map2_color);
+      }
+    else {
+      result.rgb =  maxWater_EvalNormalPerturb(xyz,
+					       inst,
+					       // xtra
+					       shader_xtra_bumpDP_0,
+					       shader_xtra_bumpDP_1,
+					       shader_xtra_bumpDP_2);
+    }
+  } // main
+};

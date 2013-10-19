@@ -1,0 +1,113 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Groups</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node197.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node199.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION196"></a>
+<h3>Groups</h3>
+<table class="table">
+<tr>
+<td><b>Element type:</b></td>
+<td>miSCENE_GROUP</td>
+</tr>
+<tr>
+<td><b>Data type:</b></td>
+<td>miGroup</td>
+</tr>
+<tr>
+<td><b>Sizes:</b></td>
+<td>int max_kids, int max_connections</td>
+</tr>
+<tr>
+<td><b>Defaults:</b></td>
+<td>all nulls, max_* as given by size arguments</td>
+</tr>
+</table>
+<pre>
+typedef struct miGroup {
+        miGeoScalar     merge;          /* merge tolerance */
+        miBoolean       placeholder;    /* is this a demand-loaded group? */
+        int             spare0;         /* not used */
+        miBoolean       merge_group;    /* perform merging on members? */
+        int             max_kids;       /* number of kids allocated */
+        int             no_kids;        /* number of kids actually used */
+        int             max_connections;/* number of connections allocated */
+        int             no_connections; /* number of connections used */
+        miTag           userdata;       /* optional user data blocks */
+        miUint          label;          /* optional label */
+        int             spare1[3];      /* not used */
+        miTag           kids[2];        /* kid list (instances) */
+} miGroup;
+
+typedef struct {
+        miTag           instance[2];    /* the two face type object instances*/
+        miGeoIndex      face[2];        /* indices of the two miFace's */
+        miGeoIndex      curve[2];       /* indices of the two miCurves*/
+        miGeoRange      range[2];
+} miConnection;
+</pre>
+<p>A translator must provide: nothing.<br />
+<br />
+A translator may provide: <tt>merge_group</tt>, <tt>merge</tt>, the
+connection array, <tt>userdata</tt>, <tt>label</tt>.</p>
+<p>Groups have two variable-sized sections, one for the list of
+instances and one for the list of connections. The latter exists
+only if the group is a merge group. The macro
+<tt>miGROUP_GET_CONNECTIONS(n)</tt> returns a <tt>miConnection</tt>
+pointer to the <i>n</i>-th connection. Note that instances must be
+added to groups with <i>mi_scene_link</i>, but the connection tags
+are written directly to the <tt>miConnection</tt>.</p>
+<p><b>merge</b> is the merge epsilon. It is used only in merge
+groups.</p>
+<p><b>placeholder</b> is reserved for internal use.</p>
+<p><b>merge_group</b> is <tt>miTRUE</tt> if this group is a merge
+group. Merge groups are treated like objects; all their subobjects
+are tessellated as one object. In fact, the Scene module treats
+merge groups like objects and lets GAP pick apart the group and its
+subtrees.</p>
+<p><b>max_kids</b> is the current size of the <i>kids</i>
+array.</p>
+<p><b>no_kids</b> is the number of instances stored in the
+<i>kids</i> array.</p>
+<p><b>max_connections</b> is the current size of the connection
+array.</p>
+<p><b>no_connections</b> is the number of connections in the
+connection array.</p>
+<p><b>userdata</b> allows attaching a user data block (miUserdata)
+or a chain of user data blocks. Shaders can retrieve the data with
+<i>mi_query</i>.</p>
+<p><b>userdata</b> allows attaching a user data block (miUserdata)
+or a chain of user data blocks. Shaders can retrieve the data with
+<i>mi_query</i>.</p>
+<p><b>label</b> is a numeric value assigned by applications.</p>
+<p><b>kids</b> is the beginning of the variable section of
+<tt>miGroup</tt>, consisting of an array of instance tags followed
+by an optional array of connections. Fields that follow the kids
+array in the C declaration in <tt>geoshader.h</tt> are not shown
+here, and are never used.</p>
+<p>The data structure contains extra members such as
+<i>groupjob</i> for placeholder groups, which are reserved for
+future extensions. Do not use.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node197.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node199.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

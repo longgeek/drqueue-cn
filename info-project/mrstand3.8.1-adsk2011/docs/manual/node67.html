@@ -1,0 +1,125 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shader Graphs</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node66.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node68.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION65"></a>
+<h2>Shader Graphs</h2>
+<p><a id="INDEX147"></a><a id="INDEX148"></a>
+Instead of assigning a constant value to a parameter in a shader definition,
+it is possible to assign a shader:</p>
+<pre>
+    "<i>parameter_name</i>" = "<i>shader_name</i>"  
+</pre>
+<p>For parameters assigned in this way, no value is stored in the
+shader definition. It is obtained by calling <i>shader_name</i> at
+runtime. For example, if the <i>ambient</i> parameter of a material
+shader has the constant value <tt>1 0 0</tt>, it is always red, but
+if another shader is assigned to it that other shader is called
+when the material shader asks for the value using the
+<i><a href="node138.html#INDEX522">mi_eval</a></i> function or one of its
+derivatives. The other shader could be a texture shader, for
+example, resulting in a textured ambient value.</p>
+<p>The return type of the assigned shader must agree with the
+parameter type. If the return type of the assigned shader is
+<tt>struct</tt>, it is possible to select a structure member by
+appending a period and the name of the struct member to the shader
+name. Consider the following assignment:</p>
+<a id="assignex"></a>
+<pre>
+     declare shader
+        color "phong" (color "ambient",
+                       color "diffuse",
+                       color "specular")
+        version 1
+     end declare
+
+     declare shader
+        struct {color "a", color "b"}
+              "texture" (color texture "picture")
+        version 1
+     end declare
+
+     color texture "fluffy" "/tmp/image.rgb"
+
+     shader "map" "texture" (
+        "picture"   "fluffy")
+
+     shader "mtlsh" "phong" (
+        "ambient"   0.3 0.3 0.3,
+        "diffuse"   = "map.a",
+        "specular"  = "map.b")
+</pre>
+<p>This defines a material shader that does not support texturing
+in any way because it has no parameters of type <tt>shader</tt> or
+<tt>color texture</tt>. Yet, shader assignments allow its diffuse
+and specular components to be textured without the <tt>phong</tt>
+shader being aware of it. Whenever <tt>phong</tt> accesses its
+ambient parameter value by calling
+<i><a href="node138.html#INDEX522">mi_eval</a></i>, it gets a constant color
+0.3 0.3 0.3. When it accesses its diffuse or specular color, a call
+to the named shader <tt>map</tt> results (which actually calls
+shader <tt>texture</tt>), whose result is then returned to the
+<tt>phong</tt> shader.</p>
+<p>In this example, the <tt>map</tt> shader returns two colors
+<tt>a</tt> and <tt>b</tt>, which are selected in the shader
+assignment by appending <tt>.a</tt> and <tt>.b</tt> to
+<tt>map</tt>. (For this reason periods should be avoided in
+parameter names.) If the shader had returned only a single color,
+only <tt>"map"</tt> would have been assigned, without appending a
+period and a structure member name.</p>
+<p>In the example, <tt>map</tt> is assigned twice. Obviously it is
+not desirable to actually call it twice, because the first call
+will already have set both its <tt>a</tt> and <tt>b</tt> return
+values. After the first call from a shader, mental ray caches the
+return value to avoid further calls. As soon as the shader
+<tt>phong</tt> returns, the cache is discarded to ensure that the
+next call to <tt>phong</tt>, most likely with a different state,
+calls <tt>map</tt> instead of using a stale cache.</p>
+<p>Note that shaders that support <a href="node67.html#INDEX148">shader
+graph</a>s must use the <i><a href="node138.html#INDEX522">mi_eval</a></i>
+function to access their
+parameters. This was done to ensure that only those assigned
+shaders whose values are actually used are evaluated. For example,
+a material shader that has two color parameters, one for the front
+and one for the back side of the surface, will access only one of
+its parameters by using <i><a href="node138.html#INDEX522">mi_eval</a></i>
+only once.</p>
+<p>To see how the <i>phong</i> shader is implemented as a C shader,
+see section <a href="node113.html#paramassign">paramassign</a>.</p>
+<p>The advantage of shader assignment is that it is not necessary
+to write shaders to accept procedural values. Without shader
+assignments, a simple Phong material shader would need parameters
+of type <tt>shader</tt> or <i>color texture</i> in addition to the
+standard ambient, diffuse, and specular parameters. Shader
+assignment allows writing small, reusable
+"<a href="node19.html#INDEX34">base shader</a>s" that can be easily combined
+into powerful <a href="node67.html#INDEX148">shader graph</a>s,
+instead of writing large monolithic shaders that are hard to modify
+and inflexible to use.</p>
+<p>The third form of parameter assigning using the
+<tt>interface</tt> keyword is available only inside phenomena,
+which will be discussed next.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node66.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node68.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>User Data</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node184.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node186.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION183"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_api_data_begin">mi_api_data_begin</a></li>
+<li><a href="#api:mi_api_data_end">mi_api_data_end</a></li>
+<li><a href="#api:mi_api_data_append">mi_api_data_append</a></li>
+<li><a href="#api:mi_api_data_byte_copy">mi_api_data_byte_copy</a></li>
+<li><a href="#api:mi_api_data_lookup">mi_api_data_lookup</a></li>
+</ul>
+
+<h3>User Data</h3>
+<p>Sometimes large amounts of opaque data must be entered into the
+scene that cannot be efficiently handled with shader parameters.
+For example, shaders may need large amounts of particle data. For
+this purpose, <b><a id="INDEX915"></a>user data block</b>s can be
+defined. A user data block consists of a header describing the data
+block, and the data itself. User data blocks are named.</p>
+<p><a id="INDEX916"></a></p>
+<h5 class="anchor" id="api:mi_api_data_begin">mi_api_data_begin</h5>
+<pre>
+    miUserdata *mi_api_data_begin(
+        char            *name,          /* name of user data block */
+        int             type,           /* 0=literal, 1=file, 2=declared */
+        void            *parm)          /* type 0:size, 1:filename, 2:decl */
+</pre>
+<p>Begin the definition of a user data block named <i>name</i>. Its
+contents can be defined in three different ways: if <i>type</i> is
+0, the data must be copied verbatim with <i>mi_api_data_copy</i>
+(see below); if <i>type</i> is 1, the data is read from a file; and
+if <i>type</i> is 2, the data is defined similar to regular shader
+parameters. This last mode is useful if the data block itself is
+not large but shared among a large number of shaders or other
+elements. In mode 0, <i>parm</i> is an integer specifying the
+number of bytes to be stored. In mode 1, <i>parm</i> is an
+allocated string that specifies the file name to load from. In mode
+2, <i>parm</i> is the tag of a function that the parameters will be
+taken from (this works exactly like the <i>params</i> argument of
+the <i><a href="node188.html#INDEX936">mi_api_instance_end</a></i>
+function except that the declaration can, but doesn't have to, be
+of type <tt>miFUNCTION_DATA</tt>). This function returns a pointer
+to the new user data block, which lets the caller set up the
+<tt>miUserdata</tt> header.</p>
+<p><a id="INDEX917"></a></p>
+<h5 class="anchor" id="api:mi_api_data_end">mi_api_data_end</h5>
+<pre>
+    miTag mi_api_data_end(void)
+</pre>
+<p>Complete the definition of the <a href="node185.html#INDEX915">user
+data block</a>, and return its
+tag.</p>
+<p><a id="INDEX918"></a></p>
+<h5 class="anchor" id="api:mi_api_data_append">mi_api_data_append</h5>
+<pre>
+    miTag mi_api_data_append(
+        miTag           front,          /* list to append to */
+        miTag           back)           /* list to append */
+</pre>
+<p>Append the <i>back</i> user data block list to the <i>front</i>
+user data tag list, and return the first tag of the concatenated
+list. Either or both lists may be empty ( <i>front</i> and/or
+<i>back</i> is a null tag). User data block concatenation works the
+same way as shader list concatenation.</p>
+<p><a id="INDEX919"></a></p>
+<h5 class="anchor" id="api:mi_api_data_byte_copy">mi_api_data_byte_copy</h5>
+<pre>
+    miBoolean mi_api_data_byte_copy(
+        int             len,            /* number of bytes */
+        miUchar         *bytes)         /* bytes from the mi file */
+</pre>
+<p>Append the given number of bytes to the user data block. This
+must be called between <i><a href="node185.html#INDEX916">mi_api_data_begin</a></i>
+and <i><a href="node185.html#INDEX917">mi_api_data_end</a></i> if the <i>type</i>
+of the <a href="node185.html#INDEX915">user data block</a> is 0. It
+may be called zero or more times, and the sum of all <i>len</i>
+arguments may not exceed the <a href="node185.html#INDEX915">user
+data block</a> size specified in the begin call. If this function
+may not be called for type 1 or 2 blocks, it overwrites data from
+the file or parameters.</p>
+<p><a id="INDEX920"></a></p>
+<h5 class="anchor" id="api:mi_api_data_lookup">mi_api_data_lookup</h5>
+<pre>
+    miTag mi_api_data_lookup(
+        char            *name)          /* data block name to look up */
+</pre>
+<p>Look up the <a href="node185.html#INDEX915">user data block</a>
+with the given <i>name</i>, and returns its tag. If the database
+element with that name is not a user data block, or if the name is
+unknown, an error is printed and a null tag is returned.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node184.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node186.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Messages and Errors</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node156.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node158.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION155"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_fatal">mi_fatal</a></li>
+<li><a href="#api:mi_error">mi_error</a></li>
+<li><a href="#api:mi_warning">mi_warning</a></li>
+<li><a href="#api:mi_info">mi_info</a></li>
+<li><a href="#api:mi_progress">mi_progress</a></li>
+<li><a href="#api:mi_debug">mi_debug</a></li>
+<li><a href="#api:mi_vdebug">mi_vdebug</a></li>
+</ul>
+
+<h3>Messages and Errors</h3>
+<p><a id="INDEX823"></a><a id="INDEX824"></a>
+Shaders may print messages and errors. They are
+printed in the same format as rendering (RC) messages. Options
+given to the translator determine which messages are printed and
+which are suppressed. All message routines have the same parameters
+as <i>printf(3)</i>. All append a newline to the message. Messages
+are printed in the form</p>
+<p>&nbsp;&nbsp; <tt>RC</tt> <i>host.thread level: message</i></p>
+<p>with the module name, e.g. <tt>RC</tt>, the host number
+<i>host</i> if available, the thread number <i>thread</i> with a
+leading dot if available, the message type <i>level</i> (fatal,
+error, warning etc), and the message given in the function call. In
+a networked environment, the messages of slaves are usually
+transferred to the master rendering host and printed in the order
+they were received. Messages resulting from connection problems and
+those that were dropped to avoid a network overload may be found in
+a local file (<tt>/tmp/raylib.log</tt>). Newlines in the message
+are replaced with blanks.</p>
+<p><a id="INDEX825"></a></p>
+<h5 class="anchor" id="api:mi_fatal">mi_fatal</h5>
+<pre>
+    void mi_fatal(
+        const char * const message,
+        ...)
+</pre>
+<p>An unrecoverable error has occurred. Unlike all others, this
+call will not return; it will attempt to recover mental ray and
+return to the top-level translator. Recovering may involve aborting
+all operations in progress and clearing the entire database. Fatal
+messages can be suppressed, but mental ray is always exited. This
+function should never be used in a shader because it may also exit
+any application that mental ray is embedded in, without giving the
+user a chance to save his work!</p>
+<p><a id="INDEX826"></a></p>
+<h5 class="anchor" id="api:mi_error">mi_error</h5>
+<pre>
+    void mi_error(
+        const char * const message,
+        ...)
+</pre>
+<p>An unrecoverable error has occurred. The caller then aborts the
+current operation gracefully and returns.</p>
+<p><a id="INDEX827"></a></p>
+<h5 class="anchor" id="api:mi_warning">mi_warning</h5>
+<pre>
+    void mi_warning(
+        const char * const message,
+        ...)
+</pre>
+<p>A recoverable error occurred. The current operation
+proceeds.</p>
+<p><a id="INDEX828"></a></p>
+<h5 class="anchor" id="api:mi_info">mi_info</h5>
+<pre>
+    void mi_info(
+        const char * const message,
+        ...)
+</pre>
+<p>Prints information about the current operation such as the
+number of triangles and timing information. Infos should be used
+sparingly; do not print information for every intersection point or
+shader call except during debugging, especially on Windows NT 4.x
+with its slow and nonparallel I/O system.</p>
+<p><a id="INDEX829"></a></p>
+<h5 class="anchor" id="api:mi_progress">mi_progress</h5>
+<pre>
+    void mi_progress(
+        const char * const message,
+        ...)
+</pre>
+<p>Prints progress reports such as rendering percentages.</p>
+<p><a id="INDEX830"></a></p>
+<h5 class="anchor" id="api:mi_debug">mi_debug</h5>
+<pre>
+    void mi_debug(
+        const char * const message,
+        ...)
+</pre>
+<p>Prints debugging information useful only for shader
+development.</p>
+<p><a id="INDEX831"></a></p>
+<h5 class="anchor" id="api:mi_vdebug">mi_vdebug</h5>
+<pre>
+    void mi_vdebug(
+        const char * const message,
+        ...)
+</pre>
+<p>Prints more debugging information useful only for shader
+development. Messages that are likely to be useful only in rare
+circumstances, or that generate a very large number of lines should
+be printed with this function.</p>
+<p>Note that all these functions incur some runtime overhead even
+if the verbosity level is set such that no message is printed. It
+is often a good idea to enclose shader debugging messages that
+occur frequently in <tt>ifdef DEBUG</tt> statements to make sure
+they are omitted in production versions of the shader.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node156.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node158.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Noise Functions</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node145.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node147.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION144"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_random">mi_random</a></li>
+<li><a href="#api:mi_srandom">mi_srandom</a></li>
+<li><a href="#api:mi_erandom">mi_erandom</a></li>
+<li><a href="#api:mi_par_random">mi_par_random</a></li>
+<li><a href="#api:mi_spline">mi_spline</a></li>
+<li><a href="#api:mi_noise_1d">mi_noise_1d</a></li>
+<li><a href="#api:mi_noise_2d">mi_noise_2d</a></li>
+<li><a href="#api:mi_noise_3d">mi_noise_3d</a></li>
+<li><a href="#api:mi_noise_1d_grad">mi_noise_1d_grad</a></li>
+<li><a href="#api:mi_noise_2d_grad">mi_noise_2d_grad</a></li>
+<li><a href="#api:mi_noise_3d_grad">mi_noise_3d_grad</a></li>
+<li><a href="#api:mi_unoise_1d">mi_unoise_1d</a></li>
+<li><a href="#api:mi_unoise_2d">mi_unoise_2d</a></li>
+<li><a href="#api:mi_unoise_3d">mi_unoise_3d</a></li>
+<li><a href="#api:mi_unoise_1d_grad">mi_unoise_1d_grad</a></li>
+<li><a href="#api:mi_unoise_2d_grad">mi_unoise_2d_grad</a></li>
+<li><a href="#api:mi_unoise_3d_grad">mi_unoise_3d_grad</a></li>
+</ul>
+
+<h3>Noise Functions</h3>
+<p>The functions in this group provide pseudo-<b><a name="INDEX689"
+id="INDEX689"></a>random number</b>s, quasi-Monte Carlo numbers
+(using low-discrepancy sequences that converge faster than
+pseudo-random numbers), and deterministic Perlin noise.</p>
+<p><a id="INDEX690"></a></p>
+<h5 class="anchor" id="api:mi_random">mi_random</h5>
+<pre>
+    miScalar mi_random(void)
+</pre>
+<p>Return a <a href="node146.html#INDEX689">random number</a> in
+the range <i>[0, 1)</i>. This is similar to <i>drand48</i> in the
+standard Unix libraries, but it is available on all platforms
+including Windows NT, which does not support <i>drand48</i>.</p>
+<p><a id="INDEX691"></a></p>
+<h5 class="anchor" id="api:mi_srandom">mi_srandom</h5>
+<pre>
+    void mi_srandom(
+        long            seed)
+</pre>
+<p>Begin a new <a href="node146.html#INDEX689">random number</a>
+sequence for <i><a href="node146.html#INDEX690">mi_random</a></i>.
+This is equivalent to the standard Unix library function
+<i>srand48</i>.</p>
+<p><a id="INDEX692"></a></p>
+<h5 class="anchor" id="api:mi_erandom">mi_erandom</h5>
+<pre>
+    miScalar mi_erandom(
+        unsigned short  seed[3])
+</pre>
+<p>Return a <a href="node146.html#INDEX689">random number</a> in
+the range <i>[0, 1)</i>, based on the given <i>seed</i>. This
+allows shaders to create private random number generators by
+initializing a private <i>seed</i> array to some arbitrary but
+constant values, and passing it to
+<i><a href="node146.html#INDEX692">mi_erandom</a></i> without the chance of
+other functions or threads disturbing the sequence by "stealing"
+<a href="node146.html#INDEX689">random number</a>s (assuming they
+do not have access to the private seed). This is equivalent to the
+standard Unix library function <i>erand48</i>.</p>
+<p><a id="INDEX693"></a></p>
+<h5 class="anchor" id="api:mi_par_random">mi_par_random</h5>
+<pre>
+    miScalar mi_par_random(
+        miState         *state)
+</pre>
+<p>Return a parallel-safe <a href="node146.html#INDEX689">random
+number</a> in the range <i>[0, 1)</i>. Parallel-safe random numbers
+can be used in parallel rendering to produce consistent results
+that do not change when the number of machines or threads changes,
+or when the execution order changes. All shaders that use this
+function share the same internal seed value. This function should
+not be used in geometry shaders, displacement shaders, photon
+shaders, output shaders, or <i>_init</i> functions of shaders
+because the initial seed of the random number sequence is undefined
+in these cases.</p>
+<p><a id="INDEX694"></a></p>
+<h5 class="anchor" id="api:mi_spline">mi_spline</h5>
+<pre>
+    miScalar mi_spline(
+        miScalar         t,
+        const int        n,
+        miScalar * const ctl)
+</pre>
+<p>This function calculates a one-dimensional
+<a href="node85.html#INDEX306">cardinal spline</a> at location <i>t</i>.
+The <i>t</i> parameter must be in the range 0&hellip;1. The spline
+is defined by <i>n</i> control points specified in the array
+<i>ctl</i>. There must be at least two control points. To calculate
+multi-dimensional splines, this function must be called once for
+each dimension. For example, <i>spline</i> can be used three times
+to interpolate colors smoothly.</p>
+<p><a id="INDEX695"></a><a id="INDEX696"></a></p>
+<h5 class="anchor" id="api:mi_noise_1d">mi_noise_1d</h5>
+<pre>
+    miScalar mi_noise_1d(
+        const miScalar   p)
+</pre>
+<p>Return a one-dimensional <b><a id="INDEX697"></a>coherent noise</b>
+function of <i>p</i>. All six
+noise functions compute a modified
+<a href="node146.html#INDEX695">Perlin noise</a> function from the given
+one, two, or three dimension parameters such that the noise changes
+gradually with changing parameters. The modification of the
+classical algorithm avoids large-scale periodical behavior at
+lattice points, such that the noise is smooth on all levels. (This
+makes the algorithm perform slower than classical Perlin noise.)
+The returned values are in the range 0&hellip;1, with a bell-shaped
+distribution centered at 0.5 and falling off to both sides. This
+means that 0.5 is returned most often, and values of less than 0.0
+and more than 1.0 are never returned. See <a href="node256.html#Perlin85">Perlin85</a>.</p>
+<p><a id="INDEX698"></a></p>
+<h5 class="anchor" id="api:mi_noise_2d">mi_noise_2d</h5>
+<pre>
+    miScalar mi_noise_2d(
+        const miScalar   u,
+        const miScalar   v)
+</pre>
+<p>Return a two-dimensional noise function of <i>u, v</i>.</p>
+<p><a id="INDEX699"></a></p>
+<h5 class="anchor" id="api:mi_noise_3d">mi_noise_3d</h5>
+<pre>
+    miScalar mi_noise_3d(
+        miVector * const p)
+</pre>
+<p>Return a three-dimensional noise function of the vector
+<i>p</i>. This is probably the most useful noise function; a simple
+procedural texture shader can be written that converts a copy of
+the <code>state&rarr;point</code> vector to
+<a href="node101.html#INDEX369">object space</a>, passes it to
+<i>mi_noise_3d</i>, and assigns the returned value to the red,
+green, and blue components of the result color. The average feature
+size of the texture will be approximately one unit in space.</p>
+<p><a id="INDEX700"></a></p>
+<h5 class="anchor" id="api:mi_noise_1d_grad">mi_noise_1d_grad</h5>
+<pre>
+    miScalar mi_noise_1d_grad(
+        const miScalar   p,
+        miScalar * const g)
+</pre>
+<p>Return a one-dimensional noise function of <i>p</i>. The
+gradient of the computed texture at the location <i>p</i> is
+assigned to <tt>*</tt> <i>g</i>. Gradients are not normalized.</p>
+<p><a id="INDEX701"></a></p>
+<h5 class="anchor" id="api:mi_noise_2d_grad">mi_noise_2d_grad</h5>
+<pre>
+    miScalar mi_noise_2d_grad(
+        const miScalar   u,
+        const miScalar   v,
+        miScalar * const gu,
+        miScalar * const gv)
+</pre>
+<p>Return a two-dimensional noise function of <i>u, v</i>. The
+gradient is assigned to <tt>*</tt> <i>gu</i> and <tt>*</tt>
+<i>gv</i>.</p>
+<p><a id="INDEX702"></a></p>
+<h5 class="anchor" id="api:mi_noise_3d_grad">mi_noise_3d_grad</h5>
+<pre>
+    miScalar mi_noise_3d_grad(
+        miVector * const p,
+        miVector * const g)
+</pre>
+<p>Return a three-dimensional noise function of the vector
+<i>p</i>. The gradient is assigned to the vector <i>g</i>.</p>
+
+<a id="INDEX703"></a><a id="INDEX704"></a><a id="INDEX705"></a>
+<a id="INDEX706"></a><a id="INDEX707"></a><a id="INDEX708"></a>
+<h5 class="anchor">
+<a id="api:mi_unoise_1d"></a>mi_unoise_1d<br />
+<a id="api:mi_unoise_2d"></a>mi_unoise_2d<br />
+<a id="api:mi_unoise_3d"></a>mi_unoise_3d<br />
+<a id="api:mi_unoise_1d_grad"></a>mi_unoise_1d_grad<br />
+<a id="api:mi_unoise_2d_grad"></a>mi_unoise_2d_grad<br />
+<a id="api:mi_unoise_3d_grad"></a>mi_unoise_3d_grad</h5>
+<pre>
+    miScalar mi_unoise_1d()
+    miScalar mi_unoise_2d()
+    miScalar mi_unoise_3d()
+    miScalar mi_unoise_1d_grad()
+    miScalar mi_unoise_2d_grad()
+    miScalar mi_unoise_3d_grad()
+</pre>
+<p>These functions are similar to the regular noise functions,
+except that the returned distribution is uniform. All returned
+values are roughly equally likely.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node145.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node147.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

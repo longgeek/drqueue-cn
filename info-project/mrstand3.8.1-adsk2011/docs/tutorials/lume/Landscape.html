@@ -1,0 +1,223 @@
+
+<HTML>
+<HEAD>
+   <TITLE>Landscape</TITLE>
+</HEAD>
+
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#006666" VLINK="#CC6600" ALINK="#888888">
+
+<CENTER><TABLE CELLSPACING=2 CELLPADDING=2 >
+<TR>
+<TD WIDTH="80"></TD>
+
+<TD ALIGN=LEFT VALIGN=TOP WIDTH="395">
+<H1><FONT FACE="Helvetica">Landscape</FONT></H1>
+<FONT FACE=Helvetica>Landscape</FONT> is a highly versatile shader that helps
+to map textures to terrain and other types of complex models in useful and
+natural ways, through attributes such as slope, height, image, and noise
+functions. For example, on a single piece of terrain geometry it could be used
+to create dusty pile-ups on plateau surfaces, exposed rock faces in steeper
+cliff-like areas, and water stains where the ground meets the sea. Especially
+useful in situations where the size or shape of an object makes handmade
+textures impractical.<p>
+<FONT FACE=Helvetica>Landscape</FONT> works by blending a base color with an
+overlay color. The blending parameter is computed from one or more effects.<p>
+<FONT FACE=Helvetica><B><BR><font size=+1>Effects</font></B></FONT><p>
+<FONT FACE=Helvetica><B></B></FONT>The artist controls <FONT
+FACE=Helvetica>Landscape</FONT> by applying one or more different "effects".
+One such effect, <b>Slope</b>, piles a texture on flat surfaces, like snow
+piling on a plateau. <b>Height</b> behaves like a waterline. Two different
+noise generators, <b>Shape Based</b> and <b>Positional</b>, provide
+natural-looking irregularities. <b>Stain</b> allows the artist to confine a
+texture with the boundaries of another object. <b>Image</b> allows the
+Overlay Color's color or alpha-channel to influence its blending.<p>
+<CENTER>
+<IMG SRC="2901.gif">
+<IMG SRC="2902.gif">
+<IMG SRC="2903.gif">
+<IMG SRC="2904.gif">
+<IMG SRC="2905.gif">
+<IMG SRC="2906.gif">
+</CENTER>
+<p>
+<FONT FACE=Helvetica>Landscape</FONT>'s real strength comes from allowing the
+artist to mix these effects. An example is mixing Slope and Height to give snow
+on high peaks. We'll explore mixing in detail later.<p>
+<FONT FACE=Helvetica><B><BR><font size=+1>Parameters</font></B></FONT><p>
+<FONT FACE=Helvetica><B>Overall</B></FONT><b></b><p>
+<b>Base Color</b> and <b>Overlay Color</b> are mixed together by a blending parameter
+computed from one or more effects.<p>
+
+<b>Blur</b> controls the sharpness of the border between the opaque and
+transparent extremes of the alpha-channel. A value of 0 gives a sharp line, a
+value of 1 gives a very blurred line.<p>
+
+Most of the effects apply only on a vertical axis and are dependent on the height
+above the origin. Use <b>Base Plane Normal</b> and <b>Base Plane Distance</b> to
+specify the vertical axis direction and distance relative to the world coordinate system origin.<p>
+
+<b>Relative to Object</b> and <b>Relative to World</b> controls whether the positions 
+and angles are measured relative to the world coordinate system or the object coordinate 
+system. Relative to World is good in situations where
+several different objects need a texture to line up across all the objects.
+Relative to Object is useful when an object needs to move, and the texture must move
+with it. Also, by rotating the center in Relative to Object mode, effects can be
+applied at an angle other than the horizontal.<p>
+
+<FONT FACE=Helvetica><B>Slope Effect</B></FONT><p>
+The Slope Effect acts like snow piling on a plateau. Flatter areas receive an
+opaque alpha-channel while steep areas receive a transparent alpha-channel.<p>
+<b>Active</b> activates the slope effect.<p>
+
+<b>Influence</b> is used for <A HREF="#Mixing">mixing</A>.<p>
+
+<b>Upside Down</b> reverses the direction of the effect, so that the
+alpha-channel is opaque in steep areas and and transparent in flat areas.<p>
+
+<b>Angle</b> specifies where the cutoff line is, (i.e. how steep the slope is
+before the snow begins falling off) measured in degrees from the XZ plane. <p>
+
+<FONT FACE=Helvetica><B>Height Effect</B></FONT><p>
+The Height Effect creates a horizontal line across the object; areas above the
+line receive an opaque alpha-channel, areas below receive a transparent
+alpha-channel.<p>
+
+<b>Active</b> activates the height effect.<p>
+
+<b>Influence</b> is used for <A HREF="#Mixing">mixing</A>.<p>
+
+<b>Upside Down</b> reverses the direction, so that the alpha-channel is opaque
+below the height-line and transparent above it.<p>
+
+<b>Height</b> specifies the height of the dividing line; the line is measured 
+either from the object's center or from the world center, according to the Relative to ...
+settings. <p>
+
+<b>Spread</b> tells how wide the area of effect should be, for blurring and
+mixing with other effects. <p>
+
+<FONT FACE=Helvetica><B>Positional Noise</b> and <b>Shape Based Noise</B></FONT><p>
+The two noise generators provide a way to insert randomness into the landscape.
+<b>Positional Noise</b> is the noise generator most people are familiar
+with; it is based upon the surface's absolute position in space. Unfortunately,
+the noise isn't affected by the shape of the surface, and so can sometimes
+produce an unnatural pattern. <p>
+<b>Shape Based Noise</b> helps alleviate this problem by using the shape
+exclusively as the seed for the noise. This means that as the surface dips and
+curves, Shape Based Noise will give variations that reflect the change. The
+drawback comes when two objects have the same shape, they will have the same
+noise; or when a surface is flat, it will receive no noise.<p>
+<CENTER>
+<IMG SRC="2904.gif">
+<IMG SRC="2903.gif">
+</CENTER>
+<p>
+A good effect can often be achieved by mixing Positional and Shape Based
+noises.<p>
+<b>Active</b> activates the noise effects.<p>
+
+<b>Influence</b> is used for <A HREF="#Mixing">mixing</A>.<p>
+
+<b>Scale</b> controls the size of the largest clumps of noise. For Positional
+Noise, Scale is measured in dimensional units. For Shape Based Noise, Scale
+is measured in degrees.<p>
+<CENTER>
+<IMG SRC="2913.gif">
+<IMG SRC="2904.gif">
+<IMG SRC="2914.gif">
+</CENTER>
+<p>
+<b>Roughness</b> controls how jagged the edge of the noise is. A value of 0
+gives a smooth edge, while a value of 1 gives a rough, speckled edge.<p>
+<CENTER>
+<IMG SRC="2915.gif">
+<IMG SRC="2904.gif">
+<IMG SRC="2916.gif">
+</CENTER>
+<p>
+<b>Coverage</b> controls what percentage of the overall alpha-channel is
+opaque. A value of 0 gives 50% opaque areas, 50% transparent areas. Smaller
+values give less opaque ares, larger values give more opaque areas.<p>
+<CENTER>
+<IMG SRC="2917.gif">
+<IMG SRC="2904.gif">
+<IMG SRC="2918.gif">
+</CENTER>
+<p>
+<b>Vertical Scale</b> lets the artist stretch the noise in the vertical direction. A value
+less than 1 compresses the noise in the vertical direction, giving an appearance
+similar to sedimentary rock; a value greater than 1 stretches the noise in the
+Vertical direction, giving a appearance similar to dripping stains.<p>
+<CENTER>
+<IMG SRC="2919.gif">
+<IMG SRC="2904.gif">
+<IMG SRC="2920.gif">
+</CENTER>
+<p>
+<FONT FACE=Helvetica><B>Stain Effect</B></FONT><p>
+The Stain Effect works in conjunction with the <FONT
+FACE=Helvetica>Stain</FONT> shader. Any area of the texture contained by a
+staining object will receive an opaque alpha-channel, while areas outside the
+staining object will receive a transparent alpha-channel.<p>
+<b>Active</b> activates the stain effect.<p>
+
+<b>Influence</b> is used for <A HREF="#Mixing">mixing</A>.<p>
+
+<b>Thickness</b> is used to control how far a point must lie within the
+staining object before the alpha-channel becomes opaque.<p>
+WARNING: This thickness is determined by the viewing angle. Large values for
+the thickness can cause the texturing to change as the object or camera change
+their relative position in the scene; this can be particularly undesirable in
+animation sequences. <p>
+<FONT FACE=Helvetica><B>Image Effect</B></FONT><p>
+The Image Effect uses the texture itself to affect the alpha channel. Any
+combination of the red, green, blue, or alpha channels can be used. Values in
+the image above 0.5 will give an opaque alpha-channel, while values below 0.5
+give a transparent alpha-channel.<p>
+<b>Active</b> activates the image effect.<p>
+
+<b>Influence</b> is used for <A HREF="#Mixing">mixing</A>.<p>
+
+<FONT FACE=Helvetica><B><A NAME="Mixing">Mixing Effects</A></B></FONT><p>
+A wide variety of patterns can be achieved by mixing these effects together.
+Mixing is accomplished by adjusting the Influence in each of the active
+effects. An effect with a high Influence value will tend to dominate the other
+effects; an effect with a low Influence value will only subtly modify the other
+effects. When specifying Influences, the ratio of the influences is all that is
+important.<p>
+For example, by mixing Height with a small amount of Positional Noise, we
+get a roughened Height line. But if we begin turning up the Influence of the
+noise, the line breaks up. At high enough values, we can't distinguish the
+line; all we can tell is that the noise is thicker at the top.<p>
+<CENTER>
+<IMG SRC="2907.gif">
+<IMG SRC="2908.gif">
+<IMG SRC="2909.gif">
+</CENTER>
+<p>
+Another example is the mixture of Height and Slope. With a high Influence for
+the Height, we get a nearly horizontal line with small dips for flat areas. As
+the Influence of the Slope increases height becomes less important, and the
+texture tends to cling to flat areas.<p>
+<CENTER>
+<IMG SRC="2910.gif">
+<IMG SRC="2911.gif">
+<IMG SRC="2912.gif">
+</CENTER>
+<p>
+
+
+<P>&nbsp;</P>
+<P><IMG SRC="line.gif" HEIGHT=10 WIDTH=395></P>
+
+<CENTER><P><IMG BORDER=0 SRC="lume.gif">
+</P></CENTER>
+
+</TD>
+
+<TD WIDTH="80"></TD>
+</TR>
+</TABLE></CENTER>
+
+</BODY>
+</HTML>

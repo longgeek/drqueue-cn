@@ -1,0 +1,145 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Hardware vs. Software Rendering</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node56.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node58.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION55"></a>
+<h3>Hardware vs. Software Rendering</h3>
+<p>
+<span class="depr">Deprecated</span>
+<p>
+Ideally, software rendering algorithms should be translatable
+directly to hardware. However, this is not possible because
+hardware and software rendering use two very different
+approaches:</p>
+<ul>
+<li>Software rendering holds the 3D scene to be rendered (or the
+relevant portions of it) in memory, and samples it pixel by pixel
+or subpixel by subpixel. In other words, the scene is static and
+always present, but the renderer deals with one pixel or subpixel
+at a time.</li>
+<li>Hardware rendering operates the opposite way. All pixels are
+present at all times, but rendering consists of considering the
+scene one triangle at a time, "painting" each one into the frame
+buffer. The hardware has no notion of a scene; only a single
+triangle is known at any one time.</li>
+</ul>
+<p>Software is completely unconstrained, except by performance
+considerations, and can perform any algorithm whatever. The
+subpixel loop method is chosen because it allows rendering nonlocal
+effects that require considering different portions of the scene in
+order to compute a single pixel or subpixel. For example,
+reflections require access to both the reflecting and the reflected
+object. A more complex example is global illumination, which
+considers the indirect light from all surrounding objects to
+compute the brightness of the subpixel being rendered. Hardware can
+do none of this because it only ever knows one triangle at a time,
+and has no notion of other objects.</p>
+<p>Hardware rendering uses a limited range of workarounds to
+address some of these limitations. These workarounds typically
+involve pre-rendering objects into "maps", which are rectangular
+pixel rectangles encoding properties of other objects and are
+stored in the graphics hardware in the form of texture images.
+While graphics hardware cannot deal with multiple objects, it can
+deal very efficiently with texture images. Examples for such
+mapping techniques are:</p>
+<ul>
+<li>Shadow mapping renders the scene from the viewpoint of each
+light source, recording only the depth of the frontmost object.
+This can later be used during final rendering to decide whether a
+point is in shadow, if it is farther away from the light than the
+recorded depth. This approach does not work well for area lights
+that cast <a href="node16.html#INDEX19">soft shadow</a>s (shadows
+with fuzzy edges), and it cannot handle transparent objects such as
+stained glass or smoke.</li>
+<li>Reflection maps render the scene from the viewpoint of a
+mirror. This image is then "pasted in" when the final render needs
+to know what is seen in the mirror. This works only for flat or
+near-flat mirrors.</li>
+<li>Environment maps contain a hemispherical or otherwise complete
+view of the surroundings as seen from the rendered scene. Nearby
+objects are not normally included. Although environment maps
+represent the scene poorly, and cannot capture the arrangement of
+nearby objects at reasonable computational cost, they are
+acceptable for highly curved reflectors such as chrome trims.</li>
+</ul>
+<p>Workarounds like this have one difficulty: they require a lot of
+manual preparation and fine-tuning to work; for example, deciding
+on a good environment map. The computer cannot do this because
+while computing a correct map is possible, it would be very
+expensive and easily defeat the expected time savings.</p>
+<p>The driving force behind graphics hardware design is gaming,
+which involves rendering as many triangles per second as possible
+to a video screen. Also, procedural shading is still quite
+primitive and requires workarounds as described above. This creates
+some limitations of hardware rendering:</p>
+<ul>
+<li>Rendered images go to a video screen. Retrieving them to the
+main memory for further processing is often poorly optimized and
+slow. This can be the main factor limiting frame rates.</li>
+<li>To achieve full speed, the entire renderer must be carefully
+hand-crafted to the scene being rendered. This cannot be done for a
+general-purpose renderer.</li>
+<li>Many effects beside the mapping workarounds described above
+require rendering the scene multiple times because the complexity
+of the effect exceeds the capacity of the hardware. This is called
+"layering" and described in more detail below. This reduces the
+achievable frame rates.</li>
+<li>Multiple frame buffers are unavailable. Rendering to video only
+requires RGBA video with low bit depth and a depth (Z) buffer.
+General-purpose production rendering requires many frame buffers
+with high bit depths.</li>
+<li>Oversampling to reduce "staircase" aliasing is generally slow
+and has poor quality. The subpixels computed are inaccessible; only
+the final pixel is available.</li>
+<li>There is no good approach to motion blurring. This is
+critically important for film production.</li>
+<li>Textures must be stored in the video hardware before use. The
+available memory is usually 256 or 512 MB. Film production often
+uses gigabytes of textures, which requires very slow paging.</li>
+<li>Compatibility between the hardware from different vendors, and
+even between successive hardware generations from the same vendor,
+is very poor. Although OpenGL hides many differences, the most
+advanced features and the fastest speed paths generally have not
+found an abstraction in OpenGL yet. Hardware development cycles are
+extremely rapid.</li>
+</ul>
+<p>None of this is mentioned in the literature and sales material
+for graphics hardware boards. In general, it is unrealistic to
+expect to attain advertised realtime frame rates, often over 100
+frames per second, for general-purpose rendering without spending
+the years of custom development that game designers generally
+require.</p>
+<p>Yet, despite all the limitations of hardware rendering, the
+things it can do are done at extremely high speed, sometimes more
+than a thousand times faster than software. Harnessing this speed
+is the object of the hardware shading support in mental ray 3.3.
+Although the limitations make it impossible to simply switch from
+software to hardware rendering, much of the advantage can be
+realized with an appropriate combination of hardware rendering and
+software rendering, combining hardware speed with software
+flexibility. This document describes how mental ray does this.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node56.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node58.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

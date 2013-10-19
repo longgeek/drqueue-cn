@@ -1,0 +1,181 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product shader summed perlin style noise
+ *****************************************************************************/
+//#define IRAY_PIXELPERFECT
+#include <mcp_lib.msl>
+
+#define TABLE_SIZE      32768.		/* must be power of 2 */
+#define TABLE_SIZE_X    256.		/* must be power of 2 */
+#define TABLE_SIZE_Y    128.		/* must be power of 2 */
+
+float mi_inoise3(
+    Texture2d   noise_random_texture, // table of pre-computed random values 
+    int3 i)							// location to compute for 
+{
+//	error("i: %d %d %d\n",i.x,i.y,i.z);
+
+    float index;
+    float3 i2;
+    i2 = (i/TABLE_SIZE)*float3(1341.0,719.0,2031.0);
+    index = i2.x + i2.y + i2.z;
+//	error("i2: %f %f %f\n",i2.x,i2.y,i2.z);
+    float t1, t2;
+    t1 = floor(index);
+    t2 = index - t1;
+    index = t2*TABLE_SIZE;
+    
+    float2 uv;
+    uv = float2( floor( fmod( index, TABLE_SIZE_X ) ) / TABLE_SIZE_X,
+                  floor( index / TABLE_SIZE_X ) / TABLE_SIZE_Y );
+
+    // fence post mapping 
+//	uv.x = uv.x*(TABLE_SIZE_X-1)/TABLE_SIZE_X + 0.5/TABLE_SIZE_X;
+//	uv.y = uv.y*(TABLE_SIZE_Y-1)/TABLE_SIZE_Y + 0.5/TABLE_SIZE_Y;
+//	return tex2D(noise_random_texture, uv, float2(0,0), float2(0,0)).x;
+    //float rv = tex2D(noise_random_texture, frac(uv)).x;
+    Texture2D_sampler_color sampler = Texture2D_sampler_color(noise_random_texture,0.,"none"); 
+    return sampler.lookup(frac(uv),float2(0),float2(0)).x;
+}
+
+
+
+
+
+float mi_noise_grad(
+    Texture2d   noise_random_texture,	// table of pre-computed random values 
+    float3		p,			// location to compute for 
+    out float3	g			// returned gradient if dograd 
+    )
+{
+    int    i, j, k;
+    int3 			ip;
+    float3          pp,fr;
+    float           u[9], du[9];
+    float           dxyz[27], dyz[9], dz[3];
+    float           fxdyz[9], fxdz[3], fydz[3];
+
+
+
+    if (p.x < -39999) p.x = -39998 - p.x; else p.x += 40000;
+    if (p.y < -39999) p.y = -39998 - p.y; else p.y += 40000;
+    if (p.z < -39999) p.z = -39998 - p.z; else p.z += 40000;
+
+    ip = int3(pp = p - .5);
+    // fractional parts of the coordinates 
+    fr = pp - ip;
+    float t;
+    // build the table of random values 
+    for (i=0; i < 3; ++i, ++ip.z)
+        for (ip.y=int(pp.y), j=0; j < 3; ++j, ++ip.y)
+            for (ip.x=int(pp.x), k=0; k < 3; ++k, ++ip.x){
+                 t= mi_inoise3(noise_random_texture, ip);
+                 dxyz[(i*3 + j)*3 + k] =t;
+                 //error("ip: %d %d %d   -- %f\n",ip.x,ip.y,ip.z,t);
+                }
+
+    
+    //  compute b-spline blending fns u[][] as functions of input point
+    // coords du[][] = d/dx (u[][]  Everything is a tensor product so we
+    //  have only one "derivative" per dimension
+    
+    for(i=0;i<9;i++)
+        u[i] = 0;
+    for(i=0;i<9;i++)
+        du[i] = 0;
+    
+    pp.x = 1.0 - fr.x;
+     u[0 ] = pp.x * pp.x * .5;
+    du[0 ] = -pp.x; // remember: partial wrt fr[i], not xx 
+    pp.x = fr.x - .5;
+     u[3 ] = -pp.x * pp.x + .75;
+    du[3 ] = -2 * pp.x;
+     u[6 ] = fr.x * fr.x * .5;
+    du[6 ] = fr.x;
+
+    pp.x = 1.0 - fr.y;
+     u[0 + 1] = pp.x * pp.x * .5;
+    du[0 + 1] = -pp.x; // remember: partial wrt fr[i], not xx 
+    pp.x = fr.y - .5;
+     u[3 + 1] = -pp.x * pp.x + .75;
+    du[3 + 1] = -2 * pp.x;
+     u[6 + 1] = fr.y * fr.y * .5;
+    du[6 + 1] = fr.y;
+
+    pp.x = 1.0 - fr.z;
+     u[0 + 2] = pp.x * pp.x * .5;
+    du[0 + 2] = -pp.x; // remember: partial wrt fr[i], not xx 
+    pp.x = fr.z - .5;
+     u[3 + 2] = -pp.x * pp.x + .75;
+    du[3 + 2] = -2 * pp.x;
+     u[6 + 2] = fr.z * fr.z * .5;
+    du[6 + 2] = fr.z;
+
+    
+    // compute the value of the spline function at the input point
+    // innermost loop computes the x, next outer the y, outermost the z
+    g=float3(0);
+    for (pp.x=0, i=0; i < 3; ++i) {			//z 
+        for (fxdz[i]=fydz[i]=dz[i]=0, j=0; j < 3; ++j){ 	// y 
+            for (fxdyz[i*3+j]=dyz[i*3+j]=0,k=0; k < 3; ++k){	// x 
+                dyz[i*3 + j]   +=  u[k*3 + 0] * dxyz[(i*3 + j)*3 + k]; // f(x) 
+                fxdyz[i*3 +j] += du[k*3 + 0] * dxyz[(i*3 + j)*3 + k]; // x-partial 
+            }
+            
+            dz[i]   +=  u[j*3 + 1] *   dyz[i*3 + j];   		/* f(x,y) */
+            fxdz[i] +=  u[j*3 + 1] * fxdyz[i*3 + j];		/* x-partial */
+            fydz[i] += du[j*3 + 1] *   dyz[i*3 + j];		/* y-partial */
+        }
+        pp.x +=  u[i*3 + 2] *   dz[i];			// f(x,y,z)  
+        g.x +=  u[i*3 + 2] * fxdz[i];			// x-partial 
+        g.y +=  u[i*3 + 2] * fydz[i];			// y-partial 
+        g.z += du[i*3 + 2] *   dz[i];			// z-partial 
+    }
+
+    return(pp.x);
+}
+
+shader Mcp_flake_noise{
+  input:
+    const float  scale = 1.0;
+    const float  strength = 1.0;
+    const float  density = 1.0;
+    const float  intensity = 1.0;
+    const Spectrum color = Spectrum(Color3(.1,.1,.5));
+    //todo: take this out,
+    texture2D noise_random_texture      = "noise_rtable.dds"
+    {
+        display_name("Noise Random Texture");
+        description("The texture containing a table of random numbers which "
+            "are used when generating the noise.");
+        disable_filtering();
+    };
+
+  output:
+    Spectrum result;
+    float3 bump_result;
+
+    void main(){
+        float3 texcoord =transform_point("internal", "object", position)/scale;
+
+
+        float3 grad;
+        mi_noise_grad(noise_random_texture,texcoord, grad);
+        texcoord += grad+grad;
+        // Then use only integer coordinates, to make
+        // flake transients "harder" and not "wobbly"
+        float scal = mi_noise_grad(noise_random_texture, 
+                float3(int(texcoord.x),
+                     int(texcoord.y),
+                     int(texcoord.z)), 
+                     grad);
+        bump_result = normalize(normal/strength + texture_tangent_u[0]*grad.x + texture_tangent_v[0]*grad.y + normal*abs(grad.z));
+        result = color* pow(scal, 1.0f/density) * intensity;
+
+    }
+};
+

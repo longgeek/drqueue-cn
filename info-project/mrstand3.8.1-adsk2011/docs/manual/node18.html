@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Shadow Maps</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node17.html">&laquo;&nbsp;prev</a></li>
+<li><a href="ibl.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION16"></a>
+<h2 if="fo:shadowmap">Shadow Maps</h2>
+
+<p id="INDEX22"><a id="INDEX23"></a>
+<dfn if="shadowmaps">Shadow mapping</dfn> is a technique that generates fast
+approximate shadows. It can be used for fast previewing of models
+or as an alternative to the more accurate (but also more costly)
+<a href="node140.html#INDEX556">ray marching</a> based approach in
+scenes where accurate shadows are not required. Shadow maps are
+particularly efficient when a scene is rendered several times
+without changes in the shadows (for example an animation where some
+of the lights and shadow-casting objects are not moving).
+<p>
+A <dfn id="shadowmap">shadow map</dfn> is a fast depth buffer rendering
+of the model as seen from a light source. This means that each pixel in
+a shadow map contains information about the distance to the nearest object
+in the model in a particular direction from the light source. This
+information can be used to compute shadows without using shadow
+rays to test for occluding objects. The shadow computation is based
+only on the depth information available in the shadow maps. For
+fast previewing of scenes, shadow maps can be used in combination
+with scanline rendering to produce fast approximate renderings with
+shadows - without using any <a href="node140.html#INDEX556">ray
+marching</a>.</p>
+<p>Two different kinds of shadows can be produced with shadow maps:
+sharp and soft (blurry) shadows. Sharp shadows are very fast, and
+depending on the resolution of the shadow map they will approximate
+the result produced with simple <a href="node140.html#INDEX556">ray
+marching</a>. Soft shadows are produced by distributing one or more
+samples in a region of the shadow map. This technique produces
+<a href="node16.html#INDEX19">soft shadow</a>s everywhere and is
+not as accurate as the <a href="node140.html#INDEX556">ray
+marching</a> based approach for computing soft shadows but is much
+faster.</p>
+<p>Shadowmaps normally store the halfway point between the first
+two shadow intersections, which is called the "<b><a name="INDEX24"
+id="INDEX24"></a>Woo trick</b>". If there is no second hit, 0
+(infinity) is stored because no shadow can exist, since there is no
+second object that the shadow could be cast onto. However, the
+second hit can come from a previous render whose shadowmap we are
+merging, so 0 (infinite) depths can occur in both the old and the
+new shadowmap because both saw only one hit, but together that's
+two hits and there should have been a nonzero depth. Hence,
+<a href="node80.html#INDEX263">shadowmap merging</a> is
+fundamentally incompatible with the Woo algorithm.</p>
+<p>mental ray also implements a shadowmap algorithm based on
+explicit <b><a id="INDEX25"></a>shadowmap bias</b>
+values. The bias is a world-space distance stored in the
+<a href="node76.html#INDEX180">options block</a> and
+<a href="node80.html#INDEX250">light source</a> definitions. Lights
+override the options; the options apply to all lights that do not
+have their own bias. A bias of zero means "no bias"; a light that
+gets a non-zero bias uses the bias algorithm while all others use
+the Woo algorithm. Bias values should be chosen smaller than the
+smallest distance between a shadow caster and a shadow receiver,
+but not too small to avoid shadow acne due to numerical inaccuracy.
+The bias algorithm stores the depth of the first intersection
+directly, after adding the bias value, without looking for a second
+intersection.</p>
+<p>Shadowmaps saved to files store the bias value, and the actual
+depths from the light with no bias applied. The bias is applied
+during lookup, not during storage. When the shadowmap file is later
+loaded from disk, the bias of the new scene and not the one stored
+in the shadowmap will be used. As an exception, if the shadowmap
+file contains a bias but the new frame does not (because it uses
+the midpoint Woo algorithm), the old file is adjusted by its bias
+on loading. This allows merging biased and Woo maps, but it is not
+recommended.</p>
+<p>To set a bias in a light or the options in the scene file, use
+the statement <tt>shadowmap bias N</tt>. The options bias can also
+be set with the command-line argument <tt>-shadowmap_bias
+N</tt>.</p>
+<p>Standard shadow maps always assume that shadow-casting objects
+are fully opaque, and never call <a href="node121.html#INDEX481">shadow
+shader</a>s. mental ray also supports
+<i>detail shadowmaps</i><a id="INDEX26"></a> that collect more information
+about shadow-casting
+objects. They have features that are a combination of standard
+shadow maps and raytraced shadows. In most aspects they behave like
+standard shadow maps, but they also call <a href="node121.html#INDEX481">shadow
+shader</a>s if present. Since shadow
+shaders return transparencies, detail shadowmaps do not store a
+simple depth value, but a list of depth values together with the
+light transmission coefficients at each depth. Detail shadowmaps
+are more expensive to calculate than standard shadow maps, since
+they may invoke shadow shaders. They typically store more
+information per pixel than standard shadow maps.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node17.html">&laquo;&nbsp;prev</a></li>
+<li><a href="ibl.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

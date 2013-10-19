@@ -1,0 +1,286 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Data Conversion</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="occlusion.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node10.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION7"></a>
+
+<h2>Data Conversion</h2>
+
+<h3>Color to Grayscale</h3>
+
+<p>Convert a color to RGBA grayscale, either by extracting the
+alpha component, by averaging RGB, or by weighting RGB according
+to a physiological color model that emphasizes green and
+deemphasizes red. The resulting grayscale value can also be used
+as a scalar. The returned R, G, B, and A components all have the
+same value.</p>
+
+<a id="INDEX37"></a>
+<h5 class="anchor" id="mi_shader__mib_color_alpha">mib_color_alpha</h5>
+<pre>
+    color "mib_color_alpha" (
+        color           "input",
+        scalar          "factor")
+</pre>
+<a id="INDEX38"></a>
+<h5 class="anchor" id="mi_shader__mib_color_average">mib_color_average</h5>
+<pre>
+    color "mib_color_average" (
+        color           "input",
+        scalar          "factor")
+</pre>
+<a id="INDEX39"></a>
+<h5 class="anchor" id="mi_shader__mib_color_intensity">mib_color_intensity</h5>
+<pre>
+    color "mib_color_intensity" (
+        color           "input",
+        scalar          "factor")
+</pre>
+
+<dl>
+<dt>input</dt><dd>is the color that is converted to a grayscale.
+<dt>factor</dt><dd>is a factor that the result is multiplied with.
+It should be set to 1.0 for correct alpha, average, and intensity
+values; a value of 0 will not evaluate <var>input</var> and return
+black.
+</dl>
+
+<h3>Color Map Interpolation</h3>
+
+<p>Given a scalar or a color, perform a lookup and interpolation
+of a multicolor map. The map is a set (not array) of up to 8
+colors. The actual number of colors is specified by a parameter.</p>
+
+<a id="INDEX40"></a>
+<h5 class="anchor" id="mi_shader__mib_color_interpolate">mib_color_interpolate</h5>
+<pre>
+    color "mib_color_interpolate" (
+        scalar          "input",
+        integer         "num",
+        scalar          "weight_1",
+        scalar          "weight_2",
+        scalar          "weight_3",
+        scalar          "weight_4",
+        scalar          "weight_5",
+        scalar          "weight_6",
+        color           "color_0",
+        color           "color_1",
+        color           "color_2",
+        color           "color_3",
+        color           "color_4",
+        color           "color_5",
+        color           "color_6",
+        color           "color_7")
+</pre>
+
+<dl>
+<dt>input<dd>is the scalar to be looked up.
+<dt>num<dd>is the number of colors in the color list. The
+value must be at least 1 and at most 8.
+<dt>weight_*<dd>specifies the locations of colors 1..6 in the
+color spread. A value of 0 puts a color at the low end and 1 at
+the high end. The weights must be monotonically increasing. Color
+0 always has a weight of 0, and color <i>num-1</i> always has a
+weight of 1. Only the weights between these two must be specified
+(that is, two fewer than colors, or <i>num-2</i> weights).
+<dt>color_*<dd> specify the color spread. Only the first <i>num</i>
+colors are defined. If the input is &le; 0 then only color_0 is evaluated;
+if the input is &ge; 1 then only color_<i>(num-1)</i> is evaluated. If the
+input is exactly equal to a weight within numerical precision, only the
+corresponding color is evaluated. In all other cases, exactly two neighboring
+colors are evaluated and interpolated.
+</dl>
+
+<h3>Mix</h3>
+
+<p>Accepts a base color and up to 8 inputs (the exact number is
+determined by a parameter), each of which consists of an input
+color, a weight scalar, and a mode. The inputs are evaluated in
+sequence, each operating on the result of the previous one (the
+first begins with the base color, which defaults to transparent
+black). The following modes are supported:</p>
+
+<table class="table">
+<tr>
+<th><i>mode</i><th>operation<th>calculation</tr>
+<tr><td>0<td>Blend<td>
+<span class="math">R = A&middot;(1&minus;B<sub>a</sub>)&middot;w + B&middot;w</span>
+</tr>
+<tr><td>1<td>Mix<td>
+<span class="math">R = A&middot;(1&minus;w) + B&middot;w</span>
+</tr>
+<tr><td>2<td>Add<td>
+<span class="math">R = A + B&middot;w</span>
+</tr>
+<tr><td>3<td>Bounded Add<td>
+<span class="math">R = <i>bound</i>(A + B&middot;w, 0, 1)</span>
+</tr>
+<tr><td>4<td>Multiply<td>
+<span class="math">R = A&middot;B&middot;w</span>
+</tr>
+<tr><td>5<td>Bounded Multiply<td>
+<span class="math">R = <i>bound</i>(A&middot;B&middot;w, 0, 1)</span>
+</tr>
+<tr><td>6<td>Replace Alpha<td>
+<span class="math">
+R<sub>rgb</sub> = A<sub>rgb</sub>; R<sub>a</sub> = B<sub>a</sub></span>
+</tr>
+</table>
+
+<p>
+<i>R</i> is the next result, <i>A</i> is the previous result,
+<i>B</i> is the current color, and <i>w</i> is the current
+weight. The subscripts r, g, b, and a are red, green, blue, and
+alpha components. Note that mode 6 does not ensure that the
+resulting alpha value is valid, that is, not less than red,
+green, or blue. mental ray will correct alpha when storing the
+color in the frame buffer unless premultiplication is turned
+off.</p>
+
+<a id="INDEX41"></a>
+<h5 class="anchor" id="mi_shader__mib_color_mix">mib_color_mix</h5>
+<pre>
+    color "mib_color_mix" (
+        integer         "num",
+        integer         "mode_0",
+        integer         "mode_1",
+        integer         "mode_2",
+        integer         "mode_3",
+        integer         "mode_4",
+        integer         "mode_5",
+        integer         "mode_6",
+        integer         "mode_7",
+        scalar          "weight_0",
+        scalar          "weight_1",
+        scalar          "weight_2",
+        scalar          "weight_3",
+        scalar          "weight_4",
+        scalar          "weight_5",
+        scalar          "weight_6",
+        scalar          "weight_7",
+        color           "color_0",
+        color           "color_1",
+        color           "color_2",
+        color           "color_3",
+        color           "color_4",
+        color           "color_5",
+        color           "color_6",
+        color           "color_7",
+        color           "color_base")
+</pre>
+
+<dl>
+<dt>num<dd>is the number of valid inputs. The minimum is 1 and the maximum is 8.
+<dt>mode_*<dd>are the compositing modes as described above.
+<dt>weight_*<dd>are the compositing weights <i>w</i> as described above.
+<dt>color_*<dd>are the composited colors <i>B</i> as described above.
+<dt>color_base<dd>is the base color.
+</dl>
+
+<h3>Spread</h3>
+
+<p>Fan out one color input to up to 8 color outputs (the exact
+number is determined by a parameter). Each output is equal to the
+corresponding input, multiplied by a weight, with a given
+conversion. The equations are</p>
+
+<table class="table">
+<tr>
+<th><i>mode</i><th>operation<th>calculation
+</tr><tr>
+<td>0<td>Weighted Color<td>
+<span class="math">R = w&middot;A</span>
+</tr><tr>
+<td>1<td>Grayscale Color from Alpha<td>
+<span class="math">R<sub>rgba</sub> = w&middot;A<sub>a</sub></span>
+</tr><tr>
+<td>2<td>Grayscale Color from Average Intensity<td>
+<span class="math">
+R<sub>rgba</sub> = w&middot;(A<sub>r</sub>+A<sub>g</sub>+A<sub>b</sub>) &frasl; 3
+</span>
+</tr><tr>
+<td>3<td>Grayscale Color from Weighted Intensity<td>
+<span class="math">
+R<sub>rgba</sub> = w&middot;(0.299&middot;A<sub>r</sub>+
+0.587&middot;A<sub>g</sub>+ 0.114&middot;A<sub>b</sub>)
+</span>
+</tr><tr>
+<td>4<td>Grayscale Color from Red Component<td>
+<span class="math">R<sub>rgba</sub> = w&middot;A<sub>r</sub></span>
+</td>
+</tr>
+</table>
+
+<p><i>R</i> is the current (one of up to eight) result, <i>w</i>
+is the current weight, <i>mode</i> is the current conversion, and
+<i>A</i> is the input color shared by all outputs. Mode 4 is
+intended for converting a scalar to a grayscale color.</p>
+
+<a id="INDEX42"></a>
+<h5 class="anchor" id="mi_shader__mib_color_spread">mib_color_spread</h5>
+<pre>
+    struct {
+        color           "out_0",
+        color           "out_1",
+        color           "out_2",
+        color           "out_3",
+        color           "out_4",
+        color           "out_5",
+        color           "out_6",
+        color           "out_7"
+    } "mib_color_spread" (
+        color           "input",
+        integer         "num",
+        integer         "mode_0",
+        integer         "mode_1",
+        integer         "mode_2",
+        integer         "mode_3",
+        integer         "mode_4",
+        integer         "mode_5",
+        integer         "mode_6",
+        integer         "mode_7",
+        color           "weight_0",
+        color           "weight_1",
+        color           "weight_2",
+        color           "weight_3",
+        color           "weight_4",
+        color           "weight_5",
+        color           "weight_6",
+        color           "weight_7")
+</pre>
+
+<dl>
+<dt>num<dd>is the number of valid outputs to compute. The minimum is 1 and
+the maximum is 8.
+<dt>mode_*<dd>are the modes <i>mode</i> as described above.
+<dt>weight_*<dd>are the weights <i>w</i> as described above.
+</dl>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="occlusion.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node10.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

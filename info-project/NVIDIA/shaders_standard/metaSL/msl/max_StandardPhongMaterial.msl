@@ -1,0 +1,691 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision$
+//#version 1.1
+
+#import <mi_msl_shared.msl>
+
+#define TRANSP_SUB		0
+#define TRANSP_ADD		1
+#define TRANSP_FILTER	2
+
+#define HLSL
+          // Max structs and macros
+  
+    
+   struct mrIllumParams {
+        Color ambIllumOut;
+        Color diffIllumOut;
+        Color specIllumOut;
+        Color selfIllumOut;
+        Color reflIllumOut;
+        Color transIllumOut;         /* This is really for storing refraction*/
+        Color realTransIllumOut;	 /* This is for storing the real transparency 
+                                         (non-additive)*/
+        Color additiveTransIllumOut; /* This is for storing additive transparency, 
+                                     which is handled differently*/
+        Color irradianceIllumOut;
+        float diffIllumIntens;
+        float finalOpac;
+        float finalAttenuation;
+        Color finalC;
+        Color finalT;                /* This is the final transparency color of 
+                                     all the layers composited together */
+        Color localT;                /* This is the transparency color of the 
+                                     current layer/material only */
+    };
+
+
+
+shader max_StandardPhongMaterial {
+input:
+
+
+    Color Parameters_Ambient = Color(0.588235, 0.588235, 0.588235, 1.0){
+    };
+    Color Parameters_Diffuse = Color(0.588235, 0.588235, 0.588235, 1.0){
+    };
+    Color Parameters_Specular = Color(0.9, 0.9, 0.9, 1.0){
+    };
+    const bool Parameters_ADLock = true{
+    };
+    const bool Parameters_DSLock = false{
+    };
+    const bool Parameters_UseSelfIllumColor = false{
+    };
+    float Parameters_SelfIllumAmount = 0.0{
+    };
+    Color Parameters_SelfIllumColor = Color(0){
+    };
+    float Parameters_SpecularLevel = 0.0{
+    };
+    float Parameters_Glossiness = 0.1{
+    };
+    float Parameters_Soften = 0.1{
+    };
+
+    //from max_StandardMaterial
+    const bool StdParameters_Wire = false{
+    };
+    const bool StdParameters_TwoSided = false{
+    };
+    const bool StdParameters_FaceMap = false{
+    };
+    const bool StdParameters_Faceted = false{
+    };
+
+    int StdExtendedParameters_OpacityType = 0{
+    };
+    float StdExtendedParameters_Opacity = 1.0{
+    };
+    Color StdExtendedParameters_FilterColor = Color(0.5){
+    };
+    Texture2d StdExtendedParameters_FilterMap = "default.dds"{
+    };
+    int StdExtendedParameters_OpacityFallOffType = 0{
+    };
+    float StdExtendedParameters_OpacityFallOff = 0{
+    };
+    float StdExtendedParameters_Ior = 1.5{
+    };
+    float StdExtendedParameters_WireSize = 1{
+    };
+    int StdExtendedParameters_WireUnits = 0{
+    };
+    const bool StdExtendedParameters_ApplyReflectionDimming = false{
+    };
+    float StdExtendedParameters_DimLevel = 0.0{
+    };
+    float StdExtendedParameters_ReflectionLevel = 3.0{
+    };
+
+    const bool StdMaps_On__0 = true;
+    Shader     StdMaps_Map_0 = Shader();
+    float      StdMaps_Amt_0 = 0.0;
+
+    const bool StdMaps_On__1 = true;
+    Shader     StdMaps_Map_1 = Shader();
+    float      StdMaps_Amt_1 = 0.0;
+
+    const bool StdMaps_On__2 = true;
+    Shader     StdMaps_Map_2 = Shader();
+    float      StdMaps_Amt_2 = 0.0;
+
+    const bool StdMaps_On__3 = true;
+    Shader     StdMaps_Map_3 = Shader();
+    float      StdMaps_Amt_3 = 0.0;
+
+    const bool StdMaps_On__4 = true;
+    Shader     StdMaps_Map_4 = Shader();
+    float      StdMaps_Amt_4 = 0.0;
+
+    const bool StdMaps_On__5 = true;
+    Shader     StdMaps_Map_5 = Shader();
+    float      StdMaps_Amt_5 = 0.0;
+
+    const bool StdMaps_On__6 = true;
+    Shader     StdMaps_Map_6 = Shader();
+    float      StdMaps_Amt_6 = 0.0;
+
+    const bool StdMaps_On__7 = true;
+    Shader     StdMaps_Map_7 = Shader();
+    float      StdMaps_Amt_7 = 0.0;
+
+    const bool StdMaps_On__8 = true;
+    Shader     StdMaps_Map_8 = Shader();
+    float      StdMaps_Amt_8 = 0.0;
+
+    const bool StdMaps_On__9 = true;
+    Shader     StdMaps_Map_9 = Shader();
+    float      StdMaps_Amt_9 = 0.0;
+
+    const bool StdMaps_On__10 = true;
+    Shader     StdMaps_Map_10 = Shader();
+    float      StdMaps_Amt_10 = 0.0;
+
+    const bool StdMaps_On__11 = true;
+    Shader     StdMaps_Map_11 = Shader();
+    float      StdMaps_Amt_11 = 0.0;
+
+    bool    StdMaps_ADTextureLock = true{
+    };
+
+
+output:
+    Color result;
+
+#define LIMIT0_1(x) if (x < 0.0f) x = 0.0f; else if (x > 1.0f) x = 1.0f;
+#define LIMITMINMAX(x, min, max) if (x < min) x = min; else if (x > max) x = max;
+#define ColorMax(c)   ((c.r > c.g) ? ((c.r > c.b) ? c.r : c.b) : \
+                        ((c.g > c.b) ? c.g : c.b))
+#define maxMAX3(a,b,c) ((a)>(b)?((a)>(c)?(a):(c)):((b)>(c)?(b):(c)))
+#define maxMIN3(a,b,c) ((a)<(b)?((a)<(c)?(a):(c)):((b)<(c)?(b):(c)))
+
+    // Evaluate a bump map. 
+#define doBumps(enabled, amount, map) if (enabled) \
+        { \
+            Color bumpresult = Color(0); \
+            map.call("input", "evalNormal", true, \
+                     "output", "result", bumpresult)  ;\
+            normal += float3(bumpresult.rgb) * amount; \
+            normal = normalize(normal); \
+        } 
+
+// Evaulate a color map into the mapArray
+#define doColorMap(enabled, map, res) if (enabled) \
+        { \
+            map.call("output", "result", res); \
+        } 
+
+// Check the mono output of the map, if any
+#define doMonoMap(enabled, map, res) if (enabled) \
+        { \
+            float f; \
+            if (map.call("output", "mono_result", f)) \
+            { \
+               res = Color(f,f,f,f); \
+            } \
+            else \
+            { \
+               map.call("output", "result", res); \
+            } \
+        } 
+
+#define doReflMap(enabled, map, res) if (enabled)	\
+    {									\
+      map.call( "output", "result", res);		\
+    } 
+
+  // Evaulate a refraction map into the mapArray
+#define doRefrMap(enabled, map, res) if (enabled)	\
+    {									\
+      map.call(	 "output", "result", res);		\
+    } 
+
+  // Macros used to evaluate a given texture in the illumination shader
+
+#define lerpColorMap(enabled, map, amount, variable, c) if (enabled)	\
+    {\
+      c *= amount;\
+      variable = (variable * (1.0 - c.a)) + c;\
+    }
+
+#define lerpMonoMap(enabled, map, amount, variable, c) if (enabled)	\
+    {\
+      float a = amount;\
+      variable = (variable * (1.0 - a)) + (c.r * a);\
+    }
+
+#define maxSoften(r)	((r) * ( 2.0f - (r)))
+
+    /* does not use weight for r,g, b */
+    float maxIntensity(Color c)
+    {
+        float f = (c.r + c.g + c.b)*0.333333333f;
+        return f;
+    }
+
+    Color max_transpColor(in int type, in float opac, in Color filt, in Color diff)
+    {
+        Color fc = Color(0);
+        if(type == TRANSP_ADD)
+        {
+            fc = Color(1.0 - opac);
+        }
+        else if(type == TRANSP_FILTER)
+        {
+            if(opac > 0.5)
+            {
+                /* darken as opac goes ( 0.5--> 1.0)
+                  ** so that max component reaches 0.0f when opac reaches 1.0
+                  ** find max component of filt
+                  */
+                float m = maxMAX3(filt.r, filt.g, filt.b);
+                float d = 2.0 * (opac - 0.5) * m;
+                fc = filt - d;
+                fc = saturate(fc);
+                fc.a = 0.0;
+               
+                
+            }
+            else
+            {
+                /* lighten as opac goes ( 0.5--> 0.0)
+                 ** so that min component reaches 1.0f when opac reaches 1.0
+                 ** find min component of filt
+                 */
+                float m = maxMIN3(filt.r, filt.g, filt.b);
+                float d = (1.0 - 2.0 * opac) * (1.0 - m);
+                fc = filt + d;
+                fc = saturate(fc);
+                fc.a = 0.0;
+                
+
+            }
+        }
+        else
+        {
+           Color f = 1.0 - diff;
+           fc = (1.0 - opac) * f;
+           fc.a = 0.0;
+
+        }
+        return fc;
+
+    }
+
+     void max_ShadeReflection(inout mrIllumParams param_ip, 
+                             in Color param_reflection, 
+                             in float param_amount,
+                             in Color param_specular,
+                             in bool param_dim_reflection,
+                             in float param_dim_intensity,
+                             in float param_dim_multiplier)
+    {
+
+        //blinn2_AffectReflection
+        param_reflection *= param_specular;
+        if(param_dim_reflection)
+        {
+            float dim_factor = (1.0 - param_dim_intensity) * param_ip.diffIllumIntens 
+                                    * param_dim_multiplier + param_dim_intensity;
+            param_amount *= dim_factor;
+        }
+        param_ip.reflIllumOut = param_reflection * param_amount;
+    }
+
+    void max_ShadeTransmission(inout mrIllumParams param_ip, 
+                               in Color param_refraction, 
+                               in float param_amount,
+                               in float param_opacity,
+                               in int param_tr_type,
+                               in Color param_filter,
+                               in Color param_diffuse)
+    {
+
+        if(param_tr_type == 0)
+            param_tr_type = TRANSP_FILTER;
+        else if(param_tr_type == 2)
+            param_tr_type = TRANSP_ADD;
+        else 
+            param_tr_type = TRANSP_SUB;
+
+        if(any(param_refraction))
+        {
+            float max, newOpac;
+            Color transpColor;
+
+            /* Set up attenuation opacity for Refraction map. dim diffuse &
+                spec by this */
+            param_ip.finalAttenuation = param_opacity * (1.0f - param_amount);
+
+            /* Make more opaque when specular hilite occurs */
+            max = ColorMax(param_ip.specIllumOut);
+            if(max > 1.0)
+                max = 1.0;
+            newOpac = param_opacity + max - param_opacity * max;
+
+            /* Evaluate refraction map, filtered by filter color */
+            
+            transpColor = max_transpColor(param_tr_type, newOpac, 
+				          param_filter,  param_diffuse);
+            param_ip.transIllumOut += param_refraction * transpColor;
+            
+            /* no transparency when doing refraction */
+            param_ip.finalT = Color(0);
+
+        }
+        else
+        {
+            if(param_opacity != 1.0)
+            {
+                float max, newOpac;
+                Color t_ray_col = Color(0);
+                Color tCol = Color(0);
+
+                param_ip.finalAttenuation = param_opacity;
+                /* Make more opaque where specular hilite occurs, 
+	                so you can still see the hilite */
+	            max = maxMAX3(param_ip.specIllumOut.r, 
+                              param_ip.specIllumOut.g, 
+                              param_ip.specIllumOut.b);
+	            if ( max > 1.0f ) 
+	               max = 1.0f;
+
+                newOpac = param_opacity + max - param_opacity * max;
+
+                /* Compute the color of the transparent filter color */
+	
+	            tCol = max_transpColor( param_tr_type, newOpac, 
+				            param_filter, 
+				            param_diffuse);
+	            param_ip.localT = param_ip.finalT = tCol;
+//in viewport, we do not want the trace to happen but the integration to composite  based on alpha value
+#ifndef HLSL 
+                //trace a transparent ray
+                Trace_options to;
+                to.set_ray_type("transparent");
+
+                Ray ray = Ray(position, direction);
+                Ray dx;
+                Ray dy;
+                trace(ray, dx, dy, to, "result", t_ray_col);
+#endif
+                switch(param_tr_type)
+                {
+                case TRANSP_ADD:
+                    param_ip.additiveTransIllumOut.rgb = t_ray_col.rgb;
+                    break;
+                default:
+                case TRANSP_SUB:
+                case TRANSP_FILTER:
+                    param_ip.realTransIllumOut.rgb = tCol.rgb * t_ray_col.rgb;
+                    break;
+                }//end switch
+                param_ip.finalT.rgb *= (1.0 - t_ray_col.a);
+            }
+            else
+            {
+                param_ip.finalT = Color(0);
+                param_ip.finalAttenuation = 1.0;
+            }
+
+        }
+    }
+
+    void max_CombineComponentsAdd ( inout mrIllumParams ip )
+    {
+        ip.finalC = ( ip.ambIllumOut + ip.diffIllumOut +
+            ip.selfIllumOut + ip.irradianceIllumOut ) * ip.finalAttenuation +
+            ip.specIllumOut + ip.reflIllumOut +
+            ip.transIllumOut + ip.realTransIllumOut +
+            ip.additiveTransIllumOut;
+    }
+
+    float max_GetEffOpacity ( in float param_opacity_falloff, 
+                              in int param_opacity_falloff_type,
+                              in float param_opacity)
+    {
+      if (( param_opacity != 1.0f ) || ( param_opacity_falloff != 0.0f )) 
+      {
+          if ( param_opacity_falloff != 0.0f) 
+	      {
+              float d = abs (dot(normal, direction));
+	          if( param_opacity_falloff_type == 1 ) 
+	                d = 1.0f-d;
+	          return param_opacity * (1.0f - param_opacity_falloff * d);
+	      }
+          else
+          {
+	          return param_opacity;
+          }
+      }
+      else
+      {
+          return 1.0f;
+      }
+    }
+
+    Color compute_bumped_irradiance(in float3 param_orig_normal, 
+                in float param_bump_scale)
+    {
+        Color res;
+        Irradiance_options io;
+        res = irradiance(io);
+        res /= PI;
+
+        return res;
+    }
+
+
+ 
+
+    // The original code has complicated remapping tables, but for
+    // efficiency these are hardcoded for the MetaSL conversion,
+    // since they never change. Here is the texture map order for:
+    //    Phong 
+    //      0 = Ambient Color
+    //      1 = Diffuse Color
+    //      2 = Specular Color
+    //      3 = Specular Level
+    //      4 = Glossiness
+    //      5 = Self-Illumination
+    //      6 = Opacity
+    //      7 = Filter Color
+    //      8 = Bump
+    //      9 = Reflection
+    //     10 = Refraction
+    //     11 = Displacement
+    void main()
+    {
+
+        result = Color(0);
+        Color map_color = Color(0);
+
+       // Faceted? 
+        if (StdParameters_Faceted)
+            normal = geometry_normal;     
+        
+
+        
+        // Optimized code destilling the "essence" from
+        // max_base_BlinnIllumination() function with the callback
+        // functions unrolled and map channel remappings resolved
+
+        Color	ambient		= (Parameters_ADLock?
+                                   Parameters_Diffuse:Parameters_Ambient);
+        Color	diffuse		= Parameters_Diffuse;
+        Color	specular	= (Parameters_DSLock?
+                                   Parameters_Diffuse:Parameters_Specular);
+        Color	selfIllumClr	= Parameters_SelfIllumColor;
+        float	selfIllum	= Parameters_SelfIllumAmount;
+        float	specularLevel	= Parameters_SpecularLevel;
+        float	glossiness	= Parameters_Glossiness;
+        float	softThresh	= Parameters_Soften;
+
+       Color filter_color = StdExtendedParameters_FilterColor;
+
+        LIMIT0_1 ( glossiness );
+        LIMITMINMAX ( specularLevel, 0.0f, 9.99f );
+        LIMIT0_1 ( selfIllum );
+        LIMIT0_1 ( softThresh );
+
+        if (!Parameters_UseSelfIllumColor)
+            selfIllumClr = Color(selfIllum, selfIllum, selfIllum, 1.0);
+
+        float3 orig_normal = normal;
+        doBumps(StdMaps_On__8, StdMaps_Amt_8, StdMaps_Map_8);
+
+        Color irradiance = compute_bumped_irradiance(orig_normal, 1.0);
+
+        doColorMap (StdMaps_On__1, StdMaps_Map_1, map_color); 
+        LIMITMINMAX ( map_color.a, 0.0f, 1.0f ); 
+        lerpColorMap(StdMaps_On__1, StdMaps_Map_1, StdMaps_Amt_1, diffuse, map_color);
+
+        // Are Diffuse and Ambient locked?
+        if(StdMaps_ADTextureLock)
+        {
+            ambient = diffuse;
+        }
+        else
+        {
+            doColorMap (StdMaps_On__0, StdMaps_Map_0, map_color);
+            lerpColorMap(StdMaps_On__0, StdMaps_Map_0, StdMaps_Amt_0, ambient, map_color);
+        }
+
+        //opacity
+        doMonoMap (StdMaps_On__6, StdMaps_Map_6, map_color);
+        float opamt   = StdMaps_On__6?StdMaps_Amt_6:0.0;
+        float opacity = maxIntensity(map_color) * opamt + 
+                        (1.0 - opamt)*StdExtendedParameters_Opacity;
+        opacity = max_GetEffOpacity(StdExtendedParameters_OpacityFallOff,
+                                    StdExtendedParameters_OpacityFallOffType,
+                                    opacity);
+
+        doColorMap (StdMaps_On__2, StdMaps_Map_2, map_color);
+        lerpColorMap(StdMaps_On__2, StdMaps_Map_2, StdMaps_Amt_2, specular, map_color);
+        doMonoMap  (StdMaps_On__3, StdMaps_Map_3, map_color);
+        lerpMonoMap(StdMaps_On__3, StdMaps_Map_3, StdMaps_Amt_3, specularLevel, map_color);
+        doMonoMap  (StdMaps_On__4, StdMaps_Map_4, map_color);
+        lerpMonoMap(StdMaps_On__4, StdMaps_Map_4, StdMaps_Amt_4, glossiness, map_color);
+        map_color = selfIllumClr;
+        doColorMap (StdMaps_On__5, StdMaps_Map_5, map_color);
+        lerpColorMap(StdMaps_On__5, StdMaps_Map_5, StdMaps_Amt_5, selfIllumClr, map_color);
+
+        doColorMap (StdMaps_On__7, StdMaps_Map_7, map_color);
+        lerpColorMap(StdMaps_On__7, StdMaps_Map_7, StdMaps_Amt_7, filter_color, map_color);
+
+        Vector3 vdir = direction;
+
+        float3 R = reflect(vdir, normal);
+        R = normalize(R);
+
+        // Optimized code destilling the "essence" from
+        // the blinn2_illum() and maxBlinn2_IllumAccumulator callback functions
+
+        // Convert to a phong exponent
+        float ph_exp = pow(2.0, glossiness * 10.0);
+
+
+        mrIllumParams ip = mrIllumParams(Color(0),
+                                         Color(0),
+                                         Color(0),
+                                         Color(0),
+                                         Color(0),
+                                         Color(0),
+                                         Color(0),
+                                         Color(0),
+                                         Color(0),
+                                         0,
+                                         0,
+                                         0,
+                                         Color(0),
+                                         Color(0),
+                                         Color(0));
+       
+        
+        ip.irradianceIllumOut = irradiance * ambient; 
+
+
+         // The light loop: enumerate lights (see maxphong2_IllumAccumulator)
+        Color lcolor;
+        Light_iterator light;
+        foreach (light)
+        {
+            lcolor = light.contribution/PI;
+            bool ambient_only = false;
+            float diff_amt = 1.0, spec_amt = 1.0, diffuseCoef = -1;
+            // Is this an "ambient" light?
+            light.get_light_parameter("ambient_only",    ambient_only);
+            // Are specular on or off?
+            light.get_light_parameter("affect_diffuse",  diff_amt);
+            light.get_light_parameter("affect_specular", spec_amt);
+            // Diffuse Coefficient (== custom dot_nl)
+            light.get_light_parameter("diffuseCoef",     diffuseCoef);
+
+            if (false == ambient_only)
+            {
+               
+                  
+
+                // Supports the 3ds Max "diffuseCoefficient" return allowing a light
+                // shader to return a custom "dot_nl" value other than the actual dot_nl
+                if (diffuseCoef < 0) 
+                    diffuseCoef = light.dot_nl;
+
+
+                // If the (possibly adjusted above) dot_nl < 0, do nuttin'
+                if (diffuseCoef >= 0) 
+                {
+                    
+
+                    // Diffuse
+                    if (diff_amt > 0)
+                        ip.diffIllumOut += lcolor * diffuseCoef * diff_amt;
+
+                    if (spec_amt > 0)
+                    {
+                        float c = dot(light.direction, R);
+                        if (c > 0)
+                        {
+                            // Do the "edge softening"
+                            if (softThresh > 0.0 && diffuseCoef < softThresh)
+                            {
+                                float r = diffuseCoef / softThresh;
+                                c *= maxSoften(r);
+                            }
+
+                            c = pow(c, ph_exp);
+                            float c_sh_str = c * specularLevel;
+                            ip.specIllumOut += c_sh_str * lcolor * spec_amt;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                ip.ambIllumOut += lcolor;
+            }
+        }
+
+        // End of code from maxPhong2_IllumAccumulator, back in code from Phong2_illum()
+
+        if (!Parameters_UseSelfIllumColor)
+        {
+            /* lerp between diffuse & white */
+            float si = maxIntensity ( selfIllumClr );
+
+            if ( si > 0.0f )
+            {
+                si = saturate ( si );
+                ip.selfIllumOut = si * diffuse;
+                ip.diffIllumOut *= (1.0f-si);
+                ip.ambIllumOut *= 1.0f-si;
+            }
+        }
+        else
+        {
+            ip.selfIllumOut = selfIllumClr;
+        }
+
+        ip.ambIllumOut  *= ambient;
+        ip.diffIllumIntens = maxIntensity(ip.diffIllumOut);
+        ip.diffIllumOut *= diffuse;
+        ip.specIllumOut *= specular;
+
+        // ShadeReflection callback evaluates to max_ShadeReflection
+        // And our reflection map (already evaluated) is 9
+		map_color = Color(0);
+        doReflMap(StdMaps_On__9, StdMaps_Map_9, map_color);
+         max_ShadeReflection(ip, 
+                            map_color, 
+                            StdMaps_Amt_9,
+                            specular,
+                            StdExtendedParameters_ApplyReflectionDimming,
+                            StdExtendedParameters_DimLevel,
+                            StdExtendedParameters_ReflectionLevel
+                            );
+
+        // ShadeTransmission callback evaluates to max_ShadeTransmission
+        // And our refraction map (already evaluated) is 10
+		map_color = Color(0);
+         doRefrMap(StdMaps_On__10, StdMaps_Map_10, map_color);
+         max_ShadeTransmission(ip, 
+                              map_color, 
+                              StdMaps_Amt_10,
+                              opacity,
+                              StdExtendedParameters_OpacityType,
+                              filter_color,
+                              diffuse);
+
+        // combineComponents callback evaluates to max_CombineComponentsAdd
+        max_CombineComponentsAdd(ip);
+
+        // Return final color
+        result.rgb = ip.finalC.rgb;
+        result.a = 1.0 - maxIntensity(ip.finalT);
+    }
+};

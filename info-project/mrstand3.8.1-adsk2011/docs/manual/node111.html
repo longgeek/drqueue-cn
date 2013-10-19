@@ -1,0 +1,1022 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>State Variables by Shader Type</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node110.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node112.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION109"></a>
+<h3>State Variables by Shader Type</h3>
+<p><a id="statevartable"></a> The following
+table describes which state variables are available in which types
+of shaders:</p>
+<div align="center">
+<table class="table">
+<tr>
+<td>G</td>
+<td><a href="node179.html#INDEX857">geometry shader</a></li>
+</tr>
+<tr>
+<td>D</td>
+<td><a href="node127.html#INDEX494">displacement shader</a></li>
+</tr>
+<tr>
+<td>P</td>
+<td><a href="node142.html#INDEX580">photon shader</a> and <a href="node102.html#INDEX379">photon volume shader</a></li>
+</tr>
+<tr>
+<td>E</td>
+<td><a href="node140.html#INDEX568">photon emitter shader</a></li>
+</tr>
+<tr>
+<td>Le</td>
+<td><a href="node124.html#INDEX487">lens shader</a></li>
+</tr>
+<tr>
+<td>M</td>
+<td><a href="node115.html#INDEX440">material shader</a> and
+<a href="node166.html#INDEX846">texture shader</a></li>
+</tr>
+<tr>
+<td>V</td>
+<td><a href="node117.html#INDEX460">volume shader</a></li>
+</tr>
+<tr>
+<td>Lg</td>
+<td><a href="node120.html#INDEX471">light shader</a></li>
+</tr>
+<tr>
+<td>S</td>
+<td><a href="node121.html#INDEX481">shadow shader</a></li>
+</tr>
+<tr>
+<td>Cs</td>
+<td><a href="node131.html#INDEX498">contour store shader</a></li>
+</tr>
+<tr>
+<td>C</td>
+<td><a href="node40.html#INDEX85">contour contrast shader</a> and
+<a href="node133.html#INDEX499">contour shader</a></li>
+</tr>
+<tr>
+<td>Lm</td>
+<td><a href="node135.html#INDEX501">lightmap shader</a></li>
+</tr>
+<tr>
+<td>O</td>
+<td><a href="node126.html#INDEX492">output shader</a></li>
+</tr>
+<tr>
+<td>IE</td>
+<td>shader init or exit function</td>
+</tr>
+</table>
+</div>
+<p>As an exception, a shader instance init function may use all the
+state variables that the shader itself may used. This does not
+apply to shader init functions, shader exit functions, and shader
+instance exit functions, all of which have only very limited
+access.</p>
+<p>In the table,</p>
+<p><b>r</b></p>
+<p>means that the shader may read this variable but should not
+modify it because it may have unknown effects on parent or child
+shaders.</p>
+<p><b>ro</b></p>
+<p>means that the shader may read this variable but may never
+modify it because <a href="node138.html#INDEX510">shader interface
+function</a>s or other parts of mental ray depend on unchanged
+values.</p>
+<p><b>rw</b></p>
+<p>means that the shader may read or write this variable; if it
+writes it is good practice to restore the original contents before
+returning to avoid surprises in parent or volume shaders.
+<i>pri</i>, in particular, <b>must</b> be restored. Most shaders do
+not need to modify most of these.</p>
+<p><b>x</b></p>
+<p>means that the shader is free to read and write, and need not
+restore any values. These are "scratchpad" variables for shader
+communication, and not used by mental ray.</p>
+<p><b>-</b></p>
+<p>means that the shader may neither read nor write this field. Its
+contents are undefined.</p>
+<p>In the case of the <i>options</i> and <i>camera</i> variables,
+the shader may write neither the pointer nor any field of the
+options and camera structures. Note that during rendering (between
+the <i>rendering</i> and <i>rendering finished</i> messages), the
+camera and the options may differ from the scene file
+specifications because <a href="node179.html#INDEX858">phenomenon</a> requirements and conflict
+detection may make adjustments. For example, a lens shader might
+have requested <a href="node102.html#INDEX390">ray tracing</a> to
+be turned off even though it was turned on in the scene file. In
+this case, shaders called during rendering would see a <i>trace</i>
+flag that is off, and other shaders such as geometry or
+displacement shaders do not.</p>
+<div align="center">
+<table class="table">
+<tr>
+<th>variable</th>
+<th>G</th>
+<th>D</th>
+<th>P</th>
+<th>E</th>
+<th>Le</th>
+<th>M</th>
+<th>V</th>
+<th>Lg</th>
+<th>S</th>
+<th>Cs</th>
+<th>C</th>
+<th>O</th>
+<th>Lm</th>
+<th>IE</th>
+</tr>
+<tr>
+<td>version</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+</tr>
+<tr>
+<td>camera_inst</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+</tr>
+<tr>
+<td>camera</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+</tr>
+<tr>
+<td>options</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+</tr>
+<tr>
+<td>global_lock <a href="#foot1" class="biglinks">
+<sup title="Used with mi_lock() and mi_unlock().">1</sup></a></td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>raster_x</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>raster_y</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>-</td>
+<td>ro</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>parent</td>
+<td>-</td>
+<td>-</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>type</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>-</td>
+<td>ro</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>scanline</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+</table>
+</div>
+<div align="center">
+<table class="table">
+<tr>
+<th>variable</th>
+<th>G</th>
+<th>D</th>
+<th>P</th>
+<th>E</th>
+<th>Le</th>
+<th>M</th>
+<th>V</th>
+<th>Lg</th>
+<th>S</th>
+<th>Cs</th>
+<th>C</th>
+<th>O</th>
+<th>Lm</th>
+<th>IE</th>
+</tr>
+<tr>
+<td>reflection_level</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>refraction_level</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>face</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>r-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>org</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>dir</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>dist</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>ro</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>time</td>
+<td>-</td>
+<td>-</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ior</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ior_in</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>material</td>
+<td>-</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>-</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>volume</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>environment</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>refraction_volume</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>label</td>
+<td>-</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>ro</td>
+<td>-</td>
+</tr>
+<tr>
+<td>instance</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>-</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>-</td>
+<td>-</td>
+<td>ro</td>
+<td>-</td>
+</tr>
+<tr>
+<td>light_instance</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>ro</td>
+<td>-</td>
+<td>-</td>
+<td>ro <a href="#foot2" class="biglinks">
+<sup title="If state->type is miRAY_SHADOW.">2</sup></a>
+<td>ro</td>
+<td>ro</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>pri <a href="#foot3" class="biglinks">
+<sup title="Set to 0 to cast rays from empty space. Do not set to other values.">3</sup></a>
+<td>-</td>
+<td>-</td>
+<td>r</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>pri_idx</td>
+<td>-</td>
+<td>-</td>
+<td>r</td>
+<td>-</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+</table>
+</div>
+<div align="center">
+<table class="table">
+<tr>
+<th>variable</th>
+<th>G</th>
+<th>D</th>
+<th>P</th>
+<th>E</th>
+<th>Le</th>
+<th>M</th>
+<th>V</th>
+<th>Lg</th>
+<th>S</th>
+<th>Cs</th>
+<th>C</th>
+<th>O</th>
+<th>Lm</th>
+<th>IE</th>
+</tr>
+<tr>
+<td>bary[4]</td>
+<td>-</td>
+<td>-</td>
+<td>r</td>
+<td>-</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>point</td>
+<td>-</td>
+<td>r</td>
+<td>r</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>normal</td>
+<td>-</td>
+<td>r</td>
+<td>r</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>normal_geom</td>
+<td>-</td>
+<td>-</td>
+<td>r</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>dot_nd</td>
+<td>-</td>
+<td>-</td>
+<td>r</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>inv_normal</td>
+<td>-</td>
+<td>-</td>
+<td>r</td>
+<td>-</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>-</td>
+<td>r</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>shadow_tol</td>
+<td>-</td>
+<td>-</td>
+<td>r</td>
+<td>-</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>r</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>tex_list</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>bump_x_list</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>bump_y_list</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>motion</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>derivs <a href="#foot4" class="biglinks">
+<sup title="Valid only if the object contains surface derivatives.">4</sup></a>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>-</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>tex</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>shader</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+</tr>
+<tr>
+<td>child</td>
+<td>-</td>
+<td>-</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>thread</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+<td>ro</td>
+</tr>
+<tr>
+<td>count</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>rw</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>user</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+</tr>
+<tr>
+<td>user_size</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+</tr>
+</table>
+</div>
+
+<div class="foot">
+
+<p id="foot1"><sup><a>1</a></sup>
+The <i>global_lock</i> is accessed with <i><a href="node156.html#api:mi_lock">mi_lock</a></i>
+and <i><a href="node156.html#api:mi_unlock">mi_unlock</a></i> only.
+
+<p id="foot2"><sup><a>2</a></sup>
+If <code>state&rarr;type</code> is <tt>miRAY_SHADOW</tt>.
+
+<p id="foot3"><sup><a>3</a></sup>
+Set to <code>0</code> to cast rays from empty space. Do not set to other values.
+
+<p id="foot4"><sup><a>4</a></sup>
+Valid only if the object contains surface derivatives.
+
+</div>
+
+<p>See page <a href="node158.html#functype">functype</a> for a
+similar table listing available shader interface functions.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node110.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node112.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

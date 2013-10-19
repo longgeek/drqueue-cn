@@ -1,0 +1,725 @@
+#*****************************************************************************
+# Author:   Josee Carrier
+# Created:  28.08.2009
+# Module:   lume
+# Purpose:  .mi gui attributes for lume.mi
+#
+#
+# History:
+#   28.08.2009 Josee:  Created
+#   28.08.2009 Josee:  Removed " (lume)" from UI name
+#   28.08.2009 Josee:  Moved max_Glare phenomenon from lume.mi
+#   09.09.2009 Josee:  New max_Landscape phenomenon
+# History from lume.mi:
+# 20 aout 2003 - Pierre-Felix Breton: defaults settings ui work
+# 21 aout 2003 - Pierre-Felix Breton: defaults settings ui work
+# 8 Juin 2004  - Pierre-Felix Breton: defaults settings ui work
+# 18 Juin 2004  - Pierre-Felix Breton: defaults settings ui work
+# 18 April 2007 - Zap. Modified/Updated "Glare" shader
+#****************************************************************************/
+
+# guard against multiple inclusions
+$ifndef "lume_max_mi_included"
+set "lume_max_mi_included" "true"
+
+#--------------------------------------------------------------------------------------------------
+#
+# Lume Tools US-English 3dsmax GUI declarations
+#
+#--------------------------------------------------------------------------------------------------
+ gui "gui_Adjustments" {
+ 		control "Global" "Global" (
+			"uiName" "Adjustments",
+			"category" "Output",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Adjustments.html",
+            "outputTypes" "-tag",
+            "hidden"
+		)
+        control "Brightness"	"float"		("value" 0.0)
+        control "Contrast"		"float"		("value" 0.0)
+        control "Hue"			"float"		("value" 0.0)
+        control "Saturation"	"float"		("value" 0.0)
+        control "Lightness"		"float"		("value" 0.0)
+        control "Input High"	"integer"	("value" 255)
+        control "Input Low"		"integer"	("value" 0)
+        control "Input Shift"	"float"		("value" 1.0)
+        control "Output High"	"integer"	("value" 255)
+        control "Output Low"	"integer"	("value" 0)
+        control "Specific Region" "boolean" ("value" 0)
+    }
+ gui "gui_BumpCapture" {
+ 		control "Global" "Global" (
+			"uiName" "Bump Capture",
+			"category" "Output",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/BumpCapture.html",
+            "outputTypes" "+z",
+            "hidden"
+		)
+        control "Store in RGB Channels"  "boolean" ("value" 1)
+        control "Store in Alpha Channel" "boolean" ("value" 0)
+    }
+ gui "gui_Glare" {
+ 		control "Global" "Global" (
+			"uiName" "Glare",
+			"category" "Output",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Glare.html",
+            "outputTypes" "-tag,+rgba_fp",
+            "hidden"
+		)
+        control "Quality"           "integer"   ("value" 2, "range" 0 4, "nonConnectable")
+        control "Spread"            "float"           ("value" 2.0, "range" 0.0 100.0, "nonConnectable")
+        control "Overlay Only"      "boolean"   ("value" 0, "nonConnectable")
+        control "Verbose"           "boolean"   ("value" 1, "nonConnectable", "hidden")
+        control "Streaks"           "boolean"   ("value" 0, "nonConnectable")
+        control "Streak Image"  "Bitmap"     ("textureInfo" "max_texmap", "nonConnectable")
+        control "Scale"             "float"           ("value" 1.0, "nonConnectable", "hidden") # This option is not working, hidden
+        control "Contrast"          "float"           ("value" 0.5, "nonConnectable")
+        control "Specific Objects" "boolean" ("value" 0, "nonConnectable", "hidden")
+        control "Object Labels" "array integer" ("value" 0, "nonConnectable", "hidden")
+        control "Specific Objects Buffer" "string" ("value" "", "nonConnectable", "hidden")
+        control "Calculation Resolution" "integer" ("value" 500, "range" 10 100000, "nonConnectable")
+    }
+ gui "gui_max_Glare" {
+ 		control "Global" "Global" (
+			"uiName" "Glare",
+			"category" "Output",
+            "outputTypes" "-tag,+rgba_fp"
+		)
+        control "Quality"		"integer"	("value" 2, "range" 0 4, "nonConnectable")
+        control "Spread"		"float"		("value" 2.0, "range" 0.0 100.0 , "nonConnectable")
+        control "Overlay Only"	"boolean"	("value" 0, "uiName" "Replace Rendered Image with Glare Only", "nonConnectable")
+        control "Streak Image"  "Bitmap"     ("value" "glare_streaks_star_camera_filter.tif", "nonConnectable", "uiName" "Streak Image")
+        control "Streaks"		"boolean"	("value" 0, "nonConnectable")
+        control "Contrast"		"float"		("value" 0.5, "range" 0.0 1.0, "uiName" "Streaks Weight", "nonConnectable")
+        control "Calculation Resolution"	"integer"	("value" 500,"range" 10 100000, "uiName" "Resolution for Glare Processing", "nonConnectable")
+    }
+ gui "gui_Distortion" {
+ 		control "Global" "Global" (
+			"uiName" "Distortion",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Distortion.html",
+			"category" "Lens"
+		)
+        control "Pin Cushion" "boolean"		("value" 1)
+        control "Barrel"	  "boolean"		("value" 0)
+        control "Amount"	  "float"		("value" 1.5, "range" 0 1000000) # 9 Juin 2004  - Pierre-Felix Breton: defaults settings ui work
+    }
+ gui "gui_Night" {
+  		control "Global" "Global" (
+			"uiName" "Night",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Night.html",
+			"category" "Lens"
+		)
+        control "Multiplier"	  "float"		("value" 1.0, "range" 0.0 1000000)
+        control "Cutoff"		  "float"		("value" 1.0, "range" 0.0 1000000) # 8 Juin 2004  - Pierre-Felix Breton: defaults settings ui work
+    }
+ gui "gui_WrapAround" {
+  		control "Global" "Global" (
+			"uiName" "WrapAround",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/WrapAround.html",
+			"category" "Lens"
+		)
+    }
+ gui "gui_Beam" {
+  		control "Global" "Global" (
+			"uiName" "Beam",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Beam.html",
+			"category" "Volume"
+		)
+        control "Color"				"color"		("value" 0.4 0.4 0.5) # 17 Juin 2004  - Pierre-Felix Breton: defaults settings ui work
+        control "Density"			"float"		("value" 5.0, "range" 0.0 1000000)
+    }
+ gui "gui_Mist" {
+ 		control "Global" "Global" (
+			"uiName" "Mist",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Mist.html",
+			"category" "Volume"
+		)
+        control "Transparency"		"float"		("value" 0.5, "range" 0.0 1.0)
+        control "Affect Alpha"		"boolean"	("value" 0)
+        control "Use Solid Color"	"boolean"	("value" 1)
+        control "Solid Color"		"color"		("value" 0.06 0.06 0.06)
+        control "Use Map"			"boolean"	("value" 0)
+
+        control "Layering"			"boolean"	("value" 0)
+        control "Base Plane Normal"	"vector"	("value" 0.0 0.0 1.0, "uiName" "Plane Normal", "range" -1 1)
+        control "Base Plane Distance" "float"	("value" 0.0, "uiName" "Plane Distance","units" "world","range" -1000000 1000000)
+        control	"Transition Height"	"float"		("value" 100.0)
+
+        control "Linear Falloff"	"boolean"	("value" 0)
+        control "Linear Start"		"float"		("value" 0.0, "uiname" "Start")
+        control	"Linear End"		"float"		("value" 1000.0, "uiname" "End")
+
+        control "Realistic Falloff"	"boolean"	("value" 1)
+        control "Density"			"float"		("value" 0.5)
+
+        control "Custom Falloff"	"boolean"	("value" 0)
+        control "Custom Start"		"float"		("value" 0.0, "uiname" "Start","units" "world")
+        control	"Custom Middle"		"float"		("value" 500.0, "uiname" "Middle","units" "world")
+        control	"Custom End"		"float"		("value" 1000.0, "uiname" "End","units" "world")
+    }
+ gui "gui_Submerge" { # 28 Juin 2004 - Pierre-Felix Breton: defaults settings ui work
+ 		control "Global" "Global" (
+			"uiName" "Submerge",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Submerge.html",
+			"category" "Volume"
+		)
+        control "Water Color"		"color"		("value" 0.0 0.7 0.7)
+        control	"Vertical Gradation" "float"	("value" 0.5, "range" 0.0 1000000)
+        control	"Density"			"float"		("value" 0.1, "range" 0.0 1.0)
+        control "Base Plane Normal"	"vector"	("value" 0.0 0.0 1.0, "uiName" "Plane Normal", "range" -1 1)
+        control "Base Plane Distance"	"float"		("value" -0.001, "uiName" "Plane Distance","range" -1000000 1000000,"units" "world")
+    }
+ gui "gui_Edge" {													# 29 aout 2003 - Pierre-Felix Breton: defaults settings ui work
+ 		control "Global" "Global" (
+			"uiName" "Edge",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Edge.html",
+			"category" "Illumination"
+		)
+        control "Surface Material"	"color"		("value" 0.3 0.3 0.3)
+        control "Transparency"		"float"		("value" 1.0, "hidden")
+        control	"Amount"			"float"		("value" 1.0, "range" 0.0 1000000)
+        control	"Blur"				"float"		("value" 0.0, "range" 0.0 1.0)
+        control "Relative to Object" "boolean"	("value" 1)
+        control "Relative to World" "boolean"	("value" 0)
+        control "Noise Influence"	"boolean"	("value" 0)
+        control "Relative Noise Influence"			"float"		("value" 1.0, "range" 0.0 1000000)
+        control "Roughness"			"float"		("value" 0.5, "range" 0.0 1.0)
+        control "Scale"				"float"		("value" 1.0, "range" 0.0 1000000)
+        control "Diffuse Influence"	"boolean"	("value" 0)
+        control "Relative Color Influence"			"float"		("value" 1.0, "range" 0.0 1000000)
+        control "Diffuse"			"color"		("value" 0.3 0.3 0.3)
+    }
+ gui "gui_EdgeShadow" {												# 29 aout 2003 - Pierre-Felix Breton: defaults settings ui work
+ 		control "Global" "Global" (
+			"uiName" "Edge Shadow",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Edge.html",
+			"category" "Shadow"
+		)
+        control "Surface Material"	"color"		("value" 0.3 0.3 0.3)
+        control "Transparency"		"float"		("value" 1.0, "hidden")
+        control	"Amount"			"float"		("value" 10.0, "range" 0.0 1000000)
+        control	"Blur"				"float"		("value" 0.0, "range" 0.0 1.0)
+        control "Relative to Object" "boolean"	("value" 1)
+        control "Relative to World" "boolean"	("value" 0)
+        control "Noise Influence"	"boolean"	("value" 0)
+        control "Influence"			"float"		("value" 1.0, "range" 0.0 1000000)
+        control "Roughness"			"float"		("value" 0.5, "range" 0.0 1.0)
+        control "Scale"				"float"		("value" 1.0, "range" 0.0 1000000)
+        control "Diffuse Influence"	"boolean"	("value" 0)
+        control "Influence"			"float"		("value" 1.0, "range" 0.0 1000000)
+        control "Diffuse"			"color"		("value" 0.3 0.3 0.3)
+    }
+    gui "gui_Landscape" {										# 03 sept 2003 - Pierre-Felix Breton: defaults settings ui work
+ 		control "Global" "Global" (
+			"uiName" "Landscape (lume)",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Landscape.html",
+			"category" "Texture",
+            "hidden"
+		)
+        control "Base Color"			"color"		("value" 0.7 0.6 0.4)
+        control "Overlay Color"			"color"		("value" 0.2 0.4 0.2)
+        control "Blur"					"float"		("value" 0.3, "range" 0.0 1.0)
+        control "Relative to Object"	"boolean"	("value" 0)
+        control "Relative to World"		"boolean"	("value" 1)
+        control "Base Plane Normal"		"vector"	("value" 0.0 0.0 1.0, "uiName" "Plane Normal","range" -1 1)
+        control "Base Plane Distance"	"float"		("value" 0.0, "uiName" "Plane Distance","range" -1000000 1000000, "units" "world")
+		
+		control "Texture" "struct" {
+			control "Active"				"boolean"	("value" 0)
+			control "Influence"				"float"	("value" 1.0, "range" 0.0 1000.0)
+			control "Use Alpha Component"	"boolean"	("value" 0)
+			control "Use Red Component"		"boolean"	("value" 1)
+			control "Use Green Component"	"boolean"	("value" 1)
+			control "Use Blue Component"	"boolean"	("value" 1)						
+		}
+		control "Height" "struct" {
+			control "Active"			"boolean"	("value" 1)
+			control "Influence"			"float"	("value" 1.0, "range" 0.0 1000.0)
+			control "Height"			"float"	("value" 20.0, "units" "world")
+			control "Spread"			"float"	("value" 2.0)
+		}
+		control "Slope" "struct" {
+			control "Active"			"boolean"	("value" 1)
+			control "Influence"			"float"	("value" 10.0, "range" 0.0 1000.0)
+			control "Angle"				"float"	("value" 40.0)
+		}
+		control "Positional Noise" "struct" {
+			control "Active"				"boolean"	("value" 1)
+			control "Influence"			"float"	("value" 1.0, "range" 0.0 1000.0)
+			control "Scale"				"float"	("value" 1.0, "range" 0.0 1000.0)
+			control "Roughness"			"float"	("value" 0.0, "range" 0.0 1.0)
+			control "Coverage"			"float"	("value" 0.0, "range" -1.0 1.0)
+			control "Vertical Scale"	"float"	("value" 1.0)
+		}
+		control "Shape Based Noise" "struct" {
+			control "Active"				"boolean"	("value" 0)
+			control "Influence"			"float"	("value" 2.0, "range" 0.0 1000.0)
+			control "Scale"				"float"	("value" 5.0, "range" 0.0 1000.0)
+			control "Roughness"			"float"	("value" 0.5, "range" 0.0 1.0)
+			control "Coverage"			"float"	("value" 0.0, "range" -1.0 1.0)
+			control "Vertical Scale"	"float"	("value" 1.0)
+		}
+		control "Stain" "struct" {
+			control "Influence"			"float"	("value" 1.0, "range" 0.0 1000.0)
+			control "Thickness"			"float"	("value" 0.0, "units" "world")
+		}
+    }
+	gui "gui_max_Landscape" {
+		control "Global" "Global"(
+			"uiName" "Landscape",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Landscape.html",
+			"category" "Texture"
+		)
+		control "Base Color"			"color"		("value" 0.7 0.6 0.4)	
+		control "Overlay Color" 		"color"		("value" 0.2 0.4 0.2)
+		control "Blur"					"float"		("value" 0.3, "range" 0.0 1.0)
+		control "Relative to Object"	"boolean"	("value" 0)
+		control "Relative to World"		"boolean"	("value" 1)
+	 	control "Base Plane Normal"		"vector"	("value" 0.0 0.0 1.0, "uiName" "Plane Normal","range" -1 1)
+		control "Base Plane Distance"	"float"		("value" 0.0, "uiName" "Plane Distance","range" -1000000 1000000, "units" "world")
+
+		control "Texture" "struct"	{
+			control "Texture Active"			"boolean"	("uiName" "Active", "value" 0)
+			control "Texture Influence"			"float"		("uiName" "Influence",	"value" 1.0, "range" 0.0 1000.0)
+			control "Use Alpha Component"		"boolean"	("value" 0)
+			control "Use Red Component"			"boolean"	("value" 1)
+			control "Use Green Component"		"boolean"	("value" 1)
+			control "Use Blue Component"		"boolean"	("value" 1)
+		}
+		control "Height" "struct" {
+			control "Height Active"				"boolean"	("uiName" "Active", "value" 1)
+			control "Height Influence"			"float"		("uiName" "Influence", "value" 1.0,	"range" 0.0 1000.0)
+			control "Height Upside Down"		"boolean"	("uiName" "Upside Down","value" 0)
+			control "Height"					"float"	("value" 20.0, "units" "world")
+			control "Height Spread"				"float"("uiName" "Spread",	"value" 2.0)
+		} 
+		control "Slope" "struct" {
+			control "Slope Active"				"boolean"	("uiName" "Active", "value" 1)
+			control "Slope Influence"			"float"		("uiName" "Influence", "value" 10.0, "range" 0.0 1000.0)
+			control "Slope Upside Down"			"boolean"	("uiName" "Upside Down", "value" 0)
+			control "Slope Angle"				"float"		("uiName" "Angle", "value" 40.0)
+		}
+		control "Positional Noise" "struct"	{
+			control "Positional Noise Active"	"boolean"	("uiName" "Active",	"value" 1)
+			control "Positional Noise Influence"	"float"	("uiName" "Influence", "value" 1.0, "range" 0.0 1000.0)
+			control "Positional Noise Scale" 	"float"		("uiName" "Scale", "value" 1.0,	"range" 0.0 1000.0)
+			control "Positional Noise Roughness"	"float"	("uiName" "Roughness", "value" 0.0,	"range" 0.0 1.0)
+			control "Positional Noise Coverage"	"float"		("uiName" "Coverage", "value" 0.0, "range" -1.0 1.0)
+			control "Positional Noise Vertical Scale"	"float"	("uiName" "Vertical Scale", "value" 1.0)
+		}
+		control "Shape Based Noise" "struct" {
+			control "Shape Based Noise Active"	"boolean"	("uiName" "Active",	"value" 0)
+			control "Shape Based Noise Influence" "float"	("uiName" "Influence", "value" 2.0,	"range" 0.0 1000.0)
+			control "Shape Based Noise Scale"	"float"		("uiName" "Scale", "value" 5.0,	"range" 0.0 1000.0)
+			control "Shape Based Noise Roughness"	"float"	("uiName" "Roughness", "value" 0.5,	"range" 0.0 1.0)
+			control "Shape Based Noise Coverage"	"float"	("uiName" "Coverage", "value" 0.0, "range" -1.0 1.0)
+			control "Shape Based Noise Vertical Scale"	"float"	("uiName" "Vertical Scale",	"value" 1.0)
+		}
+		control "Stain" "struct" {
+			control "Stain Active"				"boolean"	("uiName" "Active",	"value" 0)
+			control "Stain Influence"			"float"		("uiName" "Influence", "value" 1.0,	"range" 0.0 1000.0)
+			control "Stain Thickness"			"float"		("uiName" "Thickness", "value" 0.0,	"units" "world")
+		}
+	}
+ gui "gui_Facade" {
+		control "Global" "Global" (
+			"uiName" "Facade",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Facade.html",
+			"category" "Illumination"
+		)
+#        control "Bitmap" "color texture" ("textureInfo" "max_texmap")
+        control "Size"	"float"		("value" 1.0, "units" "world")
+        control "Up Direction" "vector"	("value" 0.0 0.0 1.0)
+        control "Cylindrical Rotation" "boolean"	("value" 1)
+        control "Spherical Rotation" "boolean" ("value" 0, "hidden")
+    }
+ gui "gui_Glass" {													# 27 aout 2003 - Pierre-Felix Breton: defaults settings ui work
+		control "Global" "Global" (
+			"uiName" "Glass",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Glass.html",
+			"category" "Illumination",
+			"hidden"
+		)
+        control "Surface Material"		"color"		("value" 0.995 1.0 1.0)
+        control "Diffuse"				"color"		("value" 0.995 1.0 1.0) 
+        control "Reflectivity"			"float"		("value" 1.0, "range" 0.0 1.0)
+        control "Transparency"			"float"		("value" 1.0, "range" 0.0 1.0)
+        control "Index Of Refraction"	"float"		("value" 1.5, "range" 1.0 2.5)
+        control "Transparency Tint"		"struct" {
+			control "On"				"boolean"	("value" 1)
+			control "Use Diffuse"		"boolean"	("value" 1)
+			control "Use Color"			"boolean"	("value" 0)
+		    control "Color"				"color"		("value" 1.0 1.0 1.0)
+		}
+        control "Blur Transparency"		"struct" {
+			control "On"				"boolean"	("value" 0)
+			control "Spread"			"float"		("value" 1.0, "range" 0.0 180.0)
+			control "Samples"			"integer"	("value" 2)
+		}
+        control "Blur Reflection"		"struct" {
+			control "On"				"boolean"	("value" 0)
+			control "Spread"			"float"		("value" 1.0, "range" 0.0 180.0)
+			control "Samples"			"integer"	("value" 2)
+		}
+        control "Edge Transparency"		"struct" {
+			control "None"				"boolean"	("value" 0)
+			control "Fresnel Effect"	"boolean"	("value" 1)
+			control "Custom Effect"		"boolean"	("value" 0)
+			control "Middle"			"float"		("value" 0.5, "range" 0.0 1.0)
+			control "Edge"				"float"		("value" 0.0, "range" 0.0 1.0)
+			control "Shift"				"float"		("value" 1.0, "range" 0.0 1000000)
+		}
+        control "Edge Shadow"		"struct" {
+			control "None"				"boolean"	("value" 1)
+			control "Custom Effect"		"boolean"	("value" 0)
+			control "Middle"			"float"		("value" 0.5, "range" 0.0 1.0)
+			control "Edge"				"float"		("value" 0.0, "range" 0.0 1.0)
+			control "Shift"				"float"		("value" 1.0, "range" 0.0 1000000)
+		}
+        control "Translucency"		"struct" {
+			control "None"				"boolean"	("value" 1)
+			control "Fixed"				"boolean"	("value" 0)
+			control "Value"				"float"		("value" 0.5, "range" 0.0 1.0)
+			control "Scale"				"boolean"	("value" 0)
+			control "Scale Amount"		"float"		("value" 1.0, "range" 0.0 1000000)
+		}
+	}
+ gui "gui_Glow" {													# 28 aout 2003 - Pierre-Felix Breton: defaults settings ui work
+		control "Global" "Global" (
+			"uiName" "Glow",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Glow.html",
+			"category" "Illumination"
+		)
+        control "Glow"					"color"		("value" 0.4 0.3 0.2)
+        control "Brightness"			"float"		("value" 3.0, "range" 0.0 1000000)
+        control "Mix Diffuse"			"boolean"	("value" 1)
+        control "Diffuse"				"color"		("value" 0.3 0.3 0.3)
+        control "Surface Material"		"color"		("value" 0.3 0.3 0.3)
+        control "Transparency"			"float"		("value" 0.0, "range" 0.0 1.0)
+    }
+ gui "gui_Metal" {														# 27 aout 2003 - Pierre-Felix Breton: defaults settings ui work
+		control "Global" "Global" (
+			"uiName" "Metal",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Metal.html",
+			"category" "Illumination"
+		)
+        control "Surface Material"		"color"		("value" 0.8 0.85 0.85)
+        control "Reflectivity"			"float"		("value" 0.9, "range" 0.0 1.0)
+        control "Reflect Color"			"color"		("value" 0.6 0.6 0.6)
+		control "Blur Reflection"		"boolean"	("value" 0)
+		control "Spread"				"float"		("value" 10.0, "range" 0.0 180.0)
+		control "Samples"				"integer"	("value" 10, "range" 1 1000000)
+	}
+ gui "gui_Stain" {
+		control "Global" "Global" (
+			"uiName" "Stain",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Stain.html",
+			"category" "Illumination"
+		)
+    }
+ gui "gui_Translucency" {
+		control "Global" "Global" (
+			"uiName" "Translucency",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Translucency.html",
+			"category" "Illumination"
+		)
+        control "Surface Material"		"color"		("value" 0.3 0.3 0.3)
+        control "Diffuse"			"color"		("value" 0.6 0.7 0.8)
+        control "Transparency"			"float"		("value" 0.5, "range" 0.0 1.0)
+    }
+ gui "gui_WaterSurface" {										# 20 aout 2003 - Pierre-Felix Breton: defaults settings ui work
+		control "Global" "Global" (
+			"uiName" "Water Surface",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/WaterSurface.html",
+			"category" "Illumination"
+		)
+        control "Surface Material"		"color"		("value" 0.3 0.3 0.3)
+        control "Transparency"			"color"		("value" 0.5 0.5 0.5)
+        control "Index Of Refraction"	"float"		("value" 1.33, "range" 1.0 2.5) # 8 Juin 2004 - Pierre-Felix Breton: ranges settings ui work
+        control "Looking Into Water"	"boolean"	("value" 1)
+        control "Looking Out of Water"	"boolean"	("value" 0)
+        control "Stain Underneath"		"boolean"	("value" 1)
+    }
+ gui "gui_WaterSurfaceShadow" {
+		control "Global" "Global" (
+			"uiName" "Water Surface Shadow",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/WaterSurface.html",
+			"category" "Shadow"
+		)
+        control "Surface Material"		"color"		("value" 0.7 0.8 0.8) # 17 Juin 2004 - Pierre-Felix Breton: ranges settings ui work
+        control "Transparency"			"color"		("value" 1.0 1.0 1.0)
+control "Index Of Refraction"	"float"		("value" 1.33, "range" 1.0 2.5, "hidden") # 8 Juin 2004 - Pierre-Felix Breton: ranges settings ui work
+        control "Looking Into Water"	"boolean"	("value" 1)
+        control "Looking Out of Water"	"boolean"	("value" 0)
+        control "Stain Underneath"	"boolean"	("value" 1, "hidden")
+    }
+ gui "gui_Wet" {
+		control "Global" "Global" (
+			"uiName" "Wet/Dry Mixer",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Wet.html",
+			"category" "Illumination"
+		)
+        control "Dry"		"color"		("value" 0.7 0.7 0.7)
+        control "Wet"		"color"		("value" 0.0 0.3 0.7)
+    }
+ gui "gui_Illumination" {
+		control "Global" "Global" (
+			"uiName" "Illumination",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Illumination.html",
+			"category" "Light",
+			"hidden"
+		)
+        control "Brightness"		"float"		("value" 1.0)
+        control "No Falloff"		"boolean"	("value" 1)
+        control "Real Falloff"		"boolean"	("value" 0)
+        control "Linear Falloff"	"boolean"	("value" 0)
+        control "Linear Start"		"float"		("value" 1.0)
+        control "Linear End"		"float"		("value" 1000.0)
+        control "Custom Falloff"	"boolean"	("value" 0)
+        control "Custom Start"		"float"		("value" 1.0)
+        control "Custom Mid"		"float"		("value" 100.0)
+        control "Custom End"		"float"		("value" 1000.0)
+    }
+ gui "gui_Ocean" { 						# 18 Juin 2004 - Pierre-Felix Breton: defaults and ranges settings ui 
+		control "Global" "Global" (
+			"addApply" "bump",
+			"uiName" "Ocean",
+			"helpCHM" "Lume/Doc/lume help.chm",
+			"helpLink" "/Ocean.html",
+			"category" "Bump",
+			"frameAnimated"
+		)
+        control "Largest"			"float"		("value" 100.0,	"units" "world", range 0 1000000)
+        control "Smallest"			"float"		("value" 1.0,	"units" "world", range 0 1000000)
+        control "Quantity"			"integer"	("value" 10, "range" 0 1000000)
+        control "Steepness"			"float"		("value" 5.0, "range" 0 1000000)
+ 
+        control "Relative to World"	"boolean"	("value" 1)
+        control "Relative to Object" "boolean"	("value" 0)
+        control "Base Plane Normal"	"vector"	("value" 0.0 0.0 1.0, "uiName" "Plane Normal", "range" -1 1)
+        control "Base Plane Distance" "float"		("value" 0.0, "range" -1000000 1000000,"uiName" "Plane Distance","units" "world")
+        control "Directed"			"boolean"	("value" 0)
+        control "Direction Angle"	"float"		("value" 0.0)
+
+        control "Wave Speed"		"float"		("value" 1.0, "range" 0 1000000)
+        control "Loop Animation"	"boolean"	("value" 1)
+        control "Loop Frames"		"float"		("value" 100, "range" 0 1000000)
+ 
+        control "Flats"				"boolean"	("value" 1)
+        control "Size"				"float"		("value" 1.0, "range" 0 1000000, "units" "world")
+        control "Variation"			"float"		("value" 1.0, "range" 0 1000000)
+        control "Bump"				"boolean"	("value" 1)
+    }
+ gui "gui_Lume Glow Material (Lambertian)" {
+		control "Global" "Global" (
+			"category" "Phenomenon",
+			"hidden"
+		)
+        control "Ambience"		"color"		("value" 0.1 0.1 0.1)
+        control "Ambient"		"color"		("value" 0.1 0.1 0.1)
+        control "Diffuse"		"color"		("value" 0.7 0.7 0.0)
+        control "Glow"			"color"		("value" 0.7 0.3 0.0)
+		control "Mix"			"boolean"	("value" 0)
+        control "Transparency"	"float"		("value" 0.5, "range" 0.0 1.0)
+        control "Brightness"	"float"		("value" 1.0)
+        control "Light Selection Mode"	"integer"		("value" 0, "range" 0 2)
+	}
+ gui "gui_Lume Metal Material (Phong)" {
+		control "Global" "Global" (
+			"category" "Phenomenon",
+			"hidden"
+		)
+        control "Ambience"			"color"		("value" 0.1 0.1 0.1)
+        control "Ambient"			"color"		("value" 0.1 0.1 0.1)
+        control "Diffuse"			"color"		("value" 0.7 0.7 0.0)
+        control "Specular"			"color"		("value" 0.7 0.7 0.7)
+        control "Reflect"			"color"		("value" 1.0 1.0 1.0)
+        control "Exponent"			"float"		("value" 100.0)
+        control "Reflectivity"		"float"		("value" 0.5, "range" 0.0 1.0)
+		control "Blur Reflection"	"boolean"	("value" 0)
+		control "Spread"			"float"		("value" 2.0, "range" 0.0 180.0)
+		control "Samples"			"integer"	("value" 10)
+        control "Light Selection Mode"	"integer"		("value" 0, "range" 0 2)
+   }
+ gui "gui_Lume Translucent Material (Lambertian)" {
+		control "Global" "Global" (
+			"category" "Phenomenon",
+			"hidden"
+		)
+        control "Ambience"		"color"		("value" 0.1 0.1 0.1)
+        control "Ambient"		"color"		("value" 0.1 0.1 0.1)
+        control "Diffuse"		"color"		("value" 0.7 0.7 0.0)
+        control "Transparency"	"float"		("value" 0.5, "range" 0.0 1.0)
+        control "Light Selection Mode"	"integer"		("value" 0, "range" 0 2)
+	}
+
+#--------------------------------------------------------------------------------------------------
+#
+# 3ds Max specific phenomena
+#
+#--------------------------------------------------------------------------------------------------
+
+declare phenomenon "max_Glare" (
+		integer "Quality",
+		scalar  "Spread",
+		boolean "Streaks",
+		color texture "Streak Image",
+		scalar  "Contrast",
+		integer "Calculation Resolution",
+		boolean "Overlay Only"
+	)
+
+    shader "theGlare" "Glare" (
+		"Quality" = interface "Quality",
+		"Spread" = interface "Spread",
+		"Overlay Only" = interface "Overlay Only",
+		"Streaks" = interface "Streaks",
+		"Streak Image" = interface "Streak Image",
+		"Contrast" = interface "Contrast",
+		"Calculation Resolution" = interface "Calculation Resolution"
+    )
+    
+    root = "theGlare"
+
+	apply output
+end declare
+
+# This redefines the landscape shader to have unique parameter name (for maxscript exposure)
+declare phenomenon "max_Landscape" 
+	(
+		color	"Base Color",
+		color	"Overlay Color",
+		scalar	"Blur",
+		boolean	"Relative to Object",
+		boolean	"Relative to World",
+		vector	"Base Plane Normal",
+		scalar  "Base Plane Distance",
+		struct "Texture" {
+			boolean "Texture Active",
+			scalar	"Texture Influence",
+			boolean	"Use Alpha Component",
+			boolean	"Use Red Component",
+			boolean	"Use Green Component",
+			boolean	"Use Blue Component"
+		},
+		struct "Height" {
+			boolean "Height Active",
+			scalar 	"Height Influence",
+			boolean	"Height Upside Down",
+			scalar	"Height",
+			scalar	"Height Spread"
+		},
+		struct "Slope" {
+			boolean "Slope Active",
+			scalar	"Slope Influence",
+			boolean	"Slope Upside Down",
+			scalar	"Slope Angle"
+		},
+		struct "Positional Noise" {
+			boolean "Positional Noise Active",
+			scalar	"Positional Noise Influence",
+			scalar	"Positional Noise Scale",
+			scalar	"Positional Noise Roughness",
+			scalar	"Positional Noise Coverage",
+			scalar	"Positional Noise Vertical Scale"
+		},
+		struct "Shape Based Noise" {
+			boolean "Shape Based Noise Active",
+			scalar	"Shape Based Noise Influence",
+			scalar	"Shape Based Noise Scale",
+			scalar	"Shape Based Noise Roughness",
+			scalar	"Shape Based Noise Coverage",
+			scalar	"Shape Based Noise Vertical Scale"
+		},
+		struct "Stain" {
+			boolean "Stain Active",
+			scalar	"Stain Influence",
+			scalar	"Stain Thickness"
+		}
+	)
+
+
+	shader "theLandscape" "Landscape" (
+		
+	
+		"Base Color"				= interface "Base Color",
+		"Overlay Color"				= interface "Overlay Color",
+		"Blur"						= interface "Blur",
+		"Relative to Object"		= interface "Relative to Object",
+		"Relative to World"			= interface "Relative to World",
+		"Base Plane Normal"			= interface "Base Plane Normal",
+		"Base Plane Distance"		= interface "Base Plane Distance",
+		"Texture" {
+			"Active"				= interface "Texture.Texture Active",
+			"Influence"				= interface "Texture.Texture Influence",
+			"Use Alpha Component"	= interface "Texture.Use Alpha Component",
+			"Use Red Component"		= interface "Texture.Use Red Component",
+			"Use Green Component"	= interface "Texture.Use Green Component",
+			"Use Blue Component"	= interface "Texture.Use Blue Component"
+		},	
+		"Height" {
+			"Active"				= interface "Height.Height Active",
+			"Influence"				= interface "Height.Height Influence",
+			"Upside Down"			= interface "Height.Height Upside Down",
+			"Height"				= interface "Height.Height",
+			"Spread"				= interface "Height.Height Spread"
+		},
+		"Slope" {
+			"Active"				= interface "Slope.Slope Active",
+			"Influence"				= interface "Slope.Slope Influence",
+			"Upside Down"			= interface "Slope.Slope Upside Down",
+			"Angle"					= interface "Slope.Slope Angle"
+		},
+		"Positional Noise" {
+			"Active"				= interface "Positional Noise.Positional Noise Active",
+			"Influence"				= interface "Positional Noise.Positional Noise Influence",
+			"Scale"					= interface "Positional Noise.Positional Noise Scale",
+			"Roughness"				= interface "Positional Noise.Positional Noise Roughness",
+			"Coverage"				= interface "Positional Noise.Positional Noise Coverage",
+			"Vertical Scale"		= interface "Positional Noise.Positional Noise Vertical Scale"
+		},
+	    "Shape Based Noise" {                  
+			"Active"				= interface "Shape Based Noise.Shape Based Noise Active",
+			"Influence"				= interface "Shape Based Noise.Shape Based Noise Influence",
+			"Scale"					= interface "Shape Based Noise.Shape Based Noise Scale",
+			"Roughness"				= interface "Shape Based Noise.Shape Based Noise Roughness",
+			"Coverage"				= interface "Shape Based Noise.Shape Based Noise Coverage",
+			"Vertical Scale"		= interface "Shape Based Noise.Shape Based Noise Vertical Scale"
+		},
+	    "Stain" {
+			"Active"				= interface "Stain.Stain Active",
+			"Influence"				= interface "Stain.Stain Influence",
+			"Thickness"				= interface "Stain.Stain Thickness"
+		}
+
+	)
+
+apply texture
+root = "theLandscape"
+
+end declare
+
+$endif # if not "lume_max_mi_included"

@@ -1,0 +1,306 @@
+# Warning: do not make param names longer or else MR may crash
+declare shader
+	integer "shaveMRGeomPasser" (
+		geometry	"geom"
+	)
+	gui "gui_shaveMRGeomPasser" {
+		control "Global" "Global" (
+		"hidden"
+		)
+	}
+	version 1
+	apply	texture
+	#:	nodeid 1059252	# Maya ID == 0x001029B4
+end declare
+
+
+
+declare shader
+	geometry "shaveMRHairGeomDRA" (
+		scalar		"trg",
+		integer		"mode",
+		integer		"nodeId",
+		boolean		"moBlur",
+		boolean		"shadowsOnly",
+		string		"hdFile",
+		integer		"uvStorage"	#: default 2
+	)
+	gui "gui_shaveMRHairGeomDRA" {
+		control "Global" "Global" (
+		"hidden"
+		)
+	}
+	version 1
+	apply	geometry
+	#:	nodeid 1059242	# Maya ID == 0x001029AA
+end declare
+
+
+
+declare shader
+	color "shaveMRHairIllum" (
+		integer		"mode",
+		scalar		"ambdiff",
+		scalar		"ambdiffMult",
+		scalar		"gloss",
+		scalar		"glossMult",
+		scalar		"specular",
+		scalar		"specularMult",
+		boolean		"tipFade",
+		# shave 5.5 - vlad|12Oct2011
+		boolean		"squirrel",
+		# shave 6.5 - vlad|18Jan2012
+		color		"specularTint",	#: default 1.0 1.0 1.0
+		color		"specularTint2"#: default 0.0 0.0 0.0
+	)
+	version 1
+	gui "gui_shaveMRHairIllum" {
+		control "Global" "Global" (
+		"hidden"
+		)
+	}
+	apply	material, shadow
+	#:	nodeid 1059237	# Maya binary node ID == 0x001029A5
+end declare
+
+
+
+# Warning: do not make param names longer or else MR may crash
+declare shader
+	color "shaveMRHairShadows" (
+		scalar		"trg",
+		integer		"mode",
+		boolean		"moBlur",
+		boolean		"natIllum",
+		scalar		"sDens",
+		array light	"sLights",
+		struct		"occ"
+		{
+			integer		"nv",
+			integer		"nf",
+			integer		"nfv",
+			array integer	"fvInd",
+			array integer	"fStart",
+			array integer	"fEnd",
+			array vector	"vColor",
+			array vector	"v",
+			array vector	"vVel",
+			array vector	"vUV",
+			array vector	"vNorm"
+		},
+		string		"hdFile",
+		geometry	"hdObj",
+		integer		"occMode",		#: default 0.0
+		array geometry	"occObjs",
+		array integer	"ltMinIDs",
+		array integer	"ltMaxIDs",
+		scalar		"irrad"			#: default 0.0
+	)
+	gui "gui_shaveMRHairShadows" {
+		control "Global" "Global" (
+		"hidden"
+		)
+	}
+	version 1
+	apply	volume
+	#:	nodeid 1059241	# Maya ID == 0x001029A9
+end declare
+
+
+
+# Warning: do not make param names longer or else MR may crash
+declare shader
+	geometry "shaveMRHairGeom" (
+		scalar		"trg",
+		integer		"mode",
+		integer		"numHairs",
+		boolean		"shadowsOnly",
+		array scalar	"speculars",
+		array scalar	"glosses",
+		array scalar	"ambdiffs",
+		array scalar	"opacities",
+		array integer	"faceVertices",
+		array integer	"faceStarts",
+		array integer	"faceEnds",
+		array scalar	"rootRadii",
+		array scalar	"tipRadii",
+		array color	"rootColours",
+		array color	"tipColours",
+		array vector	"velocities",
+		array vector	"vertices"
+	)
+	gui "gui_shaveMRHairGeom" {
+		control "Global" "Global" (
+		"hidden"
+		)
+	}
+	version 1
+	apply	geometry
+	#:	nodeid 1059236	# Maya ID == 0x001029A4
+end declare
+
+
+
+
+declare shader
+	geometry "shaveMRInstanceGeom" (
+		scalar		"trg",
+		integer		"mode",
+		integer		"nodeId",
+		integer		"numFacesPerInst",
+		integer		"numUVSets",
+		array vector	"uvs",
+		string		"hdFile"
+	)
+	gui "gui_shaveMRInstanceGeom" {
+		control "Global" "Global" (
+		"hidden"
+		)
+	}
+	version 1
+	apply	geometry
+	#:	nodeid 1059253	# Maya ID == 0x001029B5
+end declare
+
+
+
+# Warning: do not make param names longer or else MR may crash
+declare shader
+	color "shaveMRRenderComp" (
+		scalar		"trg",
+		integer		"mode",
+		boolean		"cleanupPrims",
+		boolean		"doComposite",
+		integer		"imageWidth",
+		integer		"imageHeight",
+		integer		"antialiasLevel",
+		boolean		"moBlur",
+		boolean		"natIllum",
+		boolean		"useExistingState",	#: default 0.0
+		string		"outputFile",
+		array struct	"occ"
+		{
+			integer		"nv",
+			integer		"nf",
+			integer		"nfv",
+			array integer	"fvInd",
+			array integer	"fStart",
+			array integer	"fEnd",
+			array vector	"vColor",
+			array vector	"v",
+			array vector	"vVel",
+			array vector	"vUV",
+			array vector	"vNorm"
+		},
+		string		"hdFile",
+		integer		"hdObj",
+		integer		"occMode",		#: default 0.0
+
+		#
+		# This really should be a geometry array, but as of Maya 7.0
+		# Mayatomr had a bug such that parameters of type 'geometry'
+		# on output shaders would cause the render to fail.  So
+		# instead we use shaveMRGeomPasser shaders to convert the
+		# geometry tags into integers.
+		#
+		array integer	"occObjs",
+
+		array light	"sLights",
+		array integer	"ltMinIDs",
+		array integer	"ltMaxIDs",
+		array integer	"ltDecays",
+		scalar		"irrad"			#: default 0.0
+	)
+	gui "gui_shaveMRRenderComp" {
+		control "Global" "Global" (
+		"hidden"
+		)
+	}
+	version 1
+	apply	output
+	#:	nodeid 1059243	# Maya ID == 0x001029AB
+end declare
+
+
+
+declare shader
+	color "shaveMRVertexIllum" (
+		scalar		"trg",
+		integer		"mode",
+		scalar		"ambdiff",
+		scalar		"gloss",
+		scalar		"hairPasses",
+		scalar		"specular",
+		# shave 6.5 - vlad|18Jan2012
+		color		"specularTint",	#: default 1.0 1.0 1.0
+		color		"specularTint2"#: default 0.0 0.0 0.0
+	)
+	version 1
+	gui "gui_shaveMRVertexIllum" {
+		control "Global" "Global" (
+		"hidden"
+		)
+	}
+	apply	material, shadow
+	#:	nodeid 1059238	# Maya ID == 0x001029A6
+end declare
+
+
+
+declare shader
+	color "shaveMRShadowMatte" (
+		scalar		"trg",
+		integer		"mode"
+	)
+	version 1
+	gui "gui_shaveMRShadowMatte" {
+		control "Global" "Global" (
+		"hidden"
+		)
+	}
+	apply	texture, shadow
+	
+	#:	nodeid 1059251	# Maya ID == 0x001029B3
+end declare
+
+
+# Warning: do not make param names longer or else MR may crash
+declare shader
+	color "shaveMRHairComp" (
+		scalar		"trg",
+		integer		"mode",
+		boolean		"cleanupPrims",
+		integer		"imageWidth",
+		integer		"imageHeight",
+		array integer	"pixels"
+	)
+	gui "gui_shaveMRHairComp" {
+		control "Global" "Global" (
+		"hidden"
+		)
+	}
+	version 1
+	apply	output
+	#:	nodeid 1059239	# Maya ID == 0x001029A7
+end declare
+
+
+
+declare shader
+	geometry "shaveMRSatData" (
+		scalar      "trg",
+		string		"dataFile",
+		geometry	"hdObj"
+	)
+	gui "gui_shaveMRSatData" {
+		control "Global" "Global" (
+		"hidden"
+		)
+	}
+	version 1
+	apply	geometry
+	#:	nodeid 1059246	# Maya binary node ID == 0x001029AE
+end declare
+
+
+

@@ -1,0 +1,2101 @@
+# ==========================================================================
+# Copyright 2008 Autodesk, Inc. All rights reserved.
+#
+# Use of this software is subject to the terms of the Autodesk
+# license agreement provided at the time of installation or download,
+# or which otherwise accompanies this software in either electronic
+# or hard copy form.
+# ==========================================================================
+
+# guard against multiple inclusion
+$ifndef "autodesk_mayashaders_included"
+set "autodesk_mayashaders_included" "true"
+
+min version "3.7.0"
+max version "3.8.99"
+
+# =============================================================================
+#  The shadow shaders
+# =============================================================================
+
+declare shader
+	color
+	"adskMayaShadow" (
+		color		"transparency",
+		scalar		"shadowAttenuation",
+		scalar		"translucenceDepth"
+		)
+	apply shadow
+	version	1
+end declare
+
+declare shader
+	color
+	"adskMayaFastShadow" (
+		)
+	apply shadow
+	version	1
+end declare
+
+# =============================================================================
+#  The lens shader
+# =============================================================================
+
+declare shader
+    color "adskFrameBufferLens" ()
+    apply lens
+    version 1
+end declare
+
+# =============================================================================
+# Adapter shaders for writing from custom shaders to Maya frame buffers
+# =============================================================================
+declare shader
+    struct {
+        # standard Maya outputs
+        color  "result",
+        color  "outGlowColor",
+        color  "outMatteOpacity",
+        color  "outTransparency",
+
+        # mia_material_x outputs
+        color "diffuse_result",
+        color "diffuse_raw",
+        color "diffuse_level",
+        
+        color "spec_result",
+        color "spec_raw",
+        color "spec_level",
+        
+        color "refl_result",
+        color "refl_raw",
+        color "refl_level",
+        
+        color "refr_result",
+        color "refr_raw",
+        color "refr_level",
+        
+        color "tran_result",
+        color "tran_raw",
+        color "tran_level",
+        
+        color "indirect_result",
+        color "indirect_raw",
+        color "indirect_post_ao",
+        color "ao_raw",
+        
+        color "add_result",
+        
+        color  "opacity_result",
+        color  "opacity_raw",
+        scalar "opacity"
+    }
+    "adskMayaMiaMaterialXAdapter" (
+        # contribution parameters
+        integer  "FrameBufferWriteOperation" default 1, # add
+        integer  "FrameBufferWriteFlags" default 0, # no flags
+        scalar   "FrameBufferWriteFactor" default 1.0,
+        shader   "mia_material_x_shader",
+        boolean     "Output2009Passes" default off
+    )
+    apply material
+    version 2
+end declare
+
+declare shader
+    struct {
+        # standard Maya outputs
+        color  "result",
+        color  "outGlowColor",
+        color  "outMatteOpacity",
+        color  "outTransparency",
+
+        # mi_metallic_paint_x outputs      
+        color    "ambient_result",
+        color    "ambient_raw",
+        color    "ambient_level",
+        
+        color    "diffuse_result",
+        color    "diffuse_raw",
+        color    "diffuse_level",
+
+        color    "indirect_result",
+        color    "indirect_raw",
+        color    "indirect_level",
+
+        color    "spec1_result",
+        color    "spec1_raw",
+        color    "spec1_level",
+
+        color    "spec2_result",
+        color    "spec2_raw",
+        color    "spec2_level",
+
+        color    "flake_result",
+        color    "flake_raw",
+        color    "flake_level",
+
+        color    "flake_refl_result",
+        color    "flake_refl_raw",
+        color    "flake_refl_level",
+        
+        vector   "flake_normal"
+    }
+    "adskMayaMiMetallicPaintXAdapter" (
+        # contribution parameters
+        integer  "FrameBufferWriteOperation" default 1, # add
+        integer  "FrameBufferWriteFlags" default 0, # no flags
+        scalar   "FrameBufferWriteFactor" default 1.0,
+        # render pass contributions
+    	color    "beauty",
+    	color    "beautyNoShadow",
+        color    "ambientMaterialColor",
+        color    "ambientIrradiance",
+        color    "ambient",
+        color    "diffuseMaterialColor",
+        color    "diffuse",
+        color    "diffuseNoShadow",
+        color    "specular",
+        color    "specularNoShadow",
+        color    "indirect",
+        color    "directIrradiance",
+        color    "directIrradianceNoShadow",
+        color    "shadow",
+        scalar   "shadowMono",
+        color    "rawShadow",
+        scalar   "rawShadowMono",
+        color    "lightVolume",
+        color    "objectVolume",
+        color    "sceneVolume",
+        color    "reflection",
+        color    "refraction",
+        color    "scatter",
+        color    "incandescence",
+        color    "translucence",
+        color    "translucenceNoShadow",
+        color    "rawReflection",
+        color    "rawRefraction",
+        color    "rawGlow",
+        scalar   "incidenceLightNormal",
+        # mi_metallic_paint_x specific parameters
+        color    "ambient_result",
+        color    "ambient_raw",
+        color    "ambient_level",
+        color    "diffuse_result",
+        color    "diffuse_raw",
+        color    "diffuse_level",
+        color    "indirect_result",
+        color    "indirect_raw",
+        color    "indirect_level",
+        color    "spec1_result",
+        color    "spec1_raw",
+        color    "spec1_level",
+        color    "spec2_result",
+        color    "spec2_raw",
+        color    "spec2_level",
+        color    "flake_result",
+        color    "flake_raw",
+        color    "flake_level",
+        color    "flake_refl_result",
+        color    "flake_refl_raw",
+        color    "flake_refl_level",
+        vector   "flake_normal"
+    )
+    version 1
+end declare
+
+declare shader
+    struct {
+        # standard Maya outputs
+        color  "result",
+        color  "outGlowColor",
+        color  "outMatteOpacity",
+        color  "outTransparency",
+
+        # mi_car_paint_phen_x outputs      
+        color    "ambient_result",
+        color    "ambient_raw",
+        color    "ambient_level",
+        
+        color    "diffuse_result",
+        color    "diffuse_raw",
+        color    "diffuse_level",
+
+        color    "indirect_result",
+        color    "indirect_raw",
+        color    "indirect_level",
+
+        color    "spec1_result",
+        color    "spec1_raw",
+        color    "spec1_level",
+
+        color    "spec2_result",
+        color    "spec2_raw",
+        color    "spec2_level",
+
+        color    "flake_result",
+        color    "flake_raw",
+        color    "flake_level",
+
+        color    "flake_refl_result",
+        color    "flake_refl_raw",
+        color    "flake_refl_level",
+        
+        vector   "flake_normal",
+
+        color    "reflection_result",
+        color    "reflection_raw",
+        color    "reflection_level",
+
+        color    "dirt_result",
+        color    "dirt_raw",
+        color    "dirt_level"
+    }
+    "adskMayaMiCarPaintPhenXAdapter" (
+        # contribution parameters
+        integer  "FrameBufferWriteOperation" default 1, # add
+        integer  "FrameBufferWriteFlags" default 0, # no flags
+        scalar   "FrameBufferWriteFactor" default 1.0,
+        # render pass contributions
+    	color    "beauty",
+    	color    "beautyNoShadow",
+        color    "ambientMaterialColor",
+        color    "ambientIrradiance",
+        color    "ambient",
+        color    "diffuseMaterialColor",
+        color    "diffuse",
+        color    "diffuseNoShadow",
+        color    "specular",
+        color    "specularNoShadow",
+        color    "indirect",
+        color    "directIrradiance",
+        color    "directIrradianceNoShadow",
+        color    "shadow",
+        scalar   "shadowMono",
+        color    "rawShadow",
+        scalar   "rawShadowMono",
+        color    "lightVolume",
+        color    "objectVolume",
+        color    "sceneVolume",
+        color    "reflection",
+        color    "refraction",
+        color    "scatter",
+        color    "incandescence",
+        color    "translucence",
+        color    "translucenceNoShadow",
+        color    "rawReflection",
+        color    "rawRefraction",
+        color    "rawGlow",
+        scalar   "incidenceLightNormal",
+        # mi_car_paint_phen_x specific parameters
+        color    "ambient_result",
+        color    "ambient_raw",
+        color    "ambient_level",
+        color    "diffuse_result",
+        color    "diffuse_raw",
+        color    "diffuse_level",
+        color    "indirect_result",
+        color    "indirect_raw",
+        color    "indirect_level",
+        color    "spec1_result",
+        color    "spec1_raw",
+        color    "spec1_level",
+        color    "spec2_result",
+        color    "spec2_raw",
+        color    "spec2_level",
+        color    "flake_result",
+        color    "flake_raw",
+        color    "flake_level",
+        color    "flake_refl_result",
+        color    "flake_refl_raw",
+        color    "flake_refl_level",
+        vector   "flake_normal",
+        color    "reflection_result",
+        color    "reflection_raw",
+        color    "reflection_level",
+        color    "dirt_result",
+        color    "dirt_raw",
+        color    "dirt_level"
+    )
+    version 1
+end declare
+
+declare shader
+    struct {
+        # standard Maya outputs
+        color  "result",
+        color  "outGlowColor",
+        color  "outMatteOpacity",
+        color  "outTransparency",
+
+        # misss_fast_shader_x outputs
+        color  "diffuse_result",
+        color  "diffuse_raw",
+        color  "diffuse_level",
+        
+        color  "specular_result",
+
+        color  "front_result",
+        color  "front_raw",
+        color  "front_level",
+
+        color  "back_result",
+        color  "back_raw",
+        color  "back_level"
+    }
+    "adskMayaMisssFastShaderXAdapter" (
+        # contribution parameters
+        integer  "FrameBufferWriteOperation" default 1, # add
+        integer  "FrameBufferWriteFlags" default 0, # no flags
+        scalar   "FrameBufferWriteFactor" default 1.0,
+        # render pass contributions
+    	color    "beauty",
+    	color    "beautyNoShadow",
+        color    "ambientMaterialColor",
+        color    "ambientIrradiance",
+        color    "ambient",
+        color    "diffuseMaterialColor",
+        color    "diffuse",
+        color    "diffuseNoShadow",
+        color    "specular",
+        color    "specularNoShadow",
+        color    "indirect",
+        color    "directIrradiance",
+        color    "directIrradianceNoShadow",
+        color    "shadow",
+        scalar   "shadowMono",
+        color    "rawShadow",
+        scalar   "rawShadowMono",
+        color    "lightVolume",
+        color    "objectVolume",
+        color    "sceneVolume",
+        color    "reflection",
+        color    "refraction",
+        color    "scatter",
+        color    "incandescence",
+        color    "translucence",
+        color    "translucenceNoShadow",
+        color    "rawReflection",
+        color    "rawRefraction",
+        color    "rawGlow",
+        scalar   "incidenceLightNormal",
+        # mi_metallic_paint_x specific parameters
+        color    "diffuse_result",
+        color    "diffuse_raw",
+        color    "diffuse_level",
+        color    "specular_result",
+        color    "front_result",
+        color    "front_raw",
+        color    "front_level",
+        color    "back_result",
+        color    "back_raw",
+        color    "back_level"
+    )
+    version 1
+end declare
+
+# =============================================================================
+# Shading Engine
+# =============================================================================
+
+declare shader
+    color
+    "adskMayaShadingEngine" (
+        color       "surfaceShader",
+        scalar      "cutAwayOpacity",
+        boolean     "customShader",
+        array color "customBufferShaders"
+        )
+    version 1
+    apply material
+end declare
+
+# =============================================================================
+#  shaders for writing directly to framebuffers
+# =============================================================================
+
+declare shader
+    struct {
+        color   "outEvaluationPassThrough"
+    }
+    "adskMayaWriteToColorBuffer" (
+        integer "customBufferOffset",
+        integer "writeOperation",
+	    integer "evaluationMode",
+	    scalar  "scaleFactor",
+	    color   "evaluationPassThrough",
+        color   "color",
+        scalar  "alpha"
+    )
+    version 1
+end declare
+
+declare shader
+    struct {
+        color   "outEvaluationPassThrough"
+    }
+    "adskMayaWriteToVectorBuffer" (
+        integer "customBufferOffset",
+        integer "writeOperation",
+	    integer "evaluationMode",
+	    scalar  "scaleFactor",
+	    color   "evaluationPassThrough",
+        vector  "vector"
+    )
+    version 1
+end declare
+
+declare shader
+    struct {
+        color   "outEvaluationPassThrough"
+    }
+    "adskMayaWriteToDepthBuffer" (
+        integer "customBufferOffset",
+        integer "writeOperation",
+	    integer "evaluationMode",
+	    scalar  "scaleFactor",
+	    color   "evaluationPassThrough",
+        scalar  "depth"
+    )
+    version 1
+end declare
+
+declare shader
+    struct {
+        color   "outEvaluationPassThrough"
+    }
+    "adskMayaWriteToLabelBuffer" (
+        integer "customBufferOffset",
+        integer "writeOperation",
+	    integer "evaluationMode",
+	    scalar  "scaleFactor",
+	    color   "evaluationPassThrough",
+        integer "label"
+    )
+    version 1
+end declare
+
+# =============================================================================
+#  surface shaders
+# =============================================================================
+
+declare shader
+    # Return struct
+	struct {
+		color		    "outColor",
+		color		    "outGlowColor",
+		color		    "outMatteOpacity",
+		color		    "outTransparency",
+		# BRDF components
+		color		    "outAmbient",
+		color		    "outIncandescence",
+		color		    "outIrradiance",
+		color		    "outDiffuseShadowed",
+		color		    "outDiffuseNoShadow",
+		color		    "outShadow",
+		color		    "outSpecularShadowed",
+		color		    "outSpecularNoShadow",
+		color		    "outReflection",
+		color		    "outRefraction",
+		color		    "outScatter",
+		color		    "outOpacity"
+    }
+    "adskMayaAnisotropic" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Inherited from Base Material
+        color           "color",
+        color           "transparency",
+        # Inherited from Matte Material
+		integer		    "matteOpacityMode",
+		scalar		    "matteOpacity",
+        # Inherited from Glow Material
+		scalar		    "glowIntensity",
+		# Inherited from Lambertian Material
+		integer		    "refractionLimit",
+		scalar		    "refractiveIndex",
+		boolean		    "refractions",
+		scalar		    "diffuse",
+		color		    "ambientColor",
+		color		    "incandescence",
+		scalar		    "translucence",
+		scalar		    "translucenceFocus",
+		scalar		    "translucenceDepth",
+		scalar		    "opacityGain",
+        boolean         "hideSource",
+		scalar		    "surfaceThickness",
+		scalar		    "shadowAttenuation",
+		scalar		    "transparencyDepth",
+		scalar		    "lightAbsorbance",
+		boolean		    "chromaticAberration",
+		vector		    "normalCamera",
+		color		    "irradiance",
+		color		    "irradianceColor",
+		scalar		    "refractionBlur",
+		integer		    "refractionBlurLimit",
+		integer		    "refractionRays",
+		color		    "scatterColor",
+		scalar		    "scatterRadius",
+		integer		    "scatterAccuracy",
+		integer		    "scatterFalloff",
+		integer		    "scatterLimit",
+		integer		    "scatterCache",
+		# Inherited from Reflective Material
+		integer		    "reflectionLimit",
+		color		    "specularColor",
+		color		    "reflectedColor",
+		scalar		    "reflectivity",
+		scalar		    "reflectionSpecularity",
+        scalar          "reflectionBlur",
+        scalar          "reflectionBlurLimit",
+        integer         "reflectionRays",
+        # Anisotropic parameters
+        vector          "tangentUCamera",
+        vector          "tangentVCamera",
+        scalar          "spreadX",
+        scalar          "spreadY",
+        scalar          "roughness",
+        scalar          "angle",
+        scalar          "fresnelRefractiveIndex",
+        boolean         "anisotropicReflectivity"
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    # Return struct
+	struct {
+		color		    "outColor",
+		color		    "outGlowColor",
+		color		    "outMatteOpacity",
+		color		    "outTransparency",
+		# BRDF components
+		color		    "outAmbient",
+		color		    "outIncandescence",
+		color		    "outIrradiance",
+		color		    "outDiffuseShadowed",
+		color		    "outDiffuseNoShadow",
+		color		    "outShadow",
+		color		    "outSpecularShadowed",
+		color		    "outSpecularNoShadow",
+		color		    "outReflection",
+		color		    "outRefraction",
+		color		    "outScatter",
+		color		    "outOpacity"
+    }
+    "adskMayaBlinn" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Inherited from Base Material
+        color           "color",
+        color           "transparency",
+        # Inherited from Matte Material
+		integer		    "matteOpacityMode",
+		scalar		    "matteOpacity",
+        # Inherited from Glow Material
+		scalar		    "glowIntensity",
+		# Inherited from Lambertian Material
+		integer		    "refractionLimit",
+		scalar		    "refractiveIndex",
+		boolean		    "refractions",
+		scalar		    "diffuse",
+		color		    "ambientColor",
+		color		    "incandescence",
+		scalar		    "translucence",
+		scalar		    "translucenceFocus",
+		scalar		    "translucenceDepth",
+		scalar		    "opacityGain",
+        boolean         "hideSource",
+		scalar		    "surfaceThickness",
+		scalar		    "shadowAttenuation",
+		scalar		    "transparencyDepth",
+		scalar		    "lightAbsorbance",
+		boolean		    "chromaticAberration",
+		vector		    "normalCamera",
+		color		    "irradiance",
+		color		    "irradianceColor",
+		scalar		    "refractionBlur",
+		integer		    "refractionBlurLimit",
+		integer		    "refractionRays",
+		color		    "scatterColor",
+		scalar		    "scatterRadius",
+		integer		    "scatterAccuracy",
+		integer		    "scatterFalloff",
+		integer		    "scatterLimit",
+		integer		    "scatterCache",
+		# Inherited from Reflective Material
+		integer		    "reflectionLimit",
+		color		    "specularColor",
+		color		    "reflectedColor",
+		scalar		    "reflectivity",
+		scalar		    "reflectionSpecularity",
+        scalar          "reflectionBlur",
+        scalar          "reflectionBlurLimit",
+        integer         "reflectionRays",
+        # Blinn parameters
+        scalar          "eccentricity",
+        scalar          "specularRollOff",
+        boolean         "reflectionRolloff"
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    struct {
+        color           "outColor",
+        color           "outGlowColor",
+        color           "outMatteOpacity",
+        color           "outTransparency",
+        # BRDF components.
+        color           "outAmbient",
+        color           "outIncandescence",
+        color           "outIrradiance",
+        color           "outDiffuseShadowed",
+        color           "outDiffuseNoShadow",
+        color           "outShadow",
+        color           "outSpecularShadowed",
+        color           "outSpecularNoShadow",
+        color           "outReflection",
+        color           "outRefraction",
+        color           "outScatter",
+        color           "outOpacity"
+    }
+    "adskMayaFur" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Fur parameters
+        color           "baseColor",
+        integer         "baseMap",
+        scalar          "baseNoise",
+        scalar          "baseNoiseFreq",
+        color           "tipColor",
+        integer         "tipMap",
+        scalar          "tipNoise",
+        scalar          "tipNoiseFreq",
+        color           "baseAmbientColor",
+        integer         "baseAmbientMap",
+        scalar          "baseAmbientNoise",
+        scalar          "baseAmbientNoiseFreq",
+        color           "tipAmbientColor",
+        integer         "tipAmbientMap",
+        scalar          "tipAmbientNoise",
+        scalar          "tipAmbientNoiseFreq",
+        color           "specularColor",
+        integer         "specularMap",
+        scalar          "specularNoise",
+        scalar          "specularNoiseFreq",
+        scalar          "specularSharpness",
+        integer         "specularSharpnessMap",
+        scalar          "specularSharpnessNoise",
+        scalar          "specularSharpnessNoiseFreq",
+        scalar          "baseOpacity",
+        integer         "baseOpacityMap",
+        scalar          "baseOpacityNoise",
+        scalar          "baseOpacityNoiseFreq",
+        scalar          "tipOpacity",
+        integer         "tipOpacityMap",
+        scalar          "tipOpacityNoise",
+        scalar          "tipOpacityNoiseFreq",
+        integer         "lightModel"
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    struct {
+        color           "outColor",
+        color           "outGlowColor",
+        color           "outMatteOpacity",
+        color           "outTransparency",
+        # BRDF components.
+        color           "outAmbient",
+        color           "outIncandescence",
+        color           "outIrradiance",
+        color           "outDiffuseShadowed",
+        color           "outDiffuseNoShadow",
+        color           "outShadow",
+        color           "outSpecularShadowed",
+        color           "outSpecularNoShadow",
+        color           "outReflection",
+        color           "outRefraction",
+        color           "outScatter",
+        color           "outOpacity"
+    } "adskMayaHairShader" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Hair shader parameters
+        array struct    "colorScale" {        # obsolete
+                            scalar    "position",        # obsolete
+                            color     "color",        # obsolete
+                            integer   "interp"        # obsolete
+                        },                # obsolete
+        scalar          "specularPower",
+        color           "specularColor",
+        scalar          "translucence",
+        color           "color",        # obsolete
+        scalar          "opacity",
+        integer         "matteOpacityMode",    # obsolete
+        scalar          "matteOpacity"        # obsolete
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    # Return struct
+	struct {
+		color		    "outColor",
+		color		    "outGlowColor",
+		color		    "outMatteOpacity",
+		color		    "outTransparency",
+		# BRDF components
+		color		    "outAmbient",
+		color		    "outIncandescence",
+		color		    "outIrradiance",
+		color		    "outDiffuseShadowed",
+		color		    "outDiffuseNoShadow",
+		color		    "outShadow",
+		color		    "outSpecularShadowed",
+		color		    "outSpecularNoShadow",
+		color		    "outReflection",
+		color		    "outRefraction",
+		color		    "outScatter",
+		color		    "outOpacity"
+    }
+    "adskMayaHairTubeShader" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Inherited from Base Material
+        color           "color",
+        color           "transparency",
+        # Inherited from Matte Material
+		integer		    "matteOpacityMode",
+		scalar		    "matteOpacity",
+        # Inherited from Glow Material
+		scalar		    "glowIntensity",
+		# Inherited from Lambertian Material
+		integer		    "refractionLimit",
+		scalar		    "refractiveIndex",
+		boolean		    "refractions",
+		scalar		    "diffuse",
+		color		    "ambientColor",
+		color		    "incandescence",
+		scalar		    "translucence",
+		scalar		    "translucenceFocus",
+		scalar		    "translucenceDepth",
+		scalar		    "opacityGain",
+        boolean         "hideSource",
+		scalar		    "surfaceThickness",
+		scalar		    "shadowAttenuation",
+		scalar		    "transparencyDepth",
+		scalar		    "lightAbsorbance",
+		boolean		    "chromaticAberration",
+		vector		    "normalCamera",
+		color		    "irradiance",
+		color		    "irradianceColor",
+		scalar		    "refractionBlur",
+		integer		    "refractionBlurLimit",
+		integer		    "refractionRays",
+		color		    "scatterColor",
+		scalar		    "scatterRadius",
+		integer		    "scatterAccuracy",
+		integer		    "scatterFalloff",
+		integer		    "scatterLimit",
+		integer		    "scatterCache",
+		# Inherited from Reflective Material
+		integer		    "reflectionLimit",
+		color		    "specularColor",
+		color		    "reflectedColor",
+		scalar		    "reflectivity",
+		scalar		    "reflectionSpecularity",
+        scalar          "reflectionBlur",
+        scalar          "reflectionBlurLimit",
+        integer         "reflectionRays",
+        # HairTubeShader parameters
+        integer         "tubeDirection",
+        array struct    "colorScale" {
+                            scalar  "position",
+                            color   "color",
+                            integer "interp"
+                        },
+        scalar          "specularPower",
+        scalar          "specularShift",
+        scalar          "scatterPower",
+        scalar          "scatter",
+        vector          "uvCoord",
+        vector          "tangentUCamera",
+        vector          "tangentVCamera"
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    color
+    "adskMayaImagePlane" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Image Plane paramters
+        integer         "type",
+        color texture   "imageName",
+        color           "sourceTexture",
+        integer         "displayMode",
+        color           "colorGain",
+        color           "colorOffset",
+        scalar          "alphaGain",
+        boolean         "visibleInReflections",
+        boolean         "visibleInRefractions"
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    # Return struct
+	struct {
+		color		    "outColor",
+		color		    "outGlowColor",
+		color		    "outMatteOpacity",
+		color		    "outTransparency",
+		# BRDF components
+		color		    "outAmbient",
+		color		    "outIncandescence",
+		color		    "outIrradiance",
+		color		    "outDiffuseShadowed",
+		color		    "outDiffuseNoShadow",
+		color		    "outShadow",
+		color		    "outSpecularShadowed",
+		color		    "outSpecularNoShadow",
+		color		    "outReflection",
+		color		    "outRefraction",
+		color		    "outScatter",
+		color		    "outOpacity"
+    }
+    "adskMayaLambert" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Inherited from Base Material
+        color           "color",
+        color           "transparency",
+        # Inherited from Matte Material
+		integer		    "matteOpacityMode",
+		scalar		    "matteOpacity",
+        # Inherited from Glow Material
+		scalar		    "glowIntensity",
+		# Inherited from Lambertian Material
+		integer		    "refractionLimit",
+		scalar		    "refractiveIndex",
+		boolean		    "refractions",
+		scalar		    "diffuse",
+		color		    "ambientColor",
+		color		    "incandescence",
+		scalar		    "translucence",
+		scalar		    "translucenceFocus",
+		scalar		    "translucenceDepth",
+		scalar		    "opacityGain",
+        boolean         "hideSource",
+		scalar		    "surfaceThickness",
+		scalar		    "shadowAttenuation",
+		scalar		    "transparencyDepth",
+		scalar		    "lightAbsorbance",
+		boolean		    "chromaticAberration",
+		vector		    "normalCamera",
+		color		    "irradiance",
+		color		    "irradianceColor",
+		scalar		    "refractionBlur",
+		integer		    "refractionBlurLimit",
+		integer		    "refractionRays",
+		color		    "scatterColor",
+		scalar		    "scatterRadius",
+		integer		    "scatterAccuracy",
+		integer		    "scatterFalloff",
+		integer		    "scatterLimit",
+		integer		    "scatterCache",
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    # Return struct
+    struct {
+        color           "outColor",
+        color           "outGlowColor",
+        color           "outMatteOpacity",
+        color           "outTransparency",
+        # BRDF components
+        color           "outAmbient",
+        color           "outIncandescence",
+        color           "outIrradiance",
+        color           "outDiffuseShadowed",
+        color           "outDiffuseNoShadow",
+        color           "outShadow",
+        color           "outSpecularShadowed",
+        color           "outSpecularNoShadow",
+        color           "outReflection",
+        color           "outRefraction",
+        color           "outScatter",
+        color           "outOpacity"
+    }
+    "adskMayaLayeredShader" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Color operation parameter
+        integer         "renderPassMode",        
+        # Layered shader parameters
+        integer         "compositingFlag",
+        array struct    "inputs" {
+                            color   "color",
+                            color   "transparency",
+                            color   "glowColor"
+                        },
+        integer         "matteOpacityMode",
+        scalar          "matteOpacity"
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    struct {
+        color           "outColor",
+        color           "outGlowColor",
+        color           "outMatteOpacity",
+        color           "outTransparency",
+        # BRDF components.
+        color           "outAmbient",
+        color           "outIncandescence",
+        color           "outIrradiance",
+        color           "outDiffuseShadowed",
+        color           "outDiffuseNoShadow",
+        color           "outShadow",
+        color           "outSpecularShadowed",
+        color           "outSpecularNoShadow",
+        color           "outReflection",
+        color           "outRefraction",
+        color           "outScatter",
+        color           "outOpacity",
+        # Ocean Shader specials.
+        scalar          "displacement",
+        scalar          "foam"
+    }
+    "adskMayaOceanShader" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Ocean shader parameters, none inherited although many common
+        integer         "refractionLimit",
+        scalar          "refractiveIndex",
+        boolean         "refractions",
+        scalar          "diffuse",
+        color           "waterColor",
+        color           "transparency",
+        color           "ambientColor",
+        color           "incandescence",
+        scalar          "translucence",
+        scalar          "translucenceFocus",
+        scalar          "translucenceDepth",
+        scalar          "opacityDepth",
+        scalar          "glowIntensity",
+        scalar          "specularGlow",
+        scalar          "shadowAttenuation",
+        scalar          "eccentricity",
+        scalar          "specularity",
+        integer         "reflectionLimit",
+        color           "specularColor",
+        scalar          "reflectivity",
+        array struct    "environment" {
+                            scalar    "position",
+                            color     "color",
+                            integer   "interp"
+                        },
+        color           "reflectedColor",
+        scalar          "reflectionSpecularity",
+        vector          "normalCamera",
+        integer         "matteOpacityMode",
+        scalar          "matteOpacity",
+        scalar          "time",
+        scalar          "scale",
+        vector          "windUV",
+        scalar          "observerSpeed",
+        scalar          "waveDirSpread",
+        scalar          "numFrequencies",
+        scalar          "waveLengthMin",
+        scalar          "waveLengthMax",
+        array struct    "waveHeight" {
+                            scalar    "position",
+                            scalar    "floatValue",
+                            integer   "interp"
+                        },
+        array struct    "waveTurbulence" {
+                            scalar    "position",
+                            scalar    "floatValue",
+                            integer   "interp"
+                        },
+        array struct    "wavePeaking" {
+                            scalar    "position",
+                            scalar    "floatValue",
+                            integer   "interp"
+                        },
+        scalar          "waveHeightOffset",
+        scalar          "troughShadowing",
+        color           "foamColor",
+        scalar          "foamEmission",
+        scalar          "foamThreshold",
+        scalar          "foamOffset",
+        scalar          "bumpBlur",
+        scalar          "waveSpeed",
+        color           "irradiance",
+        color           "irradianceColor",
+        scalar          "refractionBlur",
+        integer         "refractionBlurLimit",
+        integer         "refractionRays",
+        scalar          "reflectionBlur",
+        integer         "reflectionBlurLimit",
+        integer         "reflectionRays",
+        color           "scatterColor",
+        scalar          "scatterRadius",
+        integer         "scatterAccuracy",
+        integer         "scatterFalloff",
+        integer         "scatterLimit",
+        integer         "scatterCache",
+        scalar          "horizonFilter"
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    # Return struct
+	struct {
+		color		    "outColor",
+		color		    "outGlowColor",
+		color		    "outMatteOpacity",
+		color		    "outTransparency",
+		# BRDF components
+		color		    "outAmbient",
+		color		    "outIncandescence",
+		color		    "outIrradiance",
+		color		    "outDiffuseShadowed",
+		color		    "outDiffuseNoShadow",
+		color		    "outShadow",
+		color		    "outSpecularShadowed",
+		color		    "outSpecularNoShadow",
+		color		    "outReflection",
+		color		    "outRefraction",
+		color		    "outScatter",
+		color		    "outOpacity"
+    }
+    "adskMayaPhong" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Inherited from Base Material
+        color           "color",
+        color           "transparency",
+        # Inherited from Matte Material
+		integer		    "matteOpacityMode",
+		scalar		    "matteOpacity",
+        # Inherited from Glow Material
+		scalar		    "glowIntensity",
+		# Inherited from Lambertian Material
+		integer		    "refractionLimit",
+		scalar		    "refractiveIndex",
+		boolean		    "refractions",
+		scalar		    "diffuse",
+		color		    "ambientColor",
+		color		    "incandescence",
+		scalar		    "translucence",
+		scalar		    "translucenceFocus",
+		scalar		    "translucenceDepth",
+		scalar		    "opacityGain",
+        boolean         "hideSource",
+		scalar		    "surfaceThickness",
+		scalar		    "shadowAttenuation",
+		scalar		    "transparencyDepth",
+		scalar		    "lightAbsorbance",
+		boolean		    "chromaticAberration",
+		vector		    "normalCamera",
+		color		    "irradiance",
+		color		    "irradianceColor",
+		scalar		    "refractionBlur",
+		integer		    "refractionBlurLimit",
+		integer		    "refractionRays",
+		color		    "scatterColor",
+		scalar		    "scatterRadius",
+		integer		    "scatterAccuracy",
+		integer		    "scatterFalloff",
+		integer		    "scatterLimit",
+		integer		    "scatterCache",
+		# Inherited from Reflective Material
+		integer		    "reflectionLimit",
+		color		    "specularColor",
+		color		    "reflectedColor",
+		scalar		    "reflectivity",
+		scalar		    "reflectionSpecularity",
+        scalar          "reflectionBlur",
+        scalar          "reflectionBlurLimit",
+        integer         "reflectionRays",
+        # Phong parameters
+		scalar		    "cosinePower"
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    # Return struct
+	struct {
+		color		    "outColor",
+		color		    "outGlowColor",
+		color		    "outMatteOpacity",
+		color		    "outTransparency",
+		# BRDF components
+		color		    "outAmbient",
+		color		    "outIncandescence",
+		color		    "outIrradiance",
+		color		    "outDiffuseShadowed",
+		color		    "outDiffuseNoShadow",
+		color		    "outShadow",
+		color		    "outSpecularShadowed",
+		color		    "outSpecularNoShadow",
+		color		    "outReflection",
+		color		    "outRefraction",
+		color		    "outScatter",
+		color		    "outOpacity"
+    }
+    "adskMayaPhongE" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Inherited from Base Material
+        color           "color",
+        color           "transparency",
+        # Inherited from Matte Material
+		integer		    "matteOpacityMode",
+		scalar		    "matteOpacity",
+        # Inherited from Glow Material
+		scalar		    "glowIntensity",
+		# Inherited from Lambertian Material
+		integer		    "refractionLimit",
+		scalar		    "refractiveIndex",
+		boolean		    "refractions",
+		scalar		    "diffuse",
+		color		    "ambientColor",
+		color		    "incandescence",
+		scalar		    "translucence",
+		scalar		    "translucenceFocus",
+		scalar		    "translucenceDepth",
+		scalar		    "opacityGain",
+        boolean         "hideSource",
+		scalar		    "surfaceThickness",
+		scalar		    "shadowAttenuation",
+		scalar		    "transparencyDepth",
+		scalar		    "lightAbsorbance",
+		boolean		    "chromaticAberration",
+		vector		    "normalCamera",
+		color		    "irradiance",
+		color		    "irradianceColor",
+		scalar		    "refractionBlur",
+		integer		    "refractionBlurLimit",
+		integer		    "refractionRays",
+		color		    "scatterColor",
+		scalar		    "scatterRadius",
+		integer		    "scatterAccuracy",
+		integer		    "scatterFalloff",
+		integer		    "scatterLimit",
+		integer		    "scatterCache",
+		# Inherited from Reflective Material
+		integer		    "reflectionLimit",
+		color		    "specularColor",
+		color		    "reflectedColor",
+		scalar		    "reflectivity",
+		scalar		    "reflectionSpecularity",
+        scalar          "reflectionBlur",
+        scalar          "reflectionBlurLimit",
+        integer         "reflectionRays",
+        # PhongE parameters
+        scalar          "roughness",
+        scalar          "highlightSize",
+        color           "whiteness"
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    struct {
+        color           "outColor",
+        color           "outGlowColor",
+        color           "outMatteOpacity",
+        color           "outTransparency",
+        # BRDF components.
+        color           "outAmbient",
+        color           "outIncandescence",
+        color           "outIrradiance",
+        color           "outDiffuseShadowed",
+        color           "outDiffuseNoShadow",
+        color           "outShadow",
+        color           "outSpecularShadowed",
+        color           "outSpecularNoShadow",
+        color           "outReflection",
+        color           "outRefraction",
+        color           "outScatter",
+        color           "outOpacity"
+    }
+    "adskMayaRampShader" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Ramp shader parameters
+        integer         "refractionLimit",
+        scalar          "refractiveIndex",
+        boolean         "refractions",
+        scalar          "diffuse",
+        scalar          "forwardScatter",
+        array struct    "color" {
+                            scalar    "position",
+                            color     "color",
+                            integer   "interp"
+                        },
+        integer         "colorInput",
+        array struct    "transparency" {
+                            scalar    "position",
+                            color     "color",
+                            integer   "interp"
+                        },
+        color           "ambientColor",
+        array struct    "incandescence" {
+                            scalar    "position",
+                            color     "color",
+                            integer   "interp"
+                        },
+        scalar          "translucence",
+        scalar          "translucenceFocus",
+        scalar          "translucenceDepth",
+        scalar          "opacityDepth",
+        scalar          "glowIntensity",
+        scalar          "specularGlow",
+        boolean         "hideSource",
+        scalar          "surfaceThickness",
+        scalar          "shadowAttenuation",
+        scalar          "transparencyDepth",
+        scalar          "lightAbsorbance",
+        boolean         "chromaticAberration",
+        scalar          "eccentricity",
+        scalar          "specularity",
+        array struct    "specularRollOff" {
+                            scalar    "position",
+                            scalar    "floatValue",
+                            integer   "interp"
+                        },
+        integer         "reflectionLimit",
+        array struct    "specularColor" {
+                            scalar    "position",
+                            color     "color",
+                            integer   "interp"
+                        },
+        array struct    "reflectivity" {
+                            scalar    "position",
+                            scalar    "floatValue",
+                            integer   "interp"
+                        },
+        array struct    "environment" {
+                            scalar    "position",
+                            color     "color", 
+                            integer   "interp"
+                        },
+        color           "reflectedColor",
+        scalar          "reflectionSpecularity",
+        vector          "normalCamera",
+        integer         "matteOpacityMode",
+        scalar          "matteOpacity",
+        color           "irradiance",
+        color           "irradianceColor",
+        scalar          "refractionBlur",
+        integer         "refractionBlurLimit",
+        integer         "refractionRays",
+        scalar          "reflectionBlur",
+        integer         "reflectionBlurLimit",
+        integer         "reflectionRays",
+        integer         "shadowMode",
+        color           "shadowColor",
+        scalar          "shadowThreshold"
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    struct {
+        color           "outColor",
+        color           "outGlowColor",
+        color           "outMatteOpacity",
+        color           "outTransparency",
+        # BRDF components.
+        color           "outAmbient",
+        color           "outIncandescence",
+        color           "outIrradiance",
+        color           "outDiffuseShadowed",
+        color           "outDiffuseNoShadow",
+        color           "outShadow",
+        color           "outSpecularShadowed",
+        color           "outSpecularNoShadow",
+        color           "outReflection",
+        color           "outRefraction",
+        color           "outScatter",
+        color           "outOpacity"
+    }
+    "adskMayaShadingMap" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Shading map parameters
+        color           "color",
+        color           "transparency",
+        integer         "matteOpacityMode",
+        scalar          "matteOpacity",
+        integer         "renderPassMode",
+        color           "glowColor",
+        color           "shadingMapColor",
+        integer         "mapFunctionU",
+        integer         "mapFunctionV"
+    )
+    version 2
+    apply material
+end declare
+
+declare shader
+    struct {
+        color           "outColor",
+        color           "outGlowColor",
+        color           "outMatteOpacity",
+        color           "outTransparency",
+        # BRDF components.
+        color           "outAmbient",
+        color           "outIncandescence",
+        color           "outIrradiance",
+        color           "outDiffuseShadowed",
+        color           "outDiffuseNoShadow",
+        color           "outShadow",
+        color           "outSpecularShadowed",
+        color           "outSpecularNoShadow",
+        color           "outReflection",
+        color           "outRefraction",
+        color           "outScatter",
+        color           "outOpacity"
+    }
+    "adskMayaSurfaceShader" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Surface shader parameters
+        color           "outColor",
+        color           "outGlowColor",
+        color           "outMatteOpacity",
+        color           "outTransparency",
+        color           "outAmbient",
+        color           "outIncandescence",
+        color           "outIrradiance",
+        color           "outDiffuseShadowed",
+        color           "outDiffuseNoShadow",
+        color           "outShadow",
+        color           "outSpecularShadowed",
+        color           "outSpecularNoShadow",
+        color           "outReflection",
+        color           "outRefraction",
+        color           "outScatter",
+        color           "outOpacity"
+    )
+    version 1
+    apply material
+end declare
+
+declare shader
+    struct {
+        color           "outColor",
+        color           "outGlowColor",
+        color           "outMatteOpacity",
+        color           "outTransparency",
+        # BRDF components.
+        color           "outAmbient",
+        color           "outIncandescence",
+        color           "outIrradiance",
+        color           "outDiffuseShadowed",
+        color           "outDiffuseNoShadow",
+        color           "outShadow",
+        color           "outSpecularShadowed",
+        color           "outSpecularNoShadow",
+        color           "outReflection",
+        color           "outRefraction",
+        color           "outScatter",
+        color           "outOpacity"
+    }
+    "adskMayaAssetBinder" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Surface shader parameters
+        material        "adskMaterial",
+        integer         "matteOpacityMode",
+        scalar          "matteOpacity",
+        scalar          "glowIntensity"
+    )
+    version 1
+    apply material, shadow, environment, volume, texture, photon, displace, photonvol, lightmap
+end declare
+
+declare shader
+    struct {
+        color           "outColor",
+        color           "outGlowColor",
+        color           "outMatteOpacity",
+        color           "outTransparency",
+        # BRDF components.
+        color           "outAmbient",
+        color           "outIncandescence",
+        color           "outIrradiance",
+        color           "outDiffuseShadowed",
+        color           "outDiffuseNoShadow",
+        color           "outShadow",
+        color           "outSpecularShadowed",
+        color           "outSpecularNoShadow",
+        color           "outReflection",
+        color           "outRefraction",
+        color           "outScatter",
+        color           "outOpacity"
+    }
+    "adskMayaUseBackground" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Surface shader parameters
+        vector          "normalCamera",
+        scalar          "shadowMask",
+        integer         "reflectionLimit",
+        color           "specularColor",
+        scalar          "reflectivity",
+        integer         "matteOpacityMode",
+        scalar          "matteOpacity",
+        array geometry  "imagePlanes",
+        scalar          "reflectionBlur",
+        integer         "reflectionBlurLimit",
+        integer         "reflectionRays",
+        scalar          "occlusionMask"
+    )
+    version 1
+    apply material
+end declare
+
+
+# =============================================================================
+#  volume shaders
+# =============================================================================
+
+declare shader
+	color
+	"adskMayaVolumeEngine" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+		# Volume Engine Parameters
+		array geometry	"instances"
+		)
+	version	1
+end declare
+
+# =============================================================================
+#  Light shader for standard Maya light types
+# =============================================================================
+
+# Ambient Light
+#
+declare shader
+	color
+	"adskMayaAmbientLight" (
+		scalar		"ambientShade",
+		scalar		"shadowRadius",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit"
+		)
+	apply light
+	version	1
+end declare
+
+# Directional Light
+#
+declare shader
+	color
+	"adskMayaDirectionalLight" (
+		boolean		"useLightPosition",
+		scalar		"lightAngle",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit"
+		)
+	apply light
+	version	1
+end declare
+
+# Default Light
+#
+declare shader
+	color
+	"adskMayaDefaultLight" (
+		boolean		"useLightPosition",
+		scalar		"lightAngle",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit"
+		)
+	apply light
+	version	1
+end declare
+
+# Point Light
+#
+declare shader
+	color
+	"adskMayaPointLight" (
+		scalar		"lightRadius",
+		integer		"decayRate",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit",
+		# Volume shading parameters
+		scalar		"fogRadius",
+		integer		"fogType",
+		scalar		"fogIntensity",
+		# Light profile
+		lightprofile	"lightProfile"
+		)
+	apply light
+	version 1
+end declare
+
+# Spot Light
+#
+declare shader
+	color
+	"adskMayaSpotLight" (
+		scalar		"coneAngle",
+		scalar		"penumbraAngle",
+		scalar		"dropoff",
+		boolean		"barnDoors",
+		scalar		"leftBarnDoor",
+		scalar		"rightBarnDoor",
+		scalar		"topBarnDoor",
+		scalar		"bottomBarnDoor",
+		boolean		"useDecayRegions",
+		scalar		"startDistance1",
+		scalar		"endDistance1",
+		scalar		"startDistance2",
+		scalar		"endDistance2",
+		scalar		"startDistance3",
+		scalar		"endDistance3",
+		scalar		"lightRadius",
+		integer		"decayRate",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit",
+		# Volume shading parameters
+		scalar		"fogSpread",
+		scalar		"fogIntensity"
+		)
+	apply light
+	version 1
+end declare
+
+# Area Light
+#
+declare shader
+	color
+	"adskMayaAreaLight" (
+		integer		"decayRate",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit"
+		)
+	apply light
+	version	1
+end declare
+
+# Shape Light
+#
+declare shader
+	color
+	"adskMayaShapeLight" (
+		scalar		"shapeIntensity",
+		integer		"decayRate",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit"
+		)
+	apply light
+	version	1
+end declare
+
+
+# Volume Light
+#
+declare shader
+	color
+	"adskMayaVolumeLight" (
+		integer		"lightShape",
+		integer		"volumeLightDir",
+		scalar		"arc",
+		scalar		"coneEndRadius",
+		array struct	"colorRange" {
+			scalar	"position",
+			color	"color",
+			integer	"interp"
+			},
+		array struct	"penumbra" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		boolean		"emitAmbient",
+		# Inherited from point light
+		scalar		"lightRadius",
+		integer		"decayRate",
+		# From non-extended light
+		boolean		"useDepthMapShadows",
+		# From non-ambient light
+		boolean		"emitDiffuse",
+		boolean		"emitSpecular",
+		# Inherited from light
+		color		"color",
+		scalar		"intensity",
+		boolean		"useRayTraceShadows",
+		color		"shadowColor",
+		integer		"shadowRays",
+		integer		"rayDepthLimit",
+		# Volume shading parameters
+		scalar		"fogRadius",
+		integer		"fogType",
+		scalar		"fogIntensity"
+		)
+	apply light
+	version 1
+end declare
+
+
+# =============================================================================
+#  "surface" shaders for rendering non-material render passes
+# =============================================================================
+
+declare shader 
+    color
+    "adskPassCameraDepth" (
+        integer "frameBufferNumber",
+        integer "encodingIndex",
+        boolean "holdout",
+        boolean "useShadingEngineThreshold",
+        scalar  "transparencyThreshold",
+        boolean "remap" default off,
+        scalar  "znear",
+        scalar  "zfar",
+        scalar  "minbuffer",
+        scalar  "maxbuffer"
+    )
+    version 1
+end declare
+
+declare shader 
+    color
+    "adskPassNormal" (
+        integer "frameBufferNumber",
+        integer "encodingIndex",
+        boolean "holdout",
+        boolean "useShadingEngineThreshold",
+        scalar  "transparencyThreshold",
+        integer  "space" default 0
+    )
+    version 1
+end declare
+
+declare shader 
+    color
+    "adskPassMotionVector3D" (
+        integer "frameBufferNumber",
+        integer "encodingIndex",
+        boolean "holdout",
+        boolean "useShadingEngineThreshold",
+        scalar  "transparencyThreshold"
+    )
+    version 1
+end declare
+
+declare shader
+    color
+    "adskPassAmbientOcclusion" (
+        integer "frameBufferNumber",
+        integer "encodingIndex",
+        boolean "holdout",
+        boolean "useShadingEngineThreshold",
+        scalar  "transparencyThreshold",
+        boolean "useLocalSettings",
+        integer "rays",
+        color   "brightColor",
+        color   "darkColor",
+        scalar  "spread",
+        scalar  "spreadExponent",
+        scalar  "maxDistance",
+        boolean "reflective",
+        integer "cachePoints",
+        boolean "occInAlpha",
+        integer "outputMode"
+    )
+    version 1
+end declare
+
+declare shader
+    color
+    "adskPassCoverage" (
+        integer "frameBufferNumber",
+        integer "encodingIndex",
+        boolean "holdout",
+        boolean "useShadingEngineThreshold",
+        scalar  "transparencyThreshold"
+    )
+    version 1
+end declare
+
+declare shader
+    color
+    "adskPassMotionVector2D" (
+        integer "frameBufferNumber",
+        integer "encodingIndex",
+        boolean "holdout",
+        boolean "useShadingEngineThreshold",
+        scalar  "transparencyThreshold"
+    )
+    version 1
+end declare
+
+declare shader
+    color
+    "adskPassMotionVector2DNormalized" (
+        integer "frameBufferNumber",
+        integer "encodingIndex",
+        boolean "holdout",
+        boolean "useShadingEngineThreshold",
+        scalar  "transparencyThreshold",
+        boolean "automatic",
+        scalar  "min",
+        scalar  "max",
+        scalar  "maxDisplacement",
+        boolean "extractMagnitude"
+    )
+    version 1
+end declare
+
+declare shader
+    color
+    "adskPassIncidenceCameraNormal" (
+        integer "frameBufferNumber",
+        integer "encodingIndex",
+        boolean "holdout",
+        boolean "useShadingEngineThreshold",
+        scalar  "transparencyThreshold"
+    )
+    version 1
+end declare
+
+# =============================================================================
+#  Utility shaders
+# =============================================================================
+
+declare shader
+    struct {
+        color           "output"
+    } "adskMayaBlend" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Color operation parameter
+        integer         "renderPassMode",
+        # Shader-specific parameters
+        scalar          "blender",
+        color           "color1",
+        color           "color2"
+    )
+    version 1
+end declare
+
+declare shader
+	struct {
+		color		"output"
+	} "adskMayaClamp" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Color operation parameter
+        integer         "renderPassMode",
+        # Shader-specific parameters
+		color		    "input",
+		color		    "min",
+		color		    "max"
+		)
+	version	1
+end declare
+
+# Contrast
+#
+declare shader
+	struct {
+		vector		"outValue"
+	} "adskMayaContrast" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Color operation parameter
+        integer         "renderPassMode",
+        # Shader-specific parameters
+		vector		"value",
+		vector		"contrast",
+		vector		"bias"
+		)
+	version	1
+end declare
+
+# Gamma Correct
+#
+declare shader
+	struct {
+		vector		"outValue"
+	} "adskMayaGamma" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Color operation parameter
+        integer         "renderPassMode",
+        # Shader-specific parameters
+		vector		"value",
+		vector		"gamma"
+		)
+	version	1
+end declare
+
+# Hsv To Rgb
+#
+declare shader
+	struct {
+		color		"outRgb"
+	} "adskMayaHsvToRgb" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Color operation parameter
+        integer         "renderPassMode",
+        # Shader-specific parameters
+		color		    "inHsv"
+		)
+	version	1
+end declare
+
+# Luminance
+#
+declare shader
+	struct {
+		scalar		"outValue"
+	} "adskMayaLuminance" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Color operation parameter
+        integer         "renderPassMode",
+        # Shader-specific parameters
+		color		"value"
+		)
+	version	1
+end declare
+
+# Remap Color
+#
+declare shader
+	struct {
+		color		"outColor"
+	} "adskMayaRemapColor" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Color operation parameter
+        integer         "renderPassMode",
+        # Shader-specific parameters
+		color		"color",
+		scalar		"inputMin",
+		scalar		"inputMax",
+		scalar		"outputMin",
+		scalar		"outputMax",
+		array struct	"red" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"green" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"blue" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			}
+		)
+	version	1
+end declare
+
+# Remap Hsv
+#
+declare shader
+	struct {
+		color		"outColor"
+	} "adskMayaRemapHsv" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Color operation parameter
+        integer         "renderPassMode",
+        # Shader-specific parameters
+		color		"color",
+		scalar		"inputMin",
+		scalar		"inputMax",
+		scalar		"outputMin",
+		scalar		"outputMax",
+		array struct	"hue" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"saturation" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			},
+		array struct	"value" {
+			scalar	"position",
+			scalar	"floatValue",
+			integer	"interp"
+			}
+		)
+	version	1
+end declare
+
+# Rgb To Hsv
+#
+declare shader
+	struct {
+		color		"outHsv"
+	} "adskMayaRgbToHsv" (
+        # Render Pass Parameters
+        integer         "FrameBufferWriteOperation" default 1, # add
+        integer         "FrameBufferWriteFlags" default 0, # no flags
+        scalar          "FrameBufferWriteFactor" default 1.0,
+        # Color operation parameter
+        integer         "renderPassMode",
+        # Shader-specific parameters
+		color		    "inRgb"
+		)
+	version	1
+end declare
+
+
+$endif  # if not "autodesk_mayashaders_included"

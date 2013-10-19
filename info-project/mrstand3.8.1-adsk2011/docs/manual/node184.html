@@ -1,0 +1,243 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Lights, Materials, Textures</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node183.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node185.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION182"></a>
+
+<ul class="nav tag">
+<li><a href="#api:mi_api_light_begin">mi_api_light_begin</a></li>
+<li><a href="#api:mi_api_light_end">mi_api_light_end</a></li>
+<li><a href="#api:mi_api_material_begin">mi_api_material_begin</a></li>
+<li><a href="#api:mi_api_material_end">mi_api_material_end</a></li>
+<li><a href="#api:mi_api_texture_begin">mi_api_texture_begin</a></li>
+<li><a href="#api:mi_api_texture_set_colorprofile">mi_api_texture_set_colorprofile</a></li>
+<li><a href="#api:mi_api_texture_file_def">mi_api_texture_file_def</a></li>
+<li><a href="#api:mi_api_texture_function_def">mi_api_texture_function_def</a></li>
+<li><a href="#api:mi_api_texture_array_def_begin">mi_api_texture_array_def_begin</a></li>
+<li><a href="#api:mi_api_texture_byte_copy">mi_api_texture_byte_copy</a></li>
+<li><a href="#api:mi_api_texture_array_def_end">mi_api_texture_array_def_end</a></li>
+<li><a href="#api:mi_api_texture_file_size">mi_api_texture_file_size</a></li>
+<li><a href="#api:mi_api_texture_set_filter">mi_api_texture_set_filter</a></li>
+<li><a href="#api:mi_api_texture_end">mi_api_texture_end</a></li>
+</ul>
+
+<h3>Lights, Materials, Textures</h3>
+<p><a id="INDEX901"></a></p>
+<h5 class="anchor" id="api:mi_api_light_begin">mi_api_light_begin</h5>
+<pre>
+    miLight *mi_api_light_begin(
+        char            *name)      /* light name */
+</pre>
+<p>Begin the definition of a light with the specified <i>name</i>.
+A pointer to the light is returned; the caller may modify the
+structure.</p>
+<p><a id="INDEX902"></a></p>
+<h5 class="anchor" id="api:mi_api_light_end">mi_api_light_end</h5>
+<pre>
+    miBoolean mi_api_light_end(void)
+</pre>
+<p>Complete the definition of a light after all parameters have
+been set.</p>
+<p><a id="INDEX903"></a></p>
+<h5 class="anchor" id="api:mi_api_material_begin">mi_api_material_begin</h5>
+<pre>
+    miMaterial *mi_api_material_begin(
+        char            *name)     /* material name */
+</pre>
+<p>Begin the definition of a material with the specified
+<i>name</i>. A pointer to the material is returned; the caller may
+modify the structure.</p>
+<p><a id="INDEX904"></a></p>
+<h5 class="anchor" id="api:mi_api_material_end">mi_api_material_end</h5>
+<pre>
+    miTag mi_api_material_end(void)
+</pre>
+<p>Complete the definition of a material after all parameters have
+been set. If an error occurs, a null tag is returned; otherwise the
+tag of the new material element is returned. The type of the
+returned element is <tt>miSCENE_MATERIAL</tt>.</p>
+<p><a id="INDEX905"></a></p>
+<h5 class="anchor" id="api:mi_api_texture_begin">mi_api_texture_begin</h5>
+<pre>
+    miTag mi_api_texture_begin(
+        char            *name,     /* texture name */
+        int             type,      /* 0=color, 1=scalar, 2=vector */
+        int             flags)     /* bit0=local, 1=filter, 2=writable */
+</pre>
+<p>Begin the definition of a texture with the specified
+<i>name</i>. In incremental mode, the tag of the existing texture
+to be changed is returned; otherwise a null tag is returned. The
+tag is useful mainly to determine whether the previous texture was
+an image or a shader, using the <i>mi_db_type</i> function. The
+<i>type</i> of the texture and a <i>flags</i> bitmap must also be
+specified.</p>
+<p>Bit 0 of the flags, if set, specifies that the texture is local.
+This is meaningful for image textures only, it specifies that each
+host on the network should read the image from its local file
+system instead of fetching the texture across the network.
+Memory-mapped textures are not flagged explicitly; they are
+recognized automatically at load time. Bit 1 of the flags, if set,
+specifies that the texture image is looked up using a filter. This
+flag is ignored for procedural (function) textures.</p>
+<p>Bit 1 of the flags, if set, enables pyramid filtering, an
+algorithm comparable to <a href="node22.html#INDEX46">mip-map
+texture</a>s. mental ray will convert the texture to pyramid
+format, which takes about 30% more memory but allows filtered
+lookups. This avoids texture aliasing, which is a problem for
+point-sampled non-filter textures that are far away so that each
+point sample hits widely spaced pixels in the texture.</p>
+<p>Bit 2 of the flags, if set, specifies that the texture is
+writable. This flag should be set if the texture is attached to a
+<a href="node135.html#INDEX501">lightmap shader</a> that stores its
+data into the texture.</p>
+<p>This call is always the first stage of creating a texture and
+must be followed by one of the next three <i>def</i> calls, which
+complete the texture definition.</p>
+<p><a id="INDEX906"></a></p>
+<h5 class="anchor" id="api:mi_api_texture_set_colorprofile">mi_api_texture_set_colorprofile</h5>
+<pre>
+    void mi_api_texture_set_colorprofile(
+        char            *cprof_name)
+</pre>
+<p>remembers the name of the color profile describing the color
+space of the texture. If a rendering profile has also been
+provided, then the texture will be transformed from this color
+profile to the rendering color profile while it is read. The
+routine has to be called before <i>mi_api_texture_file_def</i> is
+invoked. <a id="INDEX907"></a></p>
+<h5 class="anchor" id="api:mi_api_texture_file_def">mi_api_texture_file_def</h5>
+<pre>
+    miTag mi_api_texture_file_def(
+        char            *file)     /* file name to open */
+</pre>
+<p>The new texture is defined as a file texture, using the path
+<i>file</i>. The path must be valid on the local host and, if the
+texture is local, on all other hosts on the network. If an error
+occurs, a null tag is returned; otherwise the tag of the new
+texture element is returned. The type of the returned element is
+<tt>miSCENE_IMAGE</tt>.</p>
+<p><a id="INDEX908"></a></p>
+<h5 class="anchor" id="api:mi_api_texture_function_def">mi_api_texture_function_def</h5>
+<pre>
+    miTag mi_api_texture_function_def(
+        miTag           function)   /* function with args */
+</pre>
+<p>The new texture is defined as a procedural texture, using the
+texture shader <i>function</i>. Function tags are created when
+defining functions, and are returned by
+<i>mi_api_function_call_end</i>. The local flag is ignored for
+procedural textures. If an error occurs, a null tag is returned;
+otherwise the tag of the new texture element is returned. The type
+of the returned element is <tt>miSCENE_FUNCTION</tt>.</p>
+<p><a id="INDEX909"></a></p>
+<h5 class="anchor" id="api:mi_api_texture_array_def_begin">mi_api_texture_array_def_begin</h5>
+<pre>
+    miBoolean mi_api_texture_array_def_begin(
+        int             xres,       /* width in pixels */
+        int             yres,       /* height in pixels */
+        int             zres)       /* bytes/comp, 1 or 2 */
+</pre>
+<p>The final method of defining a texture is verbatim. It is
+equivalent to a file texture except that the pixel data is not read
+from a file on disk but is stored by the API caller using the
+texture copy calls below. This kind of texture cannot be flagged
+local. The texture resolution is set with the <i>xres</i> and
+<i>yres</i> arguments. The number of bytes per component is set
+with the <i>zres</i> argument. The number of components per pixel
+is determined by the <i>type</i> argument of the preceding call to
+<i>mi_api_texture_begin</i>: 4 for color textures, 1 for scalar
+textures, and 2 for vector textures. Vector textures always assume
+4 bytes per component (one float) regardless of whether <i>zres</i>
+is 1 or 2. If the verbatim texture is filtered, only the highest
+resolution is given with <i><a href="node184.html#INDEX910">mi_api_texture_byte_copy</a></i>; the lower
+resolutions of the pyramid are built automatically by mental
+ray.</p>
+<p><a id="INDEX910"></a></p>
+<h5 class="anchor" id="api:mi_api_texture_byte_copy">mi_api_texture_byte_copy</h5>
+<pre>
+    miBoolean mi_api_texture_byte_copy(
+        int             len,       /* number of bytes */
+        miUchar         *bytes)    /* from the mi file */
+</pre>
+<p>After the texture was defined, the contents of the texture must
+be copied. A total of <var>xres &middot; yres &middot; zres &middot;
+nc</var> bytes must be copied, with <i>zres</i> being 4 for vector
+textures and <i>nc</i> being the number of components (1 for 8
+bits, 2 for 16 bits, or 4 for floating point). The copy function
+can be called multiple times to collect the required number of
+bytes, the sum of all <i>len</i> arguments must be the total
+required number of bytes. The byte order is big-endian (MSB first)
+if <i>zres</i> is greater or equal to 1. Pixels are stored in pixel
+scanline order: first the bottom scanline is copied in RGBARGBA...
+order, then the next scanline, up to the top scanline. Scalar
+textures have only one component, vector texture pixels are stored
+U first, then V.</p>
+<p><a id="INDEX911"></a></p>
+<h5 class="anchor" id="api:mi_api_texture_array_def_end">mi_api_texture_array_def_end</h5>
+<pre>
+    miTag mi_api_texture_array_def_end(void)
+</pre>
+<p>After all texture bytes have been copied, the texture must be
+completed with this call. If an error occurs, a null tag is
+returned; otherwise the tag of the new texture element is returned.
+The type of the returned element is <tt>miSCENE_IMAGE</tt>.</p>
+<p><a id="INDEX912"></a></p>
+<h5 class="anchor" id="api:mi_api_texture_file_size">mi_api_texture_file_size</h5>
+<pre>
+    miTag mi_api_texture_file_size(
+        int             xres,           /* width in pixels */
+        int             yres,           /* height in pixels */
+        int             zres,           /* # of bytes per component */
+        int             unused)         /* reserved, must be 0 */
+</pre>
+<p>If the color texture is writable, mental ray needs to know the
+size ( <i>xres</i> and <i>yres</i>) and the number of bytes per
+component ( <i>zres</i>, 1 for 8 bits, 2 for 16 bits, and 4 for
+floating point). The <i>unused</i> argument is reserved for future
+extensions to data types other then RGBA, and must always be set to
+0.</p>
+<p><a id="INDEX913"></a></p>
+<h5 class="anchor" id="api:mi_api_texture_set_filter">mi_api_texture_set_filter</h5>
+<pre>
+    miTag mi_api_texture_set_filter(
+        miScalar        filter)         /* value for filter scaling */
+</pre>
+<p>This function sets the filter constant of the texture. It must
+be set with this function instead of writing the filter value into
+the texture structure directly, as was done in mental ray 2.1,
+because the texture is created on demand. This function only works
+if the texture lives in memory. If it is a memory-mapped texture
+created with <a href="node249.html#INDEX1088">imf_copy</a> using
+the .format, the filter value must be specified when the map file
+is created, using <a href="node249.html#INDEX1088">imf_copy</a>'s
+<tt>-f</tt> option.</p>
+<p><a id="INDEX914"></a></p>
+<h5 class="anchor" id="api:mi_api_texture_end">mi_api_texture_end</h5>
+<pre>
+    void mi_api_texture_end()
+</pre>
+<p>ends the definition of a texture.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node183.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node185.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

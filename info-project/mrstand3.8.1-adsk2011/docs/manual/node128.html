@@ -1,0 +1,356 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Geometry Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node127.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node129.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION126"></a>
+<h2>Geometry Shaders</h2>
+<p><a id="INDEX496"></a> Geometry shaders are
+functions that procedurally create geometric objects. They are
+different from most of the shaders described here because they do
+not return a color, but a <tt>miTag</tt> reference to the object or
+instance group created by the shader. The geometry shader is called
+with a <tt>miState</tt> containing valid fields for camera,
+options, current shader, and version. The shader parameters are
+passed as the third argument. The geometry shader is expected to
+return the tag of the object or instance group it creates.</p>
+<p>Here is a simple example for a geometry shader that creates a
+single triangle. A more robust shader would check the return values
+of all function calls made here. Geometry shaders use a special set
+of shader interface functions to create geometry. All these
+functions begin with <i>mi_api_</i>.</p>
+<p><a id="geoshaderex"></a></p>
+<pre>
+    static void add_vector(miScalar x, miScalar y, miScalar z)
+    {
+        miVector v;
+        v.x = x; v.y = y; v.z = z;
+        mi_api_vector_xyz_add(&amp;v);
+    }
+
+    static void init_object_flags(miObject * object)
+    {
+        object-&gt;visible     = miTRUE;
+        object-&gt;shadow      =
+        object-&gt;reflection  =
+        object-&gt;refraction  =
+        object-&gt;finalgather = 0x03;
+    }
+
+    miBoolean geotriangle(
+        miTag           *result,
+        miState         *state,
+        miTag           *paras)
+    {
+        miObject        *obj;
+
+        obj = mi_api_object_begin(NULL);
+        init_object_flags(obj);
+        mi_api_basis_list_clear();
+        mi_api_object_group_begin(0.0);
+
+        add_vector(-1., 0., 0.);
+        add_vector( 1., 0., 0.);
+        add_vector( 0., 0., 1.);
+
+        mi_api_vertex_add(0);
+        mi_api_vertex_add(1);
+        mi_api_vertex_add(2);
+
+        mi_api_poly_begin_tag(1, *mi_eval_tag(paras));
+        mi_api_poly_index_add(0);
+        mi_api_poly_index_add(1);
+        mi_api_poly_index_add(2);
+        mi_api_poly_end();
+
+        mi_api_object_group_end();
+        return(mi_geoshader_add_result(result, mi_api_object_end()));
+    }
+</pre>
+<p>In this example an unnamed object is created with the visible
+flag visible set to <tt>miTRUE</tt>, shadow, reflection, refraction
+and finalgather cast and receive bits set, caustic mode set to 0,
+and a label 0. In the mandatory
+<a href="node83.html#mi:group">object group</a> a triangle is constructed
+with API calls. The material of the triangle is assigned from the
+shader parameters. The <a href="node83.html#mi:group">object
+group</a> definition is finalized with the polygonal information
+argument set to <tt>miTRUE</tt>.</p>
+<p>The following example is more complex. It creates multiple
+sub-instances, each referencing a placeholder object. The
+sub-instance transformation matrices are set so that the objects
+form a ring. Since only placeholders are created, mental ray will
+not create all their triangles up front but merely watch their
+bounding boxes (also set by the geometry shader), and when a ray
+hits the bounding box the placeholder object will be created by
+calling the installed callback function, <i>makeobject</i>.</p>
+<p>This is a very efficient way of creating geometry in a geometry
+shader. It allows mental ray to store small and simple placeholders
+in the scene, and generate the objects only when they are needed,
+and remove them from the cache when they are no longer needed.
+Instead of blocking large sections of memory, only the geometry
+actually needed is stored, and if an object is never seen because
+it is hidden by another or off-screen, it will never be loaded or
+tessellated.</p>
+<pre>
+    #include &lt;stdlib.h&gt;
+    #include &lt;string.h&gt;
+    #include &lt;math.h&gt;
+    #include &lt;shader.h&gt;
+    #include &lt;geoshader.h&gt;
+
+    static miBoolean makeobject(miTag, void *);
+
+    typedef struct {
+        miScalar        radius;
+        int             nobjects;
+    } Multgeo;
+
+    static void init_object_flags(miObject * object)
+    {
+        object-&gt;visible     = miTRUE;
+        object-&gt;shadow      =
+        object-&gt;reflection  =
+        object-&gt;refraction  =
+        object-&gt;finalgather = 0x03;
+    }
+
+    DLLEXPORT int wreath_version(void) {return(1);}
+
+    DLLEXPORT miBoolean wreath(
+        miTag           *result,
+        miState         *state,
+        Multgeo         *paras)
+    {
+        int             i, num = *mi_eval_integer(&amp;paras-&gt;nobjects);
+        miScalar        radius = *mi_eval_scalar (&amp;paras-&gt;radius);
+        miScalar        angle;
+        miInstance      *inst;
+        miObject        *obj;
+        char            oname[100], iname[100];
+
+        for (i=0; i &lt; num; i++) {
+            /* placeholder object */
+            sprintf(oname, "wreath%x_obj%d", state-&gt;shader, i);
+            obj = mi_api_object_begin(mi_mem_strdup(oname));
+            init_object_flags(obj);
+            obj-&gt;bbox_min.x = obj-&gt;bbox_min.y = obj-&gt;bbox_min.z = -1;
+            obj-&gt;bbox_max.x = obj-&gt;bbox_max.y = obj-&gt;bbox_max.z = 1;
+            mi_api_object_callback(makeobject, 0);
+            mi_api_object_end();
+
+            /* instance */
+            sprintf(iname, "wreath%x_inst%d", state-&gt;shader, i);
+            inst = mi_api_instance_begin(mi_mem_strdup(iname));
+            mi_matrix_ident(inst-&gt;tf.global_to_local);
+            angle = 2 * M_PI * i / num - M_PI;
+            inst-&gt;tf.global_to_local[12] -= sin(angle) * radius;
+            inst-&gt;tf.global_to_local[13] += cos(angle) * radius;
+            mi_matrix_invert(inst-&gt;tf.local_to_global,
+                             inst-&gt;tf.global_to_local);
+            mi_geoshader_add_result(result,
+                    mi_api_instance_end(mi_mem_strdup(oname), 0, 0));
+        }
+        return(miTRUE);
+    }
+
+    static void add_vector(miScalar a, miScalar b, miScalar c)
+    {
+        miVector v; v.x=a; v.y=b; v.z=c;
+        mi_api_vector_xyz_add(&amp;v);
+    }
+
+    static void add_triangle(int a, int b, int c)
+    {
+        mi_api_poly_begin_tag(1, 0);
+        mi_api_poly_index_add(a);
+        mi_api_poly_index_add(b);
+        mi_api_poly_index_add(c);
+        mi_api_poly_end();
+    }
+
+    #define USUB        32
+    #define VSUB        16
+
+    static miBoolean makeobject(    /* create the geometry for a placeholder */
+        miTag           tag,        /* create this tag (by name) */
+        void            *arg)       /* 2nd arg of mi_api_object_callback */
+    {
+        miVector        v;
+        miInteger       i, j, nv=0;
+        miScalar        p, r;
+        miObject        *obj;
+        const char      *oname = mi_api_tag_lookup(tag);
+
+        mi_info("creating object %s\n", oname);
+        mi_api_incremental(miTRUE);
+        obj = mi_api_object_begin(mi_mem_strdup(oname));
+        init_object_flags(obj);
+        mi_api_object_group_begin(0.0);
+        for (i=1; i &lt;= VSUB; i++) {
+            v.z = -cos(i * M_PI / (VSUB+1));
+            r   = sqrt(1. - v.z*v.z);
+            for (j=0; j &lt; USUB; j++, nv++) {
+                p   = j * 2 * M_PI / USUB;
+                v.x = r * cos(p);
+                v.y = r * sin(p);
+                mi_api_vector_xyz_add(&amp;v);              /* point */
+                mi_api_vector_xyz_add(&amp;v);              /* normal */
+            }
+        }
+        add_vector(0, 0, -1);                           /* south pole */
+        add_vector(0, 0, -1);
+        add_vector(0, 0, +1);                           /* north pole */
+        add_vector(0, 0, +1);
+        for (i=0; i &lt; nv; i++) {
+            mi_api_vertex_add(i*2);
+            mi_api_vertex_normal_add(i*2+1);
+        }
+        mi_api_vertex_add(nv*2+0);
+        mi_api_vertex_normal_add(nv*2+1);
+        mi_api_vertex_add(nv*2+2);
+        mi_api_vertex_normal_add(nv*2+3);
+        for (j=0; j &lt; USUB; j++)                        /* south pole */
+            add_triangle(nv, (j+1)%USUB, j);
+        for (j=0; j &lt; USUB; j++)                        /* north pole */
+            add_triangle(nv+1, nv-USUB+j, nv-USUB+((j+1)%USUB));
+        for (i=0; i &lt; VSUB-1; i++)
+            for (j=0; j &lt; USUB; j++) {
+                int p1 =     i*USUB + j;
+                int p2 =     i*USUB + (j+1)%USUB;
+                int p3 = (i+1)*USUB + (j+1)%USUB;
+                int p4 = (i+1)*USUB + j;
+                add_triangle(p1, p2, p4);
+                add_triangle(p2, p3, p4);
+            }
+        mi_api_object_group_end();
+        mi_api_object_end();
+        return(miTRUE);
+    }
+</pre>
+<p>This particular example is contrived because the
+<i>makeobject</i> shader creates the same sphere every time, so
+multiple instancing of a single object would have been more
+efficient. Here is a simple scene that uses this shader:</p>
+<pre>
+    verbose on
+    link "base.so"
+    $include "base.mi"
+
+    link "geosh.so"
+    declare shader
+        geometry "wreath" (
+                scalar          "radius",
+                integer         "nobjects")
+        version 1
+    end declare
+
+    options "opt"
+        samples         -1 2
+        object space
+    end options
+
+    camera "cam"
+        frame           1
+        output          "rgb" "out.rgb"
+        focal           30
+        aperture        44
+        aspect          1
+        resolution      500 500
+    end camera
+
+    instance "cam_inst" "cam"
+        transform       0.7719  0.3042 -0.5582 0.0
+                        0.0000  0.8781  0.4785 0.0
+                        0.6357 -0.3693  0.6778 0.0
+                        0.0000 -1.0000 -19.000 1.0
+    end instance
+
+    light "light1"
+        "mib_light_point" ("color" 1 1 1)
+        origin          -50 50 0
+    end light
+
+    instance "light_inst" "light1" end instance
+
+    material "mtl"
+        "mib_illum_phong" (
+            "exponent"  50,
+            "ambient"   0.5  0.5  0.5,
+            "diffuse"   0.7  0.7  0.7,
+            "specular"  1.0  1.0  1.0,
+            "ambience"  0.3  0.3  0.3,
+            "lights"    ["light_inst"]
+        )
+    end material
+
+    instance "geo_inst0"
+        geometry "wreath" ("radius" 10, "nobjects" 36)
+        material "mtl"
+    end instance
+
+    instance "geo_inst1"
+        geometry "wreath" ("radius" 10, "nobjects" 36)
+        material "mtl"
+        transform       0 0 1 0   0 1 0 0   1 0 0 0   0 0 0 1
+    end instance
+
+    instance "geo_inst2"
+        geometry "wreath" ("radius" 10, "nobjects" 36)
+        material "mtl"
+        transform       1 0 0 0   0 0 1 0   0 1 0 0   0 0 0 1
+    end instance
+
+    instgroup "rootgrp"
+        "cam_inst" "light_inst" "geo_inst0" "geo_inst1" "geo_inst2"
+    end instgroup
+
+    render "rootgrp" "cam_inst" "opt"
+</pre>
+<p>Here is the resulting image:</p>
+<div class="pic"><img style="width:60%" src="images/wreath.jpg" /></div>
+<p>Note that the default assumption for the geometry type is
+traditional geometry like polygons or NURBS. If
+<a href="node189.html#INDEX984">hair</a> geometry is needed, an extra step
+is required if setting up a callback function. Here is an
+example:</p>
+<pre>
+     miTag     tag;
+     miObject *obj;
+
+     obj = mi_api_object_begin(mi_mem_strdup(obj_name));
+     mi_api_object_callback(obj_cb, (void *)&amp;args);
+     tag = mi_api_object_end();
+
+     obj = (miObject *)mi_scene_edit(tag);
+     obj-&gt;geo.placeholder_list.type = miOBJECT_HAIR;
+     mi_scene_edit_end(tag);
+</pre>
+<p>Note that all scene elements created by a geometry shader are in
+a special scope that will be deleted later, when rendering has
+finished and the scene is postprocessed. That means that a geometry
+shader cannot generally incrementally change scene database
+elements that it has created in a previous frame.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node127.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node129.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

@@ -1,0 +1,187 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Introduction</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="index.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node3.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION0"></a>
+
+<h1>Introduction</h1>
+
+<p>mental ray is a general-purpose renderer which creates images of
+exceptional quality and achieves high performance through the
+exploitation of parallelism on both multiprocessor machines and
+across networks of machines.</p>
+<p>The software uses advanced rendering acceleration techniques
+such as a <a href="node76.html#INDEX202">scanline rendering</a>
+algorithms for fast primary visible surface determination and
+<a href="node76.html#INDEX203">BSP</a> (<b><a id="INDEX1"></a>binary
+space partitioning</b>) algorithms for
+efficient rendering of ray tracing effects. These algorithms can be
+fine-tuned by optional user-settable parameters to achieve even
+higher performance than normally achieved by the built-in automatic
+scene cost analysis.</p>
+<p>mental ray supports caustics and global illumination simulation
+using the Photon Map<sup>&trade;</sup> method. Caustics caused by
+multiple reflections and/or <a href="node115.html#INDEX446">refraction</a>s,
+caustics that are
+themselves reflected or refracted, and volume caustics are
+supported. Complete, physically correct simulation of general
+global illumination is also supported: any combination of diffuse,
+glossy, and specular reflection and transmission can be simulated,
+such as color bleeding caused by diffuse interreflections, and
+multiple volume scattering.</p>
+<p>mental ray has been designed to take full advantage of parallel
+hardware, including both <b><a id="INDEX2"></a>thread</b>
+<a href="node6.html#INDEX6">parallelism</a>
+on a single machine, and process level parallelism across networks
+of machines, and on massively parallel distributed-memory systems.
+mental ray takes advantage of thread parallelism automatically; the
+use of other machines on the network as render slaves may be
+configured by the user. The renderer balances the computational
+load among the available processors using a distributed shared
+database that distributes parts of the scene in an optimal way
+based on demand.</p>
+<p>mental ray can be combined with any suitable modeling and/or
+animation system via the <tt>.mi</tt> file format, or by
+integrating the library version into the modeling and animation
+system, or by combining the library with a translator that reads
+the modeling system's native file format and converts it directly
+to mental ray scene description. Finally, mental ray is available
+as a stand-alone program for batch-mode rendering.</p>
+<p>In the standard standalone version, input is via a scene file in
+ASCII format. The .mi format is the native scene description format
+of mental ray. Supported geometric primitives include polygon and
+triangle meshes, trimmed free-form surfaces, subdivision surfaces,
+and hair. All geometry may be procedurally displaced.</p>
+<p>Free-form surfaces may be input in non-uniform rational B-spline
+(NURB), B&eacute;zier, Taylor, or cardinal form, or through the use
+of basis matrices. Free-form surfaces may be of arbitrary degree.
+The geometry of free-form surfaces may be further modified by the
+application of trimming curves and displacement maps. Trimming
+curves need not have the same representation as the surface.
+Surfaces are triangulated internally using a variety of available
+approximation techniques and quality criteria like distance of the
+surface to the camera.</p>
+<p>Connectivity information between free-form surfaces can be given
+which will stitch surfaces together and close gaps. If the
+connectivity is unknown, it can be automatically determined at
+run-time.</p>
+<p>mental ray supports efficient rendering of animations using
+<a href="node60.html#INDEX110">incremental change</a>s to the scene
+database. Only the parts of the scene that change from one frame to
+the next need to be redefined. This feature allows mental ray to
+optimize scene tessellation, preparation, acceleration data
+structure management, and network transfers, taking advantage of
+the time coherency of the animation.</p>
+<p>The functionality of mental ray may be extended through runtime
+linking of user-supplied C or C++ subroutines, called
+<b><a id="INDEX3"></a>shader</b>s. Shaders can be used to create
+geometric elements at runtime of the renderer, procedural textures,
+including bump and displacement maps, materials, atmosphere and
+other volume rendering effects, environments, camera lenses, and
+light sources. The user has access to a convenient environment of
+supporting functions and macros for use in writing shaders. The
+parameters of a user-provided shader can be freely chosen with name
+and type; user-defined shaders are not restricted to a list of
+predefined parameters. Available parameter types include integers,
+scalars, vectors, colors, textures, light sources, arrays, and
+nested structures. When a user-defined shader is called, mental ray
+will provide parameter values according to standard C calling
+conventions.</p>
+<p>Standard <a href="node79.html#INDEX242">material</a> shader
+libraries provide a rich variety of parameters for describing
+material properties, including ambient color, diffuse color,
+specular color, transmission and shadow colors, a specular
+exponent, reflectivity, and transparency coefficients, and an
+<a href="node76.html#INDEX201">index of refraction</a>. The
+standard physics shader library adds global illumination effects
+and other physically correct simulations such as
+<a href="node80.html#INDEX259">indirect illumination</a>,
+<a href="node143.html#INDEX612">translucency</a>, glossy reflections, true
+diffuse light transport (a sub-function of global illumination that
+is often called "radiosity"), and color bleeding. Bump mapping and
+displacement mapping are supported as well. The material parameters
+are interpreted by the shader specified for the material. All
+parameters may be mapped with one or more textures or other
+shaders, by connecting shader inputs with other shaders outputs
+resulting in complex shader graphs.</p>
+<p>The illumination effects in mental ray are not hard-coded
+features but they are all defined by shaders. New illumination
+features, or variations of existing features, can be added simply
+by writing new or modify existing shaders.</p>
+<p>Furthermore, light which is passing through the free space
+surrounding objects, as well as light passing through solid
+objects, can be modified according to volume shaders. This allows
+the creation of fog and non-homogeneous transparency effects as
+well as visible light beams. In addition to standard material
+<a href="node21.html#INDEX44">environment map</a>s, a global
+environment map can be specified that provides a solid background
+for rays leaving the scene.</p>
+<p>The standard base, physics, and contour shader libraries are
+available as <b><a id="INDEX4"></a>source code</b>
+from <a href="ftp://ftp.mentalimages.com/pub/shaders/">ftp://ftp.mentalimages.com/pub/shaders/</a>.</p>
+<p>mental ray can generate a variety of output formats, including
+common picture file formats and special-purpose formats for depth
+maps and label channels. Alpha channels are supported. Bit depths
+of 8 and 16 bits per component are supported, as well as a 32-bit
+floating-point component mode and RGBE HDR (high dynamic range)
+images. User-supplied functions can be applied to the rendered
+image before it is written to disk.</p>
+<p>Contour lines can be rendered with mental ray. They can be
+placed at discontinuities of depth or surface orientation, between
+different materials, or where the color contrast is high, simply by
+using an appropriate contour shader. The contour lines are
+anti-aliased, and there can be several levels of contours created
+by reflection or seen through semitransparent materials. The
+contours can be different for each material, and some materials can
+have no contours at all. The color and thickness of the contours
+can depend on geometry, position, illumination, material,
+<a href="node199.html#INDEX1061">frame number</a>, and various other
+parameters as determined by the shader. The resulting image may be
+<a href="node77.html#INDEX0">output</a> as a pure contour image, a
+contour image composited onto the regular image (in raster form in
+any of the supported formats), or as a PostScript file.</p>
+<p><a id="INDEX5"></a> Phenomena consist of one or
+more cooperating shaders or shader trees (actually, shader DAGs; a
+DAG is a directed acyclic graph). A phenomenon consists of an
+"interface node" that looks exactly like a regular shader to the
+outside, and in fact may be a regular shader, but generally it will
+contain a link to a shader DAG. mental ray takes care of
+integrating all aspects of the phenomenon into the scene, which may
+include the introduction or modification of geometry, introduction
+of lenses, environments, and compile options, and other shaders and
+parameters.</p>
+<p>The Phenomenon concept is conceived to unify - by packaging and
+hiding complexity - all those seemingly disparate approaches,
+techniques, and tricks, most notably (but not limited to) the
+concept of a shader, which are characteristic for today's state of
+the art in high-end 3D animation and in digital visual effects
+production. The aim is to provide a comprehensive, coherent, and
+consistent foundation for the reproduction of all visual phenomena
+by means of rendering. The Phenomenon concept provides the missing
+framework for the completion of the definition of a scene for the
+purpose of rendering in a unified manner.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="index.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node3.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

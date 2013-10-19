@@ -1,0 +1,595 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta name="Author" content="mental images GmbH">
+<meta name="Company" content="mental images">
+<meta name="Creator" content="hypertex">
+<meta name="CreatorVersion" content="1.0">
+<meta name="CreationDate" content="18 Feb 2010">
+<link rel="stylesheet" type="text/css" href="mental.css">
+<style type="text/css"> i {color:darkred} dfn {font-style:italic}
+var {font-weight:bold; color:black} </style><title>Camera- and Exposure Effects</title>
+</head><body>
+<ul class="nav">
+<li><a href="architectural.html">home</a></li>
+<li><a href="arch_sunsky.html">&laquo;&nbsp;prev</a></li>
+<li><a href="arch_util.html">next&nbsp;&raquo;</a></li>
+</ul>
+<h1>Camera- and Exposure Effects</h1>
+<p>
+<a name="Tone_Mapper"></a>
+<h2 id="Tone_Mapping">Tone Mapping</h2>
+<p>
+When rendering physical light levels one runs into the problem of managing
+the HDRI output of the real physics vs. the limited dynamic range of computer
+displays. This was discussed in more detail on page <a href="arch_mtl.html#Gamma">Gamma</a>.
+<div class="pic">
+<img width="80%" src="images/toneop-notoneop.jpg" alt="Going from this..."><br />Going from this...<br /><img width="80%" src="images/toneop-portal-05.jpg" alt="...to this."><br />...to this.<br /></div>
+<p>
+There are numerous shaders and algorithms for doing &quot;tone mapping&quot; 
+(this is a very active area of research within the CG industry), and 
+the architectural library provides two: One very simple shader that 
+simply adds a knee compression to &quot;squash&quot; over-brights into a 
+manageable range, and a more complex &quot;photographic&quot; version that
+converts real photometric luminances with the help of parameters
+found on a normal camera into an image.
+<p>
+These shaders can be applied either as a lens shaders (which will 
+tone map the image &quot;on the fly&quot; as it is being rendered) or as 
+output shaders (will tone map the image as a post process). 
+<p>
+Since both of these tone mappers affects each pixel individually<a href="#Foot1" title="Many advanced tone mappers weight different areas of the image against other areas, to mimic the way the human visual system operates. These tone mappers need the entire image before they can &quot;do their job&quot;."><sup>1</sup></a>
+, the former method (as lens shader) is encouraged, since it applies 
+on the sample level rather than the pixel level.
+<p>
+Also, both of the supplied tone mappers include a <em>gamma</em> 
+term. It is important to know if one is already applying a 
+gamma correction elsewhere in the imaging pipeline (in an image
+viewer, in compositing, etc.), and if so, set it to 1.0 in these
+shaders. If one is <em>not</em> applying gamma correction anywhere
+but simply displaying the image directly on screen with a viewer
+that does not apply it's own gamma, one should most likely use
+the gamma in these shaders, set to a value between 1.8 and 2.4.
+<p>
+<h3 id="The_&quot;Simple&quot;_Tone_Mapper">The &quot;Simple&quot; Tone Mapper</h3>
+<p>
+<a name="mi_shader__mia_exposure_simple"></a>
+<h4 id="mia_exposure_simple">mia_exposure_simple</h4>
+<p>
+<pre>
+declare shader  "mia_exposure_simple" (
+        scalar  "pedestal"       default 0.0,
+        scalar  "gain"           default 1.0,
+        scalar  "knee"           default 0.5,
+        scalar  "compression"    default 2.0,
+        scalar  "gamma"          default 2.2,
+        color   texture "preview",
+        boolean "use_preview"
+    )
+    version 1
+    apply lens, output
+end declare 
+</pre>
+<p>
+The operation of this tone mapper is very simple. It does not
+refer to real physical luminance values in any way. 
+It simply takes the high dynamic range color and perform 
+these operations in order:
+<br />
+<ul>
+
+<li> <b>pedestal</b> is <em>added</em> to the color. 
+<li> The color components are then multiplied with <b>gain</b>. 
+<li> The resulting colors are checked if they are above the <b>knee</b> value.
+<li> If they are, they are &quot;squashed&quot; by the compression ratio <b>compression</b>
+<li> Finally, gamma correction with <b>gamma</b> is performed.
+</ul>
+
+<p>
+That's the theory. What is the practical use of these parameters?
+<p>
+Changing <b>pedestal</b> equates to tweaking the &quot;black level&quot;. 
+A positive value will add some light so even the blackest black will 
+become slightly gray. 
+A negative value will subtract some light and allows 
+&quot;crushing the blacks&quot; for a more contrasty artistic effect.
+<p>
+<b>gain</b> is the &quot;brightness knob&quot;. 
+This is the main point where the high dynamic range values are
+converted to low dynamic range values. For example: if one knows 
+the approximate range of color intensities goes between 0 and 10,
+this value should then be approximately 0.1 to get this range
+into the desired 0-1 range. 
+<p>
+However, the whole point of tone mapping is <em>not</em> to blindly
+linearly scale the range down. Simply setting it to 0.1 most likely 
+yields a dark and boring image. A much more likely value is 0.15 
+or even 0.2. But a value of 0.2 will map our 0-to-10 range to
+0 to 2.... what to do about that stuff above 1.0?
+<p>
+That's where the compression comes in. The <em>knee</em> level is
+the point where the over-brights begin to be &quot;squashed&quot;. 
+Since this is applied <em>after</em> the gain, it should be in
+the range of 0.0 to 1.0. A good useful range is 0.5 to 0.75.
+<p>
+Assume we set it to 0.75. This means any color that (after
+having <b>pedestal</b> added and multiplied by 
+<b>gain</b>) that comes out above 0.75 will be 
+&quot;compressed&quot;. If <b>compression</b> is 0.0 there is 
+no compression. At a <b>compression</b> value of 5.0
+the squashing is fairly strong.
+<p>
+Finally, the resulting &quot;squashed&quot; color is gamma-corrected
+for the output device (computer screen etc.)
+<p>
+<a name="Use_Preview"></a>
+The <b>use_preview</b> and <b>preview</b> parameters are used
+to make the process of tweaking the tone mapper a little bit more 
+&quot;interactive&quot;. 
+<p>
+The intended use is the following, for when the shader is applied
+as a <em>lens shader</em>:
+<br />
+<ul>
+
+<li> Disable the <i>mia_exposure_simple</i> shader.
+<li> Render the image to a file in some form of HDR capable format (like
+      .exr, .hdr or similar), for example <code>preview.exr</code>.
+<li> Enable <i>mia_exposure_simple</i> shader again.
+<li> Set the <b>preview</b> parameter to the file saved above, e.g. 
+      <code>preview.exr</code>.
+<li> Enable the <b>use_preview</b> parameter.
+<li> Disable any photon mapping or final gathering.
+<li> Re-render. The rendering will be near instant, because no actual
+      rendering occurs at all; the image is read from <code>preview.exr</code>
+      and immediately tone mapped to screen.
+<li> Tweak parameters and re-render again, until satisfied.
+<li> Re-enable any photons or final gathering. 
+<li> Turn off <b>use_preview</b>.
+<li> Voila - the tone mapper is now tuned.
+</ul>
+
+<p>
+<h3 id="The_&quot;Photographic&quot;_Tone_Mapper">The &quot;Photographic&quot; Tone Mapper</h3>
+<p>
+<a name="mi_shader__mia_exposure_photographic"></a>
+<h4 id="mia_exposure_photographic">mia_exposure_photographic</h4>
+<p>
+The photographic tonemapper converts actual pixel luminances
+(in candela per square meter) into image pixels as seen
+by a camera, applying camera-related parmeters (like f-stops
+and shutter times) for the exposure, as well as applying
+tonemapping that emulates film- and camera-like effects.
+<p>
+It has two basic modes:
+<ul>
+
+<li> &quot;Photographic&quot; - in which it assumes input values are 
+        (or can be converted to) candela per square meter.
+<li> &quot;Arbitrary&quot; - in which scene pixels are not considered to be
+        in any particular physical unit, but are simply scaled by
+        a factor to fit in the display range of the screen.
+</ul>
+
+<p>
+If the <b>film_iso</b> parameter is nonzero, the &quot;`Photographic&quot;
+mode is used, and if it is zero, the &quot;Arbitrary&quot; mode is chosen.
+<p>
+<pre>
+declare shader "mia_exposure_photographic" (
+        scalar "cm2_factor"         default 1.0,
+        color  "whitepoint"         default 1 1 1,
+        scalar "film_iso"           default 100,
+        scalar "camera_shutter"     default 100.0,
+        scalar "f_number"           default 16.0,
+        scalar "vignetting"         default  1.0,
+        scalar "burn_highlights"    default 0.0,
+        scalar "crush_blacks"       default 0.25,
+        scalar "saturation"         default 1.0,
+        scalar "gamma"              default 2.2,
+        integer "side_channel_mode" default 0,
+        string  "side_channel",
+        color   texture "preview",
+        boolean "use_preview"
+    )
+    version 4
+    apply lens, output
+end declare
+</pre>
+<p>
+In &quot;Photographic mode&quot; (nonzero <b>film_iso</b>) <b>cm2_factor</b> is 
+the conversion factor between pixel values and candela per square meter. 
+This is discussed more in detail below. 
+<p>
+In &quot;Arbitrary&quot; mode, <b>cm2_factor</b> is simply the multiplier applied 
+to scale rendered pixel values to screen pixels. This is analogous to the 
+<em>gain</em> parameter of <i>mia_exposure_simple</i>.
+<p>
+<b>whitepoint</b> is a color that will be mapped to &quot;white&quot; 
+on output, i.e. an incoming color of this hue/saturation will be
+mapped to grayscale, but its intensity will remain unchanged.
+<p>
+<b>film_iso</b> should be the ISO number of the film, also known as
+&quot;film speed&quot;. As mentioned above, if this is zero, the &quot;Arbitrary&quot;
+mode is enabled, and all color scaling is then strictly defined by 
+the value of <b>cm2_factor</b>.
+<p>
+<b>camera_shutter</b> is the camera shutter time expressed as fractional
+seconds, i.e. the value 100 means a camera shutter of 1/100. This value has
+no effect in &quot;Arbitrary&quot; mode.
+<p>
+<a name="f_stops"></a>
+<b>f_number</b> is the fractional aperture number, i.e. 11 means aperture
+&quot;f/11&quot;. Aperture numbers on cameras go in specific standard series, i.e.
+&quot;f/8&quot;, &quot;f/11&quot;, &quot;f/16&quot;, &quot;f/22&quot; etc. Each of these are refered
+to as a &quot;stop&quot; (from the fact that aperture rings on real lenses tend to 
+have physical &quot;clicks&quot; for these values) and each such &quot;stop&quot; 
+represents halving the amount of light hitting the film per increased 
+stop<a href="#Foot2" title="Sometimes the f-number can be found labeled &quot;f-stop&quot;. Since this is ambiguous, we have chosen the term f-number for clarity."><sup>2</sup></a>.
+It is important to note that this shader doesn't count &quot;stops&quot;, but 
+actually wants the f-number <em>for</em> that stop. This value has no effect 
+in &quot;Arbitrary&quot; mode.
+<p>
+In a real camera the angle with which the light hits the film impacts
+the exposure, causing the image to go darker around the edges. The 
+<b>vignetting</b> parameter simulates this. When 0.0, it is off, 
+and higher values cause stronger and stronger darkening around the
+edges. Note that this effect is based on the cosine of the angle
+with which the light ray would hit the film plane, and is hence
+affected by the field-of-view of the camera, and will not work at all
+for orthographic renderings. A good default is 3.0, which is similar
+to what a compact camera would generate<a href="#Foot3" title="Technically, the pixel intensity is multiplied by the cosine of the angle of the ray to the film plane raised to the power of the vignetting parameter."><sup>3</sup></a>.
+<p>
+The parameters <b>burn_highlights</b> and <b>crush_blacks</b> 
+guide the actual &quot;tone mapping&quot; of the image, i.e. exactly <em>how</em> 
+the high dynamic range imagery is adapted to fit into the black-to-white
+range of a display device.
+<p>
+If <b>burn_highlights</b> is 1 and <b>crush_blacks</b> is zero,
+the transfer is linear, i.e. the shader behaves like a simple linear
+intensity scaler only.
+<p>
+<b>burn_highlights</b> can be considered the parameter defining
+how much &quot;over exposure&quot; is allowed. As it is decreased from 1
+towards 0, high intensities will be more and more &quot;compressed&quot; to
+lower intensities. When it is 0, the compression curve is asymptotic,
+i.e. an <em>infinite</em> input value maps to <em>white</em> output value,
+i.e. over-exposure is no longer possible. A good default value is 0.5.
+<p>
+When the upper part of the dynamic range becomes compressed it naturally
+loses some of it's former contrast, and one often desire to regain some 
+&quot;punch&quot; in the image by using the <b>crush_blacks</b> parameter. 
+When 0, the lower intensity range is linear, but when raised towards 1, 
+a strong &quot;toe&quot; region is added to the transfer curve so that low 
+intensities gets pushed more towards black, but in a gentle (soft) fashion.
+<p>
+Compressing bright color components inherently moves them towards a 
+less saturated color. Sometimes, very strong compressions can make
+the image in an unappealingly de-saturated state. The <b>saturation</b>
+parameter allows an artistic control over the final image saturation.
+1.0 is the standard &quot;unmodified&quot; saturation, higher increases and
+lower decreases saturation.
+<p>
+The <b>gamma</b> parameter applies a display gamma correction. 
+Be careful not to apply gamma twice in the image pipeline. 
+This is discussed in more detail on page <a href="arch_mtl.html#Gamma">Gamma</a>.
+<p>
+The <b>side_channel</b> and <b>side_channel_mode</b> is intended
+for OEM integrations of the shader, to support &quot;interactive&quot; tweaking  
+as well as for the case where one wants to insert an output shader prior 
+to the conversion to &quot;display pixel values&quot;. 
+<p>
+This is accomplished by applying two copies of the
+shader, one as lens shader, the other as output shader. The two shaders
+communicate via the &quot;side channel&quot;, which is a separate floating
+point frame buffer that needs to be set up prior to rendering.
+<p>
+Valid values for <b>side_channel_mode</b> are:
+<br />
+<ul>
+
+<li> 0 - the shader is run normally as either lens- or output-shader.
+<li> 1 - the lens shader will save the un-tonemapped value in the
+          <b>side_channel</b> frame buffer. The
+          output shader will re-execute the tone mapping based on
+          the data in the side channel, <em>not</em> the pixels
+          in the main frame buffer.
+<li> 2 - the lens shader works as for option 1, the output shader
+          will read the pixels from the <b>side_channel</b> frame
+          buffer back into the main frame buffer. This is useful when
+          one want to run third party output shaders on it that
+          only support working on the main frame buffer. 
+</ul>
+
+<p>
+One may wonder, if one wants to apply the tone mapping as a post process,
+why not skip applying the lens shader completely? The answer is twofold: First,
+by applying the lens shader (even though it's output is never used), one can
+<em>see</em> something while rendering, which is always helpful. Second, 
+the mental ray <em>over-sampling</em> is guided by the pixels in the main frame buffer.
+If these are left in full dynamic range, mental ray may needlessly shoot 
+thousands of extra samples in areas of &quot;high contrast&quot; that will all be tone 
+mapped down to white in the final
+stage.
+<p>
+The <b>use_preview</b> and <b>preview</b> work exactly like 
+in the <i>mia_exposure_simple</i> shader described above.
+<p>
+<h4 id="Examples">Examples</h4>
+<p>
+Lets walk through a practical example of tuning the photographic tone 
+mapper. We have a scene showing both an indoor and outdoor area, 
+using the sun and sky, <i>mia_material</i>, and a 
+portal light in the window. The units are set up such that the
+raw pixels are in candela per square meter.
+<p>
+The raw render, with no tone mapping, looks something like this:
+<div class="pic">
+<img width="100%" src="images/toneop-notoneop.jpg" alt="No tone mapping"><br />No tone mapping
+</div>
+<p>
+This is the typical look of a Gamma=1 un-tonemapped image. Bright
+areas blow out in a very unpleasing way, shadows are unrealistically
+harsh and dark, and the colors are extremely over-saturated.
+<p>
+Applying <i>mia_exposure_photographic</i> with the following settings:
+<p>
+<pre>
+    "cm2_factor"         1.0,
+    "whitepoint"         1 1 1,
+    "film_iso"           100,
+    "camera_shutter"     100.0,
+    "f_number"           16.0,
+    "vignetting"         0.0,
+    "burn_highlights"    1.0,
+    "crush_blacks"       0.0,
+    "saturation"         1.0,
+    "gamma"              2.2,
+</pre>
+<p>
+...gives the following image as a result<a href="#Foot4" title="For speedy results in trying out settings for the tone mapping shaders, try the workflow with the &quot;preview&quot; parameter described on page Use Preview."><sup>4</sup></a>:
+<div class="pic">
+<img width="100%" src="images/toneop-sunny-16.jpg" alt="The &quot;Sunny 16&quot; result"><br />The &quot;Sunny 16&quot; result
+</div>
+<p>
+The settings we used abide by the &quot;Sunny 16&quot; rule in photography;
+for an aperture of f/16, setting the shutter speed (in fractional seconds) 
+equal to the film speed (as an ISO number) generates a &quot;good&quot; exposure
+for an outdoor sunny scene. As we can see, indeed, the outdoor area
+looks fine, but the indoor area is clearly underexposed.
+<p>
+In photography, the &quot;film speed&quot; (the ISO value), the aperture (f_number)
+and shutter time all interact to define the actual exposure of the camera. 
+Hence, to modify the exposure you could modify either for the &quot;same&quot; result.
+For example, to make the image half as bright, we could halve the shutter time,
+halve the ISO of our film, or change the aperture one &quot;stop&quot; (for example from 
+f/16 to f/22, see page <a href="arch_camera.html#f_stops">f-stops</a> for more details).
+<p>
+In a real world camera there would be subtle differences between these
+different methods, but with this shader they are mathematically equivalent.
+<div class="pic">
+<img width="80%" src="images/toneop-fstop-8.jpg" alt="f/8"><br />f/8<br /><img width="80%" src="images/toneop-fstop-4.jpg" alt="f/4"><br />f/4<br /></div>
+<p>
+Clearly the f/4 image is the best choice for the indoor part, but now the 
+outdoor area is extremely overexposed. 
+This is because we have the <b>burn_highlights</b> parameter at 1.0, which does not 
+perform <em>any</em> compression of highlights.
+<div class="pic">
+<img width="80%" src="images/toneop-burn-05.jpg" alt="<b>burn_highlights</b> = 0.5"><br /><b>burn_highlights</b> = 0.5<br /><img width="80%" src="images/toneop-burn-0.jpg" alt="<b>burn_highlights</b> = 0.0"><br /><b>burn_highlights</b> = 0.0<br /></div>
+<p>
+The left image subdues the overexposure some. The right image is
+using a <b>burn_highlights</b> of zero, which actually removes <em>any</em> over-
+exposure completely. However, this has the drawback of killing
+most contrast in the image, and while real film indeed performs
+a compression of the over-brights, no film exists that magically
+removes <em>all</em> overexposure. Hence, it is suggested to keep 
+<b>burn_highlights</b> small, yet non-zero. In our example we pick the 0.5 value.
+<p>
+Real cameras have a falloff near the edges of the image known as 
+&quot;vignetting&quot;, which is supported in this shader by using the 
+parameter of the same name:
+<div class="pic">
+<img width="80%" src="images/toneop-vign-5.jpg" alt="<b>vignetting</b> = 5"><br /><b>vignetting</b> = 5<br /><img width="80%" src="images/toneop-vign-11.jpg" alt="<b>vignetting</b> = 11"><br /><b>vignetting</b> = 11<br /></div>
+<p>
+The image on the right is interesting in that it &quot;helps&quot; our
+overexposed outdoors by the fact that it happens to be on the
+edge of the image and is hence attenuated by the vignetting.
+However, the left edge turns out too dark.
+<p>
+We will try a middle-of-the road version using a 
+<b>vignetting</b> of 6 and we modify the <b>burn_highlights</b> to 0.25 and get 
+this image:
+<div class="pic">
+<img width="100%" src="images/toneop-vign-6-burn-025.jpg" alt="<b>vignetting</b> = 6 <b>burn_highlights</b> = 0.25"><br /><b>vignetting</b> = 6 <b>burn_highlights</b> = 0.25
+</div>
+<p>
+This image is nice, but it really lacks that feel of &quot;contrast&quot;. To
+help this we play with the <b>crush_shadows</b> parameter:
+<div class="pic">
+<img width="80%" src="images/toneop-crush-02.jpg" alt="<b>crush_shadows</b> = 0.2"><br /><b>crush_shadows</b> = 0.2<br /><img width="80%" src="images/toneop-crush-06.jpg" alt="<b>crush_shadows</b> = 0.6"><br /><b>crush_shadows</b> = 0.6<br /></div>
+<p>
+The <b>crush_shadows</b> parameter deepens the lower end of the intensity curve, and
+we get some very nice contrast. However, since this image is already 
+near the &quot;too dark&quot; end of the spectrum, it tends to show an effect 
+of darkening the entire image a bit. 
+<p>
+This can be compensated by changing the exposure. Lets try a couple of 
+different <b>shutter</b> values, and prevent overexposure by further 
+lowering our <b>burn_highlights</b> value:
+<div class="pic">
+<img width="80%" src="images/toneop-shutter-50-burn-01.jpg" alt="<b>shutter</b> = 50, <b>burn_highlights</b> = 0.1"><br /><b>shutter</b> = 50, <b>burn_highlights</b> = 0.1<br /><img width="80%" src="images/toneop-shutter-30.jpg" alt="<b>shutter</b> = 30, <b>burn_highlights</b> = 0.1"><br /><b>shutter</b> = 30, <b>burn_highlights</b> = 0.1<br /></div>
+<p>
+The final image is pretty good. However, since so much highlight compression 
+is going on, we have lost a lot of color saturation by now. Lets try to finalize 
+this by compensating:
+<div class="pic">
+<img width="80%" src="images/toneop-shutter-30.jpg" alt="<b>saturation</b> = 1.0"><br /><b>saturation</b> = 1.0<br /><img width="80%" src="images/toneop-satu-14.jpg" alt="<b>saturation</b> = 1.4"><br /><b>saturation</b> = 1.4<br /></div>
+<p>
+Now we have some color back, the image is fairly well balanced. We still see 
+something exists outdoors. This is probably the best we can do that is still
+<em>physically correct</em>.
+<p>
+However, remember we were using the portal lights for the window? These have a
+non-physical &quot;transparency&quot; mode. This mode is intended to solve exactly this
+issue. Even though the result we have so far is &quot;correct&quot;, many people 
+intuitively expect to see the outdoor scene much more clearly. Since our
+eyes does such a magnificent job at compensating for the huge dynamic range
+difference between the sunlit outdoors and the much darker indoors, we
+expect our computers to magically do the same. Using the transparency feature
+of the portal lights, this can be achieved visually, without actually changing
+the <em>actual</em> intensities of any light going into the room:
+<div class="pic">
+<img width="100%" src="images/toneop-portal-05.jpg" alt="A <b>transparency</b> of 0.5 in the portal light"><br />A <b>transparency</b> of 0.5 in the portal light
+</div>
+<p>
+Now the objects outdoors are visible, while maintaining the contrast indoors.
+The light level indoors hasn't changed and still follows the real world values 
+(unlike if we had put actual dark glass into the window, which would have
+attenuated the incoming light as well).
+<p>
+Now this is a mid day scene. What if we change the time of day and put the
+sun lower on the horizon? The scene will be much darker, and we can
+compensate by changing the exposure:
+<div class="pic">
+<img width="80%" src="images/toneop-night.jpg" alt="7 PM"><br />7 PM<br /><img width="80%" src="images/toneop-night-shutter-2.jpg" alt="With shutter 1/2 second"><br />With shutter 1/2 second<br /></div>
+<p>
+Keeping the same settings (left) with the new sun angle makes a very dark
+image. On the right, all we changed was the shutter time to 2 (half a second).
+This image has a bit of a yellow cast due to the reddish sunlight, as well
+as the yellowish incandescent lighting. To compensate, we set the white-point
+to a yellowish color:
+<div class="pic">
+<img width="100%" src="images/toneop-night-whitepoint.jpg" alt="Evening shot with adjusted white-point"><br />Evening shot with adjusted white-point
+</div>
+<p>
+The remaining issue is the overexposure around the lamp (although it would be there
+in a real photograph), so we make the final image with <b>burn_highlights</b> set to a very low value,
+yet keep it nonzero to maintain a little bit of &quot;punch&quot;:
+<div class="pic">
+<img width="100%" src="images/toneop-night-burn-001.jpg" alt="<b>burn_highlights</b> = 0.01"><br /><b>burn_highlights</b> = 0.01
+</div>
+<p>
+In conclusion: Photography-related parameters help users with 
+experience in photography make good judgements on suitable values. 
+The intuitive &quot;look&quot; parameters allow further adjustment of the 
+image for a visually pleasing result.
+<p>
+
+<a name="DOF"></a>
+<a name="mi_shader__mia_lens_bokeh"></a>
+<h2 id="Depth_of_Field_/_Bokeh">Depth of Field / Bokeh</h2>
+<p>
+&quot;Bokeh&quot; is a Japanese term meaning &quot;blur&quot;, that is often used
+to refer to the perceived &quot;look&quot; of out-of-focus regions in a
+photograph. The term &quot;Depth of Field&quot; (henceforth abbreviated DOF) 
+does in actuality not describe the blur itself, but the &quot;depth&quot; of 
+the region that <em>is in focus</em>. However, it is common parlance 
+to talk about &quot;DOF&quot; while refering to the blur itself.
+<p>
+This shader is very similar to the <b>physical_lens_dof</b> in the
+physics library, but with more control on the actual <em>appearance</em>
+and quality of the blur.
+<p>
+<pre>
+declare shader "mia_lens_bokeh" (
+        boolean "on"          default on,
+        scalar  "plane"       default 100.0,
+        scalar  "radius"      default 1.0,
+        integer "samples"     default 4,
+        scalar  "bias"        default 1.0,
+        integer "blade_count" default 0,
+        scalar  "blade_angle" default 0,
+        boolean "use_bokeh"   default off,
+        color texture "bokeh"
+    )
+    version 4
+    apply lens
+    scanline off
+end declare
+</pre>
+<p>
+<b>on</b> enables the shader.
+<p>
+<b>plane</b> is the distance to the focal plane from the camera,
+i.e. a point at this distance from the camera is completely in focus.
+<div class="pic">
+<img width="80%" src="images/dof-near.jpg" alt="Focal point near camera"><br />Focal point near camera<br /><img width="80%" src="images/dof-far.jpg" alt="Focal point far away"><br />Focal point far away<br /></div>
+<p>
+<b>radius</b> is the radius of confusion. This is an actual
+measurement in scene units, and for a real-world camera this
+is approximately the radius of the <em>iris</em>, i.e. it
+depends on the cameras f-stop. But it is a good rule of
+thumb to keep it on the order of a couple of centimeters in size
+(expressed in the current scene units), otherwise the scene may come 
+out unrealistic and be perceived as a 
+minature<a href="#Foot5" title="The diameter of the iris is the focal length of the lens (in scene units) divided by the f-number. Since this parameter is a radius (not a diameter) it is half of that, i.e. (focal_length / f_number) / 2."><sup>5</sup></a>.
+<div class="pic">
+<img width="80%" src="images/dof-small.jpg" alt="Small radius - deep DOF"><br />Small radius - deep DOF<br /><img width="80%" src="images/dof-large.jpg" alt="Large radius - shallow DOF"><br />Large radius - shallow DOF<br /></div>
+<p>
+<b>samples</b> defines how many rays are shot. Fewer is faster but
+grainier, more is slower but smoother:
+<div class="pic">
+<img width="80%" src="images/dof-few.jpg" alt="Few samples"><br />Few samples<br /><img width="80%" src="images/dof-many.jpg" alt="Many samples"><br />Many samples<br /></div>
+<p>
+When <b>bias</b> is 1.0, the circle of confusion is sampled as
+a uniform disk. Lower values push the sample probability towards
+the center, creating a &quot;softer&quot; looking DOF effect with a more
+&quot;misty&quot; look. Higher values push the sample probability towards
+the edge, creating a &quot;harder&quot; looking DOF where bright spots
+actually resolve as small circles.
+<div class="pic">
+<img width="80%" src="images/dof-lobias.jpg" alt="bias = 0.5"><br />bias = 0.5<br /><img width="80%" src="images/dof-hibias.jpg" alt="bias = 2.0"><br />bias = 2.0<br /></div>
+<p>
+The <b>blade_count</b> defines how many &quot;edges&quot; the &quot;circle&quot;
+of confusion has. A zero value makes it a perfect circle. One can
+also set the angle with the <b>blade_angle</b> parameter, which
+is expressed such that 0.0 is zero degrees and 1.0 is 360 degrees.
+<div class="pic">
+<img width="80%" src="images/dof-6blade.jpg" alt="blade_count=6, angle=0.0, bias=2.0"><br />blade_count=6, angle=0.0, bias=2.0<br /><img width="80%" src="images/dof-4blade.jpg" alt="blade_count=4, angle=0.1, bias=2.0"><br />blade_count=4, angle=0.1, bias=2.0<br /></div>
+<p>
+The <b>use_bokeh</b> parameter enables the user of a specific
+<b>bokeh</b> map. When this parameter is used, the parameters
+<b>bias</b>, <b>blade_count</b> and <b>blade_angle</b>
+have no effect. The map defines the shape of the DOF filter
+kernel, so a filled white circle on a black background is 
+equivalent to the standard blur. Generally, one need more samples
+to accurately &quot;resolve&quot; a custom bokeh map than the built-in
+bokeh shape, which has an optimal sampling distribution.
+<div class="pic">
+<img width="80%" src="images/dof-cross.jpg" alt="A cross shaped bokeh map"><br />A cross shaped bokeh map<br /><img width="80%" src="images/dof-color.jpg" alt="Chromatic Aberation via colored map"><br />Chromatic Aberation via colored map<br /></div>
+<p>
+With <b>bias</b> at 1.0, <b>samples</b> at 4, <b>blade_count</b>
+at 0 and <b>use_bokeh</b> off, this shader renders an identical 
+image to the old <b>physical_lens_dof</b> shader.
+<p><hr><p><dl>Footnotes
+<a name="Foot1"></a><dt>1
+<dd>
+Many advanced tone mappers weight different areas of the image against
+other areas, to mimic the way the human visual system operates. These
+tone mappers need the entire image before they can &quot;do their job&quot;.
+<a name="Foot2"></a><dt>2
+<dd>Sometimes the f-number can be found labeled &quot;f-stop&quot;. 
+Since this is ambiguous, we have chosen the term f-number for clarity.
+<a name="Foot3"></a><dt>3
+<dd>Technically, the
+pixel intensity is multiplied by the cosine of the angle of the ray
+to the film plane raised to the power of the <b>vignetting</b>
+parameter.
+<a name="Foot4"></a><dt>4
+<dd>For speedy results
+in trying out settings for the tone mapping shaders, try the workflow
+with the &quot;preview&quot; parameter described on page 
+<a href="arch_camera.html#Use_Preview">Use Preview</a>.
+<a name="Foot5"></a><dt>5
+<dd>The diameter of the iris is the focal length
+of the lens (in scene units) divided by the f-number. 
+Since this parameter is a radius (not a diameter) it is half of 
+that, i.e. (focal_length / f_number) / 2.
+</dl>
+<ul class="nav">
+<li><a href="architectural.html">home</a></li>
+<li><a href="arch_sunsky.html">&laquo;&nbsp;prev</a></li>
+<li><a href="arch_util.html">next&nbsp;&raquo;</a></li>
+</ul>
+</body></html>

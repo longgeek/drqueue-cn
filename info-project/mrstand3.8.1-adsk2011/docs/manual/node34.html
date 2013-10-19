@@ -1,0 +1,139 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Rasterizer</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node33.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node35.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION32"></a>
+<h2 id="fo:rasterizer">Rasterizer</h2>
+
+<p>mental ray supports a first-hit rendering algorithm called
+<dfn id="INDEX67">rasterizer</dfn>. It allows to achieve superior motion blur
+speed compared to the traditional scanline mode. The primary difference is
+the separation of the shading sample phase from final sample compositing
+(also called sample collection). This allows to tune for anti-aliasing and
+motion blur image quality independently of the shading computation. Without
+the rasterizer, mental ray is always shading each of the spatial and temporal
+sample points (eye rays) selected within the shutter interval. As a
+consequence, an increase of the anti-aliasing quality requires proportional
+raise of the shading effort.</p>
+<p>The rasterizer works by shading objects at certain spatial and temporal
+sample positions, and caching these shaded samples. If an object moves, the
+shaded sample results can be re-used at each point of the motion blur path.
+The cache is tied to the geometry:</p>
+<ul>
+<li>
+a number of sample points is selected on each triangle based on
+the visibility, size, and orientation of the triangle. These points
+are then individually shaded by calling the material shaders as usual.
+The results are stored in front-to-back order for later combination.
+Care is taken to minimize the shading of points hidden behind other
+geometry, but although rendering proceeds in a roughly front-to-back
+order, there is no guarantee of the exact order, unlike for the regular
+scanline algorithm or ray tracing. For this reason, only the surface
+shading and transparency are stored initially, and volume and environment
+shading are calculated later on.</li>
+<li>
+The tile is scanned, and all front-to-back stored shading results are
+composited to individual screen samples, using their opacities to combine
+their colors, and the volume and environment shaders are called and combined
+with the surface shading.</li>
+</ul>
+<p>
+The late compositing of shading samples to form screen samples, and re-using
+of shading results has several important consequences:</p>
+<ul>
+<li>
+If the material shader traces rays with shader API functions like
+<i><a href="node140.html#INDEX549">mi_trace_reflection</a></i>, the result is
+re-used at all points the object moves along. This has the effect that the
+object appears to "drag" reflections and
+<a href="node115.html#INDEX446">refraction</a>s with it. For example, if a
+mirror that is coplanar to the image plane moves sideways, its edges are
+always blurred, but the objects being reflected would be blurred only with
+the rasterizer.</li>
+<li>
+Transparency (<i><a href="node140.html#INDEX551">mi_trace_transparent</a></i>)
+can be calculated by the regular scanline algorithm without tracing rays, by
+following the chain of depth-sorted triangles behind the current point on the
+image plane. Since the rasterizer shades points on triangles one by one, and
+combines the results according to depth only later at the compositing stage,
+<i><a href="node140.html#INDEX551">mi_trace_transparent</a></i> will always
+return false and transparent black. As long as the shader does not do
+non-standard linear compositing, this gives the same results. But if the
+shader makes decisions such as casting environment rays based on the value
+returned by <i><a href="node140.html#INDEX551">mi_trace_transparent</a></i>,
+the results may differ from expectations.</li>
+<li>
+In particular, shaders that implement <b id="INDEX68">matte objects</b> will
+not work without modification. Matte objects are placeholders for later
+compositing outside of mental ray; like transparent cut-outs where live
+action will be added later. Since the rasterizer ties its shading sample
+combining to the alpha component of the RGBA color returned by the material
+shader, it will fill in such cut-outs. To avoid this, a shader may use the
+new <i><a href="node150.html#INDEX770">mi_opacity_set</a></i> function to
+explicitly set the opacity for the compositing stage independently of the
+returned alpha value. In other words, if an explicit opacity value is set,
+the alpha channel of the shading result color is ignored for calculating
+transparency, and is just retained for writing to the final output buffer.
+Instead, the opacity color is used to combine shading values front-to-back,
+whereas in the absence of the opacity color, alpha is used to combine shading
+samples front-to-back. A matte object could have alpha of 0 but set an opacity
+of 1. In this manner one can render solid objects with transparency built in,
+for correct results during later, external compositing. There is also an
+<i><a href="node150.html#INDEX772">mi_opacity_get</a></i> function to support
+cooperating shaders in Phenomena.</li>
+</ul>
+<p>The rasterizer can enabled with a <a href="node76.html#opt:scanline">scene
+option</a> or on the <a href="node245.html#scanline">command line</a> of a
+standalone mental ray. mental ray controls the pixel over-sampling with
+the <var><a href="node76.html#samples_collect">samples collect</a></var>,
+which gives the number of samples per pixel-dimension. For example, the
+default value of 3 gives 9 samples per pixel. The rate of shading is
+controlled independently with
+<var><a href="node76.html#shading_samples">shading samples</a></var>,
+and defaults to 1.0, or roughly 1 shading call per pixel. Note, that this
+drives the internal tessellation depth, and takes effect after the geometry's
+own approximation has been calculated. It is possible to override the shading
+samples either per <i><a href="node83.html">object</a></i> or per
+<i><a href="node90.html">instance</a></i>.</p>
+<p>
+For further acceleration of motion blur rendering, the shading frequency
+can be reduced for fast-moving objects by tuning the <dfn>motion factor</dfn>
+in the <a href="node76.html#rast_motion_factor">scene options</a> or on the
+<a href="node245.html#rast_motion_factor">command line</a> of a standalone
+mental ray.
+This is a positive floating point value which divides the number of shading
+samples taken, proportional to the speed of the motion of the object in screen
+space. The default value is 0.0, which disables this feature. A good starting
+value for many scenes is 1.0. Higher values will further reduce the number of
+shading samples thus raise performance for fast moving objects.</p>
+<p>
+Due to the different sampling patterns it should be avoided to use
+<a href="node26.html#fo:samplepass">sample passes</a> rendered with the
+rasterizer together with passes that do not use the rasterizer.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node33.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node35.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

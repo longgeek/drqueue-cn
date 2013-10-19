@@ -1,0 +1,126 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Motion Blur</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node31.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node33.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION30"></a>
+<h2 id="fo:motionblur">Motion Blur</h2>
+
+<p id="INDEX60">
+mental ray can compute motion blur of any animated shading effect,
+any movement of scene elements as well as shape deformation.
+This includes motion blur of highlights and textured materials as
+primary effects, and secondary ray tracing features like shadows,
+reflections, <a href="node115.html#INDEX446">refraction</a>s, and
+transparency. mental ray provides different motion blur algorithms
+to chose from, with different quality and performance impact on the
+final rendering.</p>
+<p>
+There are two methods of defining motion blur:</p>
+<ul>
+<li>
+<dfn id="fo:instancemotion">instance motion</dfn> defines a second
+transformation matrix that controls the orientation of the instanced object,
+light, or camera at the end of the unit motion interval at time 1.0, in
+addition to the regular transformation matrix that defines the orientation
+at the beginning of the motion interval at time 0.0, which is typically
+identical to camera shutter open time. For cameras, this creates true
+curved blurs. Moving lights cause blurred highlights and shadows.</li>
+<li>
+<dfn id="fo:vectormotion">motion vectors</dfn> can be defined at object
+vertices to create internal motion caused by shape changes. Each vertex has
+a vector associated with it that describes how far that vertex moves within
+the unit motion interval. For deferred objects, where the vertices are created
+later during rendering, it is necessary to supply a
+<dfn id="INDEX61">motion bounding box</dfn> that describes the lowest and
+highest expected motion vector components. Cameras and lights do not allow
+<dfn id="INDEX62">motion vector</dfn>s because they have no shape that
+could change. mental ray supports <a href="node83.html#INDEX290">motion
+path</a>s with up to 15 motion vectors per vertex, to render curved motion
+trails for fast moving or deforming objects.</li>
+</ul>
+<p>Both instance motion and motion vectors can be combined.</p>
+<p>
+A <dfn id="INDEX63">shutter</dfn> <var>speed</var> and <var>delay</var>
+may be given for the render camera in the scene
+<a href="node76.html#opt:shutter">options</a> or on the
+<a href="node245.html#shutter">command line</a>. A shutter speed of zero
+(the default) will turn motion blur rendering off, regardless of the presence
+of <a href="node90.html#INDEX343">motion transform</a>ations or
+<a href="node32.html#INDEX62">motion vector</a>s in the scene. The shutter
+opens at time <var>delay</var> and closes after the shutter speed time has
+elapsed. An object, light, or camera moves by the distance defined by its
+motion transformation plus motion vector if the shutter interval is set to
+the full motion interval of <var>0.0&hellip;1.0</var>. The motion blur trail
+will be rendered shorter for shutter ranges that are smaller than the motion
+interval, for example <var>0.2&hellip;0.8</var>, and longer for shutter ranges
+exceeding that interval, for example <var>0.0&hellip;2.0</var>. Setting the
+shutter open and close times to the same value allows to perform bidirectional
+motion blur in output shaders.</p>
+
+<p>mental ray supports motion blur rendering with both the
+<a href="node34.html#fo:rasterizer">rasterizer</a>/scanline and raytracing
+modes. Depending on the effects used in a rendering and the desired amount
+and quality of blurring this gives the choice of fast motion blur rendering
+without ray tracing, or very accurate but more expensive motion blur of ray
+tracing results like a moving reflection. Both modes can be used together to
+achieve a compromise between quality and performance.
+Motion blur does introduce rendering overhead, but normally only where blur
+must be computed. For example, if the camera moves then motion blur would
+need to be computed for the entire image and many if not all objects in the
+scene, compared to the movement of a single object where the overhead may be
+much smaller.</p>
+
+<p><span class="recent">3.7</span>
+Rendering motion blur will soften the details of objects. mental ray can take
+advantage of this characteristic by automatically reducing the quality of
+view-dependent displacement for moving objects according to the length of the
+motion path in screen space within the current shutter interval. This currently
+affects any <em>length</em> approximation criteria for displacement of
+polygonal or triangle geometry. The decrease of displacement detail has a big
+impact on rendering performance and memory consumption by cutting down the
+typically huge count of tessellation data noticeably. A motion blur rendering
+of a heavy displacement scene may even be tuned to render faster compared to
+the static case. The amount of quality reduction in relation to the motion
+blur length is controlled by the <dfn>geom displace motion factor</dfn>
+<a href="node76.html#geom_displace_motion_factor">scene option</a>. mental ray
+enables this feature by default with a reasonable compromise between quality
+and speed, but it can be turned off for backwards compatibility.</p>
+
+<p><span class="depr">Deprecated</span>
+mental ray supports an alternative motion blur algorithm. While the regular
+motion blur algorithm is based on temporal oversampling, and is enabled if the
+shutter interval is nonzero (i.e. the shutter time is greater than the shutter
+delay time), the <dfn id="INDEX64">fast motion blur</dfn> mode is based on
+coordinated spatial and temporal oversampling. This requires much less samples
+(typically by a factor of five) for motion blurred pixels. Fast motion blur mode
+is enabled if the shutter period is nonzero and the
+<a href="node76.html#INDEX185">time contrast</a> is set to 0. In <em>fast motion
+blur</em> mode, min samples is forced to be equal to max samples.<br />
+Note, that the rasterizer ignores these settings.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node31.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node33.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

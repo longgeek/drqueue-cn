@@ -1,0 +1,38 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+
+shader Environment_map_spherical_x
+{
+input:
+    uniform Texture2d env_tex;
+    uniform float intensity = 1.0;
+    uniform float blur = 1.0;
+    uniform bool z_up = false;
+    uniform float rotate = 0.0;
+
+output:
+    Color result;
+
+    void main()
+    {
+        float3 v = transform_vector("internal", "world", direction);
+
+        if (z_up) {
+	    v = float3(v.x, v.z, -v.y);
+        }
+        float gamma = asin(v.y);
+        float theta = atan2(v.x, v.z);
+
+        float2 texture((theta+rotate)/PI,gamma/(PI * 0.5));
+        texture = (texture + 1.0) * 0.5;
+
+        Texture2D_sampler_color ts(env_tex,blur);
+        result = ts.lookup(texture) * intensity;
+    }
+}
+{
+    shader_type( "environment" );
+};

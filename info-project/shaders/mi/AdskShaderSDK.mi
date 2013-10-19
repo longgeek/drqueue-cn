@@ -1,0 +1,77 @@
+# ==========================================================================
+# Copyright 2008 Autodesk, Inc. All rights reserved.
+#
+# Use of this software is subject to the terms of the Autodesk
+# license agreement provided at the time of installation or download,
+# or which otherwise accompanies this software in either electronic
+# or hard copy form.
+# ==========================================================================
+
+# guard against multiple inclusion
+$ifndef "autodesk_adskshadersdk_included"
+set "autodesk_adskshadersdk_included" "true"
+
+min version "3.7.0"
+max version "3.8.99"
+
+# =============================================================================
+#  traversal shader 
+# =============================================================================
+
+declare shader 
+    "adskTraversal" (
+    string              "passEncoding"
+    )
+    version 1
+end declare
+
+# =============================================================================
+#  state shader for managing frame buffers
+# =============================================================================
+
+declare shader 
+    color "adskFrameBufferState" (
+    )
+    apply state
+    version 1
+end declare
+
+declare shader 
+    color "adskFrameBufferInit" (
+        integer "frameBufferNumber",
+        color   "defaultValue" default 0 0 0
+    )
+    apply state
+    version 1
+end declare
+
+# =============================================================================
+#  user data block shader for storing frame buffer info per camera
+# =============================================================================
+declare data
+    "adskFrameBufferData" (
+        integer         "magic",                  # 'FBuf'
+        array string "nonMaterialPassFrameBufferNames",
+        array struct "frameBufferInfo" {
+            string    "frameBufferName",
+            boolean   "useTransparency",
+            boolean   "holdout",
+            boolean   "reflectHidden",
+            boolean   "refractHidden",
+            boolean   "hiddenReflect",
+            boolean   "hiddenRefract",
+            boolean   "transparentAttenuation",
+            boolean   "computeShadows",
+            boolean   "hiddenShadows",
+            integer   "minReflectionLevel",
+            integer   "maxReflectionLevel",
+            integer   "minRefractionLevel",
+            integer   "maxRefractionLevel",
+            integer   "integerUserParameter1"
+        },
+        array integer   "frameBufferTypeCounts"
+    )
+    version 1
+end declare
+
+$endif  # if not "autodesk_adskshadersdk_included"

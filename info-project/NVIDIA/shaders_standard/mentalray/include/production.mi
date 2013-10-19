@@ -1,0 +1,421 @@
+#*****************************************************************************
+# Copyright 1986, 2013 NVIDIA Corporation. All rights reserved.
+#*****************************************************************************
+# Created:  15.11.05
+# Module:   production
+# Purpose:  shaders for production
+#
+# Exports:
+#   General utilities
+#     mip_rayswitch
+#     mip_rayswitch_advanced
+#     mip_rayswitch_environment
+#     mip_rayswitch_stage
+#     mip_gamma_gain
+#     mip_render_subset
+#   Card opacity
+#     mip_card_opacity
+#   Motion blur & motion vector export
+#     mip_motionblur
+#     mip_motion_vector
+#   Combining with background plates
+#     mip_cameramap
+#     mip_matteshadow
+#   Environment stuff
+#     mip_mirrorball
+#     mip_grayball
+#   Geometry shaders
+#     mip_binaryproxy
+#   Final Gathering in Animation Enhancements
+#     mip_fg_shooter
+#
+# History:
+#   01.12.05: Zap: gui
+#   28.11.05: Zap: -> mip_
+#   23.11.05: Zap: added mip_cameramap, mip_matteshadow
+#   22.11.05: Zap: updated motion blur
+#   11.11.05: Zap: Re-rewrite
+#   07.03.07: Zap: added mirror/grayball and gamma handling features, gui moved
+#                  to external files
+#   07.05.21: Zap: fixed defaults
+#   07.06.06: Zap: Added mip_render_subset, fixed _mtl phen
+#   07.06.07: Zap: Renamed outputs of mip_matteshadow
+#   07.10.17: Zap: Added mip_binaryproxy
+#   08.08.29  Zap: Added mip_rayswitch_stage
+#   08.09.01  Zap: Added mip_fgshooter
+#
+# Description:
+#
+#****************************************************************************/
+
+
+# guard against multiple inclusions
+$ifndef "production_mi_included"
+set "production_mi_included" "true"
+
+min version "3.7.53"
+max version "3.11.99"
+
+
+#
+# --------- RaySwitching - switch subshaders due to ray type
+#
+
+declare shader "mip_rayswitch" (
+        color  "eye",
+        color  "transparent",
+        color  "reflection",
+        color  "refraction",
+        color  "finalgather",
+        color  "environment",
+        color  "shadow",
+        color  "photon",
+        color  "default"
+    )
+    version 1
+    apply material, texture, environment
+end declare
+
+
+declare shader "mip_rayswitch_advanced" (
+        shader "eye",
+        shader "transparent",
+        shader "reflection",
+        shader "refraction",
+        shader "finalgather",
+        shader "environment",
+        shader "any_secondary",
+        shader "shadow",
+        shader "photon",
+        shader "default"
+    )
+    version 1
+    apply material, texture, environment
+end declare
+
+
+declare shader "mip_rayswitch_environment" (
+        color   "background"  default 0 0 0 0,
+        color   "environment" default 0 0 0 0,
+    )
+    apply texture, environment
+    version 1
+end declare
+
+
+#
+# --------- Framebuffer-aware opacity (for cards)
+#
+
+min version "3.7.53"
+
+declare shader "mip_card_opacity" (
+        color   "input",
+        boolean "opacity_in_alpha",
+        scalar  "opacity",
+        boolean "opacity_is_premultiplied",
+        scalar  "opacity_threshold"
+    )
+    version 1
+    apply material
+
+end declare
+#
+# --------- Motion blur and motion vectors
+#
+
+
+declare shader "mip_motionblur" (
+        scalar  "shutter"           default 0.5,     #: min 0    softmax 1.0
+        scalar  "shutter_falloff"   default 2.0,     #: min 0.01 softmax 5.0
+        boolean "blur_environment",        
+        scalar  "calculation_gamma" default 2.2,     #: min 0    softmax 5.0
+        scalar  "pixel_threshold"   default 1.0,     #: min 0    softmax 5.0
+        scalar  "background_depth"  default 10000.0,
+        boolean "depth_weighting"   default off,
+        string  "blur_fb",
+        string  "depth_fb",
+        string  "motion_fb",
+        boolean "use_coverage"
+    )
+    version 1
+    apply output
+end declare
+
+
+declare shader "mip_motion_vector" (
+        scalar  "max_displace"    default 50.0, #: min 0 softmax 50.0
+        boolean "blue_is_magnitude",
+        # 0 = Off, 1 = Raw, 2 = Toxik
+        integer "floating_point_format", 
+
+        boolean "blur_environment",
+        scalar  "pixel_threshold" default 0.0,  #: min 0 softmax 5.0
+        string  "result_fb",
+        string  "depth_fb",
+        string  "motion_fb",
+        boolean "use_coverage"
+    )
+    version 2
+    apply output
+end declare
+
+#
+# --------- Combining with background plates
+#
+
+declare shader 
+        struct {
+            color "result",
+            color "shadows_raw",
+            color "ao_raw",
+            color "refl_raw",
+            color "indirect_raw",
+            color "illumination_raw"
+        } "mip_matteshadow" (
+        color   "background"     default 0 0 0 0,
+
+        # Shadows
+        boolean "catch_shadows"   default on,
+        color   "shadows"         default 0 0 0 1,
+        color   "ambient"         default 0.2 0.2 0.2,
+        boolean "no_self_shadow"  default on,
+        boolean "use_dot_nl"      default on,
+        scalar  "colored_shadows" default 1.0,    #: min 0 max 1
+        # AO
+        boolean "ao_on"           default on,
+        color   "ao_dark"         default 0.0 0.0 0.0,
+        integer "ao_samples"      default 16,     #: min 0 
+        scalar  "ao_distance"     default 0.0,    #: min 0 
+        # Reflections
+        boolean "catch_reflections" default off,
+        color   "refl_color"        default 0.2 0.2 0.2 0.2,
+        color   "refl_subtractive"  default 0 0 0 0,
+        integer "refl_samples"      default 0,    #: min 0
+        scalar  "refl_glossiness"   default 0.5,  #: min 0.01 softmax 1.0
+        scalar  "refl_max_dist"     default 0.0,  #: min 0 
+        scalar  "refl_falloff"      default 2.0,  #: min 0.01 softmax 5.0
+
+        # Indirect
+        boolean "catch_indirect"    default off,
+        color   "indirect",
+
+        # System
+        boolean "multiple_outputs"  default off,
+
+        # Additional illumination
+        boolean "catch_illuminators" default off,
+        array light "illuminators",
+
+        # Extra input
+        color       "additional_color" default 0 0 0,
+
+        integer     "mode",
+        array light "lights"    
+    )
+    version 6
+    apply material, texture
+end declare
+
+declare shader "mip_cameramap" (
+        color texture "map",
+        scalar  "multiplier"               default 1.0, #: min 0  softmax 5.0
+        scalar  "degamma"                  default 1.0, #: min 0  softmax 5.0
+        boolean "per_pixel_match"          default off,
+        boolean "transparent_alpha"        default off,
+        boolean "offscreen_is_environment" default on,
+        color   "offscreen_color"
+    )
+    version 4
+    apply material, texture, environment
+end declare
+
+
+declare shader "mip_mirrorball" (
+        color  texture "texture",
+        scalar "multiplier"   default 1.0, #: min 0  softmax 5.0
+        scalar "degamma"      default 1.0, #: min 0  softmax 5.0
+        scalar "blur"         default 0.0, #: min -1 softmin 0.0 softmax 5.0
+    )
+    apply texture, environment
+    version 3
+end declare
+
+
+declare shader "mip_grayball" (
+        color  texture "texture",
+        scalar "multiplier"   default 1.0, #: min 0  softmax 5.0
+        scalar "degamma"      default 1.0, #: min 0  softmax 5.0
+        scalar "blur"         default 0.0, #: min -1 softmin 0.0 softmax 5.0
+    )
+    apply texture, environment
+    version 3
+end declare
+
+declare shader "mip_gamma_gain" (
+        color   "input",
+        scalar  "gamma"        default 1.0, #: min 0  softmax 5.0
+        scalar  "gain"         default 1.0, #: min 0  softmax 5.0
+        boolean "reverse"      default off,
+    )
+    apply texture, environment, lens
+    version 1
+end declare
+
+declare shader "mip_render_subset" (
+        boolean "enabled"        default on,
+        array geometry "objects",
+        array integer  "instance_label",
+        material       "material",
+        boolean "mask_only"      default off,
+        color   "mask_color"     default 1 1 1 1,
+        color   "background"     default 0 0 0 0,
+        color   "other_objects"  default 0 0 0 0,
+        boolean "full_screen_fg" default on
+    )
+    apply lens
+    version 5
+end declare
+
+declare phenomenon material "mip_matteshadow_mtl" (
+        color   "background"     default 0 0 0 0,
+
+        # Shadows
+        boolean "catch_shadows"   default on,
+        color   "shadows"         default 0 0 0 1,
+        color   "ambient"         default 0.2 0.2 0.2,
+        boolean "no_self_shadow"  default on,
+        boolean "use_dot_nl"      default on,
+        scalar  "colored_shadows" default 1.0,    #: min 0 max 1
+        # AO
+        boolean "ao_on"           default on,
+        color   "ao_dark"         default 0.0 0.0 0.0,
+        integer "ao_samples"      default 16,     #: min 0 
+        scalar  "ao_distance"     default 0.0,    #: min 0 
+        # Reflections
+        boolean "catch_reflections" default off,
+        color   "refl_color"        default 0.2 0.2 0.2 0.2,
+        color   "refl_subtractive"  default 0 0 0 0,
+        integer "refl_samples"      default 0,    #: min 0
+        scalar  "refl_glossiness"   default 0.5,  #: min 0.01 softmax 1.0
+        scalar  "refl_max_dist"     default 0.0,  #: min 0 
+        scalar  "refl_falloff"      default 2.0,  #: min 0.01 softmax 5.0
+
+        # Indirect
+        boolean "catch_indirect"    default off,
+        color   "indirect",
+
+        # Additional illumination
+        boolean "catch_illuminators" default off,
+        array light "illuminators",
+
+        # Extra input
+        color       "additional_color" default 0 0 0,
+        
+        scalar      "opacity"          default 1.0, #: min 0 max 1
+
+        integer     "mode",
+        array light "lights"    
+    )
+    
+    shader "matteshadow" "mip_matteshadow" (
+        "background"        = interface "background",
+        
+        "catch_shadows"     = interface "catch_shadows",
+        "shadows"           = interface "shadows",
+        "colored_shadows"   = interface "colored_shadows",
+        "ambient"           = interface "ambient",
+        "no_self_shadow"    = interface "no_self_shadow",
+        "use_dot_nl"        = interface "use_dot_nl",
+        
+        "ao_on"             = interface "ao_on",
+        "ao_dark"           = interface "ao_dark",
+        "ao_samples"        = interface "ao_samples",
+        "ao_distance"       = interface "ao_distance",
+        
+        "catch_reflections" = interface "catch_reflections",
+        "refl_color"        = interface "refl_color",
+        "refl_subtractive"  = interface "refl_subtractive",
+        "refl_samples"      = interface "refl_samples",
+        "refl_glossiness"   = interface "refl_glossiness",
+        "refl_max_dist"     = interface "refl_max_dist",
+        "refl_falloff"      = interface "refl_falloff",
+        
+        "catch_indirect"    = interface "catch_indirect",
+        "indirect"          = interface "indirect",
+        
+        "multiple_outputs"  off,
+
+        "catch_illuminators" = interface "catch_illuminators",
+        "illuminators"      = interface "illuminators",
+        "additional_color"  = interface "additional_color",
+
+        "mode"              = interface "mode",
+        "lights"            = interface "lights"
+    )
+    
+    shader "cardshader" "mip_card_opacity" (
+        "input" = "matteshadow.result",
+        "opacity_in_alpha" false,
+        "opacity" = interface "opacity",
+        "opacity_is_premultiplied" false,
+        "opacity_threshold" 0.1
+    )
+    
+    material "material" 
+        = "cardshader"
+        shadow = "matteshadow"
+        photon = "matteshadow"
+    end material
+
+    root material "material"   
+end declare
+
+declare shader
+    geometry "mip_binaryproxy" (
+        # The filename
+        string "object_filename",
+        
+        # Write mode?
+        boolean "write_geometry",
+        # The geometry the write
+        geometry "geometry",        
+        # One meter in scene units; 
+        # Stored as info when saving, and
+        # scaled relative to it when loading
+        # if zero, no rescaling is done.
+        scalar   "meter_scale", 
+        
+        # Flags. Reserved for future expansion; 
+        # Use 0
+        integer  "flags"      
+    )
+    version 4
+    apply geometry
+end declare
+
+
+declare shader "mip_rayswitch_stage" (
+        color "unknown",
+        color "main_render",
+        color "finalgather_precomp",
+        color "ao_precomp",
+        color "caustic_photons",
+        color "globillum_photons",
+        color "importon_emit",
+        color "lightmapping"
+    )
+    version 1
+    apply material, texture, environment
+end declare
+
+declare shader "mip_fgshooter" (
+        integer "mode",
+        array transform "trans"
+    )
+    version 1
+    apply lens
+end declare
+
+
+$endif #if not "production_mi_included"

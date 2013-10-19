@@ -1,0 +1,167 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Volume Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node116.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node118.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION115"></a>
+<h2>Volume Shaders</h2>
+<p><a id="INDEX460"></a> Volume shaders may be
+attached to the camera or to a material. They modify the color
+returned from an intersection point to account for the distance the
+ray traveled through a volume. The most common application for
+volume<a id="INDEX461"></a><a id="INDEX462"></a> shaders is atmospheric
+fog effects; for example, a
+simple volume shader may simulate fog by fading the input color to
+white depending on the ray distance. By definition, the distance
+<i>dist</i> given in the state is 0.0 and the intersection
+<i>point</i> is undefined if the ray has infinite length.</p>
+<p>Volume shaders are normally called in three situations. When a
+material shader returns, the volume shader that the material shader
+left in the <i>state</i>&rarr;volume variable is called, without
+copying the state, as if it had been called as the last operation
+of the material shader. Copying the state is not necessary because
+the volume shader does not return to the material shader, so it is
+not necessary to preserve any variables in the state.</p>
+<p><a id="INDEX463"></a> Unless the <tt>shadow
+segment</tt> mode is in effect, volume shaders are also called when
+a light shader has returned; in this case the volume shader
+<i>state</i>&rarr;volume is called once for the entire distance
+from the light source to the illuminated point (i.e., to the point
+that caused the material shader that sampled the light to be
+called). In <tt>shadow segment</tt> mode, volume shaders are not
+called for <a href="node117.html#INDEX463">light ray</a>s but for
+every shadow ray segment from the illuminated point towards the
+light source. Some volume shaders may decide that they should not
+apply to <a href="node117.html#INDEX463">light ray</a>s; this can
+be done by returning immediately if the <i>state</i>&rarr;type
+variable is <tt>miRAY_LIGHT</tt>.</p>
+<p>Finally, volume shaders are called after an <a href="node119.html#INDEX468">environment shader</a> was called. Note
+that if a volume shader is called after the material, light, or
+other shader, the return value of that other shader is discarded
+and the return value of the volume shader is used. The reason is
+that a volume shader can substitute a non-black color even if the
+original shader has given up. Volume shaders return
+<tt>miFALSE</tt> if no light can pass through the given volume, and
+<tt>miTRUE</tt> if there is a non-black result color.</p>
+<p>Material shaders have two separate state variables dealing with
+volumes, <i>volume</i> and <i>refraction_volume</i>. If the
+material shader casts a refraction or transparency ray, the tracing
+function will copy the refraction volume shader, if there is one,
+to the volume shader after copying the state. This means that the
+next intersection point finds the refraction volume in
+<i>state</i>&rarr;volume, which effectively means that once the ray
+has entered an object, that object's interior volume shader is
+used. However, the material shader is responsible to detect when a
+refraction ray exits an object, and overwrite
+<i>state</i>&rarr;refraction_volume with an appropriate outside
+volume shader, such as <i>state</i>&rarr;camera<i>&rarr;</i>volume,
+or a volume shader found by following the <i>state</i>&rarr;parent
+links.</p>
+<p>Since volume shaders modify a color calculated by a previous
+material shader, environment shader, or light shader, they differ
+from these shaders in that they receive an input color in the
+<i>result</i> argument that they are expected to modify. A very
+simple fog volume shader could be written as:</p>
+<p><a id="INDEX464"></a></p>
+<pre>
+    miBoolean myfog(
+        register miColor      *result,
+        register miState      *state,
+        register struct myfog *paras)
+    {
+        register miScalar     fade;
+        register miColor      *fogcolor;
+        register miScalar     max;
+
+        if (state-&gt;type == miRAY_LIGHT)
+             return(miTRUE);
+
+        max      = *mi_eval_scalar(&amp;paras-&gt;maxdist);
+        fogcolor =  mi_eval_scalar(&amp;paras-&gt;fogcolor);
+        fade     = state-&gt;dist &gt; max ? 1.0
+                                     : state-&gt;dist / max;
+
+        result-&gt;r = fade     * fogcolor-&gt;r
+                  + (1-fade) * result-&gt;r;
+        result-&gt;g = fade     * fogcolor-&gt;g
+                  + (1-fade) * result-&gt;g;
+        result-&gt;b = fade     * fogcolor-&gt;b
+                  + (1-fade) * result-&gt;b;
+        result-&gt;a = fade     * fogcolor-&gt;a
+                  + (1-fade) * result-&gt;a;
+
+        return(miTRUE);
+    }
+</pre>
+<p>This shader linearly fades the input color to
+<i>state</i>&rarr;fogcolor (probably white) within
+<i>state</i>&rarr;maxdist internal space units. Objects more
+distant are completely lost in <a href="node117.html#INDEX461">fog</a>. The length of the ray to be
+modified can be found in <i>state</i>&rarr;dist, its start point in
+<i>state</i>&rarr;org, and its end point in
+<i>state</i>&rarr;point. This example shader does not apply to
+<a href="node117.html#INDEX463">light ray</a>s, light sources can
+penetrate fog of any depth because of the <tt>miRAY_LIGHT</tt>
+check. In this case, the shader returns <tt>miTRUE</tt> anyway
+because the shader did not fail; it merely decided not to apply
+fog. Note that the shader parameters are evaluated with <i><a href="node138.html#INDEX522">mi_eval</a></i> after the <i>if</i>
+statement to ensure that no unnecessary work is done by obtaining
+parameter values that are not going to be used.</p>
+<p>If this shader is attached to the camera, the atmosphere
+surrounding the scene will contain fog. Every
+<i>state</i>&rarr;volume will inherit this camera volume shader,
+until a refraction or transparency ray is cast. The ray will copy
+the material's volume shader, <i>state</i>&rarr;refraction_volume,
+if there is one, to <i>state</i>&rarr;volume, and the ray is now
+assumed to be in the object. If the material has no volume shader
+to be copied, the old <a href="node117.html#INDEX460">volume
+shader</a> will remain in place and will be inherited by subsequent
+rays.</p>
+<p>Some volume shaders employ <a href="node140.html#INDEX556">ray
+marching</a> techniques to sample lights from empty space, to
+achieve effects such as visible light beams. Before such a shader
+calls <i><a href="node140.html#INDEX555">mi_sample_light</a></i>,
+it should store 0 in <i>state</i>&rarr;pri to inform mental ray
+that there is no primitive to illuminate, and to not attempt
+certain optimizations such as backface elimination. Shaders other
+than volume shaders may do this too, but must restore <i>pri</i>
+before returning. Some <i><a href="miquery.html#api:mi_query">mi_query</a></i> modes do not work if
+<i>pri</i> has been modified.</p>
+<p>Volume shader that sample light sources should not only clear
+<i>state</i>&rarr;pri but also use this test at the beginning:</p>
+<pre>
+    if (state-&gt;type == miRAY_LIGHT) return(miTRUE);
+</pre>
+<p>Since sampling a light causes one or more
+<a href="node117.html#INDEX463">light ray</a>s to be cast, and since these
+<a href="node117.html#INDEX463">light ray</a>s most likely travel
+through the same volume, they would also call this same volume
+shader recursively. If the volume shader doesn't realize this and
+proceeds to cast even more recursive rays, it will get into an
+infinite recursion until a stack overflow aborts the program. Note
+that the test should come before all other code, especially
+<i>mi_eval</i> calls, to avoid unnecessary work and increase
+performance.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node116.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node118.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

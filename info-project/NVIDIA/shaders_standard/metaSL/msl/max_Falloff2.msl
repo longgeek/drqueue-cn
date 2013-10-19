@@ -1,0 +1,593 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// $Revision: 1139 $
+
+#include <max_common.msl>
+
+#ifdef HLSL_OPTIMIZE
+#define XPARAS(x) x
+#else
+#define XPARAS(x) ExtraParameters.x
+#endif
+
+// tex_falloff2.cpp
+#define FALLTYPE_TOWRDS_AWY   0
+#define FALLTYPE_PERP_PARA    1
+#define FALLTYPE_FRESNEL      2
+#define FALLTYPE_SHADOW_LIGHT 3
+#define FALLTYPE_DIST_BLEND   4
+
+// tex_falloff2.cpp
+#define FALLDIR_VIEW 0
+#define FALLDIR_XCAM 1
+#define FALLDIR_YCAM 2
+#define FALLDIR_OBJ  3
+#define FALLDIR_XLOC 4
+#define FALLDIR_YLOC 5
+#define FALLDIR_ZLOC 6
+#define FALLDIR_XWOR 7
+#define FALLDIR_YWOR 8
+#define FALLDIR_ZWOR 9
+
+shader max_Falloff2 {
+ input:
+  // parameters for max_Falloff2:
+  // ----------------------------
+  // see mrFalloff2 in max_texmaps.h
+#ifdef HLSL_OPTIMIZE
+  Color  Color1 = Color(0.9, 0.2, 0.5, 1.0);	 // color1
+  float  Map1Amount = 100.0;	 // map1Amount
+  Shader Map1;	 // map1
+  const  bool Map1On = true;	 // map1On
+  Color  Color2 = Color(0.1, 0.8, 0.5, 1.0);	 // color2
+  float  Map2Amount = 100.0;	 // map2Amount
+  Shader Map2;	 // map2
+  const  bool Map2On = true;	 // map2On
+  const  int  Type = 1;		 // type
+  const  int  Direction = 0;	 // direction
+  bool   MtlIOROverride = true; // mtlIOROverride
+  float  Ior = 1.6;		 // ior
+  bool   ExtrapolateOn = false;	 // extrapolateOn
+  float  NearDistance = 0.2;  // nearDistance
+  float  FarDistance = 1.9;	 // farDistance
+
+  // ExtraParameters
+  float3 Position;	    // position
+  Shader Output;	    // output
+  Shader CurveControl;    // curvectl
+  bool   Self;		    // self
+
+#else
+  struct Parameters_struct { // see mrFalloff2 in max_texmaps.h
+    Color Color1;	 // color1
+    float Map1Amount;	 // map1Amount
+    Shader Map1;	 // map1
+    bool Map1On;	 // map1On
+    Color Color2;	 // color2
+    float Map2Amount;	 // map2Amount
+    Shader Map2;	 // map2
+    bool Map2On;	 // map2On
+    int Type;		 // type
+    int Direction;	 // direction
+    bool MtlIOROverride; // mtlIOROverride
+    float Ior;		 // ior
+    bool ExtrapolateOn;	 // extrapolateOn
+    float NearDistance;  // nearDistance
+    float FarDistance;	 // farDistance
+  }; // Parameters_struct
+  Parameters_struct Parameters(Color(0.9, 0.2, 0.5, 1.0),
+			       100.0,
+			       Shader(),
+			       true,
+			       Color(0.1, 0.8, 0.5, 1.0),
+			       100.0,
+			       Shader(),
+			       true,
+			       2,
+			       1,
+			       true,
+			       1.6,
+			       false,
+			       0.2,
+			       1.9);
+  struct ExtraParameters_struct {
+    int GBufferID;	    // GBufID
+    float3 Position;	    // position
+    Shader Output;	    // output
+    Shader CurveControl;    // curvectl
+    bool Self;		    // self
+  }; // ExtraParameters_struct
+  ExtraParameters_struct ExtraParameters =
+    ExtraParameters_struct(0,
+			   float3(0.0, 0.0, 0.0),
+			   Shader(),
+			   Shader(),
+			   false);
+#endif
+
+  bool evalNormal = false {
+  };
+
+ output:
+  Color result;
+
+  // see shd_util.cpp
+  float fresnel(in float3 ReflectVector,
+		in float3 ViewRay,
+		in float ior) {
+    // Based upon:
+    // Andrew S. Glassner.  Principles of Digital Image Synthesis:  Vol 2
+    // pp 736-737, Morgan Kaufman Publishers, Inc.  S.F.  CA.
+    float g = 0.0;
+    float3 R = ReflectVector;
+    float3 V = ViewRay;
+    float3 VR = float3(0.0, 0.0, 0.0);
+    R = -R;
+    VR = V + R;
+    VR = normalize(VR);
+    float c = dot(V, VR);
+    g = ior * ior + c * c - 1.0;
+    if (g < 0.0) {
+      g = 0.0;
+    } else {
+      g = sqrt(g);
+    }
+    if (g != -c) {
+      c = ((((g - c) * (g - c))/(2.0 * (g + c) * (g + c))) *
+	   (1.0 + (((c * (g + c) - 1.0) * (c * (g + c) - 1.0))/
+		   ((c * (g + c) + 1.0) * (c * (g + c) + 1.0)))));
+      // TODO: miASSERT(!isnan(c));
+      return c;
+    } // if (g != -c)
+    else {
+      return 0.0;
+    } // else [ if (g != -c) ]
+  } // fresnel
+
+  // see tex_falloff2.cpp
+  float FalloffFunc(// state
+		    in float3 state_direction,
+		    in float3 state_normal,
+		    in float3 state_point,
+		    in float state_ior,
+		    // paras
+		    in int paras_direction,
+		    in int paras_type,
+		    in bool paras_extrapolateOn,
+		    in float paras_nearDistance,
+		    in float paras_farDistance,
+		    in bool paras_mtlIOROverride,
+		    in float paras_ior,
+		    // extra
+		    in bool paras_extra_self,
+		    in float3 paras_extra_position) {
+    float d = 0.0;
+    float l = 0.0;
+    float3 N = float3(0.0, 0.0, 0.0);
+    float3 V = float3(0.0, 0.0, 0.0);
+    float4x4 m = get_transform("internal", "camera");
+    float3 v = float3(0.0, 0.0, 0.0);
+    float3 n = float3(0.0, 0.0, 0.0);
+    v = float3(m[0][0], m[0][1], m[0][2]);
+    n = normalize(v);
+    m[0][0] = n.x;
+    m[0][1] = n.y;
+    m[0][2] = n.z;
+    v = float3(m[1][0], m[1][1], m[1][2]);
+    n = normalize(v);
+    m[1][0] = n.x;
+    m[1][1] = n.y;
+    m[1][2] = n.z;
+    v = float3(m[2][0], m[2][1], m[2][2]);
+    n = normalize(v);
+    m[2][0] = n.x;
+    m[2][1] = n.y;
+    m[2][2] = n.z;
+    float3 P = float3(0.0, 0.0, 0.0);
+    float4x4 tm = float4x4(1.0, 0.0, 0.0, 0.0,
+			   0.0, 1.0, 0.0, 0.0,
+			   0.0, 0.0, 1.0, 0.0,
+			   0.0, 0.0, 0.0, 1.0);
+    float3 R = float3(0.0, 0.0, 0.0);
+    float VdotN = 0.0;
+    Color lightCol = Color(0.0, 0.0, 0.0, 0.0);
+    Color lightColor = Color(0.0, 0.0, 0.0, 0.0);
+    Light_iterator light;
+    float light_diffuseCoef = 0.0;
+    switch (paras_direction) {
+    case FALLDIR_VIEW:
+      V = transform_vector("internal", "camera", state_direction);
+      // WARNING: we are NOT using transform_normal here !!!
+      N = transform_vector("internal", "camera", state_normal);
+      d = -dot(V, N);
+      P = transform_point("internal", "camera", state_point);
+      l = length(P);
+      break;
+    case FALLDIR_XCAM:
+      V = float3(-1.0, 0.0, 0.0);
+      // WARNING: we are NOT using transform_normal here !!!
+      N = transform_vector("internal", "camera", state_normal);
+      d = -dot(N, V);
+      P = transform_point("internal", "camera", state_point);
+      l = P.x;
+      break;
+    case FALLDIR_YCAM:
+      V = float3(0.0, -1.0, 0.0);
+      // WARNING: we are NOT using transform_normal here !!!
+      N = transform_vector("internal", "camera", state_normal);
+      d = -dot(N, V);
+      P = transform_point("internal", "camera", state_point);
+      l = P.y;
+      break;
+    case FALLDIR_OBJ:
+      N = transform_vector("internal", "camera", state_normal);
+      V = float3(0.0, 0.0, 0.0);
+      if (paras_extra_self) {
+	V.x = -1.0;
+	V.y = -1.0;
+	V.z = -1.0;
+      }
+      else {
+	P = transform_point("world", "internal", paras_extra_position);
+	P = transform_point("internal", "camera", P);
+	float3 p = transform_point("internal", "camera", state_point);
+	V.x = P.x - p.x;
+	V.y = P.y - p.y;
+	V.z = P.z - p.z;
+      }
+      l = length(V);
+      V = V / l;
+      d = dot(N, V);
+      break;
+    case FALLDIR_XLOC:
+      V = float3(1.0, 0.0, 0.0);
+      V = transform_vector("camera", "internal", V);
+      V = transform_vector("internal", "object", V);
+      N = transform_vector("internal", "object", state_normal);
+      d = N.x;
+      // TODO? if (state->instance != miNULLTAG) - not in MetaSL
+      tm = get_transform("object", "world");
+      l = tm[0][0];
+      break;
+    case FALLDIR_YLOC:
+      V = float3(0.0, 1.0, 0.0);
+      V = transform_vector("camera", "internal", V);
+      V = transform_vector("internal", "object", V);
+      N = transform_vector("internal", "object", state_normal);
+      d = N.y;
+      // TODO? if (state->instance != miNULLTAG) - not in MetaSL
+      tm = get_transform("object", "world");
+      l = tm[1][0];
+      break;
+    case FALLDIR_ZLOC:
+      V = float3(0.0, 0.0, 1.0);
+      V = transform_vector("camera", "internal", V);
+      V = transform_vector("internal", "object", V);
+      N = transform_vector("internal", "object", state_normal);
+      d = N.z;
+      // TODO? if (state->instance != miNULLTAG) - not in MetaSL
+      tm = get_transform("object", "world");
+      l = tm[2][0];
+      break;
+    case FALLDIR_XWOR:
+      V = float3(1.0, 0.0, 0.0);
+      V = transform_vector("camera", "internal", V);
+      V = transform_vector("internal", "world", V);
+      N = transform_vector("internal", "world", state_normal);
+      d = N.x;
+      // TODO? if (state->instance != miNULLTAG) - not in MetaSL
+      tm = get_transform("camera", "world");
+      l = tm[0][0];
+      break;
+    case FALLDIR_YWOR:
+      V = float3(0.0, 1.0, 0.0);
+      V = transform_vector("camera", "internal", V);
+      V = transform_vector("internal", "world", V);
+      N = transform_vector("internal", "world", state_normal);
+      d = N.y;
+      // TODO? if (state->instance != miNULLTAG) - not in MetaSL
+      tm = get_transform("camera", "world");
+      l = tm[1][0];
+      break;
+    case FALLDIR_ZWOR:
+      V = float3(0.0, 0.0, 1.0);
+      V = transform_vector("camera", "internal", V);
+      V = transform_vector("internal", "world", V);
+      N = transform_vector("internal", "world", state_normal);
+      d = N.z;
+      // TODO? if (state->instance != miNULLTAG) - not in MetaSL
+      tm = get_transform("camera", "world");
+      l = tm[2][0];
+      break;
+    } // switch (paras_direction)
+    switch (paras_type) {
+    case FALLTYPE_TOWRDS_AWY:
+      d = 1.0 - 0.5 * (d + 1.0);
+      break;
+    case FALLTYPE_PERP_PARA:
+      d = 1.0 - abs(d);
+      break;
+    case FALLTYPE_FRESNEL:
+      N = transform_vector("internal", "camera", state_normal);
+      VdotN = dot(V, N);
+      R.x = -(2.0 * VdotN * N.x - V.x);
+      R.y = -(2.0 * VdotN * N.y - V.y);
+      R.z = -(2.0 * VdotN * N.z - V.z);
+      if (paras_mtlIOROverride) {
+	d = fresnel(R, V, paras_ior);
+      }
+      else {
+	// need material ior
+	d = fresnel(R, V, ((state_ior != 0) ? state_ior : 1.0));
+      }
+      // WORK
+      break;
+    case FALLTYPE_SHADOW_LIGHT:
+      // begin IllumAccumulate
+      // TODO: if (callType != miSHADER_DISPLACE) {...}
+      foreach (light) {
+	// TODO: if (light_affects & AFFECTS_DIFFUSE) {...}
+	// TODO: if (!light_diffuseCoefSet)
+	light_diffuseCoef = light.dot_nl;
+	lightCol = light.contribution/PI;
+	lightColor.r += light_diffuseCoef * lightCol.r;
+	lightColor.g += light_diffuseCoef * lightCol.g;
+	lightColor.b += light_diffuseCoef * lightCol.b;
+      } // foreach (light)
+      // end IllumAccumulate
+      d = (lightColor.r + lightColor.g + lightColor.b) / 3.0;
+      break;
+    case FALLTYPE_DIST_BLEND:
+      if (!paras_extrapolateOn && l <= paras_nearDistance) {
+	d = 1.0;
+      }
+      else {
+	if (!paras_extrapolateOn && l > paras_farDistance) {
+	  d = 0.0;
+	}
+	else {
+	  d = (((paras_farDistance - paras_nearDistance) != 0.0) ?
+	       ((paras_farDistance - l) / (paras_farDistance -
+					   paras_nearDistance)) :
+	       10000.0); /* tweener  l=D1->D2 : f=1->0 */
+	}
+      }
+      break;
+    } // switch (paras_type)
+    return d;
+  } // FalloffFunc
+
+  // see tex_falloff2.cpp
+  float maxFalloff_EvalColor(// state
+			     in float3 state_direction,
+			     in float3 state_normal,
+			     in float3 state_point,
+			     in float state_ior,
+			     // paras
+			     in int paras_direction,
+			     in int paras_type,
+			     in bool paras_extrapolateOn,
+			     in float paras_nearDistance,
+			     in float paras_farDistance,
+			     in bool paras_mtlIOROverride,
+			     in float paras_ior,
+			     // extra
+			     in bool paras_extra_self,
+			     in float3 paras_extra_position) {
+    float f = FalloffFunc(// state
+			  state_direction,
+			  state_normal,
+			  state_point,
+			  state_ior,
+			  // paras
+			  paras_direction,
+			  paras_type,
+			  paras_extrapolateOn,
+			  paras_nearDistance,
+			  paras_farDistance,
+			  paras_mtlIOROverride,
+			  paras_ior,
+			  // extra
+			  paras_extra_self,
+			  paras_extra_position);
+    return f;
+  } // maxFalloff_EvalColor
+
+  // see tex_falloff2.cpp
+  float maxFalloff_EvalPerturbNormal(// state
+				     in float3 state_direction,
+				     in float3 state_normal,
+				     in float3 state_point,
+				     in float state_ior,
+				     // paras
+				     in int paras_direction,
+				     in int paras_type,
+				     in bool paras_extrapolateOn,
+				     in float paras_nearDistance,
+				     in float paras_farDistance,
+				     in bool paras_mtlIOROverride,
+				     in float paras_ior,
+				     // extra
+				     in bool paras_extra_self,
+				     in float3 paras_extra_position) {
+    float f = FalloffFunc(// state
+			  state_direction,
+			  state_normal,
+			  state_point,
+			  state_ior,
+			  // paras
+			  paras_direction,
+			  paras_type,
+			  paras_extrapolateOn,
+			  paras_nearDistance,
+			  paras_farDistance,
+			  paras_mtlIOROverride,
+			  paras_ior,
+			  // extra
+			  paras_extra_self,
+			  paras_extra_position);
+    return f;
+  } // maxFalloff_EvalPerturbNormal
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+
+    int add_info_texture_eval_type = mi_MAX_EVAL_COLOR; // see max_proto.h
+    if (evalNormal) {
+      add_info_texture_eval_type = mi_MAX_EVAL_NORMAL;  // see max_proto.h
+    } // if (evalNormal)
+      // call other shader parameters
+    bool useNormal = true;
+    bool doNotUseNormal = false;
+
+    Color map1 = Color(0.0, 0.0, 0.0, 0.0);
+    Color Map1Normal = Color(0.0, 0.0, 0.0, 0.0);
+    bool useMap1 = false;
+
+    Color map2       = Color(0.0, 0.0, 0.0, 0.0);
+    Color Map2Normal = Color(0.0, 0.0, 0.0, 0.0);
+    bool useMap2 = false;
+
+    // pattern
+    float f = 0.0;
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    Color c1 = PARAS(Color1);
+    Color c2 = PARAS(Color2);
+    float3 b1 = float3(0.0, 0.0, 0.0);
+    float3 b2 = float3(0.0, 0.0, 0.0);
+    switch (add_info_texture_eval_type) {
+    case mi_MAX_EVAL_COLOR:
+    case mi_MAX_EVAL_MONO:
+      if (PARAS(Map1On) &&
+	  PARAS(Map1).call("input",  "evalNormal", doNotUseNormal,
+			   "output", "result",     map1)) {
+	useMap1 = true;
+      }
+      if (PARAS(Map2On) &&
+	  PARAS(Map2).call("input", "evalNormal", doNotUseNormal,
+			   "output", "result", map2)) {
+	useMap2 = true;
+      }
+      f = maxFalloff_EvalColor(// state
+			       direction,
+			       normal,
+			       position,
+			       refracted_ior,
+			       // paras
+			       PARAS(Direction),
+			       PARAS(Type),
+			       PARAS(ExtrapolateOn),
+			       PARAS(NearDistance),
+			       PARAS(FarDistance),
+			       PARAS(MtlIOROverride),
+			       PARAS(Ior),
+			       // extra
+			       XPARAS(Self),
+			       XPARAS(Position));
+      // we have to call CurveControl in the main() function !!!
+
+      if (XPARAS(CurveControl).call("input", "xtra_location", f,
+				    "output", "result", shader_return)) {
+	f = shader_return.r;
+      }
+      
+      // therefore I changed the return type of maxFalloff_EvalColor and
+      // mix the colors here !!!
+      // GetNearCol
+      if (useMap1 &&  PARAS(Map1Amount) != 0.0) {
+	float tmp = PARAS(Map1Amount) / 100.0;
+	c1 = map1;
+	c1 = PARAS(Color1) + tmp * (c1 - PARAS(Color1));
+      } // if (useMap1 && PARAS(Map1Amount) != 0.0)
+      // GetFarCol
+      if (useMap2 && PARAS(Map2Amount) != 0.0) {
+	float tmp = PARAS(Map2Amount) / 100.0;
+	c2 = map2;
+	c2 = PARAS(Color2) + tmp * (c2 - PARAS(Color2));
+      } // if (useMap2 && PARAS(Map2Amount) != 0.0)
+      result.r = c1.r + f * (c2.r - c1.r);
+      result.g = c1.g + f * (c2.g - c1.g);
+      result.b = c1.b + f * (c2.b - c1.b);
+      result.a = c1.a + f * (c2.a - c1.a);
+      // TODO: if (paras_ExtraParameters.output != miNULLTAG) {...}
+
+      XPARAS(Output).call("input",  "inputColor", result,
+			  "output", "result", result);
+
+      break;
+
+    case mi_MAX_EVAL_NORMAL:
+      if (PARAS(Map1On) &&
+	  PARAS(Map1).call("input",  "evalNormal", doNotUseNormal,
+			   "output", "result",     map1) &&
+	  PARAS(Map1).call("input",  "evalNormal", useNormal,
+			   "output", "result",     Map1Normal)) {
+	useMap1 = true;
+      }
+      if (PARAS(Map2On) &&
+	  PARAS(Map2).call("input", "evalNormal", doNotUseNormal,
+			   "output", "result", map2) &&
+	  PARAS(Map2).call("input", "evalNormal", useNormal,
+			   "output", "result", Map2Normal)) {
+	useMap2 = true;
+      }
+      f = maxFalloff_EvalPerturbNormal(// state
+				       direction,
+				       normal,
+				       position,
+				       refracted_ior,
+				       // paras
+				       PARAS(Direction),
+				       PARAS(Type),
+				       PARAS(ExtrapolateOn),
+				       PARAS(NearDistance),
+				       PARAS(FarDistance),
+				       PARAS(MtlIOROverride),
+				       PARAS(Ior),
+				       // extra
+				       XPARAS(Self),
+				       XPARAS(Position));
+      // we have to call CurveControl in the main() function !!!
+      if (XPARAS(CurveControl).call("input", "xtra_location", f,
+				    "output", "result", shader_return))
+	f = shader_return.r;
+
+      // therefore I changed the return type of
+      // maxFalloff_EvalPerturbNormal and mix the float3 values here
+      // !!!
+      // GetNearBmp
+      if (useMap1 && PARAS(Map1Amount) != 0.0) {
+	float tmp = PARAS(Map1Amount) / 100.0;
+	b1.x = Map1Normal.r;
+	b1.y = Map1Normal.g;
+	b1.z = Map1Normal.b;
+	b1.x *= tmp;
+	b1.y *= tmp;
+	b1.z *= tmp;
+      } // if (useMap1)
+      // GetFarBmp
+      if (useMap2 && PARAS(Map2Amount) != 0.0) {
+	float tmp = PARAS(Map2Amount) / 100.0;
+	b2.x = Map2Normal.r;
+	b2.y = Map2Normal.g;
+	b2.z = Map2Normal.b;
+	b2.x *= tmp;
+	b2.y *= tmp;
+	b2.z *= tmp;
+      } // if (useMap2)
+      result.x = b1.x + f * (b2.x - b1.x);
+      result.y = b1.y + f * (b2.y - b1.y);
+      result.z = b1.z + f * (b2.z - b1.z);
+
+      XPARAS(Output).call("input",  "inputColor", result,
+			  "input",  "evalNormal", true,
+			  "output", "result", result);
+
+      // TODO: if (paras_ExtraParameters.output != miNULLTAG) {...}
+      break;
+    } // switch (add_info_texture_eval_type)
+  } // main
+};

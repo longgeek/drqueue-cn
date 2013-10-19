@@ -1,0 +1,175 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Final Gathering</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node54.html">&laquo;&nbsp;prev</a></li>
+<li><a href="ao.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<a id="SECTION50"></a>
+<h2 id="fo:finalgather">Final Gathering</h2>
+
+<p><dfn id="INDEX98" id="finalgather">Final gathering</dfn> is a
+technique for estimating global illumination for a given point by
+either sampling a number of directions in the hemisphere over that
+point (such a sample set is called a <dfn>final gather point</dfn>),
+or by averaging a number of final gather points nearby since final
+gather points are too expensive to compute for every illuminated
+point.</p>
+<p>For diffuse scenes, final gathering often improves the quality
+of the global illumination solution. Without final gathering, the
+global illumination on a diffuse surface is computed by estimating
+the photon density (and energy) near that point. With final
+gathering, many new rays are sent out to sample the hemisphere
+above the point to determine the incident illumination. Some of
+these rays hit diffuse surfaces; the global illumination at those
+points is then computed by the material shaders at those sample
+point, using illumination from the globillum
+<a href="node48.html#INDEX96">photon map</a> if available and other
+material properties. Other rays hit specular surfaces and do not
+contribute to the final gather color (since that type of light
+transport is a secondary caustic). Tracing many rays (each with a
+<a href="node48.html#INDEX96">photon map</a> lookup) is very
+time-consuming so it is only done when necessary - in most cases,
+interpolation and extrapolation from previous nearby final
+gatherings is sufficient.</p>
+<p>Final gathering is useful in scenes where the indirect
+illumination various slowly, such as purely diffuse scenes. For
+such scenes, final gathering eliminates
+<a href="node48.html#INDEX96">photon map</a> artifacts such as low
+frequency noise and dark corners. Fewer photons are needed in the
+globillum <a href="node48.html#INDEX96">photon map</a> and lower
+globillum accuracy is sufficient since each final gather averages
+over many values of <a href="node80.html#INDEX259">indirect
+illumination</a>.
+<p>In film production work, final gathering is often used rather
+than photon mapping, except for caustics. Final gathering by
+default supports a single bounce only. Multiple-bounce effects tend
+to have far less impact on the final image than the first bounce;
+these are performed by photons by default and by final gathering
+only if the shaders adjusts the <a href="node76.html#INDEX196">trace
+depth</a>. Although physical correctness is lost, this is often
+"good enough" for film production, and final gathering is easier to
+control than photons emanating from distant light sources. However,
+for accurate indoor illumination simulations and other CAD-related
+applications, photon mapping is preferred.</p>
+<p>Final gathering is set <tt>off</tt> by default, but can be
+turned <tt>on</tt> in the options. To change the number of rays
+shot in each final gather (and optionally the maximum distance at
+which a final gathering result can be used for interpolation and
+the minimum distance at which it must be used), specify a
+<tt>finalgather accuracy</tt> setting in the options. For
+example,</p>
+<pre>
+finalgather accuracy 1000 1.5 0.25
+</pre>
+<p>increases the number of rays and reduces noise in scenes with
+complex illumination and geometry. The default number of rays is
+1000. The default maximum distance depends on the scene extent;
+decreasing it will reduce noise but increase render time. The
+default minimum distance is 10% of the maximum distance.</p>
+<p>
+mental ray 3.4 has changed the final gathering algorithm. It normally
+achieves better quality in less time with approximately one-half the
+number of rays. It is necessary to modify the accuracy settings though,
+for example changing 1000 to 500 in the preceding example, or rendering
+times will increase.</p>
+<p>
+<span class="new">3.8</span> Final gathering can be combined with importance-based techniques like
+<a href="importons.html#fo:importons">Importons</a> and
+<a href="irradparticles.html#fo:ip">Irradiance Particles</a>, to achieve
+better quality with less artifacts in shorter rendering time. In these
+cases, importons are shot before FG, which are then used to control the
+distribution of FG rays according to "importance".
+
+<h3 id="fo:fg_modes">Final Gathering Modes</h3>
+
+<p>mental ray offers the following final gathering modes:</p>
+<dl>
+<dt id="mi:fg_automatic">"automatic"</dt>
+<dd>This final gathering mode offers greatly simplified usage compared to
+version 3.4. It no longer requires radii to control final gathering sampling
+and interpolation. The parameters used to control this mode are:
+<ul>
+<li>number of finalgather rays (the first numeric argument of "finalgather
+accuracy"),
+<li>"finalgather points", the approximate number of points used for
+the interpolation.
+</ul>
+</dd>
+
+<dt id="mi:fg_multiframe">"multiframe"</dt>
+<dd>This mode is similar to the <a href="#mi:fg_automatic">"automatic"</a>
+mode, but has been specifically designed for rendering of camera
+fly-through animations. To avoid flickering, the rendering should be split
+into two parts. In the first part, the final gather map is rendered for the
+set of key frames or for a coarse sequence of frames. In the second part,
+the frozen final gathering mode is used for the rendering of the full
+animation. It is possible that some part of the scene will not contain
+sufficient number of finalgather points for some frames not belonging to
+the key frame set. To avoid picking up illumination from distant objects
+which is possible in the <a href="#mi:fg_automatic">automatic</a> mode,
+the finalgather accuracy max radius limits the maximal distance. If a
+sufficient number of final gather points is not found within that distance,
+the illumination will be faded to black smoothly.
+<dd>
+This mode is typically useful for animated scenes, but is not necessarily
+the best method for animations where flickering is not a problem. It may
+also be well suitable for still images without animation.
+The parameters used to control this mode are:
+<ul>
+<li>number of finalgather rays (the first numeric argument of "finalgather
+accuracy"),
+<li>min and max radius (secondary arguments of "finalgather accuracy"),
+<li>optional "view" flag of the finalgather accuracy,
+<li>"finalgather points", the approximate number of points used for
+the interpolation.
+</ul>
+</dd>
+<dt id="mi:fg_34">"3.4"</dt>
+<dd>This mode is provided for compatibility with mental ray version 3.4
+settings, which gives the experienced user additional control over the final
+gathering computations. It renders results similar to the older version of
+mental ray but benefits from improvements of the current implementation.
+It and makes use of all "finalgather accuracy" arguments (optional
+"view" flag, number of finalgather rays, max and min radii).</dd>
+
+<dt id="mi:fg_strict34">"strict 3.4"</dt>
+<dd>This mode is similar to the <a href="#mi:fg_34">"3.4"</a> mode, but
+achieves higher compatibility with the older mental ray version, allowing
+identical re-rendering of old scenes with the current mental ray. Some
+rendering improvements are disabled in that mode.</dd>
+
+<dt>"force" </dt>
+<dd>This mode disables the final gather point cache at all, and will always
+compute the accurate solution. This takes time but will yield superior results.
+</dl>
+
+<p>The mode can be selected by a
+<a href="node76.html#finalgathering">scene option</a> or on the
+mental ray <a href="node245.html#cli:fg">command line</a>.
+<br />The default is "3.4" compatibility mode.</p>
+
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node54.html">&laquo;&nbsp;prev</a></li>
+<li><a href="ao.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p>
+<a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

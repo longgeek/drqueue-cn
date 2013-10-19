@@ -1,0 +1,329 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Photon Shaders</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node121.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node123.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION120"></a>
+<h2>Photon Shaders</h2>
+<p>Photon shaders are used in the photon tracing phase to compute
+the <a href="node48.html#INDEX96">photon map</a>s that are used to
+simulate <a href="node41.html#INDEX86">caustics</a> and
+<a href="node48.html#INDEX95">global illumination</a>. Like shadow shaders,
+they are specified in materials, and can share the material
+shader's parameters, or its implementation. Photon shaders need to
+use the <i>mi_photon_reflection_*</i> and
+<i>mi_photon_transmission_*</i> functions to reflect or transmit
+photons. They can also, if desired, use the built-in functions to
+generate new photon directions: <i>mi_reflection_dir_*</i> and
+<i>mi_transmission_dir_*</i>.</p>
+<p>The following is a simple <b><a id="INDEX483"></a>photon shader example</b>
+that handles the
+interaction between a photon and a simple transmitting material.
+Notice how the incoming energy is modified <i>before</i> the new
+photon is transmitted; this is according with the fact that photons
+move in the <i>opposite</i> direction of the rays in the raytracing
+phase.</p>
+<pre>
+     struct ptparm {
+        miScalar trans; /* fraction of light transmitted */
+        miScalar ior;   /* index of refraction */
+     };
+
+     miBoolean ptrans_photon(
+        miColor         *result,
+        miState         *state,
+        struct ptparm   *paras)
+     {
+        miVector        dir;
+        miColor         new_energy;
+        miScalar        trans;
+
+        mi_refraction_dir(&amp;dir, state, 1.0,
+                          *mi_eval_scalar(&amp;paras-&gt;ior));
+
+        trans = *mi_eval_scalar(&amp;paras-&gt;trans);
+        new_energy.r = result-&gt;r * trans;
+        new_energy.g = result-&gt;g * trans;
+        new_energy.b = result-&gt;b * trans;
+
+        mi_photon_transmission_specular(&amp;new_energy, state, &amp;dir);
+        return(miTRUE);
+     }
+</pre>
+<p>This <a href="node142.html#INDEX580">photon shader</a> only
+handles transmission and it only generates one photon. It is
+recommended to produce only one photon in a photon shader. If the
+photon shader supports several types of reflection or transmission,
+it should use <i><a href="node148.html#INDEX729">mi_choose_scatter_type</a></i> to select
+only one of these per photon interaction such that only one photon
+is propagated. If several photons are generated in a photon shader,
+the number of photons in the <a href="node48.html#INDEX96">photon
+map</a> might grow very quickly without obtaining the necessary
+quality.</p>
+<p>Incoming photons should be stored on materials with a diffuse
+surface. This is done in the photon shader by calling <i><a href="node142.html#INDEX600">mi_store_photon</a></i>.</p>
+<p>To benefit from the <a href="node48.html#INDEX96">photon
+map</a>s (consisting of the photons stored by the photon shaders),
+the material shaders should include the illumination from the
+<a href="node48.html#INDEX96">photon map</a>s using <i><a href="node140.html#INDEX571">mi_compute_irradiance</a></i>. This is
+illustrated in the following example of a simple diffuse surface
+simulated using a material shader and its corresponding photon
+shader.</p>
+<p><i>pdif_photon</i> is a simple example of a photon shader that
+stores a photon; <i>pdif</i> is material shader that displays the
+<a href="node48.html#INDEX96">photon map</a>. Since the
+<i>pdif_photon</i> shader only computes caustics, it does not
+reflect the photon off the diffuse surface. The <i>pdif</i>
+material shader does not compute direct illumination from the light
+sources and only takes the caustic into account.</p>
+<pre>
+     struct pdparm {
+        miColor diffuse;
+     };
+
+     miBoolean pdif_photon(
+        miColor         *result,
+        miState         *state,
+        struct pdparm   *paras)
+     {
+        mi_store_photon(result, state);
+        return(miTRUE);
+     }
+
+     int pdif_version(void) {return(1);}
+
+     miBoolean pdif(
+        miColor         *result,
+        miState         *state,
+        struct pdparm   *paras)
+     {
+        miColor         irrad, *diffuse;
+
+        mi_compute_irradiance(&amp;irrad, state);
+        diffuse = mi_eval_color(&amp;paras-&gt;diffuse);
+
+        result-&gt;r = irrad.r * diffuse-&gt;r;
+        result-&gt;g = irrad.g * diffuse-&gt;g;
+        result-&gt;b = irrad.b * diffuse-&gt;b;
+        result-&gt;a = 1.0;
+        return(miTRUE);
+     }
+</pre>
+<p>In a scene consisting of a glass lens that creates a caustic on
+a ground plane, four shaders need to be attached:</p>
+<ul>
+<li>The material of the glass object references a refractive
+material shader (not described here).</li>
+<li>The material of the glass object references
+<i>ptrans_photon</i> as photon shader.</li>
+<li>The material of the ground plane object references <i>pdif</i>
+as material shader.</li>
+<li>The material of the ground plane object references
+<i>pdif_photon</i> as photon shader.</li>
+</ul>
+<p>Here is a more complete example of a photon shader. It simulates
+diffuse, glossy, and specular reflection, and can be used for both
+caustics (both caustic generation and receiving) and global
+illumination.</p>
+<pre>
+     miBoolean dgs_material_photon(
+         miColor              *energy,
+         miState              *state,
+         struct dgs_material  *paras)
+     {
+         struct               dgs_material m;
+         miColor              color;
+         miVector             dir;
+         miScalar             ior_in, ior_out;
+         miRay_type           type;
+         miBoolean            ok;
+
+         /*
+          * Make a local copy of the parameters (light
+          * sources are not used here)
+          */
+
+         m.diffuse  = *mi_eval_color (&amp;paras-&gt;diffuse);
+         m.glossy   = *mi_eval_color (&amp;paras-&gt;glossy);
+         m.specular = *mi_eval_color (&amp;paras-&gt;specular);
+         m.shiny    = *mi_eval_scalar(&amp;paras-&gt;shiny);
+         m.shiny_u  = *mi_eval_scalar(&amp;paras-&gt;shiny_u);
+         m.shiny_v  = *mi_eval_scalar(&amp;paras-&gt;shiny_v);
+         m.transp   = *mi_eval_scalar(&amp;paras-&gt;transp);
+         m.ior      = *mi_eval_scalar(&amp;paras-&gt;ior);
+
+         /*
+          * Insert photon in map if this is a diffuse
+          * surface.
+          */
+
+         if (m.diffuse.r &gt; miEPS ||
+             m.diffuse.g &gt; miEPS ||
+             m.diffuse.b &gt; miEPS)
+                 mi_store_photon(energy, state);
+
+         /*
+          * Choose scatter type for new photon
+          */
+
+         type = mi_choose_scatter_type(state, m.transp,
+                                       &amp;m.diffuse,
+                                       &amp;m.glossy,
+                                       &amp;m.specular);
+         /*
+          * Shoot new photon: Compute new photon color
+          * (compensating for Russian roulette) and shoot
+          * new photon in a direction determined by the
+          * scattering type
+          */
+
+         switch (type) {
+                        /* no reflection. or transmission */
+           case miPHOTON_ABSORB:
+                 return(miTRUE);
+
+                        /* specular reflection (mirror) */
+           case miPHOTON_REFLECT_SPECULAR:
+                 color.r = energy-&gt;r * m.specular.r;
+                 color.g = energy-&gt;g * m.specular.g;
+                 color.b = energy-&gt;b * m.specular.b;
+                 mi_reflection_dir_specular(&amp;dir, state);
+                 return mi_photon_reflection_specular(&amp;color, state, &amp;dir);
+
+                        /* glossy reflection (Ward model) */
+           case miPHOTON_REFLECT_GLOSSY:
+                 color.r = energy-&gt;r * m.glossy.r;
+                 color.g = energy-&gt;g * m.glossy.g;
+                 color.b = energy-&gt;b * m.glossy.b;
+                 if (m.shiny)
+                        /* isotropic glossy reflection */
+                         mi_reflection_dir_glossy(&amp;dir, state, m.shiny);
+                 else {     /* anisotropic glossy reflection */
+                         miVector u, v;
+                         miASSERT(m.shiny_u &gt; 0 &amp;&amp; m.shiny_v &gt; 0);
+                         anis_orientation(&amp;u, &amp;v, state);
+                         mi_reflection_dir_anisglossy(&amp;dir, state,
+                                            &amp;u, &amp;v, m.shiny_u, m.shiny_v);
+                 }
+                 return(mi_photon_reflection_glossy(&amp;color, state, &amp;dir));
+
+                        /* diffuse (Lamberts cosine law) */
+           case miPHOTON_REFLECT_DIFFUSE:
+                 color.r = energy-&gt;r * m.diffuse.r;
+                 color.g = energy-&gt;g * m.diffuse.g;
+                 color.b = energy-&gt;b * m.diffuse.b;
+                 mi_reflection_dir_diffuse(&amp;dir, state);
+                 return(mi_photon_reflection_diffuse(&amp;color, state, &amp;dir));
+
+                        /* specular transmission */
+           case miPHOTON_TRANSMIT_SPECULAR:
+                 color.r = energy-&gt;r * m.specular.r;
+                 color.g = energy-&gt;g * m.specular.g;
+                 color.b = energy-&gt;b * m.specular.b;
+                 refraction_index(state, &amp;m, &amp;ior_in, &amp;ior_out);
+                 miASSERT(ior_in &gt;= 1 &amp;&amp; ior_out &gt;= 1);
+
+                 return(ior_out == ior_in
+                     ? mi_photon_transparent(&amp;color, state)
+                     : mi_transmission_dir_specular(&amp;dir, state,ior_in,ior_out)
+                     ? mi_photon_transmission_specular(&amp;color, state, &amp;dir)
+                     : miFALSE);
+                 }
+
+                        /* glossy transmiss. (Ward model) */
+           case miPHOTON_TRANSMIT_GLOSSY:
+                 color.r = energy-&gt;r * m.glossy.r;
+                 color.g = energy-&gt;g * m.glossy.g;
+                 color.b = energy-&gt;b * m.glossy.b;
+                 refraction_index(state, &amp;m, &amp;ior_in, &amp;ior_out);
+                 miASSERT(ior_in &gt;= 1 &amp;&amp; ior_out &gt;= 1);
+
+                 if (m.shiny)             /* isotropic glossy transmission */
+                         ok = mi_transmission_dir_glossy(&amp;dir,
+                                     state, ior_in, ior_out, m.shiny);
+                 else {                   /* anisotropic glossy transmission */
+                         miVector u, v;
+                         miASSERT(m.shiny_u &gt; 0 &amp;&amp; m.shiny_v &gt; 0);
+                         anis_orientation(&amp;u, &amp;v, state);
+                         ok = mi_transmission_dir_anisglossy(&amp;dir, state,
+                                ior_in, ior_out, &amp;u, &amp;v, m.shiny_u, m.shiny_v);
+                 }
+                 if (ok)
+                 return(ok ? mi_photon_transmission_glossy(&amp;color, state, &amp;dir)
+                           : miFALSE);
+
+                        /* diffuse transm. (translucency) */
+           case miPHOTON_TRANSMIT_DIFFUSE:
+                 color.r = energy-&gt;r * m.diffuse.r;
+                 color.g = energy-&gt;g * m.diffuse.g;
+                 color.b = energy-&gt;b * m.diffuse.b;
+                 mi_transmission_dir_diffuse(&amp;dir, state);
+                 return(mi_photon_transmission_diffuse(&amp;color, state, &amp;dir));
+
+           default:     /* Unknown scatter type */
+                 mi_error("unknown scatter type in dgs photon shader");
+                 return(miFALSE);
+         }
+     }
+</pre>
+<p>The first thing that happens in <i><a href="node45.html#INDEX92">dgs_material_photon</a></i> is that the
+reflection parameters are evaluated with <i>mi_eval_*</i>. Then the
+photon is stored if the surface is diffuse and the photon is not
+directly from the light source. Second, the function <i><a href="node148.html#INDEX729">mi_choose_scatter_type</a></i> is called.
+Based on the transparency and reflection coefficients, it decides
+whether the photon should be absorbed, reflected diffusely,
+glossily, or specularly, or refracted diffusely, glossily, or
+specularly. If absorption is not chosen,
+<i>mi_choose_scatter_type</i> changes the reflection coefficients
+of the chosen reflection or refraction type to compensate for the
+fact that the photon "survived". This is a method known as
+"<b><a id="INDEX484"></a>Russian Roulette</b>".</p>
+<p>If the photon is absorbed, <i>dgs_material_photon</i> simply
+returns at this point. If the photon should be reflected or
+refracted, the energy of the new photon is computed, a new
+direction is computed (using the built-in functions to compute
+reflection and refraction directions), and the photon is emitted in
+that direction.</p>
+<p>Instead of using Russian Roulette to determine whether the
+photon should be absorbed or not, one could also emit a new photon
+for each type of reflection and refraction that has a non-zero
+reflection coefficient. Each emitted photon should have an energy
+that is the energy of the incoming photon multiplied by the
+reflection coefficient for that reflection (or refraction) type.
+However, this means that each photon emitted from the light source
+can cause <i>many</i> photons to be stored, some with very
+insignificant energy. The advantage of using Russian Roulette is
+that all the stored photons have comparable energies - no storage
+is wasted saving photons with low energy.</p>
+<p>Obviously scene creation is simplified if the material shaders
+are written such that they also function as photon shaders, and
+also as shadow shaders, because the same shader can be attached to
+the respective materials three times, as material shader, photon
+shader, and shadow shader. If no parameters are specified for the
+photon and shadow shader references, mental ray will pass the
+material shader arguments to them, so they need not be duplicated
+twice. A shader can find the context in which it is called by
+examining <code>state&rarr;type</code>.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node121.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node123.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

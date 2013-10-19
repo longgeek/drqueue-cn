@@ -1,0 +1,136 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Advanced Topics</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node33.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node35.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION32"></a>
+
+  <h2 id="misss:advanced">Advanced Topics</h2>
+
+  <h3 id="misss:manuallightmap">Passing Lightmaps Manually</h3>
+
+  <p>
+  The lightmaps are rendered in camera space, using adjacent pixels
+  to store front- and back-surface light data. Since these are
+  adjacent horizontally, this means that lightmaps should have a
+  width greater than their height. If 500x500 actual samples of
+  both the front and back surface are desired, the lightmap should
+  be 1000x500 pixels.
+
+  <p>The lightmap must be a 32-bit
+  texture. Floating point RGBA is strictly required because Z depth
+  information is stored in the alpha component. As a memory saving
+  option, the .exr format may be used, with a negligible
+  performance penalty and 50% memory savings.
+
+  <p>The <var>depthmap</var> is not user assignable and is only used for the
+  automatic mode. Its sole purpose is a small memory/performance optimization.
+  </p>
+
+  <h3 id="misss:autolightmap">Automatic Lightmap Generation</h3>
+
+  <p> For ease of use, passing an explicit lightmap in the proper format is
+  not required. However, since all participating shaders must know about the
+  lightmaps used, a special kind of Phenomenon can be used in which the first
+  two parameters of the Phenomenon must be the lightmap and depthmap pair.
+  Anywhere the individual shaders are used within the Phenomenon, they must
+  be linked to these first two parameters via <tt>interface</tt> connections,
+  instead of being set to a specific value.</p>
+
+  <p>Only if these conditions are met, automatic lightmap creation can be used.
+  If the conditions are not met, manual specification of the lightmap have to
+  be used.</p>
+
+  <p>Here is pseudocode for a Phenomenon that meets these criteria:</p>
+  <pre>
+    declare phenomenon 
+        material "my_sss_phenomenon" (
+            color texture     "lightmap",                  # must be first
+            color texture     "depthmap",                  # must be second
+            color             "diffuse_paint",
+            color             "my_special_color",
+            scalar            "lightmap_size",             # for example
+            ...
+        )
+        shader "myscattering" "misss_fast_shader" (
+            "lightmap"        = interface "lightmap",      # required
+            "depthmap"        = interface "depthmap",      # required
+            "diffuse_illum"   ...
+            ...
+        )
+        shader "mylightmapping"   "misss_lightmap_write" (
+            "lightmap"        = interface "lightmap",      # required
+            "depthmap"        = interface "depthmap",      # required
+            "lightmap_group"  "A",
+            "lightmap_size"   = interface "lightmap_size", # for example
+            ...
+        )
+        ...
+    end declare
+</pre>
+
+  <p>Failing to follow these guidelines may cause the Phenomenon to
+  behave unpredictably and may possibly abort rendering when the
+  shaders attempt to communicate over a parameter slot that is
+  missing or used for another purpose.</p>
+
+  <h3 id="misss:network">Network Rendering</h3>
+
+  <p> When mental ray renders lightmaps, it tries to distribute the workload to
+  several hosts on a per-object basis. However, the
+  <i>misss_fast_</i> shaders encourage (due to memory efficiency)
+  and in some cases require (for separate objects to scatter into
+  each other) several objects to share the same lightmap.</p>
+
+  <p>Multiple hosts writing into the same lightmap is not possible
+  in mental ray, and will create a collision, where incomplete or incorrect
+  lightmap data can be created.</p>
+
+  <p>The following are some ways around the problem:</p>
+
+  <ul style="list-style-type:disc">
+    <li>Make sure every object has its own lightmap (scatter group).
+    This will increase memory requirements.
+
+    <li>Redesign the model to use fewer objects so there is one
+    object per lightmap.
+
+    <li>Render in passes by using the component shaders (instead of
+    the supplied Phenomena) to render the lightmaps to file on a
+    single host. In a second pass referencing these pre-created
+    lightmaps render the final image on an arbitrary number of
+    hosts.
+
+    <li>Render on a single host.
+  </ul>
+
+  <p>Note, when using displacement, objects might be split automatically
+  into many sub-objects that are tessellated and lightmapped individually.
+  This causes one object to become many, making the first two workarounds
+  listed impossible.
+
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node33.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node35.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

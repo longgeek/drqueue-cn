@@ -1,0 +1,567 @@
+#*****************************************************************************
+# Copyright 1986, 2013 NVIDIA Corporation. All rights reserved.
+#*****************************************************************************
+# Created:	09.23.02
+# Module:	lume
+# Purpose:	.mi declarations for built-in lume tools baseshaders
+#
+# 18.04.2007    Modified/Updated "Glare" shader
+#
+#****************************************************************************/
+
+
+# guard against multiple inclusions
+$ifndef "lume_mi_included"
+set "lume_mi_included" "true"
+
+
+min version "3.7.53"
+max version "3.11.99"
+
+#--------------------------------------------------------------------------------------------------
+#
+# Lume Tools shader declarations
+#
+#--------------------------------------------------------------------------------------------------
+
+
+#--------------------------------------------------------------------------------------------------
+# Output shaders
+#--------------------------------------------------------------------------------------------------
+declare shader
+	"Adjustments" (
+		scalar "Brightness",
+		scalar "Contrast",
+		scalar "Hue",
+		scalar "Saturation",
+		scalar "Lightness",
+		integer "Input High",
+		integer "Input Low",
+		scalar "Input Shift",
+		integer "Output High",
+		integer "Output Low",
+		boolean	"Specific Region",
+		array integer "Region Labels"
+	)
+	version 2
+	apply output
+	parallel
+end declare
+
+declare shader
+	"BumpCapture" (
+		boolean "Store in RGB Channels",
+		boolean	"Store in Alpha Channel"
+	)
+	version 2
+	apply output
+end declare
+
+declare shader
+	"Glare" (
+		integer "Quality",
+		scalar  "Spread",
+		boolean "Overlay Only",
+		boolean "Verbose",
+		boolean "Streaks",
+		color texture "Streak Image",
+		scalar  "Scale",
+		scalar  "Contrast",
+		boolean	"Specific Objects",
+		array integer "Object Labels",
+		string  "Specific Objects Buffer",
+		integer "Calculation Resolution"
+	)
+	version 4
+	apply output
+end declare
+
+#--------------------------------------------------------------------------------------------------
+# Lens shaders
+#--------------------------------------------------------------------------------------------------
+declare shader
+	"Distortion" (
+		boolean "Pin Cushion",
+		boolean	"Barrel",
+		scalar	"Amount"
+	)
+	version 2
+	apply lens
+	scanline off
+	trace on
+end declare
+
+declare shader
+	"Night" (
+		scalar	"Multiplier",
+		scalar	"Cutoff"
+	)
+	version 2
+	apply lens
+end declare
+
+declare shader
+	"WrapAround" ()
+	version 2
+	apply lens
+	scanline off
+	trace on
+end declare
+
+#--------------------------------------------------------------------------------------------------
+# Volume shaders
+#--------------------------------------------------------------------------------------------------
+declare shader
+	"Beam" (
+		color "Color",
+		scalar "Density",
+		array light "Lights"
+	)
+	version 2
+	apply volume
+end declare
+
+declare shader
+	"Mist" (
+		scalar	"Transparency",
+		boolean "Affect Alpha",
+		boolean "Use Solid Color",
+		color	"Solid Color",
+		boolean "Use Map",
+		color texture "Bitmap",
+		boolean "Layering",
+		vector	"Base Plane Normal",
+		scalar	"Base Plane Distance",
+		scalar	"Transition Height",
+		boolean "Linear Falloff",
+		scalar	"Linear Start",
+		scalar	"Linear End",
+		boolean "Realistic Falloff",
+		scalar	"Density",
+		boolean "Custom Falloff",
+		scalar	"Custom Start",
+		scalar	"Custom Middle",
+		scalar	"Custom End"
+	)
+	version 2
+	apply volume
+end declare
+
+declare shader
+	"Submerge" (
+		color	"Water Color",
+		scalar	"Vertical Gradation",
+		scalar	"Density",
+		vector	"Base Plane Normal",
+		scalar  "Base Plane Distance"
+	)
+	version 2
+	apply volume
+end declare
+
+#--------------------------------------------------------------------------------------------------
+# Texture shaders
+#--------------------------------------------------------------------------------------------------
+declare shader 
+	"Landscape" (
+		color	"Base Color",
+		color	"Overlay Color",
+		scalar	"Blur",
+		boolean	"Relative to Object",
+		boolean	"Relative to World",
+		vector	"Base Plane Normal",
+		scalar  "Base Plane Distance",
+		struct "Texture" {
+			boolean "Active",
+			scalar	"Influence",
+			boolean	"Use Alpha Component",
+			boolean	"Use Red Component",
+			boolean	"Use Green Component",
+			boolean	"Use Blue Component"
+		},
+		struct "Height" {
+			boolean "Active",
+			scalar	"Influence",
+			boolean	"Upside Down",
+			scalar	"Height",
+			scalar	"Spread"
+		},
+		struct "Slope" {
+			boolean "Active",
+			scalar	"Influence",
+			boolean	"Upside Down",
+			scalar	"Angle"
+		},
+		struct "Positional Noise" {
+			boolean "Active",
+			scalar	"Influence",
+			scalar	"Scale",
+			scalar	"Roughness",
+			scalar	"Coverage",
+			scalar	"Vertical Scale"
+		},
+		struct "Shape Based Noise" {
+			boolean "Active",
+			scalar	"Influence",
+			scalar	"Scale",
+			scalar	"Roughness",
+			scalar	"Coverage",
+			scalar	"Vertical Scale"
+		},
+		struct "Stain" {
+			boolean "Active",
+			scalar	"Influence",
+			scalar	"Thickness"
+		}
+	)
+	version 2
+	apply texture
+end declare
+			
+#--------------------------------------------------------------------------------------------------
+# Shadow shaders
+#--------------------------------------------------------------------------------------------------
+declare shader 
+	"EdgeShadow" (
+		color   "Surface Material",
+		scalar	"Transparency",
+		scalar	"Amount",
+		scalar	"Blur",
+		boolean	"Relative to Object",
+		boolean	"Relative to World",
+		boolean	"Noise Influence",
+		scalar	"Noise Influence Amount",
+		scalar	"Roughness",
+		scalar	"Scale",
+		boolean	"Diffuse Influence",
+		scalar	"Diffuse Influence Amount",
+		color   "Diffuse"
+	)
+	version 2
+	apply shadow
+end declare
+
+declare shader
+	"WaterSurfaceShadow" (
+		color   "Surface Material",
+		color   "Transparency",
+		scalar  "Index Of Refraction",
+		boolean "Look In",
+		boolean "Look Out",
+		boolean "Stain"
+	)
+	version 2
+	apply shadow
+end declare
+
+#--------------------------------------------------------------------------------------------------
+# Material shaders
+#--------------------------------------------------------------------------------------------------
+declare shader
+	"Facade" (
+		color texture "Bitmap",
+		scalar "Size",
+		vector "Up Direction",
+		boolean "Cylindrical Rotation",
+		boolean	"Spherical Rotation"
+	)
+	version 2
+	apply material, shadow
+end declare
+
+declare shader
+	"Glass" (
+		color  "Surface Material",
+		color  "Diffuse",
+		scalar "Reflectivity",
+		scalar "Transparency",
+		scalar "Index Of Refraction",
+		struct "Transparency Tint" {
+			boolean "On",
+			boolean "Use Diffuse",
+			boolean "Use Color",
+			color   "Color"
+		},
+		struct "Blur Transparency" {
+			boolean "On",
+			scalar  "Spread",
+			integer "Samples"
+		},
+		struct "Blur Reflection" {
+			boolean "On",
+			scalar  "Spread",
+			integer "Samples"
+		},
+		struct "Edge Transparency" {
+			boolean "None",
+			boolean "Fresnel Effect",
+			boolean "Custom Effect",
+			scalar  "Middle",
+			scalar  "Edge",
+			scalar  "Shift"
+		},
+		struct "Edge Shadow" {
+			boolean "None",
+			boolean "Custom Effect",
+			scalar  "Middle",
+			scalar  "Edge",
+			scalar  "Shift"
+		},
+		struct "Translucency" {
+			boolean "None",
+			boolean "Fixed",
+			scalar  "Value",
+			boolean "Scale",
+			scalar  "Scale Amount"
+		},
+		array light "Lights"
+	)
+	version 2
+	apply material, shadow
+end declare
+
+declare shader
+	"Glow" (
+		color   "Glow",
+		scalar  "Brightness",
+		boolean "Mix Diffuse",
+		color   "Surface Material",
+		color   "Diffuse",
+		scalar  "Transparency"
+	)
+	version 2
+	apply material, shadow, photon
+end declare
+
+declare shader 
+	"Edge" (
+		color   "Surface Material",
+		scalar	"Transparency",
+		scalar	"Amount",
+		scalar	"Blur",
+		boolean	"Relative to Object",
+		boolean	"Relative to World",
+		boolean	"Noise Influence",
+		scalar	"Relative Noise Influence",
+		scalar	"Roughness",
+		scalar	"Scale",
+		boolean	"Diffuse Influence",
+		scalar	"Relative Color Influence",
+		color   "Diffuse"
+	)
+	version 2
+	apply material, photon
+end declare
+
+declare shader 
+	"Metal" (
+		color   "Surface Material",
+		scalar	"Reflectivity",
+		color	"Reflect Color",
+		boolean "Blur Reflection",
+		scalar  "Spread",
+		integer "Samples"
+	)
+	version 2
+	apply material, shadow, photon
+end declare
+
+declare shader
+	"Stain" ()
+	version 2
+	apply material
+end declare
+
+declare shader
+	"Translucency" (
+		color "Surface Material",
+		color "Diffuse",
+		scalar "Transparency",
+		array light "Lights"
+	)
+	version 2
+	apply material, shadow
+end declare
+
+declare shader
+	"WaterSurface" (
+		color   "Surface Material",
+		color   "Transparency",
+		scalar  "Index Of Refraction",
+		boolean "Looking Into Water",
+		boolean "Looking Out of Water",
+		boolean "Stain Underneath"
+	)
+	version 2
+	apply material
+end declare
+
+declare shader
+	"Wet" (
+		color "Dry",
+		color "Wet"
+	)
+	version 2
+	apply material
+end declare
+
+#--------------------------------------------------------------------------------------------------
+# Light shaders
+#--------------------------------------------------------------------------------------------------
+declare shader
+	scalar "Illumination" (
+		scalar	"Brightness",
+		boolean "No Falloff",
+		boolean "Real Falloff",
+		boolean "Linear Falloff",
+		scalar  "Linear Start",
+		scalar	"Linear End",
+		boolean "Custom Falloff",
+		scalar  "Custom Start",
+		scalar  "Custom Mid",
+		scalar	"Custom End"
+	)
+	version 3
+	apply light
+end declare
+
+
+#--------------------------------------------------------------------------------------------------
+# Bump and Displacement shaders
+#--------------------------------------------------------------------------------------------------
+declare shader
+	"Ocean" (
+		scalar	"Largest",
+		scalar	"Smallest",
+		integer	"Quantity",
+		scalar	"Steepness",
+		boolean "Relative to World",
+		boolean "Relative to Object",
+		vector	"Base Plane Normal",
+		scalar  "Base Plane Distance",
+		boolean "Directed",
+		scalar	"Direction Angle",
+		scalar	"Wave Speed",
+		boolean "Loop Animation",
+		integer	"Loop Frames",
+		boolean "Flats",
+		scalar	"Size",
+		scalar	"Variation",
+		boolean "Bump"
+	)
+    apply displace
+	version 2
+end declare
+
+#--------------------------------------------------------------------------------------------------
+# Phenomena
+#--------------------------------------------------------------------------------------------------
+declare phenomenon
+	color "Lume Glow Material (Lambertian)" (
+		color		"Ambience",
+		color		"Ambient",
+		color 		"Diffuse",
+		color 		"Glow",
+		boolean		"Mix Diffuse",
+		scalar		"Transparency",
+		scalar		"Brightness",
+		integer		"Light Selection Mode",				# light selection mode 0..2
+		array light	"Lights"
+	)
+
+	shader "Lambert"
+		"mib_illum_lambert" (
+			"ambience"		= interface "Ambience",
+			"ambient"		= interface "Ambient",
+			"diffuse"		= interface "Diffuse",
+			"mode"			= interface "Light Selection Mode",
+			"lights"		= interface "Lights"
+		)
+	shader "Glow"
+		"Glow" (
+			"Surface Material" = "Lambert",
+			"Diffuse"		= interface "Diffuse",
+			"Glow"			= interface "Glow",
+			"Mix Diffuse"	= interface "Mix Diffuse",
+			"Transparency"	= interface "Transparency",
+			"Brightness"	= interface "Brightness"
+		)
+
+	root = "Glow"
+	apply material
+end declare
+
+
+declare phenomenon
+	color "Lume Metal Material (Phong)" (
+		color		"Ambience",
+		color		"Ambient",
+		color 		"Diffuse",
+		color 		"Specular",
+		color 		"Reflect",
+		scalar		"Exponent",
+		scalar		"Reflectivity",
+		boolean		"Blur Reflection",
+		scalar		"Spread",
+		integer		"Samples",
+		integer		"Light Selection Mode",				# light selection mode 0..2
+		array light	"Lights"
+	)
+
+	shader "Phong"
+		"mib_illum_phong" (
+			"ambience"		= interface "Ambience",
+			"ambient"		= interface "Ambient",
+			"diffuse"		= interface "Diffuse",
+			"specular"		= interface "Specular",
+			"exponent"		= interface "Exponent",
+			"mode"			= interface "Light Selection Mode",
+			"lights"		= interface "Lights"
+		)
+	shader "Metal"
+		"Metal" (
+			"Surface Material" = "Phong",
+			"Reflectivity"	= interface "Reflectivity",
+			"Reflect Color"	= interface "Reflect",
+			"Blur Reflection"		= interface "Blur Reflection",
+			"Spread"		= interface "Spread",
+			"Samples"		= interface "Samples"
+		)
+
+	root = "Metal"
+	apply material
+end declare
+
+declare phenomenon
+	color "Lume Translucent Material (Lambertian)" (
+		color		"Ambience",
+		color		"Ambient",
+		color 		"Diffuse",
+		scalar		"Transparency",
+		array light "Back Lights",
+		integer		"Light Selection Mode",				# light selection mode 0..2
+		array light	"Lights"
+	)
+
+	shader "Lambert"
+		"mib_illum_lambert" (
+			"ambience"		= interface "Ambience",
+			"ambient"		= interface "Ambient",
+			"diffuse"		= interface "Diffuse",
+			"mode"			= interface "Light Selection Mode",
+			"lights"		= interface "Lights"
+		)
+	shader "Translucency"
+		"Translucency" (
+			"Surface Material" = "Lambert",
+			"Diffuse"		= interface "Diffuse",
+			"Transparency"	= interface "Transparency",
+			"Lights"		= interface "Back Lights"
+		)
+
+	root = "Translucency"
+	apply material
+end declare
+
+
+$endif # if not "lume_mi_included"

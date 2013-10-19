@@ -1,0 +1,109 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Geometry Shader API</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node180.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node182.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION179"></a>
+<h2>Geometry Shader API</h2>
+<p><a id="geoshaderapi"></a> This section
+describes the high-level API which provides an easy-to-use scene
+definition layer for geometry shaders. The high-level API functions
+are mainly concerned with atomic creation of high-level elements
+like those found in the .mi language. Many such elements,
+especially geometric objects, are built from multiple scene
+database entries with numerous internal references. This internal
+complexity is hidden by the API module and expanded automatically.
+However, simple elements such as cameras are created by API calls
+but filling in certain parameters requires struct member
+assignment. To simplify the API call interface, API calls that
+would do nothing but assign a variable to another have been
+omitted.</p>
+<p>Conceptually, database storage is performed on four layers:</p>
+<ol>
+<li>At the lowest level, MEM is handling plain unstructured memory
+allocation on a single host, identified by pointers.</li>
+<li>The DB layer on top of MEM provides network-wide global shared
+memory identified by tags, and maintains type information.</li>
+<li>The SCENE layer adds structure to DB memory blocks, and
+provides operations on typed data including default values and
+graph structuring operations.</li>
+<li>At the top level, the API module provides a high-level
+object-based scene creation and rendering service based on symbolic
+names.</li>
+</ol>
+<p>This section should be read in conjunction with the section
+<a href="node196.html#scenedatastruct">scenedatastruct</a>, which
+describes simple data structures that the API module requires
+assignments to. For example, API contains functions to begin and
+finish the creation of a camera, but provides no functions for
+setting each of the many fields of these structures. Instead, they
+are simply written to the fields directly.</p>
+<p>The API module has been patterned after the .mi language, to
+the point where the .mi <i>yacc</i> grammar consists almost
+entirely of one or very few API calls or variable assignments for
+every statement and clause. To understand the correct order of API
+calls, refer to the .mi language description (page
+<a href="node60.html#scenechapter">scenechapter</a>). The complete
+<i>yacc</i> grammar that parses the .mi language, including C
+code, is reprinted in appendix B. For information on the syntax of
+a <i>yacc</i> grammar description, refer to the Unix manual page
+for <i>yacc</i>.</p>
+<p>Note that all character string arguments passed to any of the
+API functions below are expected to have been allocated with
+<i><a href="node155.html#INDEX794">mi_mem_allocate</a></i> or, more
+commonly, <i><a href="node155.html#INDEX797">mi_mem_strdup</a></i>.
+All API functions release such strings using <i>mi_mem_release</i>,
+so the same allocated string may not be passed to API twice.
+Similarly, <tt>miDlist</tt>s created with
+<i>mi_api_dlist_create</i> and passed as an argument to an API call
+are freed by API, and should not be passed to API twice. The reason
+for this is that API keeps most strings for extended periods of
+time, so allocation is almost always necessary <i>somewhere</i>,
+and putting the burden on the API caller avoids double allocations
+in cases where the caller works with allocated strings anyway (for
+example in <i>yacc</i> parsers). In the few cases where API could
+work with non-allocated strings (
+<i><a href="node195.html#INDEX1059">mi_api_debug</a></i>, for example)
+allocation is required anyway to avoid requiring allocation for
+some strings but not others, which would invite hard-to-find bugs.
+Functions whose name does not begin with <i>mi_api_</i> generally
+do not require string allocation.</p>
+<p>Most API functions return a boolean, a pointer, or a tag. If the
+function succeeds, <tt>miTRUE</tt>, a non-null pointer, or a
+non-null tag is returned, respectively. If an error occurs,
+<tt>miFALSE</tt> or a null pointer or tag is returned; this means
+that errors can be caught with C's "<tt>!</tt>" operator. The tags
+returned by the calls whose names end in <tt>_end</tt> are merely a
+convenience; they are not generally useful to standard name-based
+translators.</p>
+<p>Note that many of these functions come in <i>begin</i> and
+<i>end</i> pairs, such as
+<i><a href="node189.html#INDEX942">mi_api_object_begin</a></i> and
+<i><a href="node189.html#INDEX949">mi_api_object_end</a></i>. These calls may
+not be interleaved in any way; there may only be one open
+unfinished <i>begin</i> ... <i>end</i> bracket at any time in a
+single thread. (Multiple threads can have such an open bracket
+each.)</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node180.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node182.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

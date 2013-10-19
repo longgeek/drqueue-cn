@@ -1,0 +1,216 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Environments</title>
+  <meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+  <meta name="author" content="mental images GmbH" />
+  <link href="mailto:office@mentalimages.com" rev="made" />
+  <link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+  <link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+
+<body>
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node4.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node6.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+  <a id="SECTION3"></a>
+
+  <h2>Environments</h2>
+
+  <p>These shaders return colors from color textures that are
+  mapped to finite or infinite distances. They are useful for
+  adding background or foreground plates to the rendered scene.
+  Environments must be used for environment shaders, overlays must
+  be used for lens shaders, and textures must be used for texture
+  or material shaders on a plane or other object in the scene.</p>
+
+  <h3>Spherical Environment</h3>
+
+  <p>Given a texture shader, assume that the texture it produces is
+  wrapped on an infinite sphere around the scene, evaluate the
+  texture, and return the color. This is useful for environment
+  shaders.</p>
+
+  <a id="INDEX8"></a>
+<h5 class="anchor" id="mi_shader__mib_lookup_spherical">mib_lookup_spherical</h5>
+  <pre>
+    color "mib_lookup_spherical" (
+        vector          "dir",
+        scalar          "rotate",
+        color texture   "tex")
+</pre>
+
+<dl>
+  <dt>dir<dd> is the direction to sample. If connected to
+  <i>mib_texture_vector</i>, a select value of -10 is useful. It
+  should be given in world space. If this is the null vector, the
+  ray direction is used, after conversion to world space.</p>
+
+  <dt>tex<dd> is a texture or shader to look up at the computed
+  coordinate.</p>
+</dl>
+
+  <h3>Cube Environment</h3>
+
+  <p>Same as the spherical environment shader, but accept either
+  one or six textures mapped on an infinite cube. This is useful
+  for environment shaders.</p>
+
+  <a id="INDEX9"></a>
+<h5 class="anchor" id="mi_shader__mib_lookup_cube1">mib_lookup_cube1</h5>
+  <pre>
+    color "mib_lookup_cube1" (
+        vector          "point",
+        vector          "dir",
+        vector          "size",
+        color texture   "tex")
+</pre>
+<h5 class="anchor" id="mi_shader__mib_lookup_cube6">mib_lookup_cube6</h5>
+<pre>
+    color "mib_lookup_cube6" (
+        vector          "point",
+        vector          "dir",
+        vector          "size",
+        color texture   "tex_mx",
+        color texture   "tex_px",
+        color texture   "tex_my",
+        color texture   "tex_py",
+        color texture   "tex_mz",
+        color texture   "tex_pz")
+</pre>
+
+<dl>
+  <dt>point<dd> is the view location.</p>
+
+  <dt>dir<dd> is the direction to sample. If connected to
+  <i>mib_texture_vector</i>, a select value of -10 is useful. If
+  this is the null vector, the ray direction is used.</p>
+
+  <dt>size<dd> is the size of the box.</p>
+
+  <dt>tex<dd> is a texture to look up at the computed coordinate.
+  One texture contains all six sides; it has six times the number
+  of scanlines required for a single face, with the sub-textures
+  stacked in the following order, top-down: -x, +x, -y, +y, -z,
+  +z.</p>
+
+  <dt>tex_**<dd> are six textures for the left (mx), right (px),
+  bottom (my), top (py), yon (mz), and hither (pz) faces. "p" and
+  "m" stand for plus and minus.</p>
+</dl>
+
+  <h3>Cylindrical Environment</h3>
+
+  <p>This environment shader is most useful for projecting regular
+  patterns onto geometry, for example for surface quality control.
+  The cylinder does not have caps, so it might happen that rays do
+  not hit the cylinder. The cylinder is defined by a transformation
+  which transforms from world to canonical cylinder space, and two
+  scalars that allow cutting off part of the cylinder. If both
+  <i>begin</i> and <i>end</i> are zero, a full cylinder is
+  selected.</p>
+
+  <a id="INDEX10"></a>
+<h5 class="anchor" id="mi_shader__mib_lookup_cylindrical">mib_lookup_cylindrical</h5>
+  <pre>
+    color "mib_lookup_cylindrical" (
+        transform       "xform",
+        scalar          "begin",
+        scalar          "end",
+        color texture   "tex" )
+</pre>
+
+<dl>
+  <dt>xform<dd> transforms from world to canonical cylinder
+  space. The canonical cylinder has the Z axis as the major axis,
+  extends from <i>-1</i> to <i>+1</i> on the Z axis and has a
+  radius of 1. If tex is a procedural texture, texture coordinates
+  are calculated for the intersection point: <i>Z = -1</i> is
+  mapped to <i>v = 0</i> and <i>Z = +1</i> is mapped to <i>v =
+  1</i>. Texture coordinates for u are calculated counterclockwise
+  around the Z axis where <i>+X</i> is mapped to <i>u = 0</i> and
+  <i>-X</i> to 0.5.</p>
+
+  <dt>begin<dd> specifies the starting angle in radians where the
+  cylinder begins. The angle specification is based on <i>+X =
+  0</i> radians.</p>
+
+  <dt>end<dd> specifies the ending angle where the cylinder body
+  should end.</p>
+
+  <dt>tex<dd> is a texture or shader to look up at the computed
+  coordinate.</p>
+</dl>
+
+  <h3>Backgrounds</h3>
+
+  <p>Given a texture shader, place it in the background of the
+  scene such that the edges of the texture line up with the edges
+  of the rendered image. Factors can be applied to stretch and pan
+  the texture, to allow for lenses that bend rays away from the
+  center. The purpose of this environment is inserting background
+  plates. Returns a color. This is useful in three different types
+  of shaders:</p>
+
+  <ul>
+    <li>Environment shaders can place the background plate at
+    infinity.</li>
+
+    <li>Lens shaders can place the plate in front of the entire
+    scene by evaluating the background shader first and casting an
+    eye ray only if the returned alpha is less than 1, and blending
+    the results.</li>
+
+    <li>Material shaders on an XY axis aligned plane in the scene
+    insert the plate at the Z coordinate of the plane if they first
+    evaluate the background shader, then cast a transparency ray
+    only if the returned alpha is less than 1, and blend the
+    results.</li>
+  </ul>
+
+  <a id="INDEX11"></a>
+<h5 class="anchor" id="mi_shader__mib_lookup_background">mib_lookup_background</h5>
+  <pre>
+    color "mib_lookup_background" (
+        vector          "zoom",
+        vector          "pan",
+        boolean         "torus_u",
+        boolean         "torus_v",
+        color texture   "tex")
+</pre>
+
+<dl>
+  <dt>zoom<dd> enlarges the texture image by a factor given by
+  the X and Y components of the zoom vector. The Z component is not
+  used. If a component is 0, it defaults to 1.</p>
+
+  <dt>pan<dd> shifts the texture sideways by a fraction of the
+  rendered image size. The Z component is unused. For example, if
+  the X component is 0.1, the left 10% of the rendered image
+  background remain blank.</p>
+
+  <dt>torus_*<dd>if true, repeats the texture endlessly in the
+  respective direction. If false, transparent black is returned
+  outside the tex image.</p>
+
+  <dt>tex<dd> is a texture or shader to look up at the computed
+  coordinate. It will be sampled in the range <i>[0 ... 1)</i>
+  only.</p>
+</dl>
+
+  <p><br />
+<ul class="nav"><li><a href="index.html">home</a></li>
+<li><a href="node4.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node6.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+
+<p>
+<a href="copyright.html">Copyright</a> (&copy;) 1986-2009 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

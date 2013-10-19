@@ -1,0 +1,59 @@
+/******************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *
+ * Library: mi cross product shader set
+ *
+ * File contents: mi cross product shader for generating coordinates.
+ *****************************************************************************/
+#include <mcp_lib.msl>
+
+shader Mcp_coordinate_source{
+  input:
+    Coordinate_system coordinate_system = UVW_COORDINATES
+    {
+        description( "The shader can source coordinates in uvw, world, object or camera space." );
+    };
+    const int texture_space = 0
+    {
+        disabled_if(coordinate_system != UVW_COORDINATES);
+        description( "Texture space index for uvw coordinates" );
+    };
+  output:
+    Mcp_coordinate result;
+
+    void main()
+    {
+        switch (coordinate_system) {
+            case OBJECT_COORDINATES:
+            result.position =transform_point("internal","object",position);
+            result.du=transform_vector("internal","object",texture_du[0]);
+            result.dv=transform_vector("internal","object",texture_dv[0]);
+            result.ddx=transform_vector("internal","object",ddx(position));
+            result.ddy=transform_vector("internal","object",ddy(position));
+            break;
+            case WORLD_COORDINATES:
+            result.position =transform_point("internal","world",position);
+            result.du=transform_vector("internal","world",texture_du[0]);
+            result.dv=transform_vector("internal","world",texture_dv[0]);
+            result.ddx=transform_vector("internal","world",ddx(position));
+            result.ddy=transform_vector("internal","world",ddy(position));
+            break;
+            case UVW_COORDINATES:
+            default:
+            //error("i want world coordinates!!");
+            result.position = texture_coordinate[texture_space].xyz;
+            result.ddx=ddx(texture_coordinate[texture_space]).xyz;
+            result.ddy=ddy(texture_coordinate[texture_space]).xyz;
+              //todo: this is actually not correct for  other tangent_spaces then 0. need to transform this from tangent_space[texture_space] into tangent_space[0] 
+              //but maybe i can express it in terms of ddx/ddy
+            result.du=float3(1,0,0);
+            result.dv=float3(0,1,0);
+            break;
+        }
+    }
+}
+{
+    display_name( "Generate coordinate (core shader library)" );
+};
+

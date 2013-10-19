@@ -1,0 +1,48 @@
+#*****************************************************************************
+# Copyright 2006 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	Eric Bourque, Luc Vo Van
+# Purpose:	
+#
+# History:
+#
+#****************************************************************************/
+
+min version "3.4"
+
+declare phenomenon									
+    material "adsk_Mtl_Decal_V2"
+    (
+        struct "m"
+        {		
+                material "surface_material",
+                array material "decal",
+                array vector "bottom_left",
+                array vector "bottom_right",
+                array vector "top_left",
+                array vector "top_right"
+                
+        }
+    )
+    apply material
+    version 1	
+    
+    shader "adsk_decal1" "adsk_decal"
+    (
+        "surface_material" = interface "m.surface_material",
+        "decal" = interface "m.decal",
+        "bottom_left" = interface "m.bottom_left",
+        "bottom_right" = interface "m.bottom_right",
+        "top_left" = interface "m.top_left",
+        "top_right" = interface "m.top_right"
+    )
+    
+    material "mat" opaque
+                = "adsk_decal1"
+            photon = "adsk_decal1"
+            shadow = "adsk_decal1"
+    end material			  
+    root material "mat"
+
+end declare

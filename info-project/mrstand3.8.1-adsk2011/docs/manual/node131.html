@@ -1,0 +1,103 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Contour Store Function</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node130.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node132.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION129"></a>
+<h3>Contour Store Function</h3>
+<p>The <b><a id="INDEX498"></a>contour store
+shader</b> stores various information needed for contour
+computations. The input is the regular <i>state</i> after ray
+intersection and the call of material shader, and the color
+resulting from the material shader call. The output is the
+information the user deems necessary to compute contours, and the
+size of this information. There is only one global contour store
+shader for a scene. The contour store function's job is to collect
+all information that the contour contrast function needs to decide
+where to put contours and that the contour shaders need to draw a
+contour.</p>
+<p>To give an example of a contour store shader, assume you have
+decided that to compute contours, you need the ray intersection
+point, the normal vector, the material, and the color at that point
+as computed by the material shader (which means the color is not
+just the color of the material with the given illumination; it also
+includes reflected and refracted light). Then define the data type
+<tt>MyInfo</tt> as</p>
+<pre>
+     typedef struct MyInfo {
+        miVector   point;      /* ray intersection point */
+        miVector   normal;     /* ray intersection normal */
+        miTag      material;   /* material tag */
+        miColor    color;      /* from material shader */
+     } MyInfo;
+</pre>
+<p>Here is a contour store shader that fills in these fields of
+<tt>MyInfo</tt>:</p>
+<pre>
+     miBoolean my_contour_store_function(
+        void     *info_void,
+        int      *info_size,
+        miState  *state,
+        miColor  *color)
+     {
+        struct MyInfo *info = (MyInfo *)info_void;
+
+        info-&gt;point    = state-&gt;point;
+        info-&gt;normal   = state-&gt;normal;
+        info-&gt;material = state-&gt;material;
+        info-&gt;color    = *color;
+
+        *info_size = sizeof(MyInfo);    /* for mental ray 2.x */
+
+        return(miTRUE);
+     }
+</pre>
+<p>mental ray will store a <tt>MyInfo</tt> data structure with
+every sample until the contour contrast shader is called. The
+number of stored <tt>MyInfo</tt> data structures grows up to the
+number of samples taken in an image task (typically a
+32&thinsp;&times;&thinsp;32 pixel block).</p>
+<p>Note that mental ray 3.x requires that the contour store shader
+is declared correctly:</p>
+<pre>
+     declare shader
+         struct {
+              vector    "point",
+              vector    "normal",
+              material  "material",
+              color     "color"
+         } "out_depthfade" (scalar "near", scalar "far")
+         version 1
+     end declare
+</pre>
+<p>mental ray 2.x ignored the return type and required that the
+shader assigns the size of the returned data in * <i>info_size</i>.
+This will no longer work with mental ray 3.x, which must know the
+return size in advance, and therefore <b>requires a correct
+declaration</b>. mental ray 3.x will print an error message if the
+return type declaration is missing and allocates space for one
+color, but in this case this would not be enough, so the shader
+would crash!</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node130.html">&laquo;&nbsp;prev</a></li>
+<li><a href="node132.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

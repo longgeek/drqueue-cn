@@ -1,0 +1,285 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+#import <mi_msl_shared.msl>
+
+shader Illumination_architectural {
+input:
+
+    Color diffuse_refl = Color(0.5, 0.5, 0.5, 1.0)
+    {
+        display_name("Diffuse Reflection Color");
+        description("The basic material color.");
+        hard_range(Color(0.0, 0.0, 0.0, 1.0), Color(1.0, 1.0, 1.0, 1.0));
+    };
+    float diffuse_refl_scalar = 1.0
+    {
+    display_name("Diffuse Reflection Intensity");
+    description("Modulates the diffuse color.");
+    hard_range(0.0, 1.0);
+    };
+    float diffuse_dev = 0.0
+    {
+    display_name("Diffuse Roughness");
+    description("The microfacet deviation.");
+    hard_range(0.0, 1.0);
+    };
+    Color specular_refl = Color(0.3, 0.3, 0.3, 1.0)
+    {
+    display_name("Specular Reflection Color");
+    description("The color of reflections and highlights.");
+    hard_range(Color(0.0, 0.0, 0.0, 1.0), Color(1.0, 1.0, 1.0, 1.0));
+    };
+    float specular_refl_scalar = 0.6
+    {
+    display_name("Specular Reflection Intensity");
+    description("Modulates the specular color.");
+    hard_range(0.0, 1.0);
+    };
+    float refl_gloss = 1.0
+    {
+    display_name("Reflection Sharpness");
+    description("0: almost diffuse, 1: perfect mirror");
+    hard_range(0.0, 1.0);
+    };
+    bool metal_material = false
+    {
+    display_name("Metal Material");
+    description("Tints the reflection color with the base color.");
+    };
+    Color specular_trans = Color(0.3, 0.3, 0.3, 1.0)
+    {
+    display_name("Refraction Color");
+    description("Color of refractions");
+    hard_range(Color(0.0, 0.0, 0.0, 1.0), Color(1.0, 1.0, 1.0, 1.0));
+    };
+    float specular_trans_scalar = 0.0
+    {
+    display_name("Refraction Intensity");
+    description("Modulates the refracted color.");
+    hard_range(0.0, 1.0);
+    };
+    float trans_gloss = 1.0
+    {
+    display_name("Refraction Glossiness");
+    description("0: frosted glass etc., 1: perfect refraction");
+    hard_range(0.0, 1.0);
+    };
+    Color diffuse_trans = Color(0.0, 0.0, 0.0, 1.0)
+    {
+    display_name("Translucent Color");
+    description("The diffusely transmitted color.");
+    hard_range(Color(0.0, 0.0, 0.0, 1.0), Color(1.0, 1.0, 1.0, 1.0));
+    };
+    float diffuse_trans_scalar = 0.0
+    {
+    display_name("Translucency Intensity");
+    description("Modulates the translucent color.");
+    hard_range(0.0, 1.0);
+    };
+    float anisotropy = 0.0
+    {
+    display_name("Anisotropy");
+    description("0: isotropic, 1: stretched highlight");
+    hard_range(0.0, 1.0);
+    };
+    float anisotropy_rotation = 0.0
+    {
+    display_name("Anisotropy Rotation");
+    description("The orientation of anisotropic highlights. "
+    "The range from 0 to 1 will be mapped to 0 to 360 degrees.");
+    soft_range(0.0, 1.0);
+    };
+    // temporary
+    float material_ior = 1.4
+    {
+    display_name("Material Index of Refraction.");
+    soft_range(0.0, 1.0);
+    };
+
+
+output:
+    Color result;
+    Color transparency;
+
+    float fresnel(
+    in float ior_d,
+    in float ior_s,
+    in float cos_h)
+    {
+    if (ior_d == 0 || ior_d == ior_s) return 0;
+    float eta = ior_s/ior_d;
+    float rn = (eta - 1.f) / (eta + 1.f);
+    rn *= rn;
+    float c = 1.f - cos_h;
+    float c2 = c * c;
+    return rn + (1.f - rn) * (c * c2 * c2);
+    } // fresnel
+
+    float fresnel_reflection(
+    in float my_dot_nd,
+    in float ior_d,
+    in float ior_s)
+    {
+
+    if (my_dot_nd<= -1.f) return 1.f;
+    float cos_d_h = sqrt((my_dot_nd + 1.f) * .5f);
+    return fresnel(ior_d,ior_s,cos_d_h);
+    } // fresnel_reflection
+
+
+    float microfacet(
+    in float3  dir,
+    in float3  h,
+    in float3  sampled,
+    in float   cos_d_g,
+    in float   a_cos_d_s,
+    in float   cos_d_h,
+    in float   p_h,
+    in float3  n)
+    {
+    void(dir); void(h); void(cos_d_g);
+    float a_cos_s_s = abs(dot(sampled,n));
+    return abs(p_h / (4.f * cos_d_h * max(a_cos_d_s,a_cos_s_s)));
+    } // microfacet
+
+    float
+    lobe(
+    in float3   di,
+    in float3   dr,
+    in float3   n,
+    in float3   ng,
+    in float3   t,
+    in float3   b,
+    in float    gloss,
+    in float    anis)
+    {
+    float3 h;
+    float  hn, ht, hb, e;
+    float  result = 0;
+
+    float exp_b,exp_t,iso;
+
+    if (gloss < 1) {
+        exp_b = exp_t = ( 1 / pow(3000000,-gloss) ) - 1;
+        iso = 1 - anis;
+        if (iso < 1) {
+            exp_b *= iso;
+            exp_t /= iso;
+        }
+
+        h = dr - di;
+        h = normalize(h);
+
+        hn = dot(h, n);
+        ht = dot(h, t);
+        hb = dot(h, b);
+
+        e = (exp_t*ht*ht + exp_b*hb*hb) / (1-hn*hn);
+        result = microfacet(di,h,dr,dot(di,ng),abs(dot(di,n)),dot(di,h),
+                            sqrt((exp_t+1)*(exp_b+1))*(0.5/PI)*pow(abs(hn),e),n);
+    } else {
+        result = 0;
+    }
+    return result;
+    } // lobe
+
+    void main()
+    {
+	void(diffuse_dev); void(trans_gloss); void(diffuse_trans);
+	void(diffuse_trans_scalar); void(anisotropy_rotation);
+
+        transparency = specular_trans * specular_trans_scalar;
+
+        // Skip result output for shadow rays
+        if (ray_type == "shadow")
+        {
+            result = Color(0.);
+            return;
+        }
+
+        result = Color(0,0,0,1);
+        Color r_diff = Color(0,0,0,0);
+        Color r_spec = Color(0,0,0,0);
+
+        Color diffuse_color = diffuse_refl;
+        Color specular_color = specular_refl;
+
+        float refl_weight = specular_refl_scalar;
+        float diff_weight = diffuse_refl_scalar;
+
+        // Metals take on the reflective diffuse color
+        if(metal_material)
+        {
+            Color luminance_weight = Color(0.212671, 0.715160, 0.072169, 0.0);
+            diff_weight *= (1.0 - ((specular_color.r * luminance_weight.r +
+                                    specular_color.g * luminance_weight.g +
+                                    specular_color.b * luminance_weight.b) *
+                                    refl_weight));
+            diff_weight = max(diff_weight, 0.0);
+            specular_color.rgb *= diffuse_color.rgb;
+        }
+
+        // Enumerate lights
+        Light_iterator light;
+        foreach (light)
+        {
+            float cos = saturate(light.dot_nl);
+            if (cos > 0.0) {
+                float f;
+                if (backside)
+                    f = fresnel_reflection(-dot(direction,light.direction), material_ior, 1.0);
+                else
+                    f = fresnel_reflection(-dot(direction,light.direction), 1.0, material_ior);
+                r_diff += cos * light.contribution * diffuse_color * (diff_weight / PI) *
+                                (1-f * dot((refl_weight*specular_color).rgb,float3(1/3.)));
+                float spec = lobe(
+                    direction,
+                    light.direction,
+                    normal,
+                    geometry_normal,
+                    texture_tangent_u[0],
+                    texture_tangent_v[0],
+                    refl_gloss,
+                    anisotropy);
+                r_spec += cos * spec * light.contribution * specular_color * refl_weight * f;
+            }
+        }
+
+        // Irradiance term
+        Irradiance_options irradiance_options = Irradiance_options();
+        irradiance_options.set_importance(diff_weight);
+        r_diff += diffuse_color * (diff_weight / PI) * irradiance(irradiance_options);
+
+        // Reflection
+        Color r_refl = Color(0,0,0,0);
+        if(any(specular_color.rgb * refl_weight))
+        {
+            float3 refl_dir = reflect(direction, normal);
+            Ray ray(position, refl_dir);
+            Trace_options trace_opt;
+            Color trace_result=Color(0);
+            Ray ray_dx(float3(0), float3(0));
+            Ray ray_dy(float3(0), float3(0));
+            trace(ray, ray_dx, ray_dy, trace_opt, "result", trace_result);
+            float f;
+            if (backside)
+                f = fresnel_reflection(-dot(direction,refl_dir), material_ior, 1.0);
+            else
+                f = fresnel_reflection(-dot(direction,refl_dir), 1.0, material_ior);
+
+            r_refl = trace_result * refl_weight * specular_color * f;
+        }
+
+        // Result
+        result = r_diff + r_spec + r_refl;
+        result.a = 1.0;
+    }
+}
+{
+    description("An illumination model that supports a number of reflection and"
+            "refraction components.");
+}
+;
+

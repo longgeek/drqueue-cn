@@ -1,0 +1,211 @@
+/******************************************************************************
+ * Copyright 1986-2010 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+// see max_texutil.h
+#define fmax(x,y)	(((x)>(y))?(x):(y))
+
+shader hlsl_Checker_EvalNormal {
+ input:
+  float Soften = 0.0 {
+    display_name("Soften");
+    hard_range(0.0, 1.0);
+  };
+  Color Color1 = Color(0.0, 0.803278, 1.0, 1.0) {
+    display_name("Color1");
+  };
+  Color Color2 = Color(0.163155, 0.475410, 0.070142, 1.0) {
+    display_name("Color2");
+  };
+  Shader Map1;
+  Shader Map2;
+  const bool Map1Enabled = false {
+    display_name("Map1 Enabled");
+  };
+  const bool Map2Enabled = false {
+    display_name("Map2 Enabled");
+  };
+  Shader Coords;
+  // TODO: int GBufferID
+
+ output:
+  Color result;
+
+  // see max_support.cpp
+  float maxIntensity(in Color c) {
+    float f = (c.r + c.g + c.b) * 0.333333333;
+    return f;
+  } // maxIntensity
+
+  // see max_support.cpp
+  int mi_max_floor(float x) {
+    return ((int) x - (((x) < 0.0) ? 1 : 0));
+  }
+
+  float maxSintegral(in float x) {
+    float f = (float) mi_max_floor(x);
+    float xf_5 = (x - f) - 0.5;
+    return (float)(f * 0.5 + fmax(0.0, xf_5));
+  } // maxSintegral
+
+  Color maxChecker_evalfunction(in float u,
+				in float v,
+				in float du,
+				in float dv,
+				// shader parameters
+				in bool useMap1, in Color Map1,
+				in bool useMap2, in Color Map2) {
+    Color local_result = Color(0.0, 0.0, 0.0, 0.0);
+    float local_du = Soften + du;
+    float local_dv = Soften + dv;
+    float hdu = local_du * 0.5;
+    float hdv = local_dv * 0.5;
+    if ((local_du != 0.0) && (local_dv != 0.0)) {
+      float s = (maxSintegral(u + hdu) - maxSintegral(u - hdu)) / local_du;
+      float t = (maxSintegral(v + hdv) - maxSintegral(v - hdv)) / local_dv;
+      float a = s * t + (1.0 - s) * (1.0 - t);
+      if (a <= 0.0005) {
+	if (useMap1) {
+	  local_result = Map1;
+	}
+	else {
+	  local_result = Color1;
+	}
+      } // if (a <= 0.0005)
+      else {
+	if (a >= 0.9995) {
+	  if (useMap2) {
+	    local_result = Map2;
+	  }
+	  else {
+	    local_result = Color2;
+	  }
+	} // if (a >= 0.9995)
+	else  {
+	  Color c0,c1;
+	  float o_m_a;
+	  if (useMap1) {
+	    c0 = Map1;
+	  }
+	  else {
+	    c0 = Color1;
+	  }
+	  if (useMap2) {
+	    c1 = Map2;
+	  }
+	  else {
+	    c1 = Color2;
+	  }
+	  o_m_a = 1.0 - a;
+	  local_result.r = a * c1.r + o_m_a * c0.r;
+	  local_result.g = a * c1.g + o_m_a * c0.g;
+	  local_result.b = a * c1.b + o_m_a * c0.b;
+	  local_result.a = a * c1.a + o_m_a * c0.a;
+	} // else [ if (a >= 0.9995) ]
+      } // else [ if (a <= 0.0005) ]
+    } // if ((local_du != 0.0) && (local_dv != 0.0))
+    else {
+      u = u - (float) mi_max_floor(u);
+      v = v - (float) mi_max_floor(v);
+      // was if ((u > 0.5) ^ (v > 0.5)) but there is no XOR operator in MetaSL
+      if (((u > 0.5) || (v > 0.5)) && !((u > 0.5) && (v > 0.5))) {
+	if (useMap1) {
+	  local_result = Map1;
+	}
+	else {
+	  local_result = Color1;
+	}
+      } // if (((u > 0.5) || (v > 0.5)) && !((u > 0.5) && (v > 0.5)))
+      else {
+	if (useMap2) {
+	  local_result = Map2;
+	}
+	else {
+	  local_result = Color2;
+	}
+      } // else [ if (((u > 0.5) || (v > 0.5)) && !((u > 0.5) && (v > 0.5))) ]
+    } // else [ if ((local_du != 0.0) && (local_dv != 0.0)) ]
+    return local_result;
+  } // maxChecker_evalfunction
+
+  void main() {
+    result = Color(0.0, 0.0, 0.0, 0.0);
+    // uv-coords
+    float u = texture_coordinate[0].x;
+    float v = texture_coordinate[0].y;
+    float2 duv = float2(0.0, 0.0);
+    float2 d = float2(0.0, 0.0);
+    float3 dPdu = float3(0.0, 0.0, 0.0);
+    float3 dPdv = float3(0.0, 0.0, 0.0);
+    // try to call hlsl_base_UVGenerator
+    Color shader_return = Color(0.0, 0.0, 0.0, 0.0);
+    if (Coords.call("output", "result", shader_return,
+		    "output", "duv", duv,
+		    "output", "d", d,
+		    "output", "dPdu", dPdu,
+		    "output", "dPdv", dPdv)) {
+      u = shader_return.r;
+      v = shader_return.g;
+    }
+    else {
+      duv = (abs(ddx(texture_coordinate[0]).xyz) +
+	     abs(ddy(texture_coordinate[0]).xyz)).xy;
+      if(duv.x == 0.0 && duv.y == 0.0) {
+	duv = float2(0.002, 0.002);
+      }
+      d = duv;
+      dPdu = texture_tangent [0];
+      dPdv = texture_binormal[0];
+    }
+    // call other shader parameters
+    Color Map1Color = Color(0.0, 0.0, 0.0, 0.0);
+    bool useMap1 = false;
+    if (Map1Enabled && 
+	Map1.call("output", "result", Map1Color)) {
+      useMap1 = true;
+    }
+    Color Map2Color = Color(0.0, 0.0, 0.0, 0.0);
+    bool useMap2 = false;
+    if (Map2Enabled && 
+	Map2.call("output", "result", Map2Color)) {
+      useMap2 = true;
+    }
+    // use uv-coords
+    float3 res = float3(0.0, 0.0, 0.0);
+    float3 dM = float3(0.0, 0.0, 0.0);
+    float du = duv.x;
+    float dv = duv.y;
+    Color sample_result = Color(0.0, 0.0, 0.0, 0.0);
+    sample_result = maxChecker_evalfunction(u, v, du, dv,
+					    // shader parameters
+					    useMap1, Map1Color,
+					    useMap2, Map2Color);
+    float m0 = maxIntensity(sample_result);
+    float m1 = 0.0;
+    float m2 = 0.0;
+    if ((du != 0.0) && (d.x != 0.0)) {
+      sample_result = maxChecker_evalfunction(u + d.x, v, du, dv,
+					      // shader parameters
+					      useMap1, Map1Color,
+					      useMap2, Map2Color);
+      m1 = maxIntensity(sample_result);
+      dM.x = -(m1 - m0) / du;
+    } // if ((du != 0.0) && (du != 0.0))
+    else dM.x = 0.0;
+    if ((dv != 0.0) && (d.y != 0.0)) {
+      sample_result = maxChecker_evalfunction(u, v + d.y, du, dv,
+					      // shader parameters
+					      useMap1, Map1Color,
+					      useMap2, Map2Color);
+      m2 = maxIntensity(sample_result);
+      dM.y = -(m2 - m0) / dv;
+    } // if ((dv != 0.0) && (dv != 0.0))
+    else dM.y = 0.0;
+    dM.z = 0.0;
+    result.r = dM.x * dPdu.x + dM.y * dPdv.x;
+    result.g = dM.x * dPdu.y + dM.y * dPdv.y;
+    result.b = dM.x * dPdu.z + dM.y * dPdv.z;
+    result.a = 1.0;
+  } // main
+};

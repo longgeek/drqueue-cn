@@ -1,0 +1,56 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+#include <mi_msl_shared.msl>
+
+shader Curve_stairs {
+
+  input:
+	float t = texture_coordinate[0].x {
+		display_name("Input");
+	};
+	int steps = 8 {
+		display_name("Steps");
+		description("Number of steps in the stair function");
+	};
+	float a = 0.95 {
+		display_name("Transition Shape");
+		hard_range(0.0, 1.0);
+		description("To avoid aliasing artifacts a soft transition can be "
+		"applied between steps. This parameter controls the shape of the "
+		"transition" );
+	};
+	float offset = 0.0 {
+		display_name("Offset");
+		description("Offsets the step function");
+	};
+	
+  output:
+	float result;
+	Color graph_out;
+		
+	void main() {
+		float step_size = 1.0/(steps);	
+		float tt = (t + step_size/2 - offset*step_size);
+		float step_num;
+
+		float step_pos = modf(tt * steps, step_num);
+		
+		//avoid discontinuity around 0 so that the function extends below 0
+		if(step_pos < 0) {
+			step_pos =  1 + step_pos;
+			result = (step_num - 1) * step_size + 
+					mi_gain_func(step_pos, a) * step_size - step_size/2;
+		}
+		else {
+			result = step_num * step_size + 
+					mi_gain_func(step_pos, a) * step_size - step_size/2;
+		}
+		graph_out = texture_coordinate[0].y < result ? MI_LOWER_COL : MI_UPPER_COL;
+	}
+};
+
+// declaration for curve shader pack backwards compatibility
+shader curve_stairs : Curve_stairs { };

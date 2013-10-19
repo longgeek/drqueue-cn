@@ -1,0 +1,140 @@
+/*****************************************************************************
+* Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+native shader MI_mill_scene_element
+{
+  input:
+    Shader material_definition;
+	Shader light_definition;
+	Shader geometry;
+	float3 position = 0 { soft_range(0.0f, 5.0f); };
+	float3 rotation = 0 { soft_range(0.0f, 360.0f); };
+	float  scale    = 1 { soft_range(0.0f, 2.0f); };
+	
+  output:
+    Color result;
+	
+	void main()
+	{
+		result = 1;
+	}
+} { display_name("Scene Element"); };
+
+shader MI_mill_geom_base
+{
+  output:
+    Color result;
+	
+	void main()
+	{
+		result = 1;
+	}
+};
+
+native shader MI_mill_sphere_geometry : MI_mill_geom_base
+{
+  input:
+    float radius = 0.5f;  
+} { display_name("Sphere"); };
+
+native shader MI_mill_torus_geometry : MI_mill_geom_base
+{
+  input:
+    float radius1 = 0.2f;  
+	float radius2 = 0.4f;  
+} { display_name("Torus"); };
+
+native shader MI_mill_plane_geometry : MI_mill_geom_base
+{
+  input:
+    float width = 2.0f;  
+	float depth = 2.0f;
+} { display_name("Plane"); };
+
+native shader MI_mill_box_geometry : MI_mill_geom_base
+{
+  input:
+    float width  = 1.0f;  
+	float depth  = 1.0f;  
+	float height = 1.0f;  
+} { display_name("Box"); };
+
+native shader MI_mill_terrain_geometry : MI_mill_geom_base
+{
+  input:
+    float size   = 2.0f; 
+	float height = 1.0f;  
+} { display_name("Terrain"); };
+
+native shader MI_mill_custom_geometry : MI_mill_geom_base
+{
+  input:
+    String file_name = "mi_sphere.obj"
+    { 
+    file_picker("Choose geometry", "Geometry files (*.obj)|*.obj|All files (*.*)|*.*");
+    };
+} { display_name("Object"); };
+
+native shader MI_mill_light_point_geometry : MI_mill_geom_base
+{
+  input:
+    bool  on     = true;    
+	float size   = 0.2f;
+} { display_name("Point Light"); };
+
+native shader MI_mill_light_spot_geometry : MI_mill_geom_base
+{
+  input:
+    bool  on     = true;
+	float size   = 0.2f;
+    float spread = 45.0f { soft_range(0.0f, 90.0f); };
+} { display_name("Spot Light"); };
+
+native shader MI_mill_light_direct_geometry : MI_mill_geom_base
+{
+  input:
+    bool  on     = true;
+	float size   = 0.2f;    
+} { display_name("Directional Light"); };
+
+native shader MI_mill_light_area_geometry : MI_mill_geom_base
+{
+  input:  
+    bool on = true;
+	
+	enum Area_type { Rectangle=0, Disc=1, Sphere=2, Cylinder=3 };
+	Area_type area_type = Rectangle;
+		
+	enum Area_light_quality { Low=0, Medium=1, High=2 };
+	Area_light_quality area_quality = Medium;
+	
+	float width  = 0.5;
+	float height = 0.5;
+	float radius = 0.2;
+} { display_name("Area Light"); };
+
+native shader MI_mill_render_scene
+{
+  input:    
+	float3 camera_position=float3(1,-1,1);
+	float3 camera_target=0;
+	float  camera_roll=0                 { soft_range(-180.0, 180.0); };
+	float  camera_fov=60                 { hard_range(   0.0, 180.0); };
+	Shader environment;
+	Shader volume;
+	float3 camera_up(0,0,1)              { in_group("Advanced"); };
+	float  camera_near_clip=0.1f         { in_group("Advanced"); };
+	float  camera_far_clip=100.0f        { in_group("Advanced"); };
+	Color  ambient(0)                    { in_group("Advanced"); };
+	String techniques                    { in_group("Advanced"); technique_selection(); };
+	
+  output:
+    texture2D result;
+	
+	void main()
+	{
+		result = texture2D();
+	}	
+} { display_name("Camera"); };

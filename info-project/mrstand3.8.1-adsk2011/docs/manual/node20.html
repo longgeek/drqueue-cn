@@ -1,0 +1,117 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Memory-Mapped Textures</title>
+<meta http-equiv="content-type" content="text/html; charset=us-ascii" />
+<meta name="author" content="mental images GmbH" />
+<link href="mailto:office@mentalimages.com" rev="made" />
+<link href="mental.css" rel="stylesheet" media="all" type="text/css" />
+<link rel="shortcut icon" href="mentalicon.ico" type="image/x-icon" />
+</head>
+<body>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node19.html">&laquo;&nbsp;prev</a></li>
+<li><a href="texcache.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<a id="SECTION18"></a>
+<h2>Memory-Mapped Textures</h2>
+<p>mental ray supports memory mapping of textures on all platforms.
+<a id="INDEX37"></a>Memory mapping means that the
+texture is not loaded into memory, but is accessed directly from
+disk when a shader accesses it. There is no special keyword or
+option for this; if a texture is memory-mappable, mental ray will
+recognize it and memory-map it automatically. Only the map image
+file format (standard extension <tt>.map</tt>, but mappable files
+are recognized even if they have an extension other than
+<tt>.map</tt>) can be mapped. See the
+<a href="node38.html#SECTION36">Output Shaders</a> chapter for a list of
+supported file formats.</p>
+<p>Note that memory mapping is based on the concept that the image
+data on disk does not require decoding or data type conversion, but
+is available in the exact format that mental ray uses internally
+during rendering. Normally mental ray will attempt to auto-convert
+image data formats; for example if a color image file is given in a
+<tt>scalar texture</tt> construct, mental ray will silently convert
+the color pixels to scalars as the texture is read in. Most data
+types are auto-converted to most other data types. This does not
+work for memory-mapped textures because it would defeat the
+purpose. This also applies to the byte order.</p>
+<p>Memory mapping requires several preparation steps:</p>
+<ul>
+<li>The texture must be converted to <tt>.map</tt> format using a
+utility like mental images' <a href="node249.html#INDEX1088">imf_copy</a>.
+The scene file must be
+changed to reference this texture. Note that mental ray recognizes
+<tt>.map</tt> textures even if they have an extension other than
+<tt>.map</tt>; this can be exploited by continuing to use the old
+file name with the "wrong" extension, to avoid having to change the
+scene file. When using <a href="node249.html#INDEX1088">imf_copy</a>,
+the <tt>-p</tt> option is
+highly recommended to create a texture pyramid in the file.</li>
+<li>Memory-mapped textures are automatically considered
+<tt>local</tt> by mental ray, as if the <tt>local</tt> keyword had
+been used in the scene file. This means that if the scene is
+rendered on multiple hosts, each will try to access the given path
+instead of transferring the texture across the network, which would
+defeat memory mapping. The given path must be valid on every host
+participating in the render. mental ray also supports non-local
+mapped textures, so that it is mapped on the master but fetched
+across the network by slaves if the <tt>local</tt> keyword is not
+supplied, which simplifies scene distribution but may incur
+unacceptable network overheads.</li>
+<li>The texture should not be on an network-mounted file system
+(one that is imported across the network from another host).
+Although this simplifies the requirement that the texture must
+exist on all hosts, the necessary network transfer performed by the
+operating system may reduce the effectiveness and can easily make
+memory-mapping slower than regular textures.</li>
+<li>Memory-mapping works best if there are extremely large textures
+containing many tens of megabytes that are sampled infrequently
+because then most of the large texture file is never loaded into
+memory.</li>
+<li>A memory-mapped file texture must be created on a host with the
+same byte order as the host where it will be used. mental ray will
+not memory-map textures with an incompatible byte order, and read
+the whole texture into memory and convert it instead. This is not
+efficient and should be avoided.</li>
+</ul>
+<p>If the textures and the scene are so large that they do not fit
+into physical memory, loading a texture is equivalent to loading
+the file into memory, decompressing it, and copying it out to swap.
+(The swap is a disk partition that acts as a low-speed extension of
+the physical memory that exists as RAM chips in the computer.)
+<a id="INDEX38"></a>From then on, accessing a
+texture means accessing the swap. Memory mapping eliminates the
+read-decompress-write step and accesses the texture from the file
+system instead of from swap. This has the side effect that less
+swap space is needed. If the texture and scene are not large and
+fit into memory, and if the texture is accessed frequently,
+memory-mapped textures are slightly slower than regular textures
+because the swap would not have been used, but for textures that
+are larger than perhaps a hundred kilobytes (uncompressed), memory
+mapping is a much more efficient way of loading textures.</p>
+<p>This is especially important for mental ray which manages memory
+as a cache. Large non-memory mapped textures are a big drain on the
+cache because they tend to take up large portions of cache memory.
+mental ray has a separate virtual cache manager that loads and
+unloads memory-mapped textures efficiently without blocking the
+regular cache.</p>
+<p class="note"><b>Note:</b> memory-mapping of large concrete
+textures is reducing the available adressable memory for mental
+ray. This may result in memory faults on 32bit systems with limited
+address space. In those cases it is recommended to utilize
+<a href="texcache.html">texture caching</a> instead of memory mapping to
+optimize texture file access and memory usage.</p>
+<ul class="nav">
+<li><a href="index.html">home</a></li>
+<li><a href="node19.html">&laquo;&nbsp;prev</a></li>
+<li><a href="texcache.html">next&nbsp;&raquo;</a></li>
+<li><a href="globalindex.html">index</a></li>
+</ul>
+<p><a href="copyright.html">Copyright</a> &copy; 1986-2010 by
+<a href="http://www.mental.com">mental images GmbH</a></p>
+</body>
+</html>

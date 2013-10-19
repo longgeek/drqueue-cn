@@ -1,0 +1,173 @@
+#*****************************************************************************
+# Copyright 2007 by Autodesk Media & Entertainment
+# All rights reserved.
+#*****************************************************************************
+# Author :	Pierre-Felix Breton
+# Purpose:	Simplified Noise map based on the 3ds max Noise map
+#
+# History:
+#
+# 2007 feb 15th - pfbreton, initial implementation
+#
+# 
+#****************************************************************************/
+
+min version "3.4"
+
+#------------------------------------------------------------------------
+# Phenomenon
+#------------------------------------------------------------------------
+declare phenomenon "adsk_Map_Simple_Noise_V2" 
+  (
+      #-------------------------------------
+			# Main parameters
+			#-------------------------------------
+      struct "m" 
+      {
+      	color "Color1",
+      	color "Color2",
+      	integer "Type",  #the regular noise type could be prevented in the ui:  same results can be acheived with a fractal noise with a levels set to 1.0
+      	scalar "Size",
+      	scalar "ThresholdLow",
+      	scalar "ThresholdHigh",
+      	scalar "Levels",
+      	scalar "Phase"
+      	
+      },
+      
+			#-------------------------------------
+			# XYZ Generator Parameters
+			# 		This is a temporary solution
+			#			minimal set of parameters exposed
+			#			more design work needs to be done
+			#-------------------------------------
+      struct "u" 
+      {
+      	vector "Offset",
+      	vector "Tiling",
+      	vector "Angle"
+
+      },
+      integer "mode",
+      array light "lights"
+      	
+   )#end phenomenon
+
+
+#-------------------------------------
+# XYZ Generator
+#-------------------------------------
+
+shader "XYZGen|Shader" "adsk_Utility_XYZGenerator" 
+(
+	"CoordinateSystem" 0, 				#ObjectXYZ | WorldXYZ | ExplicitMapChannel | VertexColorChannel
+	"MapChannel" 1,  							#Unused in this case, since we are using the ObjectXYZ coordinatesystem
+	#--------------			
+	"Offset" = interface "u.Offset", 
+	"Tiling" = interface "u.Tiling", 
+	"Angle" = interface "u.Angle", 
+	#-------------------
+	"Blur" 1, 
+	"BlurOffset" 0
+)#end shader
+
+
+#-------------------------------------
+# Output Shader
+#-------------------------------------
+shader "TextureOutput|Shader" "adsk_Utility_Output" 
+	(
+		"RGBAmount" 1, 
+		"RGBOffset" 0, 
+		"OutputAmount" 1, 
+		"BumpAmount" 1, 
+		"Invert" off, 
+		"Clamp" off, 
+		"AlphaFromRGB" off, 
+		"UseColorMap" off, 
+		"UseRGBCurve" off
+	)
+
+#------------------------------------------------------------------------
+# Noise Map Shader
+#------------------------------------------------------------------------
+shader "Map_Noise|Texmap|Shader" "adsk_Utility_Noise" 
+	(
+		"Parameters" 
+		{
+			"Color1" = interface "m.Color1", 
+			"Color2" = interface "m.Color2", 
+			"Map1Enabled" off, 
+			"Map2Enabled" off, 
+			#--------------------------
+		  "Type" = interface "m.Type", 
+			"Size" = interface "m.Size", 
+			"Phase" = interface "m.Phase", 
+			"Levels" = interface "m.Levels", 
+			"ThresholdLow" = interface "m.ThresholdLow", 
+		  "ThresholdHigh" = interface "m.ThresholdHigh", 
+
+			#--------------------------
+			"Coords" "XYZGen|Shader", 
+			"Output" "TextureOutput|Shader"
+		}, 
+		"ExtraParameters" 
+		{
+			"GBufferID" 0	
+		}
+
+	)#end shader
+
+
+root = "Map_Noise|Texmap|Shader"
+apply texture
+
+#------------------------------------------------------------------------
+# UI
+#------------------------------------------------------------------------
+
+	gui "gui_adsk_Map_Simple_Noise_V2"
+	{
+		#----------------------------------
+		control "Global" "Global" ("uiName" "Simple Noise Map (adsk)", "category" "Texture", "hidden" )
+	
+		#-------------------------------------
+		#  Map Parameters
+		#-------------------------------------
+		control "m" "struct" ("uiName" "Simple Noise Map Parameters")
+		{
+			#----------------------------------
+			control "Type" "integer" ("nonConnectable", "uiName" "Type (Regular, Fractal, Turbulence)", "value" 0, "range" 0 2) #the regular noise type could be prevented:  same results can be acheived with a fractal noise with a levels set to 1.0
+			control "Size" "float" ("nonConnectable", "uiName" "Size", "value" 25, "range" 0.001 1000000000)
+			control "Color1" "color" ("uiName" "Color 1","value" 0 0 0 1.0)
+			control "Color2" "color" ("uiName" "Color 2","value" 1 1 1 1.0)
+			control "ThresholdHigh" "float" ("nonConnectable", "uiName" "High Threshold", "value" 1, "range" 0 1)
+			control "ThresholdLow" "float" ("nonConnectable", "uiName" "Low Threshold", "value" 0, "range" 0 1)
+     	control "Levels" "float" ("nonConnectable", "uiName" "Levels", "value" 3.0, "range" 1.0 10)
+     	control "Phase" "float" ("nonConnectable", "uiName" "Phase", "value" 0, "range" -1000 1000)
+     	
+		}#end control
+		
+		
+	#-------------------------------------
+	# XYZ Generator Parameters
+	# 		This is a temporary solution
+	#			minimal set of parameters exposed
+	#			more design work needs to be done
+	#-------------------------------------
+		control "u" "struct" ("uiName" "Texture Coordinates Parameters")
+    {  
+         control "Offset" "vector" ("nonConnectable", "value" 0 0 0)
+         control "Tiling" "vector" ("nonConnectable", "value" 1 1 1)
+         control "Angle" "vector" ("nonConnectable", "value" 0 0 0)     
+   }#end struct
+		
+		
+	  #----------------------------------
+		control "mode" "null" ("uiName" "Mode", "value" 0, "hidden")
+		control "lights" "array light" ("hidden","nonConnectable")
+		control "mode" "integer" ("hidden","nonConnectable")
+
+	}#end gui
+
+end declare #end declare phenomenon

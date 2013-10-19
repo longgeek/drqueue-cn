@@ -1,0 +1,163 @@
+/*****************************************************************************
+ * Copyright 1986-2011 by mental images GmbH, Fasanenstr. 81, D-10623 Berlin,
+ * Germany. All rights reserved.
+ *****************************************************************************/
+
+shader Normals_offset_uv
+{
+        input:
+                int texture_space = 0
+                {
+                        display_name("Texture Space");
+                        description( "Texture coordinates to use for offsetting" );
+                        literal();
+                };
+                float u_offset = 0.0f
+                {
+                        display_name("U Offset");
+                        soft_range(float(-1),float(1));
+                        description( "Determines how far the current texture coordinates "
+                                                 "will be offset in the U direction." );
+                };
+                float v_offset = 0.0f
+                {
+                        display_name("V Offset");
+                        soft_range(float(-1),float(1));
+                        description( "Determines how far the current texture coordinates "
+                                                 "will be offset in the V direction." );
+                };
+
+        output:
+                float4 result;
+
+        void main()
+        {
+                result = texture_coordinate[texture_space];
+                result.x += u_offset;
+                result.y += v_offset;
+        }
+}
+{
+        description( "An operation that offsets the input texture coordinates "
+                                 "based on the offset parameters." );
+}
+;
+
+shader Normals_perturb_normal
+{
+        input:
+                Color center_color = Color(0,0,0,1)
+                {
+                                display_name("Center Color");
+                                soft_range(Color(0,0,0,1),Color(1,1,1,1));
+                                description( "The center height map color." );
+                };
+                Color u_color = Color(0,0,0,1)
+                {
+                                display_name("U Color");
+                                soft_range(Color(0,0,0,1),Color(1,1,1,1));
+                                description( "The u height map color." );
+                };
+                Color v_color = Color(0,0,0,1)
+                {
+                                display_name("V Color");
+                                soft_range(Color(0,0,0,1),Color(1,1,1,1));
+                                description( "The v height map color." );
+                };
+                float amount = 1.0
+                {
+                                display_name("Amount");
+                                soft_range(float(-1),float(1));
+                                description( "The degree to which the normal will be "
+                                                         "perturbed." );
+                };
+
+        output:
+                float3 result;
+
+        void main()
+        {
+                // doting with this vector gives the average component value
+                float3 a  = float3(1./3, 1./3, 1./3);
+
+                // three values: center, offset u, and offset v
+                float c   = dot(a, center_color.xyz);
+                float ddu = dot(a, u_color.xyz)-c;
+                float ddv = dot(a, v_color.xyz)-c;
+
+                // construct the normal in tangent space
+                float3 n  = normalize(float3(-ddu, -ddv, 1./amount));
+
+                // transform the normal into camera space
+               result = normalize(normal + (n.x *texture_tangent[0] + n.y*texture_binormal[0]));
+        }
+}
+{
+        description( "Uses colors, often height map samples, to "
+                     "perturb the normal. Used as a bump map component." );
+}
+;
+
+shader Normals_height_bumpmap {
+        input:
+                int texture_space = 0
+                {
+                        display_name("Texture Space");
+                        description( "Texture coordinates to use for offsetting" );
+                        literal();
+                };
+                float factor = 10.0f
+                {
+                        display_name( "Bump factor" );
+                        description( "Determines the degree of bumpiness." );
+                };
+                float scale = 1.0f
+                {
+                      display_name( "Bump scale" );
+                      description( "Controls the scaling of UV coordinates." );
+                };
+                Texture2d tex;
+        output:
+                float3 result;
+                float3 normal_result;
+
+        void main()
+        {
+            normal_result = normal; // get normal from state
+
+            float2 coord = texture_coordinate[texture_space].xy * scale;
+            coord.x -= floor(coord.x);
+            coord.y -= floor(coord.y);
+            float2 coord_u = coord;
+            float2 coord_v = coord;
+
+            // differential offset
+            coord_u.x += 0.001;
+            coord_v.y += 0.001;
+
+            Texture2D_sampler_color samp = Texture2D_sampler_color(tex);
+
+            // doting with this vector gives the average component value
+            float3 a  = float3(1./3, 1./3, 1./3);
+
+            Color c;
+            c = samp.lookup(coord);
+            float val   = dot(a, c.xyz);
+
+            c = samp.lookup(coord_u);
+            float val_u = dot(a, c.xyz) - val;
+
+            c = samp.lookup(coord_v);
+            float val_v = dot(a, c.xyz) - val;
+
+            // modify normal
+            normal_result -= factor * (texture_tangent[texture_space] * val_u +
+                                       texture_binormal[texture_space] * val_v);
+            normal_result = normalize(normal_result);
+            result = normal_result;
+        } // main
+}
+{
+        description( "Uses a scalar bump map to perturb the normal." );
+}
+;
